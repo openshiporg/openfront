@@ -1,11 +1,11 @@
 import { createAuth } from "@keystone-6/auth";
 import { config } from "@keystone-6/core";
 import { statelessSessions } from "@keystone-6/core/session";
-import { permissionsList } from "./models/fields";
+import { permissionsList } from "../models/fields";
 import "dotenv/config";
-import { sendPasswordResetEmail } from "./lib/mail";
-import { extendGraphqlSchema } from "./mutations";
-import { models } from "./models";
+import { sendPasswordResetEmail } from "../lib/mail";
+import { extendGraphqlSchema } from "../mutations";
+import { models } from "../models";
 
 const databaseURL = process.env.DATABASE_URL || "file:./keystone.db";
 
@@ -36,12 +36,32 @@ const { withAuth } = createAuth({
       role: {
         create: {
           name: "Admin",
-          canManageProducts: true,
-          canSeeOtherUsers: true,
-          canManageUsers: true,
-          canManageRoles: true,
-          canManageCart: true,
+          canReadOrders: true,
           canManageOrders: true,
+          canReadProducts: true,
+          canManageProducts: true,
+          canReadFulfillments: true,
+          canManageFulfillments: true,
+          canReadUsers: true,
+          canManageUsers: true,
+          canReadRoles: true,
+          canManageRoles: true,
+          canReadCheckouts: true,
+          canManageCheckouts: true,
+          canReadDiscounts: true,
+          canManageDiscounts: true,
+          canReadGiftCards: true,
+          canManageGiftCards: true,
+          canReadReturns: true,
+          canManageReturns: true,
+          canReadSalesChannels: true,
+          canManageSalesChannels: true,
+          canReadPayments: true,
+          canManagePayments: true,
+          canReadIdempotencyKeys: true,
+          canManageIdempotencyKeys: true,
+          canReadApps: true,
+          canManageApps: true
         },
       },
     },

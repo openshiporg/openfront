@@ -7,11 +7,19 @@ import {
   text,
   relationship,
 } from "@keystone-6/core/fields";
+import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
 
 export const PaymentSession = list({
   access: {
-    operation: denyAll,
+    operation: {
+      query: ({ session }) =>
+        permissions.canReadPayments({ session }) ||
+        permissions.canManagePayments({ session }),
+      create: permissions.canManagePayments,
+      update: permissions.canManagePayments,
+      delete: permissions.canManagePayments,
+    },
   },
   fields: {
     isSelected: checkbox(),

@@ -7,11 +7,19 @@ import {
   text,
   relationship,
 } from "@keystone-6/core/fields";
+import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
 
 export const ProductVariant = list({
   access: {
-    operation: denyAll,
+    operation: {
+      query: ({ session }) =>
+        permissions.canReadProducts({ session }) ||
+        permissions.canManageProducts({ session }),
+      create: permissions.canManageProducts,
+      update: permissions.canManageProducts,
+      delete: permissions.canManageProducts,
+    },
   },
   fields: {
     title: text({

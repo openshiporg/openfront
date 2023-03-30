@@ -11,10 +11,18 @@ import {
   relationship,
 } from "@keystone-6/core/fields";
 import { trackingFields } from "./trackingFields";
+import { permissions } from "../access";
 
 export const Order = list({
   access: {
-    operation: denyAll,
+    operation: {
+      query: ({ session }) =>
+        permissions.canReadOrders({ session }) ||
+        permissions.canManageOrders({ session }),
+      create: permissions.canManageOrders,
+      update: permissions.canManageOrders,
+      delete: permissions.canManageOrders,
+    },
   },
   fields: {
     status: select({

@@ -1,12 +1,18 @@
 import { list } from "@keystone-6/core";
-import { denyAll } from "@keystone-6/core/access";
 import { json, text, relationship } from "@keystone-6/core/fields";
+import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
-// import { allOperations, allowAll } from "@keystone-6/core/access";
 
 export const Address = list({
   access: {
-    operation: denyAll,
+    operation: {
+      query: ({ session }) =>
+        permissions.canReadUsers({ session }) ||
+        permissions.canManageUsers({ session }),
+      create: permissions.canManageUsers,
+      update: permissions.canManageUsers,
+      delete: permissions.canManageUsers,
+    },
   },
   fields: {
     company: text(),

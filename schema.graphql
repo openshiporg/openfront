@@ -206,8 +206,22 @@ type Role {
   canManageUsers: Boolean
   canReadRoles: Boolean
   canManageRoles: Boolean
-  canReadCarts: Boolean
-  canManageCarts: Boolean
+  canReadCheckouts: Boolean
+  canManageCheckouts: Boolean
+  canReadDiscounts: Boolean
+  canManageDiscounts: Boolean
+  canReadGiftCards: Boolean
+  canManageGiftCards: Boolean
+  canReadReturns: Boolean
+  canManageReturns: Boolean
+  canReadSalesChannels: Boolean
+  canManageSalesChannels: Boolean
+  canReadPayments: Boolean
+  canManagePayments: Boolean
+  canReadIdempotencyKeys: Boolean
+  canManageIdempotencyKeys: Boolean
+  canReadApps: Boolean
+  canManageApps: Boolean
   assignedTo(where: UserWhereInput! = {}, orderBy: [UserOrderByInput!]! = [], take: Int, skip: Int! = 0): [User!]
   assignedToCount(where: UserWhereInput! = {}): Int
   createdAt: DateTime
@@ -234,8 +248,22 @@ input RoleWhereInput {
   canManageUsers: BooleanFilter
   canReadRoles: BooleanFilter
   canManageRoles: BooleanFilter
-  canReadCarts: BooleanFilter
-  canManageCarts: BooleanFilter
+  canReadCheckouts: BooleanFilter
+  canManageCheckouts: BooleanFilter
+  canReadDiscounts: BooleanFilter
+  canManageDiscounts: BooleanFilter
+  canReadGiftCards: BooleanFilter
+  canManageGiftCards: BooleanFilter
+  canReadReturns: BooleanFilter
+  canManageReturns: BooleanFilter
+  canReadSalesChannels: BooleanFilter
+  canManageSalesChannels: BooleanFilter
+  canReadPayments: BooleanFilter
+  canManagePayments: BooleanFilter
+  canReadIdempotencyKeys: BooleanFilter
+  canManageIdempotencyKeys: BooleanFilter
+  canReadApps: BooleanFilter
+  canManageApps: BooleanFilter
   assignedTo: UserManyRelationFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
@@ -265,8 +293,22 @@ input RoleOrderByInput {
   canManageUsers: OrderDirection
   canReadRoles: OrderDirection
   canManageRoles: OrderDirection
-  canReadCarts: OrderDirection
-  canManageCarts: OrderDirection
+  canReadCheckouts: OrderDirection
+  canManageCheckouts: OrderDirection
+  canReadDiscounts: OrderDirection
+  canManageDiscounts: OrderDirection
+  canReadGiftCards: OrderDirection
+  canManageGiftCards: OrderDirection
+  canReadReturns: OrderDirection
+  canManageReturns: OrderDirection
+  canReadSalesChannels: OrderDirection
+  canManageSalesChannels: OrderDirection
+  canReadPayments: OrderDirection
+  canManagePayments: OrderDirection
+  canReadIdempotencyKeys: OrderDirection
+  canManageIdempotencyKeys: OrderDirection
+  canReadApps: OrderDirection
+  canManageApps: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
 }
@@ -283,8 +325,22 @@ input RoleUpdateInput {
   canManageUsers: Boolean
   canReadRoles: Boolean
   canManageRoles: Boolean
-  canReadCarts: Boolean
-  canManageCarts: Boolean
+  canReadCheckouts: Boolean
+  canManageCheckouts: Boolean
+  canReadDiscounts: Boolean
+  canManageDiscounts: Boolean
+  canReadGiftCards: Boolean
+  canManageGiftCards: Boolean
+  canReadReturns: Boolean
+  canManageReturns: Boolean
+  canReadSalesChannels: Boolean
+  canManageSalesChannels: Boolean
+  canReadPayments: Boolean
+  canManagePayments: Boolean
+  canReadIdempotencyKeys: Boolean
+  canManageIdempotencyKeys: Boolean
+  canReadApps: Boolean
+  canManageApps: Boolean
   assignedTo: UserRelateToManyForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
@@ -314,8 +370,22 @@ input RoleCreateInput {
   canManageUsers: Boolean
   canReadRoles: Boolean
   canManageRoles: Boolean
-  canReadCarts: Boolean
-  canManageCarts: Boolean
+  canReadCheckouts: Boolean
+  canManageCheckouts: Boolean
+  canReadDiscounts: Boolean
+  canManageDiscounts: Boolean
+  canReadGiftCards: Boolean
+  canManageGiftCards: Boolean
+  canReadReturns: Boolean
+  canManageReturns: Boolean
+  canReadSalesChannels: Boolean
+  canManageSalesChannels: Boolean
+  canReadPayments: Boolean
+  canManagePayments: Boolean
+  canReadIdempotencyKeys: Boolean
+  canManageIdempotencyKeys: Boolean
+  canReadApps: Boolean
+  canManageApps: Boolean
   assignedTo: UserRelateToManyForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
@@ -1158,6 +1228,8 @@ type Product {
   status: ProductStatusType
   externalId: String
   productCollection: ProductCollection
+  productCategories(where: ProductCategoryWhereInput! = {}, orderBy: [ProductCategoryOrderByInput!]! = [], take: Int, skip: Int! = 0): [ProductCategory!]
+  productCategoriesCount(where: ProductCategoryWhereInput! = {}): Int
   shippingProfile: ShippingProfile
   productType: ProductType
   discountConditions(where: DiscountConditionWhereInput! = {}, orderBy: [DiscountConditionOrderByInput!]! = [], take: Int, skip: Int! = 0): [DiscountCondition!]
@@ -1212,6 +1284,7 @@ input ProductWhereInput {
   status: ProductStatusTypeNullableFilter
   externalId: StringFilter
   productCollection: ProductCollectionWhereInput
+  productCategories: ProductCategoryManyRelationFilter
   shippingProfile: ShippingProfileWhereInput
   productType: ProductTypeWhereInput
   discountConditions: DiscountConditionManyRelationFilter
@@ -1230,6 +1303,12 @@ input ProductStatusTypeNullableFilter {
   in: [ProductStatusType!]
   notIn: [ProductStatusType!]
   not: ProductStatusTypeNullableFilter
+}
+
+input ProductCategoryManyRelationFilter {
+  every: ProductCategoryWhereInput
+  some: ProductCategoryWhereInput
+  none: ProductCategoryWhereInput
 }
 
 input DiscountConditionManyRelationFilter {
@@ -1317,6 +1396,7 @@ input ProductUpdateInput {
   status: ProductStatusType
   externalId: String
   productCollection: ProductCollectionRelateToOneForUpdateInput
+  productCategories: ProductCategoryRelateToManyForUpdateInput
   shippingProfile: ShippingProfileRelateToOneForUpdateInput
   productType: ProductTypeRelateToOneForUpdateInput
   discountConditions: DiscountConditionRelateToManyForUpdateInput
@@ -1334,6 +1414,13 @@ input ProductCollectionRelateToOneForUpdateInput {
   create: ProductCollectionCreateInput
   connect: ProductCollectionWhereUniqueInput
   disconnect: Boolean
+}
+
+input ProductCategoryRelateToManyForUpdateInput {
+  disconnect: [ProductCategoryWhereUniqueInput!]
+  set: [ProductCategoryWhereUniqueInput!]
+  create: [ProductCategoryCreateInput!]
+  connect: [ProductCategoryWhereUniqueInput!]
 }
 
 input ShippingProfileRelateToOneForUpdateInput {
@@ -1422,6 +1509,7 @@ input ProductCreateInput {
   status: ProductStatusType
   externalId: String
   productCollection: ProductCollectionRelateToOneForCreateInput
+  productCategories: ProductCategoryRelateToManyForCreateInput
   shippingProfile: ShippingProfileRelateToOneForCreateInput
   productType: ProductTypeRelateToOneForCreateInput
   discountConditions: DiscountConditionRelateToManyForCreateInput
@@ -1438,6 +1526,11 @@ input ProductCreateInput {
 input ProductCollectionRelateToOneForCreateInput {
   create: ProductCollectionCreateInput
   connect: ProductCollectionWhereUniqueInput
+}
+
+input ProductCategoryRelateToManyForCreateInput {
+  create: [ProductCategoryCreateInput!]
+  connect: [ProductCategoryWhereUniqueInput!]
 }
 
 input ShippingProfileRelateToOneForCreateInput {
@@ -1564,6 +1657,79 @@ input ProductCollectionCreateInput {
 input ProductRelateToManyForCreateInput {
   create: [ProductCreateInput!]
   connect: [ProductWhereUniqueInput!]
+}
+
+type ProductCategory {
+  id: ID!
+  title: String
+  handle: String
+  metadata: JSON
+  isInternal: Boolean
+  isActive: Boolean
+  discountConditions(where: DiscountConditionWhereInput! = {}, orderBy: [DiscountConditionOrderByInput!]! = [], take: Int, skip: Int! = 0): [DiscountCondition!]
+  discountConditionsCount(where: DiscountConditionWhereInput! = {}): Int
+  products(where: ProductWhereInput! = {}, orderBy: [ProductOrderByInput!]! = [], take: Int, skip: Int! = 0): [Product!]
+  productsCount(where: ProductWhereInput! = {}): Int
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input ProductCategoryWhereUniqueInput {
+  id: ID
+}
+
+input ProductCategoryWhereInput {
+  AND: [ProductCategoryWhereInput!]
+  OR: [ProductCategoryWhereInput!]
+  NOT: [ProductCategoryWhereInput!]
+  id: IDFilter
+  title: StringFilter
+  handle: StringFilter
+  isInternal: BooleanFilter
+  isActive: BooleanFilter
+  discountConditions: DiscountConditionManyRelationFilter
+  products: ProductManyRelationFilter
+  createdAt: DateTimeFilter
+  updatedAt: DateTimeFilter
+}
+
+input ProductCategoryOrderByInput {
+  id: OrderDirection
+  title: OrderDirection
+  handle: OrderDirection
+  isInternal: OrderDirection
+  isActive: OrderDirection
+  createdAt: OrderDirection
+  updatedAt: OrderDirection
+}
+
+input ProductCategoryUpdateInput {
+  title: String
+  handle: String
+  metadata: JSON
+  isInternal: Boolean
+  isActive: Boolean
+  discountConditions: DiscountConditionRelateToManyForUpdateInput
+  products: ProductRelateToManyForUpdateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input ProductCategoryUpdateArgs {
+  where: ProductCategoryWhereUniqueInput!
+  data: ProductCategoryUpdateInput!
+}
+
+input ProductCategoryCreateInput {
+  title: String
+  handle: String
+  metadata: JSON
+  isInternal: Boolean
+  isActive: Boolean
+  discountConditions: DiscountConditionRelateToManyForCreateInput
+  products: ProductRelateToManyForCreateInput
+  createdAt: DateTime
+  updatedAt: DateTime
 }
 
 type ProductImage {
@@ -3676,6 +3842,8 @@ type DiscountCondition {
   productsCount(where: ProductWhereInput! = {}): Int
   productCollections(where: ProductCollectionWhereInput! = {}, orderBy: [ProductCollectionOrderByInput!]! = [], take: Int, skip: Int! = 0): [ProductCollection!]
   productCollectionsCount(where: ProductCollectionWhereInput! = {}): Int
+  productCategories(where: ProductCategoryWhereInput! = {}, orderBy: [ProductCategoryOrderByInput!]! = [], take: Int, skip: Int! = 0): [ProductCategory!]
+  productCategoriesCount(where: ProductCategoryWhereInput! = {}): Int
   productTags(where: ProductTagWhereInput! = {}, orderBy: [ProductTagOrderByInput!]! = [], take: Int, skip: Int! = 0): [ProductTag!]
   productTagsCount(where: ProductTagWhereInput! = {}): Int
   productTypes(where: ProductTypeWhereInput! = {}, orderBy: [ProductTypeOrderByInput!]! = [], take: Int, skip: Int! = 0): [ProductType!]
@@ -3712,6 +3880,7 @@ input DiscountConditionWhereInput {
   customerGroups: CustomerGroupManyRelationFilter
   products: ProductManyRelationFilter
   productCollections: ProductCollectionManyRelationFilter
+  productCategories: ProductCategoryManyRelationFilter
   productTags: ProductTagManyRelationFilter
   productTypes: ProductTypeManyRelationFilter
   createdAt: DateTimeFilter
@@ -3760,6 +3929,7 @@ input DiscountConditionUpdateInput {
   customerGroups: CustomerGroupRelateToManyForUpdateInput
   products: ProductRelateToManyForUpdateInput
   productCollections: ProductCollectionRelateToManyForUpdateInput
+  productCategories: ProductCategoryRelateToManyForUpdateInput
   productTags: ProductTagRelateToManyForUpdateInput
   productTypes: ProductTypeRelateToManyForUpdateInput
   createdAt: DateTime
@@ -3793,6 +3963,7 @@ input DiscountConditionCreateInput {
   customerGroups: CustomerGroupRelateToManyForCreateInput
   products: ProductRelateToManyForCreateInput
   productCollections: ProductCollectionRelateToManyForCreateInput
+  productCategories: ProductCategoryRelateToManyForCreateInput
   productTags: ProductTagRelateToManyForCreateInput
   productTypes: ProductTypeRelateToManyForCreateInput
   createdAt: DateTime
@@ -6763,6 +6934,12 @@ type Mutation {
   updateProductCollections(data: [ProductCollectionUpdateArgs!]!): [ProductCollection]
   deleteProductCollection(where: ProductCollectionWhereUniqueInput!): ProductCollection
   deleteProductCollections(where: [ProductCollectionWhereUniqueInput!]!): [ProductCollection]
+  createProductCategory(data: ProductCategoryCreateInput!): ProductCategory
+  createProductCategories(data: [ProductCategoryCreateInput!]!): [ProductCategory]
+  updateProductCategory(where: ProductCategoryWhereUniqueInput!, data: ProductCategoryUpdateInput!): ProductCategory
+  updateProductCategories(data: [ProductCategoryUpdateArgs!]!): [ProductCategory]
+  deleteProductCategory(where: ProductCategoryWhereUniqueInput!): ProductCategory
+  deleteProductCategories(where: [ProductCategoryWhereUniqueInput!]!): [ProductCategory]
   createProductImage(data: ProductImageCreateInput!): ProductImage
   createProductImages(data: [ProductImageCreateInput!]!): [ProductImage]
   updateProductImage(where: ProductImageWhereUniqueInput!, data: ProductImageUpdateInput!): ProductImage
@@ -7147,6 +7324,9 @@ type Query {
   productCollections(where: ProductCollectionWhereInput! = {}, orderBy: [ProductCollectionOrderByInput!]! = [], take: Int, skip: Int! = 0): [ProductCollection!]
   productCollection(where: ProductCollectionWhereUniqueInput!): ProductCollection
   productCollectionsCount(where: ProductCollectionWhereInput! = {}): Int
+  productCategories(where: ProductCategoryWhereInput! = {}, orderBy: [ProductCategoryOrderByInput!]! = [], take: Int, skip: Int! = 0): [ProductCategory!]
+  productCategory(where: ProductCategoryWhereUniqueInput!): ProductCategory
+  productCategoriesCount(where: ProductCategoryWhereInput! = {}): Int
   productImages(where: ProductImageWhereInput! = {}, orderBy: [ProductImageOrderByInput!]! = [], take: Int, skip: Int! = 0): [ProductImage!]
   productImage(where: ProductImageWhereUniqueInput!): ProductImage
   productImagesCount(where: ProductImageWhereInput! = {}): Int

@@ -7,12 +7,20 @@ import {
   timestamp,
   relationship,
 } from "@keystone-6/core/fields";
+import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
 
 export const Fulfillment = list({
   access: {
-    operation: denyAll,
-  }, 
+    operation: {
+      query: ({ session }) =>
+        permissions.canReadFulfillments({ session }) ||
+        permissions.canManageFulfillments({ session }),
+      create: permissions.canManageFulfillments,
+      update: permissions.canManageFulfillments,
+      delete: permissions.canManageFulfillments,
+    },
+  },
   fields: {
     trackingNumbers: json({
       defaultValue: "[]",

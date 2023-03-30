@@ -4,6 +4,7 @@ import { Order } from "./Order";
 import { LineItem } from "./LineItem";
 import { Product } from "./Product";
 import { ProductCollection } from "./ProductCollection";
+import { ProductCategory } from "./ProductCategory";
 import { ProductImage } from "./ProductImage";
 import { ProductOption } from "./ProductOption";
 import { ProductOptionValue } from "./ProductOptionValue";
@@ -67,6 +68,7 @@ export const models = {
   LineItem,
   Product,
   ProductCollection,
+  ProductCategory,
   ProductImage,
   ProductOption,
   ProductOptionValue,

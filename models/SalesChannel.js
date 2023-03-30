@@ -7,11 +7,19 @@ import {
   image,
   checkbox,
 } from "@keystone-6/core/fields";
+import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
 
 export const SalesChannel = list({
   access: {
-    operation: denyAll,
+    operation: {
+      query: ({ session }) =>
+        permissions.canReadSalesChannels({ session }) ||
+        permissions.canManageSalesChannels({ session }),
+      create: permissions.canManageSalesChannels,
+      update: permissions.canManageSalesChannels,
+      delete: permissions.canManageSalesChannels,
+    },
   },
   fields: {
     name: text(),

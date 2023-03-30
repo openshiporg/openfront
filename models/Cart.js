@@ -1,5 +1,5 @@
 import { list } from "@keystone-6/core";
-import { denyAll } from "@keystone-6/core/access";
+import { allOperations, allowAll, denyAll } from "@keystone-6/core/access";
 import {
   json,
   select,
@@ -7,12 +7,32 @@ import {
   timestamp,
   relationship,
 } from "@keystone-6/core/fields";
-
+import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
+
+const canManageCarts = ({ session }) => {
+  if (!session) {
+    // No session? No Carts.
+    return false;
+  }
+  return { user: { id: session.itemId } };
+};
 
 export const Cart = list({
   access: {
-    operation: denyAll,
+    operation: {
+      query: ({ session }) =>
+        permissions.canReadOrders({ session }) ||
+        permissions.canManageOrders({ session }),
+      create: permissions.canManageOrders,
+      update: permissions.canManageOrders,
+      delete: permissions.canManageOrders,
+    },
+    // filter: {
+    //   query: canManageCarts,
+    //   update: canManageCarts,
+    //   delete: canManageCarts,
+    // },
   },
   fields: {
     email: text(),

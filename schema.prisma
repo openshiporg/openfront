@@ -31,23 +31,37 @@ model User {
 }
 
 model Role {
-  id                    String   @id @default(cuid())
-  name                  String   @default("")
-  canReadOrders         Boolean  @default(false)
-  canManageOrders       Boolean  @default(false)
-  canReadProducts       Boolean  @default(false)
-  canManageProducts     Boolean  @default(false)
-  canReadFulfillments   Boolean  @default(false)
-  canManageFulfillments Boolean  @default(false)
-  canReadUsers          Boolean  @default(false)
-  canManageUsers        Boolean  @default(false)
-  canReadRoles          Boolean  @default(false)
-  canManageRoles        Boolean  @default(false)
-  canReadCarts          Boolean  @default(false)
-  canManageCarts        Boolean  @default(false)
-  assignedTo            User[]   @relation("User_role")
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @default(now()) @updatedAt
+  id                       String   @id @default(cuid())
+  name                     String   @default("")
+  canReadOrders            Boolean  @default(false)
+  canManageOrders          Boolean  @default(false)
+  canReadProducts          Boolean  @default(false)
+  canManageProducts        Boolean  @default(false)
+  canReadFulfillments      Boolean  @default(false)
+  canManageFulfillments    Boolean  @default(false)
+  canReadUsers             Boolean  @default(false)
+  canManageUsers           Boolean  @default(false)
+  canReadRoles             Boolean  @default(false)
+  canManageRoles           Boolean  @default(false)
+  canReadCheckouts         Boolean  @default(false)
+  canManageCheckouts       Boolean  @default(false)
+  canReadDiscounts         Boolean  @default(false)
+  canManageDiscounts       Boolean  @default(false)
+  canReadGiftCards         Boolean  @default(false)
+  canManageGiftCards       Boolean  @default(false)
+  canReadReturns           Boolean  @default(false)
+  canManageReturns         Boolean  @default(false)
+  canReadSalesChannels     Boolean  @default(false)
+  canManageSalesChannels   Boolean  @default(false)
+  canReadPayments          Boolean  @default(false)
+  canManagePayments        Boolean  @default(false)
+  canReadIdempotencyKeys   Boolean  @default(false)
+  canManageIdempotencyKeys Boolean  @default(false)
+  canReadApps              Boolean  @default(false)
+  canManageApps            Boolean  @default(false)
+  assignedTo               User[]   @relation("User_role")
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @default(now()) @updatedAt
 }
 
 model Order {
@@ -159,6 +173,7 @@ model Product {
   externalId          String              @default("")
   productCollection   ProductCollection?  @relation("Product_productCollection", fields: [productCollectionId], references: [id])
   productCollectionId String?             @map("productCollection")
+  productCategories   ProductCategory[]   @relation("Product_productCategories")
   shippingProfile     ShippingProfile?    @relation("Product_shippingProfile", fields: [shippingProfileId], references: [id])
   shippingProfileId   String?             @map("shippingProfile")
   productType         ProductType?        @relation("Product_productType", fields: [productTypeId], references: [id])
@@ -185,6 +200,19 @@ model ProductCollection {
   metadata           Json?
   discountConditions DiscountCondition[] @relation("DiscountCondition_productCollections")
   products           Product[]           @relation("Product_productCollection")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @default(now()) @updatedAt
+}
+
+model ProductCategory {
+  id                 String              @id @default(cuid())
+  title              String              @default("")
+  handle             String              @default("")
+  metadata           Json?
+  isInternal         Boolean             @default(false)
+  isActive           Boolean             @default(false)
+  discountConditions DiscountCondition[] @relation("DiscountCondition_productCategories")
+  products           Product[]           @relation("Product_productCategories")
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @default(now()) @updatedAt
 }
@@ -568,6 +596,7 @@ model DiscountCondition {
   customerGroups     CustomerGroup[]               @relation("CustomerGroup_discountConditions")
   products           Product[]                     @relation("DiscountCondition_products")
   productCollections ProductCollection[]           @relation("DiscountCondition_productCollections")
+  productCategories  ProductCategory[]             @relation("DiscountCondition_productCategories")
   productTags        ProductTag[]                  @relation("DiscountCondition_productTags")
   productTypes       ProductType[]                 @relation("DiscountCondition_productTypes")
   createdAt          DateTime                      @default(now())

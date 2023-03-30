@@ -7,8 +7,18 @@ import {
   text,
   relationship,
 } from "@keystone-6/core/fields";
-import { permissions, rules } from "../access";
+import { isSignedIn, permissions, rules } from "../access";
 import { trackingFields } from "./trackingFields";
+
+const canManageUsers = ({ session }) => {
+  if (!isSignedIn({ session })) {
+    return false;
+  }
+  if (permissions.canManageUsers({ session })) {
+    return true;
+  }
+};
+
 
 export const User = list({
   access: {
@@ -19,8 +29,8 @@ export const User = list({
       delete: permissions.canManageUsers,
     },
     filter: {
-      query: rules.canManageUsers,
-      update: rules.canManageUsers,
+      query: canManageUsers,
+      update: canManageUsers,
     },
   },
   ui: {

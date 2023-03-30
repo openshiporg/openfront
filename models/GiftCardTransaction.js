@@ -6,11 +6,19 @@ import {
   float,
   relationship,
 } from "@keystone-6/core/fields";
+import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
 
 export const GiftCardTransaction = list({
   access: {
-    operation: denyAll,
+    operation: {
+      query: ({ session }) =>
+        permissions.canReadGiftCards({ session }) ||
+        permissions.canManageGiftCards({ session }),
+      create: permissions.canManageGiftCards,
+      update: permissions.canManageGiftCards,
+      delete: permissions.canManageGiftCards,
+    },
   },
   fields: {
     amount: integer({

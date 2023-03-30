@@ -1,18 +1,19 @@
 import { list } from "@keystone-6/core";
-import { denyAll } from "@keystone-6/core/access";
+import { allowAll, denyAll } from "@keystone-6/core/access";
 import { json, text, relationship, image } from "@keystone-6/core/fields";
+import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
-
-// export const cloudinary = {
-//   cloudName: process.env.CLOUDINARY_CLOUD_NAME || 'fake',
-//   apiKey: process.env.CLOUDINARY_KEY || 'fake',
-//   apiSecret: process.env.CLOUDINARY_SECRET || 'fake',
-//   folder: 'sickfits',
-// };
 
 export const ProductImage = list({
   access: {
-    operation: denyAll,
+    operation: {
+      query: ({ session }) =>
+        permissions.canReadProducts({ session }) ||
+        permissions.canManageProducts({ session }),
+      create: permissions.canManageProducts,
+      update: permissions.canManageProducts,
+      delete: permissions.canManageProducts,
+    },
   },
   fields: {
     // image: cloudinaryImage({

@@ -8,11 +8,19 @@ import {
   text,
   relationship,
 } from "@keystone-6/core/fields";
+import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
 
 export const Product = list({
   access: {
-    operation: denyAll,
+    operation: {
+      query: ({ session }) =>
+        permissions.canReadProducts({ session }) ||
+        permissions.canManageProducts({ session }),
+      create: permissions.canManageProducts,
+      update: permissions.canManageProducts,
+      delete: permissions.canManageProducts,
+    },
   },
   fields: {
     title: text({
@@ -65,6 +73,10 @@ export const Product = list({
     externalId: text(),
     productCollection: relationship({
       ref: "ProductCollection.products",
+    }),
+    productCategories: relationship({
+      ref: "ProductCategory.products",
+      many: true,
     }),
     shippingProfile: relationship({
       ref: "ShippingProfile.products",

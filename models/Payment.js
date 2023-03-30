@@ -7,11 +7,19 @@ import {
   timestamp,
   relationship,
 } from "@keystone-6/core/fields";
+import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
 
 export const Payment = list({
   access: {
-    operation: denyAll,
+    operation: {
+      query: ({ session }) =>
+        permissions.canReadPayments({ session }) ||
+        permissions.canManagePayments({ session }),
+      create: permissions.canManagePayments,
+      update: permissions.canManagePayments,
+      delete: permissions.canManagePayments,
+    },
   },
   fields: {
     amount: integer({

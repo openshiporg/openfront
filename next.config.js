@@ -1,3 +1,11 @@
-const { withKeystone } = require("@keystone-6/core/next");
-
-module.exports = withKeystone();
+module.exports = {
+  async redirects() {
+    return [
+      {
+        source: "/admin/api/graphql",
+        destination: "/api/graphql",
+        permanent: false,
+      },
+    ];
+  },
+};

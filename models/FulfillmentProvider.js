@@ -1,11 +1,19 @@
 import { list } from "@keystone-6/core";
 import { denyAll } from "@keystone-6/core/access";
 import { checkbox, relationship } from "@keystone-6/core/fields";
+import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
 
 export const FulfillmentProvider = list({
   access: {
-    operation: denyAll,
+    operation: {
+      query: ({ session }) =>
+        permissions.canReadFulfillments({ session }) ||
+        permissions.canManageFulfillments({ session }),
+      create: permissions.canManageFulfillments,
+      update: permissions.canManageFulfillments,
+      delete: permissions.canManageFulfillments,
+    },
   },
   fields: {
     isInstalled: checkbox({

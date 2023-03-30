@@ -1,4 +1,4 @@
-// import React from "react"
+import '../styles/globals.css'
 import { Core } from "@keystone-ui/core";
 import { ErrorBoundary } from "@keystone-6/core/admin-ui/components";
 import { KeystoneProvider } from "@keystone-6/core/admin-ui/context";
@@ -27,11 +27,34 @@ import * as view7 from "@keystone-6/core/fields/types/select/views";
 import * as view8 from "@keystone-6/core/fields/types/integer/views";
 import * as view9 from "@keystone-6/core/fields/types/float/views";
 import * as view10 from "@keystone-6/core/fields/types/image/views";
+import { useEffect, useState } from "react";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 
 var adminConfig = {};
 
 export default function App({ Component, pageProps }) {
   const allViews = [];
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!pathname?.startsWith("/admin")) return;
+
+    const handleClick = (event) => {
+      if (event.currentTarget.activeElement.tagName === "A") {
+        event.preventDefault();
+        const href = event.currentTarget.activeElement.pathname;
+        console.log(event.currentTarget);
+        router.push(`/admin${href}`);
+      }
+    };
+
+    document.addEventListener("click", handleClick);
+    return () => {
+      document.removeEventListener("click", handleClick);
+    };
+  }, [pathname]);
+
   return (
     <Core>
       <KeystoneProvider

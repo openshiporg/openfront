@@ -41,13 +41,69 @@ export const permissionFields = {
     defaultValue: false,
     label: "User can CRUD roles"
   }),
-  canReadCarts: checkbox({
+  canReadCheckouts: checkbox({
     defaultValue: false,
-    label: "User can read other carts"
+    label: "User can read other checkouts"
   }),
-  canManageCarts: checkbox({
+  canManageCheckouts: checkbox({
     defaultValue: false,
-    label: "User can see and manage carts"
+    label: "User can see and manage checkouts"
+  }),
+  canReadDiscounts: checkbox({
+    defaultValue: false,
+    label: "User can read other discounts"
+  }),
+  canManageDiscounts: checkbox({
+    defaultValue: false,
+    label: "User can see and manage discounts"
+  }),
+  canReadGiftCards: checkbox({
+    defaultValue: false,
+    label: "User can read other gift cards"
+  }),
+  canManageGiftCards: checkbox({
+    defaultValue: false,
+    label: "User can see and manage gift cards"
+  }),
+  canReadReturns: checkbox({
+    defaultValue: false,
+    label: "User can read other returns"
+  }),
+  canManageReturns: checkbox({
+    defaultValue: false,
+    label: "User can see and manage returns"
+  }),
+  canReadSalesChannels: checkbox({
+    defaultValue: false,
+    label: "User can read other returns"
+  }),
+  canManageSalesChannels: checkbox({
+    defaultValue: false,
+    label: "User can see and manage returns"
+  }),
+  canReadPayments: checkbox({
+    defaultValue: false,
+    label: "User can read other payments"
+  }),
+  canManagePayments: checkbox({
+    defaultValue: false,
+    label: "User can see and manage payments"
+  }),
+  canReadIdempotencyKeys: checkbox({
+    defaultValue: false,
+    label: "User can read other idempotency keys"
+  }),
+  canManageIdempotencyKeys: checkbox({
+    defaultValue: false,
+    label: "User can see and manage idempotency keys"
+  }),
+  canReadApps: checkbox({
+    defaultValue: false,
+    label: "User can read other apps"
+  }),
+  canManageApps: checkbox({
+    defaultValue: false,
+    label: "User can see and manage apps"
   }),
 }
 

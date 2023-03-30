@@ -6,6 +6,7 @@ import {
   relationship,
   image,
 } from "@keystone-6/core/fields";
+import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
 
 // export const cloudinary = {
@@ -17,7 +18,14 @@ import { trackingFields } from "./trackingFields";
 
 export const ClaimImage = list({
   access: {
-    operation: denyAll,
+    operation: {
+      query: ({ session }) =>
+        permissions.canReadOrders({ session }) ||
+        permissions.canManageOrders({ session }),
+      create: permissions.canManageOrders,
+      update: permissions.canManageOrders,
+      delete: permissions.canManageOrders,
+    },
   },
   fields: {
     // image: cloudinaryImage({
