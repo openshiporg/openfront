@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && keystone prisma migrate deploy",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "migrate:gen": "keystone build --no-ui && keystone prisma migrate dev",
+    "migrate": "keystone prisma migrate deploy"
   },
   "dependencies": {
     "@emotion/react": "^11.10.0",
