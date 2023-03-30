@@ -1,32 +1,22 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { getSigninPage } from "@keystone-6/auth/pages/SigninPage";
 import { checkAuth } from "@lib/checkAuth";
 import { useRouter } from "next/router";
 
-const SignInPage = () => {
-  const [authenticatedItem, setAuthenticatedItem] = useState(null);
-  const [redirectToInit, setRedirectToInit] = useState(false);
+const Page = () => {
   const router = useRouter();
 
-  const fetchData = async () => {
-    const { authenticatedItem: authItem, redirectToInit: redirectTo } = await checkAuth();
-    setAuthenticatedItem(authItem);
-    setRedirectToInit(redirectTo);
-  };
-
   useEffect(() => {
+    const fetchData = async () => {
+      const { authenticatedItem, redirectToInit } = await checkAuth();
+      if (redirectToInit) {
+        router.push("/admin/init");
+      } else if (authenticatedItem) {
+        router.push("/admin");
+      }
+    };
     fetchData();
   }, []);
-
-  if (authenticatedItem) {
-    router.push("/");
-    return null;
-  }
-
-  if (redirectToInit) {
-    router.push("/init");
-    return null;
-  }
 
   return getSigninPage({
     identityField: "email",
@@ -37,4 +27,4 @@ const SignInPage = () => {
   })();
 };
 
-export default SignInPage;
+export default Page;
