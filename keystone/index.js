@@ -87,6 +87,7 @@ export default withAuth(
     db: {
       provider: "postgresql",
       url: databaseURL,
+      useMigrations: true,
       // async onConnect(context) {
       //   console.log("Connected to the database!");
       //   if (process.argv.includes("--seed-data")) {
