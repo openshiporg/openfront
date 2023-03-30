@@ -88,6 +88,7 @@ export default withAuth(
       provider: "postgresql",
       url: databaseURL,
       useMigrations: true,
+      prismaClientPath: 'node_modules/.prisma/client',
       // async onConnect(context) {
       //   console.log("Connected to the database!");
       //   if (process.argv.includes("--seed-data")) {
