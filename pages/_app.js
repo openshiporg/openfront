@@ -28,7 +28,8 @@ import * as view8 from "@keystone-6/core/fields/types/integer/views";
 import * as view9 from "@keystone-6/core/fields/types/float/views";
 import * as view10 from "@keystone-6/core/fields/types/image/views";
 import { useEffect, useState } from "react";
-import { usePathname, useSearchParams, useRouter } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useRouter } from 'next/router';
 
 var adminConfig = {};
 
