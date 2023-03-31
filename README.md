@@ -1,4 +1,4 @@
-Openfront
+# Openfront
 
 Shopify alternative built on Next.js and Keystone.js 
 
@@ -12,7 +12,7 @@ npm run dev
 yarn dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the storefront (coming soon).
 
 Open [http://localhost:3000/admin](http://localhost:3000/admin) with your browser to see the Admin UI.
 
