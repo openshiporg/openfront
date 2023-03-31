@@ -1,5 +1,6 @@
 import Head from "next/head";
 import Image from "next/image";
+import Link from "next/link";
 
 const Home = () => {
   return (
@@ -12,9 +13,9 @@ const Home = () => {
       <main className="flex w-full flex-1 flex-col items-center justify-center px-20 text-center">
         <h1 className="text-6xl font-bold">
           Welcome to{" "}
-          <a className="text-blue-600" href="https://nextjs.org">
-            Openfront!
-          </a>
+          <Link legacyBehavior href="/">
+            <a className="text-blue-600">Openfront!</a>
+          </Link>
         </h1>
 
         <div className="mt-6 flex max-w-4xl flex-wrap items-center justify-around sm:w-full">
@@ -33,23 +34,23 @@ const Home = () => {
             </p>
           </a>
 
-          <a
-            href="/admin"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">Admin UI</h3>
-            <p className="mt-4 text-xl">Openfront comes with a full Admin UI</p>
-          </a>
+          <Link legacyBehavior href="/admin">
+            <a className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600">
+              <h3 className="text-2xl font-bold">Admin UI</h3>
+              <p className="mt-4 text-xl">
+                Openfront comes with a full Admin UI
+              </p>
+            </a>
+          </Link>
 
-          <a
-            href="/api/graphql"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <h3 className="text-2xl font-bold">GraphQL API</h3>
-            <p className="mt-4 text-xl">
-              Openfront comes with a GraphQL API and Playground
-            </p>
-          </a>
+          <Link legacyBehavior href="/api/graphql">
+            <a className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600">
+              <h3 className="text-2xl font-bold">GraphQL API</h3>
+              <p className="mt-4 text-xl">
+                Openfront comes with a GraphQL API and Playground
+              </p>
+            </a>
+          </Link>
         </div>
       </main>
     </div>
