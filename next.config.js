@@ -24,11 +24,4 @@ const nextConfig = {
   },
 };
 
-/*
-    If you are running this example outside the Keystone repo
-    you can export the next config directly
-*/
-// module.exports = nextConfig;
-
-/* withPreconstruct() is a special export for the keystone monorepo */
 module.exports = withPreconstruct(nextConfig);

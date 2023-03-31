@@ -1,4 +1,4 @@
-import '../styles/globals.css'
+import "../styles/globals.css";
 import { Core } from "@keystone-ui/core";
 import { ErrorBoundary } from "@keystone-6/core/admin-ui/components";
 import { KeystoneProvider } from "@keystone-6/core/admin-ui/context";
@@ -28,8 +28,7 @@ import * as view8 from "@keystone-6/core/fields/types/integer/views";
 import * as view9 from "@keystone-6/core/fields/types/float/views";
 import * as view10 from "@keystone-6/core/fields/types/image/views";
 import { useEffect, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
-import { useRouter } from 'next/router';
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 
 var adminConfig = {};
 
@@ -39,22 +38,54 @@ export default function App({ Component, pageProps }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!pathname?.startsWith("/admin")) return;
-
+    if (!pathname?.startsWith('/admin')) return;
+  
+    const adminPathname = (path) => (path.startsWith('/admin') ? path : `/admin${path}`);
+  
     const handleClick = (event) => {
-      if (event.currentTarget.activeElement.tagName === "A") {
+      let target = event.target;
+      while (target && target.tagName !== 'A' && target.tagName !== 'BODY') {
+        target = target.parentNode;
+      }
+      if (target && target.tagName === 'A') {
         event.preventDefault();
-        const href = event.currentTarget.activeElement.pathname;
-        console.log(event.currentTarget);
-        router.push(`/admin${href}`);
+        const href = target.getAttribute('href');
+        if (href.startsWith('/')) router.push(adminPathname(href));
       }
     };
-
-    document.addEventListener("click", handleClick);
-    return () => {
-      document.removeEventListener("click", handleClick);
+  
+    const replaceLinks = () => {
+      const links = document.getElementsByTagName("a");
+      for (let i = 0; i < links.length; i++) {
+        const link = links[i];
+        const isInternalLink = link.getAttribute("href").startsWith("/");
+        if (isInternalLink) {
+          link.removeEventListener("click", handleClick);
+          link.addEventListener("click", handleClick);
+        }
+      }
     };
-  }, [pathname]);
+  
+    replaceLinks();
+  
+    const observerOptions = {
+      childList: true,
+      subtree: true,
+    };
+  
+    const observer = new MutationObserver((mutationsList) => {
+      for (let mutation of mutationsList) {
+        if (mutation.type === "childList") {
+          replaceLinks();
+        }
+      }
+    });
+    observer.observe(document.documentElement, observerOptions);
+  
+    return () => {
+      observer.disconnect();
+    };
+  }, [pathname, router]);
 
   return (
     <Core>
