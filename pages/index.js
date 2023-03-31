@@ -19,20 +19,19 @@ const Home = () => {
         </h1>
 
         <div className="mt-6 flex max-w-4xl flex-wrap items-center justify-around sm:w-full">
-          <a
-            href="/"
-            className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600"
-          >
-            <div className="flex justify-between items-start">
-              <h3 className="text-2xl font-bold">Storefront</h3>
-              <span class="bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 mt-1.5 rounded ">
-                SOON
-              </span>
-            </div>
-            <p className="mt-4 text-xl">
-              Openfront comes with a storefront that will appear here{" "}
-            </p>
-          </a>
+          <Link legacyBehavior href="/">
+            <a className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600">
+              <div className="flex justify-between items-start">
+                <h3 className="text-2xl font-bold">Storefront</h3>
+                <span className="bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 mt-1.5 rounded ">
+                  SOON
+                </span>
+              </div>
+              <p className="mt-4 text-xl">
+                Openfront comes with a storefront that will appear here{" "}
+              </p>
+            </a>
+          </Link>
 
           <Link legacyBehavior href="/admin">
             <a className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600">
