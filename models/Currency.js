@@ -17,6 +17,7 @@ export const Currency = list({
   },
   fields: {
     code: text({
+      isIndexed: "unique",
       validation: {
         isRequired: true,
       },

@@ -39,6 +39,10 @@ export const ShippingOption = list({
           label: "Calculated",
           value: "calculated",
         },
+        {
+          label: "Free",
+          value: "free",
+        },
       ],
       validation: {
         isRequired: true,

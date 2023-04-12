@@ -504,7 +504,7 @@ model Country {
 
 model Currency {
   id           String        @id @default(cuid())
-  code         String        @default("")
+  code         String        @unique @default("")
   symbol       String        @default("")
   symbolNative String        @default("")
   name         String        @default("")
@@ -678,6 +678,7 @@ model FulfillmentItem {
 
 model FulfillmentProvider {
   id              String           @id @default(cuid())
+  code            String           @unique @default("")
   isInstalled     Boolean          @default(true)
   fulfillments    Fulfillment[]    @relation("Fulfillment_fulfillmentProvider")
   regions         Region[]         @relation("FulfillmentProvider_regions")
@@ -854,6 +855,7 @@ model OAuth {
 
 model PaymentProvider {
   id              String           @id @default(cuid())
+  code            String           @unique @default("")
   isInstalled     Boolean          @default(true)
   regions         Region[]         @relation("PaymentProvider_regions")
   paymentSessions PaymentSession[] @relation("PaymentSession_paymentProvider")
@@ -909,6 +911,7 @@ model Refund {
 
 model Region {
   id                   String                @id @default(cuid())
+  code                 String                @unique @default("")
   name                 String                @default("")
   taxRate              Float
   taxCode              String                @default("")
@@ -1314,6 +1317,7 @@ enum ReturnStatusType {
 enum ShippingOptionPriceTypeType {
   flat_rate
   calculated
+  free
 }
 
 enum ShippingOptionRequirementTypeType {

@@ -37,56 +37,88 @@ export default function App({ Component, pageProps }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!pathname?.startsWith('/admin')) return;
+  // big ol' monkey patch below to make all links inside /admin route prepend "/admin"
+  // we do this because keystone Admin UI is meant to run on index route
+  // useEffect(() => {
+  //   if (!pathname?.startsWith('/admin')) return;
   
-    const adminPathname = (path) => (path.startsWith('/admin') ? path : `/admin${path}`);
+  //   const adminPathname = (path) => (path.startsWith('/admin') ? path : `/admin${path}`);
   
-    const handleClick = (event) => {
-      let target = event.target;
-      while (target && target.tagName !== 'A' && target.tagName !== 'BODY') {
-        target = target.parentNode;
-      }
-      if (target && target.tagName === 'A') {
-        event.preventDefault();
-        const href = target.getAttribute('href');
-        if (href.startsWith('/')) router.push(adminPathname(href));
-      }
-    };
+  //   const handleClick = (event) => {
+  //     let target = event.target;
+  //     while (target && target.tagName !== 'A' && target.tagName !== 'BODY') {
+  //       target = target.parentNode;
+  //     }
+  //     if (target && target.tagName === 'A') {
+  //       event.preventDefault();
+  //       const href = target.getAttribute('href');
+  //       if (href.startsWith('/')) router.push(adminPathname(href));
+  //     }
+  //   };
   
-    const replaceLinks = () => {
-      const links = document.getElementsByTagName("a");
-      for (let i = 0; i < links.length; i++) {
-        const link = links[i];
-        const isInternalLink = link.getAttribute("href").startsWith("/");
-        if (isInternalLink) {
-          link.removeEventListener("click", handleClick);
-          link.addEventListener("click", handleClick);
-        }
-      }
-    };
+  //   const replaceLinks = () => {
+  //     const links = document.getElementsByTagName("a");
+  //     for (let i = 0; i < links.length; i++) {
+  //       const link = links[i];
+  //       const isInternalLink = link.getAttribute("href").startsWith("/");
+  //       if (isInternalLink) {
+  //         link.removeEventListener("click", handleClick);
+  //         link.addEventListener("click", handleClick);
+  //       }
+  //     }
+  //   };
   
-    replaceLinks();
+  //   replaceLinks();
   
-    const observerOptions = {
-      childList: true,
-      subtree: true,
-    };
+  //   const observerOptions = {
+  //     childList: true,
+  //     subtree: true,
+  //   };
   
-    const observer = new MutationObserver((mutationsList) => {
-      for (let mutation of mutationsList) {
-        if (mutation.type === "childList") {
-          replaceLinks();
-        }
-      }
-    });
-    observer.observe(document.documentElement, observerOptions);
+  //   const observer = new MutationObserver((mutationsList) => {
+  //     for (let mutation of mutationsList) {
+  //       if (mutation.type === "childList") {
+  //         replaceLinks();
+  //       }
+  //     }
+  //   });
+  //   observer.observe(document.documentElement, observerOptions);
   
-    return () => {
-      observer.disconnect();
-    };
-  }, [pathname, router]);
+  //   return () => {
+  //     observer.disconnect();
+  //   };
+  // }, [pathname, router]);
 
+  useEffect(() => {
+    if (!pathname.startsWith("/admin")) return;
+
+    const adminPathname = (path) => (path.startsWith("/admin") ? path : `/admin${path}`);
+
+    const handleClick = (event) => {
+      const target = event.target.closest("a");
+      if (!target) return;
+
+      event.preventDefault();
+      const href = target.getAttribute("href");
+      if (href.startsWith("/")) router.push(adminPathname(href));
+    };
+
+    const replaceLinks = () => {
+      const links = document.querySelectorAll("a[href^='/']");
+      links.forEach((link) => {
+        link.removeEventListener("click", handleClick);
+        link.addEventListener("click", handleClick);
+      });
+    };
+
+    replaceLinks();
+
+    const observer = new MutationObserver(() => replaceLinks());
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
+  }, [pathname, router]);
+  
   return (
     <Core>
       <KeystoneProvider

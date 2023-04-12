@@ -22,6 +22,12 @@ export const Region = list({
     },
   },
   fields: {
+    code: text({
+      isIndexed: "unique",
+      validation: {
+        isRequired: true,
+      },
+    }),
     name: text({
       validation: {
         isRequired: true,

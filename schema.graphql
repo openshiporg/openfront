@@ -3288,6 +3288,7 @@ type Currency {
 
 input CurrencyWhereUniqueInput {
   id: ID
+  code: String
 }
 
 input CurrencyWhereInput {
@@ -4366,6 +4367,7 @@ input FulfillmentRelateToOneForCreateInput {
 
 type FulfillmentProvider {
   id: ID!
+  code: String
   isInstalled: Boolean
   fulfillments(where: FulfillmentWhereInput! = {}, orderBy: [FulfillmentOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: FulfillmentWhereUniqueInput): [Fulfillment!]
   fulfillmentsCount(where: FulfillmentWhereInput! = {}): Int
@@ -4379,6 +4381,7 @@ type FulfillmentProvider {
 
 input FulfillmentProviderWhereUniqueInput {
   id: ID
+  code: String
 }
 
 input FulfillmentProviderWhereInput {
@@ -4386,6 +4389,7 @@ input FulfillmentProviderWhereInput {
   OR: [FulfillmentProviderWhereInput!]
   NOT: [FulfillmentProviderWhereInput!]
   id: IDFilter
+  code: StringFilter
   isInstalled: BooleanFilter
   fulfillments: FulfillmentManyRelationFilter
   regions: RegionManyRelationFilter
@@ -4402,12 +4406,14 @@ input ShippingOptionManyRelationFilter {
 
 input FulfillmentProviderOrderByInput {
   id: OrderDirection
+  code: OrderDirection
   isInstalled: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
 }
 
 input FulfillmentProviderUpdateInput {
+  code: String
   isInstalled: Boolean
   fulfillments: FulfillmentRelateToManyForUpdateInput
   regions: RegionRelateToManyForUpdateInput
@@ -4429,6 +4435,7 @@ input FulfillmentProviderUpdateArgs {
 }
 
 input FulfillmentProviderCreateInput {
+  code: String
   isInstalled: Boolean
   fulfillments: FulfillmentRelateToManyForCreateInput
   regions: RegionRelateToManyForCreateInput
@@ -5258,6 +5265,7 @@ input OAuthCreateInput {
 
 type PaymentProvider {
   id: ID!
+  code: String
   isInstalled: Boolean
   regions(where: RegionWhereInput! = {}, orderBy: [RegionOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: RegionWhereUniqueInput): [Region!]
   regionsCount(where: RegionWhereInput! = {}): Int
@@ -5269,6 +5277,7 @@ type PaymentProvider {
 
 input PaymentProviderWhereUniqueInput {
   id: ID
+  code: String
 }
 
 input PaymentProviderWhereInput {
@@ -5276,6 +5285,7 @@ input PaymentProviderWhereInput {
   OR: [PaymentProviderWhereInput!]
   NOT: [PaymentProviderWhereInput!]
   id: IDFilter
+  code: StringFilter
   isInstalled: BooleanFilter
   regions: RegionManyRelationFilter
   paymentSessions: PaymentSessionManyRelationFilter
@@ -5285,12 +5295,14 @@ input PaymentProviderWhereInput {
 
 input PaymentProviderOrderByInput {
   id: OrderDirection
+  code: OrderDirection
   isInstalled: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
 }
 
 input PaymentProviderUpdateInput {
+  code: String
   isInstalled: Boolean
   regions: RegionRelateToManyForUpdateInput
   paymentSessions: PaymentSessionRelateToManyForUpdateInput
@@ -5304,6 +5316,7 @@ input PaymentProviderUpdateArgs {
 }
 
 input PaymentProviderCreateInput {
+  code: String
   isInstalled: Boolean
   regions: RegionRelateToManyForCreateInput
   paymentSessions: PaymentSessionRelateToManyForCreateInput
@@ -5591,6 +5604,7 @@ input RefundCreateInput {
 
 type Region {
   id: ID!
+  code: String
   name: String
   taxRate: Float
   taxCode: String
@@ -5625,6 +5639,7 @@ type Region {
 
 input RegionWhereUniqueInput {
   id: ID
+  code: String
 }
 
 input RegionWhereInput {
@@ -5632,6 +5647,7 @@ input RegionWhereInput {
   OR: [RegionWhereInput!]
   NOT: [RegionWhereInput!]
   id: IDFilter
+  code: StringFilter
   name: StringFilter
   taxRate: FloatFilter
   taxCode: StringFilter
@@ -5673,6 +5689,7 @@ input PaymentProviderManyRelationFilter {
 
 input RegionOrderByInput {
   id: OrderDirection
+  code: OrderDirection
   name: OrderDirection
   taxRate: OrderDirection
   taxCode: OrderDirection
@@ -5683,6 +5700,7 @@ input RegionOrderByInput {
 }
 
 input RegionUpdateInput {
+  code: String
   name: String
   taxRate: Float
   taxCode: String
@@ -5738,6 +5756,7 @@ input RegionUpdateArgs {
 }
 
 input RegionCreateInput {
+  code: String
   name: String
   taxRate: Float
   taxCode: String
@@ -6240,6 +6259,7 @@ type ShippingOption {
 enum ShippingOptionPriceTypeType {
   flat_rate
   calculated
+  free
 }
 
 input ShippingOptionWhereUniqueInput {

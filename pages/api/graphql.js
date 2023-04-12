@@ -1,6 +1,7 @@
 import { keystoneContext } from "@lib/keystoneContext";
 import { createYoga } from "graphql-yoga";
 import processRequest from "graphql-upload/processRequest.js";
+import { useSofaWithSwaggerUI } from "@graphql-yoga/plugin-sofa";
 
 export const config = {
   api: {
