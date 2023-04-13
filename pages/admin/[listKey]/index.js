@@ -1,7 +1,6 @@
 import { getListPage } from "@keystone-6/core/___internal-do-not-use-will-break-in-patch/admin-ui/pages/ListPage";
 import { models } from "@models/index";
 import { getNamesFromList } from "@lib/getNamesFromList";
-import { checkAuth } from "@lib/checkAuth";
 import { useRouter } from "next/router";
 import { useAuthRedirect } from "@lib/useAuthRedirect";
 

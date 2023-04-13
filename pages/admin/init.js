@@ -1,27 +1,22 @@
 import { getInitPage } from "@keystone-6/auth/pages/InitPage";
-import { checkAuth } from "@lib/checkAuth";
-import { useEffect } from "react";
 import { useRouter } from "next/router";
+import { useAuthRedirect } from "@lib/useAuthRedirect";
 
-const Page = () => {
+const InitPage = () => {
   const router = useRouter();
+  const [authenticatedItem, isLoading] = useAuthRedirect();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const { authenticatedItem, redirectToInit } = await checkAuth();
-      if (authenticatedItem) {
-        router.push("/admin");
-      } else if (!redirectToInit) {
-        router.push("/admin/signin");
-      }
-    };
-    fetchData();
-  }, []);
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+  if (authenticatedItem) {
+    router.push("/admin");
+    return null;
+  }
 
   return getInitPage({
     listKey: "User",
     fieldPaths: ["name", "email", "password"],
   })();
 };
-
-export default Page;
+export default InitPage;

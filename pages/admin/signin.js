@@ -1,22 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { getSigninPage } from "@keystone-6/auth/pages/SigninPage";
-import { checkAuth } from "@lib/checkAuth";
+import { useAuthRedirect } from "@lib/useAuthRedirect";
 import { useRouter } from "next/router";
 
-const Page = () => {
+const SigninPage = () => {
   const router = useRouter();
+  const [authenticatedItem, isLoading] = useAuthRedirect();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const { authenticatedItem, redirectToInit } = await checkAuth();
-      if (redirectToInit) {
-        router.push("/admin/init");
-      } else if (authenticatedItem) {
-        router.push("/admin");
-      }
-    };
-    fetchData();
-  }, []);
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+  if (authenticatedItem) {
+    router.push("/admin");
+    return null;
+  }
 
   return getSigninPage({
     identityField: "email",
@@ -26,5 +23,4 @@ const Page = () => {
     failureTypename: "UserAuthenticationWithPasswordFailure",
   })();
 };
-
-export default Page;
+export default SigninPage;

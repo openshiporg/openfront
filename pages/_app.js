@@ -108,6 +108,11 @@ export default function App({ Component, pageProps }) {
       links.forEach((link) => {
         link.removeEventListener("click", handleClick);
         link.addEventListener("click", handleClick);
+    
+        const href = link.getAttribute("href");
+        if (!href.startsWith("/admin")) {
+          link.setAttribute("href", `/admin${href}`);
+        }
       });
     };
 
@@ -118,7 +123,7 @@ export default function App({ Component, pageProps }) {
 
     return () => observer.disconnect();
   }, [pathname, router]);
-  
+
   return (
     <Core>
       <KeystoneProvider
