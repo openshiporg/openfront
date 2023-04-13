@@ -90,7 +90,7 @@ export default function App({ Component, pageProps }) {
   // }, [pathname, router]);
 
   useEffect(() => {
-    if (!pathname.startsWith("/admin")) return;
+    if (!pathname?.startsWith("/admin")) return;
 
     const adminPathname = (path) => (path.startsWith("/admin") ? path : `/admin${path}`);
 
