@@ -17,13 +17,9 @@
     "baseUrl": ".",
     "paths": {
       "@lib/*": ["lib/*"],
-      "@models/*": ["models/*"],
-      // "@config/*": ["config/*"],
-      "@components/*": ["components/*"],
-      // "@utils/*": ["utils/*"],
-      // "@primitives/*": ["primitives/*"],
-      // "@pages/*": ["pages/*"],
-      // "@graphql/*": ["graphql/*"],
+      "@keystone/*": ["keystone/*"],
+      "@modules/*": ["modules/*"],
+      "@pages/*": ["pages/*"],
       "@svg": ["svg"]
     }
   },

@@ -1,5 +1,5 @@
 import { getItemPage } from "@keystone-6/core/___internal-do-not-use-will-break-in-patch/admin-ui/pages/ItemPage";
-import { models } from "@models/index";
+import { models } from "@keystone/models";
 import { getNamesFromList } from "@lib/getNamesFromList";
 import { useAuthRedirect } from "@lib/useAuthRedirect";
 import { useRouter } from "next/router";

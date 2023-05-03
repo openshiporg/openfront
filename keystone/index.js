@@ -1,11 +1,11 @@
 import { createAuth } from "@keystone-6/auth";
 import { config } from "@keystone-6/core";
 import { statelessSessions } from "@keystone-6/core/session";
-import { permissionsList } from "../models/fields";
+import { permissionsList } from "./models/fields";
 import "dotenv/config";
-import { sendPasswordResetEmail } from "../lib/mail";
-import { extendGraphqlSchema } from "../mutations";
-import { models } from "../models";
+import { extendGraphqlSchema } from "./mutations";
+import { models } from "./models";
+import { sendPasswordResetEmail } from "./lib/mail";
 
 const databaseURL = process.env.DATABASE_URL || "file:./keystone.db";
 
