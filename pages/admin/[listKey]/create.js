@@ -25,8 +25,6 @@ const Page = () => {
 
   const listKey = listsObject[router.query.listKey];
 
-  useCreateItem
-
   return getCreateItemPage({ listKey })();
 };
 
