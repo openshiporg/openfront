@@ -1,5 +1,5 @@
 import useToggleState from "@lib/storefront/hooks/use-toggle-state"
-import { searchClient, SEARCH_INDEX_NAME } from "@lib/storefront/search-client"
+// import { searchClient, SEARCH_INDEX_NAME } from "@lib/storefront/search-client"
 import Modal from "@modules/common/components/modal"
 import Search from "@modules/common/icons/search"
 import DesktopHit from "@modules/search/components/desktop-hit"
@@ -19,10 +19,10 @@ const DesktopSearchModal = () => {
 
       <Modal isOpen={state} close={close} size="large">
         <Modal.Body>
-          <InstantSearch
+          {/* <InstantSearch
             indexName={SEARCH_INDEX_NAME}
             searchClient={searchClient}
-          >
+          > */}
             <div className="flex flex-col h-full">
               <div className="w-full flex items-center gap-x-2 bg-gray-50 p-4">
                 <Search />
@@ -33,7 +33,7 @@ const DesktopSearchModal = () => {
                 <DesktopHits hitComponent={DesktopHit} />
               </div>
             </div>
-          </InstantSearch>
+          {/* </InstantSearch> */}
         </Modal.Body>
       </Modal>
     </>
