@@ -8,7 +8,6 @@ export default function RootLayout({ children }) {
   const appTheme = process.env.NEXT_PUBLIC_APP_THEME || "KeystoneUI";
   const UIProvider = UIProviders[appTheme];
 
-  DrawerProvider;
   return (
     <html lang="en">
       <body>
