@@ -1,4 +1,4 @@
-import { keystoneContext } from "@lib/keystoneContext";
+import { keystoneContext } from "@keystone/keystoneContext";
 import { createYoga } from "graphql-yoga";
 import processRequest from "graphql-upload/processRequest.js";
 

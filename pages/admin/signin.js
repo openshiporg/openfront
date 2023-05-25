@@ -5,15 +5,15 @@ import { useRouter } from "next/router";
 
 const SigninPage = () => {
   const router = useRouter();
-  const [authenticatedItem, isLoading] = useAuthRedirect();
+  // const [authenticatedItem, isLoading] = useAuthRedirect();
 
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-  if (authenticatedItem) {
-    router.push("/admin");
-    return null;
-  }
+  // if (isLoading) {
+  //   return <div>Loading...</div>;
+  // }
+  // if (authenticatedItem) {
+  //   router.push("/admin");
+  //   return null;
+  // }
 
   return getSigninPage({
     identityField: "email",

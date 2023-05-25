@@ -5,7 +5,7 @@ import { permissionsList } from "./models/fields";
 import "dotenv/config";
 import { extendGraphqlSchema } from "./mutations";
 import { models } from "./models";
-import { sendPasswordResetEmail } from "./lib/mail";
+import { sendPasswordResetEmail } from "./utils/mail";
 
 const databaseURL = process.env.DATABASE_URL || "file:./keystone.db";
 
