@@ -1,16 +1,16 @@
 import dynamic from "next/dynamic";
-import { Tamagui } from "./Tamagui";
+import { Tailwind } from "./Tailwind";
 import { KeystoneUI } from "./KeystoneUI";
 
 // decide to use dynamic or just JSON
 
-// const Tamagui = dynamic(async () => (await import("./Tamagui")).Tamagui);
+// const Tailwind = dynamic(async () => (await import("./Tailwind")).Tailwind);
 // const KeystoneUI = dynamic(
 //   async () => (await import("./KeystoneUI")).KeystoneUI
 // );
 
 export const UIProviders = {
-  Tamagui,
+  Tailwind,
   KeystoneUI,
 };
 

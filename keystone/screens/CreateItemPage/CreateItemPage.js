@@ -1,7 +1,7 @@
 /** @jsxRuntime classic */
 /** @jsx jsx */
 import { Button } from "@keystone-ui/button"
-import { Box } from "@keystone-ui/core"
+import { jsx, Box } from "@keystone-ui/core"
 import { ChevronDownIcon } from "@keystone-ui/icons/icons/ChevronDownIcon"
 import { Options, OptionPrimitive, CheckMark } from "@keystone-ui/options"
 import { Popover } from "@keystone-ui/popover"

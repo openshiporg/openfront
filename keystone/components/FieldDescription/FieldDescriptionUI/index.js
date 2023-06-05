@@ -1,11 +1,11 @@
 import dynamic from "next/dynamic";
 
-const Tamagui = dynamic(async () => (await import("./Tamagui")).Tamagui);
+const Tailwind = dynamic(async () => (await import("./Tailwind")).Tailwind);
 const KeystoneUI = dynamic(
   async () => (await import("./KeystoneUI")).KeystoneUI
 );
 
 export const FieldDescriptionUI = {
-  Tamagui,
+  Tailwind,
   KeystoneUI,
 };

@@ -1,7 +1,7 @@
 import * as KeystoneUI from "./KeystoneUI";
-import * as Tamagui from "./Tamagui";
+import * as Tailwind from "./Tailwind";
 
 export const PasswordUI = {
-  Tamagui,
+  Tailwind,
   KeystoneUI,
 };

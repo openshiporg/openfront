@@ -3,8 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import { LoadingIcon } from "@keystone/components/LoadingIcon";
+import { InlineEdit } from "@keystone/components/InlineEdit";
+import { InlineCreate } from "@keystone/components/InlineCreate";
+import { RelationshipSelect } from "@keystone/components/RelationshipSelect";
 
 import { forwardRefWithAs } from "@keystone/utils/forwardRefWithAs";
+import { useItemState } from "@keystone/utils/useItemState";
 
 import {
   // Box,
@@ -24,12 +28,6 @@ import {
   getRootGraphQLFieldsFromFieldController,
   makeDataGetter,
 } from "@keystone-6/core/admin-ui/utils";
-
-import { RelationshipSelect } from "../RelationshipSelect";
-import { useItemState } from "./useItemState";
-import { InlineEdit } from "./InlineEdit";
-import { InlineCreate } from "./InlineCreate";
-
 
 const CardContainer = forwardRefWithAs(({ mode = "view", ...props }, ref) => {
   const { tones } = useTheme();
@@ -63,7 +61,7 @@ const CardContainer = forwardRefWithAs(({ mode = "view", ...props }, ref) => {
   );
 });
 
-export function Cards({
+export function KeystoneUI({
   localList,
   field,
   foreignList,

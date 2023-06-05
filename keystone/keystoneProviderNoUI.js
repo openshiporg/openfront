@@ -22,7 +22,6 @@ import {
 import { LoadingIcon } from "./components/LoadingIcon";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useLazyMetadata } from "./utils/useLazyMetadata";
-// import { ErrorBoundary } from "@keystone-6/core/admin-ui/components";
 
 const KeystoneContext = createContext(undefined);
 
@@ -93,7 +92,6 @@ export const KeystoneProvider = ({ children }) => {
     view0,
     view1,
     view2,
-    // Password,
     view3,
     view4,
     view5,
@@ -170,41 +168,3 @@ export const useList = (key) => {
     throw new Error(`Invalid list key provided to useList: ${key}`);
   }
 };
-// useEffect(() => {
-//   if (!pathname?.startsWith('/admin')) return;
-
-//   const adminPathname = path =>
-//     path.startsWith('/admin') ? path : `/admin${path}`;
-
-//   const handleClick = event => {
-//     const target = event.target.closest('a');
-//     if (!target) return;
-
-//     event.preventDefault();
-//     const href = target.getAttribute('href');
-//     if (href.startsWith('/')) router.push(adminPathname(href));
-//   };
-
-//   const replaceLinks = () => {
-//     const links = document.querySelectorAll("a[href^='/']");
-//     links.forEach(link => {
-//       link.removeEventListener('click', handleClick);
-//       link.addEventListener('click', handleClick);
-
-//       const href = link.getAttribute('href');
-//       if (!href.startsWith('/admin')) {
-//         link.setAttribute('href', `/admin${href}`);
-//       }
-//     });
-//   };
-
-//   replaceLinks();
-
-//   const observer = new MutationObserver(() => replaceLinks());
-//   observer.observe(document.documentElement, {
-//     childList: true,
-//     subtree: true,
-//   });
-
-//   return () => observer.disconnect();
-// }, [pathname, router]);

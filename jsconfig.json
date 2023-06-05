@@ -20,9 +20,7 @@
       "@keystone/*": ["keystone/*"],
       "@modules/*": ["modules/*"],
       "@pages/*": ["pages/*"],
-      "@components/*": ["components/*"],
-      "@svg": ["svg"],
-      "react-native": ["react-native-web"]
+      "@svg": ["svg"]
     }
   },
   "include": ["**/*.js", "*.js"],

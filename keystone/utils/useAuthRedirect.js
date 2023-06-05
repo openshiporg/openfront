@@ -1,6 +1,6 @@
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { checkAuth } from "./checkAuth";
-import { useRouter } from "next/router";
-import { useState, useEffect } from "react";
 
 // Custom hook to check authentication and handle redirection
 export const useAuthRedirect = () => {
@@ -16,11 +16,11 @@ export const useAuthRedirect = () => {
         setIsLoading(false);
       }
       if (redirectToInit) {
-        router.push("/admin/init");
+        router.push("/dashboard/init");
         setIsLoading(false);
       }
       if (!redirectToInit && !authenticatedItem) {
-        router.push("/admin/signin");
+        router.push("/dashboard/signin");
         setIsLoading(false);
       }
     };

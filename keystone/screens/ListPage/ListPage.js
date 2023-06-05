@@ -1,41 +1,42 @@
 /** @jsxRuntime classic */
 /** @jsx jsx */
 
-import { Fragment, useMemo, useState } from "react"
 import { useRouter } from "next/navigation";
+import { Fragment, useMemo, useState } from "react";
 
-import { Button } from "@keystone-ui/button"
+import { Button } from "@keystone-ui/button";
 import {
+  jsx,
   Center,
   Stack,
-  useTheme} from "@keystone-ui/core"
-import { TextInput } from "@keystone-ui/fields"
-import { LoadingDots } from "@keystone-ui/loading"
+  useTheme
+} from "@keystone-ui/core";
+import { TextInput } from "@keystone-ui/fields";
+import { LoadingDots } from "@keystone-ui/loading";
 
-import { SearchIcon } from "@keystone-ui/icons/icons/SearchIcon"
+import { SearchIcon } from "@keystone-ui/icons/icons/SearchIcon";
 
-import { makeDataGetter } from "@keystone-6/core/admin-ui/utils"
-import { gql, useQuery } from "@keystone-6/core/admin-ui/apollo"
-import { PageContainer } from "@keystone-6/core/admin-ui/components"
-import { PaginationLabel } from "@keystone-6/core/dist/declarations/src/admin-ui/components/Pagination"
-import { HEADER_HEIGHT } from "@keystone-6/core/dist/declarations/src/admin-ui/components/PageContainer"
+import { gql, useQuery } from "@keystone-6/core/admin-ui/apollo";
+import { PageContainer } from "@keystone-6/core/admin-ui/components";
+import { makeDataGetter } from "@keystone-6/core/admin-ui/utils";
+import { HEADER_HEIGHT } from "@keystone-6/core/dist/declarations/src/admin-ui/components/PageContainer";
+import { PaginationLabel } from "@keystone-6/core/dist/declarations/src/admin-ui/components/Pagination";
 
-import { useQueryParamsFromLocalStorage } from "@keystone/components/useQueryParamsFromLocalStorage"
-import { ListPageHeader } from "@keystone/components/ListPageHeader"
-import { ResultsSummaryContainer } from "@keystone/components/ResultsSummaryContainer"
-import { DeleteManyButton } from "@keystone/components/DeleteManyButton"
-import { ListTable } from "@keystone/components/ListTable"
 import { CreateButtonLink } from "@keystone/components/CreateButtonLink";
-import { useList } from "@keystone/keystoneProviderNoUI"
-
-import { useFilter } from "../../../../fields/types/relationship/views/RelationshipSelect"
-import { FieldSelection } from "./FieldSelection"
-import { FilterAdd } from "./FilterAdd"
-import { FilterList } from "./FilterList"
-import { SortSelection } from "./SortSelection"
-import { useFilters } from "./useFilters"
-import { useSelectedFields } from "./useSelectedFields"
-import { useSort } from "./useSort"
+import { DeleteManyButton } from "@keystone/components/DeleteManyButton";
+import { FieldSelection } from "@keystone/components/FieldSelection";
+import { FilterAdd } from "@keystone/components/FilterAdd";
+import { FilterList } from "@keystone/components/FilterList";
+import { ListPageHeader } from "@keystone/components/ListPageHeader";
+import { ListTable } from "@keystone/components/ListTable";
+import { ResultsSummaryContainer } from "@keystone/components/ResultsSummaryContainer";
+import { SortSelection } from "@keystone/components/SortSelection";
+import { useList } from "@keystone/keystoneProviderNoUI";
+import { useFilter } from "@keystone/utils/useFilter";
+import { useFilters } from "@keystone/utils/useFilters";
+import { useQueryParamsFromLocalStorage } from "@keystone/utils/useQueryParamsFromLocalStorage";
+import { useSelectedFields } from "@keystone/utils/useSelectedFields";
+import { useSort } from "@keystone/utils/useSort";
 
 let listMetaGraphqlQuery = gql`
   query($listKey: String!) {

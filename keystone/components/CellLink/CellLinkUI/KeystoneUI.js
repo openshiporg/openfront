@@ -1,9 +1,5 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
-import { jsx, useTheme } from '@keystone-ui/core';
-import Link from 'next/link';
-
+import { useTheme } from "@keystone-ui/core";
+import Link from "next/link";
 
 /**
  * This is the component you should use when linking a Cell to an item (i.e when the Cell supports
@@ -16,12 +12,12 @@ export const KeystoneUI = (props) => {
     <Link
       css={{
         color: colors.foreground,
-        display: 'block',
+        display: "block",
         padding: spacing.small,
-        textDecoration: 'none',
+        textDecoration: "none",
 
-        ':hover': {
-          textDecoration: 'underline',
+        ":hover": {
+          textDecoration: "underline",
         },
       }}
       {...props}
