@@ -1,32 +1,39 @@
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { checkAuth } from "./checkAuth";
 
 // Custom hook to check authentication and handle redirection
 export const useAuthRedirect = () => {
   const router = useRouter();
-  const [authenticatedItem, setAuthenticatedItem] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const pathname = usePathname();
 
   useEffect(() => {
-    const fetchData = async () => {
-      const { authenticatedItem, redirectToInit } = await checkAuth(router);
-      if (authenticatedItem) {
-        setAuthenticatedItem(authenticatedItem);
-        setIsLoading(false);
-      }
-      if (redirectToInit) {
+    const authMiddleware = async () => {
+      // const pathname = router.asPath;
+      const { authenticatedItem, redirectToInit } = await checkAuth();
+
+      // redirect to init if conditions are met
+      if (pathname !== "/dashboard/init" && redirectToInit) {
         router.push("/dashboard/init");
-        setIsLoading(false);
       }
-      if (!redirectToInit && !authenticatedItem) {
+
+      // redirect to / if attempting to /init and conditions are not met
+      else if (pathname === "/dashboard/init" && !redirectToInit) {
+        router.push("/dashboard");
+      }
+
+      // don't redirect if we have access
+      else if (authenticatedItem) {
+      }
+
+      // otherwise, redirect to signin
+      else if (pathname === "/dashboard") {
         router.push("/dashboard/signin");
-        setIsLoading(false);
+      } else {
+        router.push(`/dashboard/signin?from=${encodeURIComponent(pathname)}`);
       }
     };
 
-    fetchData();
-  }, [router]);
-
-  return [authenticatedItem, isLoading];
+    authMiddleware();
+  }, [pathname]);
 };

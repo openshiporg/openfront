@@ -9,7 +9,7 @@ import { useAdminPathHandler } from "@keystone/utils/useAdminPathHandler";
 import { useAuthRedirect } from "@keystone/utils/useAuthRedirect";
 
 export default function RootLayout({ children }) {
-  // useAuthRedirect();
+  useAuthRedirect();
   useAdminPathHandler();
 
   const appTheme = process.env.NEXT_PUBLIC_APP_THEME || "KeystoneUI";
