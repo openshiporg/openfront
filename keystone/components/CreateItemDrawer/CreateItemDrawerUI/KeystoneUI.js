@@ -9,8 +9,7 @@ import { Fields } from "@keystone/components/Fields";
 import { GraphQLErrorNotice } from "@keystone/components/GraphQLErrorNotice";
 
 import { useKeystone, useList } from "@keystone/keystoneProviderNoUI";
-
-import { useCreateItem } from "../utils/useCreateItem";
+import { useCreateItem } from "@keystone/utils/useCreateItem";
 
 export function KeystoneUI({ listKey, onClose, onCreate }) {
   const { createViewFieldModes } = useKeystone();

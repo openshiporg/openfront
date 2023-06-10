@@ -3,13 +3,23 @@
 
 import { Fragment, useMemo, useState } from "react";
 import { Button } from "@keystone-ui/button";
-import { jsx, Box, Stack, useTheme } from "@keystone-ui/core";
+import {
+  Box,
+  Divider,
+  Heading,
+  Stack,
+  VisuallyHidden,
+  jsx,
+  useTheme,
+} from "@keystone-ui/core";
+import { Select } from "@keystone-ui/fields";
+import { ChevronLeftIcon } from "@keystone-ui/icons/icons/ChevronLeftIcon";
 import { ChevronRightIcon } from "@keystone-ui/icons/icons/ChevronRightIcon";
 import { ChevronDownIcon } from "@keystone-ui/icons/icons/ChevronDownIcon";
-import { OptionPrimitive } from "@keystone-ui/options";
+import { OptionPrimitive, Options } from "@keystone-ui/options";
 import { PopoverDialog, usePopover } from "@keystone-ui/popover";
 import { useList } from "@keystone/keystoneProviderNoUI";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 const fieldSelectComponents = {
   Option: ({ children, ...props }) => {
@@ -77,6 +87,14 @@ export function KeystoneUI({ listKey, filterableFields }) {
 
 function FilterAddPopoverContent({ onClose, listKey, filterableFields }) {
   const list = useList(listKey);
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  // Create a query object that behaves like the old query object
+  const query = {};
+  for (let [key, value] of searchParams.entries()) {
+    query[key] = value;
+  }
   const router = useRouter();
   const fieldsWithFilters = useMemo(() => {
     const fieldsWithFilters = {};
@@ -95,7 +113,7 @@ function FilterAddPopoverContent({ onClose, listKey, filterableFields }) {
       let hasUnusedFilters = false;
       const filters = {};
       Object.keys(field.controller.filter.types).forEach((filterType) => {
-        if (router.query[`!${fieldPath}_${filterType}`] === undefined) {
+        if (query[`!${fieldPath}_${filterType}`] === undefined) {
           hasUnusedFilters = true;
           filters[filterType] = field.controller.filter.types[filterType].label;
         }
@@ -105,7 +123,7 @@ function FilterAddPopoverContent({ onClose, listKey, filterableFields }) {
       }
     });
     return filtersByFieldThenType;
-  }, [router.query, fieldsWithFilters]);
+  }, [query, fieldsWithFilters]);
   const [state, setState] = useState({ kind: "selecting-field" });
 
   return (
@@ -116,14 +134,16 @@ function FilterAddPopoverContent({ onClose, listKey, filterableFields }) {
       onSubmit={(event) => {
         event.preventDefault();
         if (state.kind === "filter-value") {
-          router.push({
-            query: {
-              ...router.query,
-              [`!${state.fieldPath}_${state.filterType}`]: JSON.stringify(
-                state.filterValue
-              ),
-            },
-          });
+          router.push(
+            pathname +
+              "?" +
+              new URLSearchParams({
+                ...query,
+                [`!${state.fieldPath}_${state.filterType}`]: JSON.stringify(
+                  state.filterValue
+                ),
+              })
+          );
           onClose();
         }
       }}

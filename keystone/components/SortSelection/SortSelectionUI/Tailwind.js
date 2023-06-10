@@ -5,8 +5,8 @@ import { Options } from "@keystone-ui/options";
 import { PopoverDialog, usePopover } from "@keystone-ui/popover";
 import { Fragment } from "react";
 import { useSort } from "@keystone/utils/useSort";
-import { useRouter } from "next/navigation";
-import { fieldSelectionOptionsComponents } from "@keystone/components/FieldSelection/FieldSelectionUI/Tailwind";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { fieldSelectionOptionsComponents } from "@keystone/components/FieldSelection/FieldSelectionUI/KeystoneUI";
 
 export function Tailwind({ list, orderableFields }) {
   const sort = useSort(list, orderableFields);
@@ -69,7 +69,14 @@ const noFieldOption = {
 function SortSelectionPopoverContent({ onClose, list, orderableFields }) {
   const sort = useSort(list, orderableFields);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
 
+  // Create a query object that behaves like the old query object
+  const query = {};
+  for (let [key, value] of searchParams.entries()) {
+    query[key] = value;
+  }
   return (
     <Stack padding="medium" css={{ minWidth: 320 }} gap="small">
       <div css={{ position: "relative" }}>
@@ -88,18 +95,26 @@ function SortSelectionPopoverContent({ onClose, list, orderableFields }) {
         onChange={(newVal) => {
           const fieldPath = newVal.value;
           if (fieldPath === noFieldOption.value) {
-            const { sortBy, ...restOfQuery } = router.query;
-            router.push({ query: restOfQuery });
+            const { sortBy, ...restOfQuery } = query;
+            router.push(
+              pathname +
+                "?" +
+                new URLSearchParams({
+                  restOfQuery,
+                })
+            );
           } else {
-            router.push({
-              query: {
-                ...router.query,
-                sortBy:
-                  sort?.field === fieldPath && sort.direction === "ASC"
-                    ? `-${sort.field}`
-                    : fieldPath,
-              },
-            });
+            router.push(
+              pathname +
+                "?" +
+                new URLSearchParams({
+                  ...query,
+                  sortBy:
+                    sort?.field === fieldPath && sort.direction === "ASC"
+                      ? `-${sort.field}`
+                      : fieldPath,
+                })
+            );
           }
 
           onClose();

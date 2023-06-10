@@ -1,4 +1,8 @@
+/** @jsxRuntime classic */
+/** @jsx jsx */
+
 import { Button } from "@keystone-ui/button";
+import { jsx } from "@keystone-ui/core";
 import Link from "next/link";
 
 export const KeystoneUI = (props) => {

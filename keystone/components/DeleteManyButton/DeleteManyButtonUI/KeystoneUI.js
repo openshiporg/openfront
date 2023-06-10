@@ -1,3 +1,7 @@
+/** @jsxRuntime classic */
+/** @jsx jsx */
+import { jsx } from "@keystone-ui/core";
+
 import { Fragment, useMemo, useState } from "react";
 import { gql, useMutation } from "@keystone-6/core/admin-ui/apollo";
 
@@ -5,7 +9,6 @@ import { Button } from "@keystone-ui/button";
 
 import { useToasts } from "@keystone/components/Toast";
 import { AlertDialog } from "@keystone/components/Modals";
-
 
 export function KeystoneUI({ selectedItems, list, refetch }) {
   const [deleteItems, deleteItemsState] = useMutation(

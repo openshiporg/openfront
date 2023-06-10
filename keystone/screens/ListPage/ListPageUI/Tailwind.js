@@ -32,6 +32,7 @@ import { useQueryParamsFromLocalStorage } from "@keystone/utils/useQueryParamsFr
 import { useSelectedFields } from "@keystone/utils/useSelectedFields";
 import { useSort } from "@keystone/utils/useSort";
 import { PageContainer } from "@keystone/components/PageContainer";
+import { PaginationLabel } from "@keystone/components/Pagination";
 
 const HEADER_HEIGHT = 80;
 
@@ -225,13 +226,13 @@ export const Tailwind = ({ listKey }) => {
     }
     return (
       <Fragment>
-        {/* <PaginationLabel
+        <PaginationLabel
           currentPage={currentPage}
           pageSize={pageSize}
           plural={list.plural}
           singular={list.singular}
           total={data.count}
-        /> */}
+        />
         , sorted by{" "}
         <SortSelection list={list} orderableFields={orderableFields} />
         with{" "}

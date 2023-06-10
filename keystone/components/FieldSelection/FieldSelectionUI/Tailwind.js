@@ -4,7 +4,7 @@ import { ChevronDownIcon } from "@keystone-ui/icons/icons/ChevronDownIcon";
 import { CheckMark, OptionPrimitive, Options } from "@keystone-ui/options";
 import { Popover } from "@keystone-ui/popover";
 import { useSelectedFields } from "@keystone/utils/useSelectedFields";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 function isArrayEqual(arrA, arrB) {
   if (arrA.length !== arrB.length) return false;
@@ -36,16 +36,32 @@ export const fieldSelectionOptionsComponents = {
 
 export function Tailwind({ list, fieldModesByFieldPath }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Create a query object that behaves like the old query object
+  const query = {};
+  for (let [key, value] of searchParams.entries()) {
+    query[key] = value;
+  }
   const selectedFields = useSelectedFields(list, fieldModesByFieldPath);
 
   const setNewSelectedFields = (selectedFields) => {
     if (isArrayEqual(selectedFields, list.initialColumns)) {
-      const { fields: _ignore, ...otherQueryFields } = router.query;
-      router.push({ query: otherQueryFields });
+      const { fields: _ignore, ...otherQueryFields } = query;
+      router.push(
+        pathname +
+          "?" +
+          new URLSearchParams({
+            otherQueryFields,
+          })
+      );
     } else {
-      router.push({
-        query: { ...router.query, fields: selectedFields.join(",") },
-      });
+      router.push(
+        pathname +
+          "?" +
+          new URLSearchParams({ ...query, fields: selectedFields.join(",") })
+      );
     }
   };
   const fields = [];

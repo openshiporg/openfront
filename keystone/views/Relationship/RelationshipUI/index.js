@@ -1,7 +1,7 @@
 import * as KeystoneUI from "./KeystoneUI";
 import * as Tailwind from "./Tailwind";
 
-export const PasswordUI = {
+export const RelationshipUI = {
   Tailwind,
   KeystoneUI,
 };

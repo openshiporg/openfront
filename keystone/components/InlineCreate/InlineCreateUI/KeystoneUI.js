@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Stack } from "@keystone-ui/core";
 import isDeepEqual from "fast-deep-equal";
-import { useToasts } from "@keystone-ui/toast";
 import { Button } from "@keystone-ui/button";
 import { useToasts } from "@keystone/components/Toast";
 import { useFieldsObj } from "@keystone/utils/useFieldObj";

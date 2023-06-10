@@ -1,9 +1,12 @@
-import { Inline, Stack } from "@keystone-ui/core";
+/** @jsxRuntime classic */
+/** @jsx jsx */
+
+import { jsx, Inline, Stack } from "@keystone-ui/core";
 import { Button } from "@keystone-ui/button";
 import { usePopover, PopoverDialog } from "@keystone-ui/popover";
 import { Fragment, useState } from "react";
 import { Pill } from "@keystone-ui/pill";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export function KeystoneUI({ filters, list }) {
   return (
@@ -24,6 +27,14 @@ export function KeystoneUI({ filters, list }) {
 
 function FilterPill({ filter, field }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  // Create a query object that behaves like the old query object
+  const query = {};
+  for (let [key, value] of searchParams.entries()) {
+    query[key] = value;
+  }
   const { isOpen, setOpen, trigger, dialog, arrow } = usePopover({
     placement: "bottom",
     modifiers: [{ name: "offset", options: { offset: [0, 8] } }],
@@ -46,8 +57,14 @@ function FilterPill({ filter, field }) {
           const {
             [`!${filter.field}_${filter.type}`]: _ignore,
             ...queryToKeep
-          } = router.query;
-          router.push({ pathname: router.pathname, query: queryToKeep });
+          } = query;
+          router.push(
+            pathname +
+              "?" +
+              new URLSearchParams({
+                queryToKeep,
+              })
+          );
         }}
       >
         {field.label}{" "}
@@ -81,6 +98,14 @@ function FilterPill({ filter, field }) {
 function EditDialog({ filter, field, onClose }) {
   const Filter = field.controller.filter.Filter;
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  // Create a query object that behaves like the old query object
+  const query = {};
+  for (let [key, value] of searchParams.entries()) {
+    query[key] = value;
+  }
   const [value, setValue] = useState(filter.value);
   return (
     <Stack
@@ -89,12 +114,14 @@ function EditDialog({ filter, field, onClose }) {
       gap="small"
       onSubmit={(event) => {
         event.preventDefault();
-        router.push({
-          query: {
-            ...router.query,
-            [`!${filter.field}_${filter.type}`]: JSON.stringify(value),
-          },
-        });
+        router.push(
+          pathname +
+            "?" +
+            new URLSearchParams({
+              ...query,
+              [`!${filter.field}_${filter.type}`]: JSON.stringify(value),
+            })
+        );
         onClose();
       }}
     >

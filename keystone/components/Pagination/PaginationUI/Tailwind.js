@@ -21,7 +21,7 @@ const getPaginationStats = ({ list, pageSize, currentPage, total }) => {
   return { stats };
 };
 
-export function Tailwind({ currentPage, total, pageSize, list }) {
+export function Pagination({ currentPage, total, pageSize, list }) {
   const { query, pathname, push } = useRouter();
   const { stats } = getPaginationStats({ list, currentPage, total, pageSize });
   const { opacity } = useTheme();

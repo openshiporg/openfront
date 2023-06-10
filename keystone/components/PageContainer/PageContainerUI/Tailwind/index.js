@@ -1,8 +1,7 @@
 import { useTheme } from "@keystone-ui/core";
+import { Navigation } from "@keystone/components/Navigation";
+import { Logo } from "@keystone/components/Logo";
 import { Fragment } from "react";
-
-// import { Navigation } from "./Navigation"
-// import { Logo } from "./Logo"
 
 export const HEADER_HEIGHT = 80;
 
@@ -78,7 +77,7 @@ export const Tailwind = ({ children, header, title }) => {
           paddingRight: spacing.xlarge,
         }}
       >
-        {/* <Logo /> */}
+        <Logo />
       </div>
       <header
         css={{
@@ -95,7 +94,9 @@ export const Tailwind = ({ children, header, title }) => {
         <title>{title ? `Keystone - ${title}` : "Keystone"}</title>
         {header}
       </header>
-      <Sidebar>{/* <Navigation /> */}</Sidebar>
+      <Sidebar>
+        <Navigation />
+      </Sidebar>
       <Content>{children}</Content>
     </PageWrapper>
   );

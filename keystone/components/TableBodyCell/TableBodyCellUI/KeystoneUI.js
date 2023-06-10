@@ -1,4 +1,7 @@
-import { useTheme } from "@keystone-ui/core";
+/** @jsxRuntime classic */
+/** @jsx jsx */
+
+import { jsx, useTheme } from "@keystone-ui/core";
 
 export const KeystoneUI = (props) => {
   const { colors, typography } = useTheme();

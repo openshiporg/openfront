@@ -1,12 +1,14 @@
-import { useTheme } from "@keystone-ui/core"
-import { Fragment } from "react"
+/** @jsxRuntime classic */
+/** @jsx jsx */
 
-// import { Navigation } from "./Navigation"
-// import { Logo } from "./Logo"
+import { jsx, useTheme } from "@keystone-ui/core";
+import { Navigation } from "@keystone/components/Navigation";
+import { Logo } from "@keystone/components/Logo";
+import { Fragment } from "react";
 
-export const HEADER_HEIGHT = 80
+export const HEADER_HEIGHT = 80;
 
-const PageWrapper = props => {
+const PageWrapper = (props) => {
   // const { colors } = useTheme();
   return (
     <Fragment>
@@ -19,15 +21,15 @@ const PageWrapper = props => {
           gridTemplateColumns: `minmax(300px, 1fr) 4fr`,
           gridTemplateRows: `${HEADER_HEIGHT}px auto`,
           height: "100vh",
-          isolation: "isolate"
+          isolation: "isolate",
         }}
         {...props}
       />
     </Fragment>
-  )
-}
+  );
+};
 
-const Sidebar = props => {
+const Sidebar = (props) => {
   // const { colors } = useTheme();
 
   return (
@@ -36,15 +38,15 @@ const Sidebar = props => {
         // borderRight: `1px solid ${colors.border}`,
         minWidth: 0, // resolves collapsing issues in children
         overflowY: "auto",
-        WebkitOverflowScrolling: "touch"
+        WebkitOverflowScrolling: "touch",
       }}
       {...props}
     />
-  )
-}
+  );
+};
 
-const Content = props => {
-  const { colors, spacing } = useTheme()
+const Content = (props) => {
+  const { colors, spacing } = useTheme();
 
   return (
     <main
@@ -56,15 +58,15 @@ const Content = props => {
         paddingRight: spacing.xlarge,
         overflowY: "auto",
         WebkitOverflowScrolling: "touch",
-        position: "relative"
+        position: "relative",
       }}
       {...props}
     />
-  )
-}
+  );
+};
 
 export const KeystoneUI = ({ children, header, title }) => {
-  const { colors, spacing } = useTheme()
+  const { colors, spacing } = useTheme();
   return (
     <PageWrapper>
       <div
@@ -75,10 +77,10 @@ export const KeystoneUI = ({ children, header, title }) => {
           display: "flex",
           justifyContent: "space-between",
           paddingLeft: spacing.xlarge,
-          paddingRight: spacing.xlarge
+          paddingRight: spacing.xlarge,
         }}
       >
-        {/* <Logo /> */}
+        <Logo />
       </div>
       <header
         css={{
@@ -89,16 +91,16 @@ export const KeystoneUI = ({ children, header, title }) => {
           justifyContent: "space-between",
           minWidth: 0, // fix flex text truncation
           paddingLeft: spacing.xlarge,
-          paddingRight: spacing.xlarge
+          paddingRight: spacing.xlarge,
         }}
       >
         <title>{title ? `Keystone - ${title}` : "Keystone"}</title>
         {header}
       </header>
       <Sidebar>
-        {/* <Navigation /> */}
+        <Navigation />
       </Sidebar>
       <Content>{children}</Content>
     </PageWrapper>
-  )
-}
+  );
+};

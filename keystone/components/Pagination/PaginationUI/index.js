@@ -1,9 +1,5 @@
-import dynamic from "next/dynamic";
-
-const Tailwind = dynamic(async () => (await import("./Tailwind")).Tailwind);
-const KeystoneUI = dynamic(
-  async () => (await import("./KeystoneUI")).KeystoneUI
-);
+import * as KeystoneUI from "./KeystoneUI";
+import * as Tailwind from "./Tailwind";
 
 export const PaginationUI = {
   Tailwind,

@@ -1,8 +1,8 @@
 import { PaginationUI } from "./PaginationUI";
 
-export const Pagination = (props) => {
-  const appTheme = process.env.NEXT_PUBLIC_APP_THEME || "KeystoneUI";
-  const PaginationTemplate = PaginationUI[appTheme];
+const appTheme = process.env.NEXT_PUBLIC_APP_THEME || "KeystoneUI";
 
-  return <PaginationTemplate {...props} />;
-};
+const { Pagination, PaginationLabel } =
+  PaginationUI[appTheme];
+
+export { Pagination, PaginationLabel };

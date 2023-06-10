@@ -1,5 +1,8 @@
+/** @jsxRuntime classic */
+/** @jsx jsx */
+
 import { Fragment } from "react";
-import { Heading } from "@keystone-ui/core";
+import { jsx, Heading } from "@keystone-ui/core";
 import { useList } from "@keystone/keystoneProviderNoUI";
 
 export const KeystoneUI = ({ listKey }) => {

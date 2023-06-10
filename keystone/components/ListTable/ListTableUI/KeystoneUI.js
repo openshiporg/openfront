@@ -1,4 +1,7 @@
-import { Box, VisuallyHidden } from "@keystone-ui/core";
+/** @jsxRuntime classic */
+/** @jsx jsx */
+
+import { jsx, Box, VisuallyHidden } from "@keystone-ui/core";
 import { CheckboxControl } from "@keystone-ui/fields";
 import { ArrowRightCircleIcon } from "@keystone-ui/icons/icons/ArrowRightCircleIcon";
 import Link from "next/link";

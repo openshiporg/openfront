@@ -4,6 +4,7 @@
 import { useMemo } from "react"
 
 import {
+  jsx,
   Center,
   Inline,
   Heading,
@@ -12,15 +13,13 @@ import {
 } from "@keystone-ui/core"
 import { PlusIcon } from "@keystone-ui/icons/icons/PlusIcon"
 import { LoadingDots } from "@keystone-ui/loading"
+import { makeDataGetter } from "@keystone-6/core/admin-ui/utils"
+import { PageContainer } from "@keystone/components/PageContainer"
+import { gql, useQuery } from "@keystone-6/core/admin-ui/apollo"
+import { useKeystone, useList } from "@keystone/keystoneProviderNoUI"
+import Link from "next/link"
 
-import { makeDataGetter } from "../../../../admin-ui/utils"
-import {
-  PageContainer,
-  HEADER_HEIGHT
-} from "../../../../admin-ui/components/PageContainer"
-import { gql, useQuery } from "../../../../admin-ui/apollo"
-import { useKeystone, useList } from "../../../../admin-ui/context"
-import { Link } from "../../../../admin-ui/router"
+const HEADER_HEIGHT = 80;
 
 const ListCard = ({ listKey, count, hideCreate }) => {
   const { colors, palette, radii, spacing } = useTheme()
@@ -108,42 +107,7 @@ const CreateButton = props => {
   )
 }
 
-const Lists = () => {
-  if (visibleLists.state === "error") {
-    return (
-      <span css={{ color: "red" }}>
-        {visibleLists.error instanceof Error
-          ? visibleLists.error.message
-          : visibleLists.error[0].message}
-      </span>
-    )
-  }
-  return Object.keys(lists).map(key => {
-    if (!visibleLists.lists.has(key)) {
-      return null
-    }
-    const result = dataGetter.get(key)
-    return (
-      <ListCard
-        count={
-          data
-            ? result.errors
-              ? { type: "error", message: result.errors[0].message }
-              : { type: "success", count: data[key] }
-            : { type: "loading" }
-        }
-        hideCreate={
-          data?.keystone.adminMeta.lists.find(list => list.key === key)
-            ?.hideCreate ?? false
-        }
-        key={key}
-        listKey={key}
-      />
-    )
-  })
-}
-
-export const HomePage = () => {
+export const KeystoneUI = () => {
   const {
     adminMeta: { lists },
     visibleLists
@@ -186,7 +150,40 @@ export const HomePage = () => {
             marginBottom: "0px"
           }}
         >
-          <Lists />
+          {(() => {
+            if (visibleLists.state === 'error') {
+              return (
+                <span css={{ color: 'red' }}>
+                  {visibleLists.error instanceof Error
+                    ? visibleLists.error.message
+                    : visibleLists.error[0].message}
+                </span>
+              );
+            }
+            return Object.keys(lists).map(key => {
+              if (!visibleLists.lists.has(key)) {
+                return null;
+              }
+              const result = dataGetter.get(key);
+              return (
+                <ListCard
+                  count={
+                    data
+                      ? result.errors
+                        ? { type: 'error', message: result.errors[0].message }
+                        : { type: 'success', count: data[key] }
+                      : { type: 'loading' }
+                  }
+                  hideCreate={
+                    data?.keystone.adminMeta.lists.find((list) => list.key === key)
+                      ?.hideCreate ?? false
+                  }
+                  key={key}
+                  listKey={key}
+                />
+              );
+            });
+          })()}
         </Inline>
       )}
     </PageContainer>
