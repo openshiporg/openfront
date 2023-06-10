@@ -9,11 +9,15 @@ export const useAuthRedirect = () => {
 
   useEffect(() => {
     const authMiddleware = async () => {
-      // const pathname = router.asPath;
       const { authenticatedItem, redirectToInit } = await checkAuth();
 
+      // New condition: redirect to init if redirectToInit is true and authenticatedItem is false
+      if (redirectToInit && !authenticatedItem) {
+        router.push("/dashboard/init");
+      }
+      
       // redirect to init if conditions are met
-      if (pathname !== "/dashboard/init" && redirectToInit) {
+      else if (pathname !== "/dashboard/init" && redirectToInit) {
         router.push("/dashboard/init");
       }
 
