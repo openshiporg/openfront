@@ -15,17 +15,19 @@ const themeAliases = {
 function valueToArray(obj) {
   const newObj = {};
   for (const key in obj) {
-    newObj[`${key}/*`] = [`${obj[key]}/*`];  
+    newObj[`${key}/*`] = [`${obj[key]}/*`];
   }
-  return newObj;  
+  return newObj;
 }
 
-jsconfig.compilerOptions.paths = {
-  ...jsconfig.compilerOptions.paths,
-  ...valueToArray(themeAliases),
-};
+if (process.env.NODE_ENV !== "production") {
+  jsconfig.compilerOptions.paths = {
+    ...jsconfig.compilerOptions.paths,
+    ...valueToArray(themeAliases),
+  };
 
-fs.writeFileSync("jsconfig.json", JSON.stringify(jsconfig, null, 2));
+  fs.writeFileSync("jsconfig.json", JSON.stringify(jsconfig, null, 2));
+}
 
 const nextConfig = {
   /*
