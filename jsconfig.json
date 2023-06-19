@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -16,13 +20,37 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "@lib/*": ["lib/*"],
-      "@keystone/*": ["keystone/*"],
-      "@modules/*": ["modules/*"],
-      "@pages/*": ["pages/*"],
-      "@svg": ["svg"]
+      "@lib/*": [
+        "lib/*"
+      ],
+      "@keystone/*": [
+        "keystone/*"
+      ],
+      "@modules/*": [
+        "modules/*"
+      ],
+      "@pages/*": [
+        "pages/*"
+      ],
+      "@svg": [
+        "svg"
+      ],
+      "@keystone/components/*": [
+        "keystone/themes/KeystoneUI/components/*"
+      ],
+      "@keystone/screens/*": [
+        "keystone/themes/KeystoneUI/screens/*"
+      ],
+      "@keystone/views/*": [
+        "keystone/themes/KeystoneUI/views/*"
+      ]
     }
   },
-  "include": ["**/*.js", "*.js"],
-  "exclude": ["node_modules"]
+  "include": [
+    "**/*.js",
+    "*.js"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

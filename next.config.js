@@ -1,4 +1,31 @@
 const withPreconstruct = require("@preconstruct/next");
+const webpack = require("webpack");
+const path = require("path");
+const fs = require("fs");
+const jsconfig = require("./jsconfig.json");
+
+const theme = process.env.NEXT_PUBLIC_ADMIN_THEME || "KeystoneUI";
+
+const themeAliases = {
+  "@keystone/components": `keystone/themes/${theme}/components`,
+  "@keystone/screens": `keystone/themes/${theme}/screens`,
+  "@keystone/views": `keystone/themes/${theme}/views`,
+};
+
+function valueToArray(obj) {
+  const newObj = {};
+  for (const key in obj) {
+    newObj[`${key}/*`] = [`${obj[key]}/*`];  
+  }
+  return newObj;  
+}
+
+jsconfig.compilerOptions.paths = {
+  ...jsconfig.compilerOptions.paths,
+  ...valueToArray(themeAliases),
+};
+
+fs.writeFileSync("jsconfig.json", JSON.stringify(jsconfig, null, 2));
 
 const nextConfig = {
   /*
@@ -8,9 +35,52 @@ const nextConfig = {
       dependencies that use native Node.js APIs.
       More here: https://beta.nextjs.org/docs/api-reference/next.config.js#servercomponentsexternalpackages
     */
-  webpack: (config) => {
+  webpack: (config, { isServer }) => {
     config.externals = [...(config.externals || []), ".prisma/client"];
-    // Important: return the modified config
+
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      ...themeAliases,
+    };
+    // Components
+    // config.plugins.push(
+    //   new webpack.NormalModuleReplacementPlugin(
+    //     /keystone\/components\/(.*)$/,
+    //     function (resource) {
+    //       resource.request = resource.request.replace(
+    //         /keystone\/components\/(.*)$/,
+    //         `keystone/components/$1/${theme}`
+    //       );
+    //     }
+    //   )
+    // );
+
+    // // Screens
+    // config.plugins.push(
+    //   new webpack.NormalModuleReplacementPlugin(
+    //     /keystone\/screens\/(.*)$/,
+    //     function (resource) {
+    //       resource.request = resource.request.replace(
+    //         /keystone\/screens\/(.*)$/,
+    //         `keystone/screens/$1/${theme}`
+    //       );
+    //     }
+    //   )
+    // );
+
+    // // Views
+    // config.plugins.push(
+    //   new webpack.NormalModuleReplacementPlugin(
+    //     /keystone\/views\/(.*)$/,
+    //     function (resource) {
+    //       resource.request = resource.request.replace(
+    //         /keystone\/views\/(.*)$/,
+    //         `keystone/views/$1/${theme}`
+    //       );
+    //     }
+    //   )
+    // );
+
     return config;
   },
   async redirects() {
@@ -25,5 +95,3 @@ const nextConfig = {
 };
 
 module.exports = withPreconstruct(nextConfig);
-
-

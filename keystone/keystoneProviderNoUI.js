@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useMemo } from "react";
 import * as view0 from "@keystone-6/core/___internal-do-not-use-will-break-in-patch/admin-ui/id-field-view";
-import { Text as view1 } from "./views/Text";
-import { Password as view2 } from "./views/Password";
-import { Relationship as view3 } from "./views/Relationship";
+import * as view1 from "@keystone/views/Text";
+import * as view2 from "@keystone/views/Password";
+import * as view3 from "@keystone/views/Relationship";
 import * as view4 from "@keystone-6/core/fields/types/json/views";
 import * as view5 from "@keystone-6/core/fields/types/timestamp/views";
 import * as view6 from "@keystone-6/core/fields/types/checkbox/views";
@@ -19,9 +19,9 @@ import {
   ApolloClient,
   InMemoryCache,
 } from "@keystone-6/core/admin-ui/apollo";
-import { LoadingIcon } from "./components/LoadingIcon";
-import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useLazyMetadata } from "./utils/useLazyMetadata";
+import { LoadingIcon } from "@keystone/components/LoadingIcon";
+import { ErrorBoundary } from "@keystone/components/ErrorBoundary";
 
 const KeystoneContext = createContext(undefined);
 
