@@ -33,6 +33,8 @@ import { useSelectedFields } from "@keystone/utils/useSelectedFields";
 import { useSort } from "@keystone/utils/useSort";
 import { PageContainer } from "@keystone/components/PageContainer";
 import { PaginationLabel } from "@keystone/components/Pagination";
+import { models } from "@keystone/models";
+import { getNamesFromList } from "@keystone/utils/getNamesFromList";
 
 const HEADER_HEIGHT = 80;
 
@@ -59,7 +61,19 @@ let listMetaGraphqlQuery = gql`
 
 export const storeableQueries = ["sortBy", "fields"];
 
-export const ListPage = ({ listKey }) => {
+export const ListPage = ({ params }) => {
+  const listKey = params.listKey;
+  const listsObject = {};
+  for (const [key, list] of Object.entries(models)) {
+    const { adminUILabels } = getNamesFromList(key, list);
+    listsObject[adminUILabels.path] = key;
+  }
+  const key = listsObject[listKey];
+
+  return <ListPageTemplate listKey={key} />;
+};
+
+export const ListPageTemplate = ({ listKey }) => {
   const list = useList(listKey);
 
   const { push } = useRouter();

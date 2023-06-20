@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useMemo } from "react";
-import * as view0 from "@keystone-6/core/___internal-do-not-use-will-break-in-patch/admin-ui/id-field-view";
+import * as view0 from "@keystone/views/IDField";
 import * as view1 from "@keystone/views/Text";
 import * as view2 from "@keystone/views/Password";
 import * as view3 from "@keystone/views/Relationship";
-import * as view4 from "@keystone-6/core/fields/types/json/views";
+import * as view4 from "@keystone/views/JSON";
 import * as view5 from "@keystone-6/core/fields/types/timestamp/views";
 import * as view6 from "@keystone-6/core/fields/types/checkbox/views";
 import * as view7 from "@keystone-6/core/fields/types/select/views";

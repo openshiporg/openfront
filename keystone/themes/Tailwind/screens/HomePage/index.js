@@ -1,7 +1,7 @@
 /** @jsxRuntime classic */
 /** @jsx jsx */
 
-import { useMemo } from "react"
+import { useMemo } from "react";
 
 import {
   jsx,
@@ -9,21 +9,21 @@ import {
   Inline,
   Heading,
   VisuallyHidden,
-  useTheme
-} from "@keystone-ui/core"
-import { PlusIcon } from "@keystone-ui/icons/icons/PlusIcon"
-import { LoadingDots } from "@keystone-ui/loading"
-import { makeDataGetter } from "@keystone-6/core/admin-ui/utils"
-import { PageContainer } from "@keystone/components/PageContainer"
-import { gql, useQuery } from "@keystone-6/core/admin-ui/apollo"
-import { useKeystone, useList } from "@keystone/keystoneProviderNoUI"
-import { AdminLink } from "@keystone/components/AdminLink"
+  useTheme,
+} from "@keystone-ui/core";
+import { PlusIcon } from "@keystone-ui/icons/icons/PlusIcon";
+import { LoadingDots } from "@keystone-ui/loading";
+import { makeDataGetter } from "@keystone-6/core/admin-ui/utils";
+import { PageContainer } from "@keystone/components/PageContainer";
+import { gql, useQuery } from "@keystone-6/core/admin-ui/apollo";
+import { useKeystone, useList } from "@keystone/keystoneProviderNoUI";
+import { AdminLink } from "@keystone/components/AdminLink";
 
 const HEADER_HEIGHT = 80;
 
 const ListCard = ({ listKey, count, hideCreate }) => {
-  const { colors, palette, radii, spacing } = useTheme()
-  const list = useList(listKey)
+  const { colors, palette, radii, spacing } = useTheme();
+  const list = useList(listKey);
   return (
     <div css={{ position: "relative" }}>
       <AdminLink
@@ -40,11 +40,11 @@ const ListCard = ({ listKey, count, hideCreate }) => {
           textDecoration: "none",
 
           ":hover": {
-            borderColor: palette.blue400
+            borderColor: palette.blue400,
           },
           ":hover h3": {
-            textDecoration: "underline"
-          }
+            textDecoration: "underline",
+          },
         }}
       >
         <h3 css={{ margin: `0 0 ${spacing.small}px 0` }}>{list.label} </h3>
@@ -74,11 +74,11 @@ const ListCard = ({ listKey, count, hideCreate }) => {
         </CreateButton>
       )}
     </div>
-  )
-}
+  );
+};
 
-const CreateButton = props => {
-  const theme = useTheme()
+const CreateButton = (props) => {
+  const theme = useTheme();
   return (
     <AdminLink
       css={{
@@ -99,19 +99,19 @@ const CreateButton = props => {
         width: 32,
         "&:hover, &:focus": {
           color: "white",
-          backgroundColor: theme.tones.positive.fill[0]
-        }
+          backgroundColor: theme.tones.positive.fill[0],
+        },
       }}
       {...props}
     />
-  )
-}
+  );
+};
 
 export const HomePage = () => {
   const {
     adminMeta: { lists },
-    visibleLists
-  } = useKeystone()
+    visibleLists,
+  } = useKeystone();
   const query = useMemo(
     () => gql`
   query {
@@ -124,15 +124,15 @@ export const HomePage = () => {
       }
     }
     ${Object.values(lists)
-      .filter(list => !list.isSingleton)
-      .map(list => `${list.key}: ${list.gqlNames.listQueryCountName}`)
+      .filter((list) => !list.isSingleton)
+      .map((list) => `${list.key}: ${list.gqlNames.listQueryCountName}`)
       .join("\n")}
   }`,
     [lists]
-  )
-  let { data, error } = useQuery(query, { errorPolicy: "all" })
+  );
+  let { data, error } = useQuery(query, { errorPolicy: "all" });
 
-  const dataGetter = makeDataGetter(data, error?.graphQLErrors)
+  const dataGetter = makeDataGetter(data, error?.graphQLErrors);
 
   return (
     <PageContainer header={<Heading type="h3">Dashboard</Heading>}>
@@ -147,20 +147,20 @@ export const HomePage = () => {
           paddingY="xlarge"
           css={{
             paddingLeft: "0px",
-            marginBottom: "0px"
+            marginBottom: "0px",
           }}
         >
           {(() => {
-            if (visibleLists.state === 'error') {
+            if (visibleLists.state === "error") {
               return (
-                <span css={{ color: 'red' }}>
+                <span css={{ color: "red" }}>
                   {visibleLists.error instanceof Error
                     ? visibleLists.error.message
                     : visibleLists.error[0].message}
                 </span>
               );
             }
-            return Object.keys(lists).map(key => {
+            return Object.keys(lists).map((key) => {
               if (!visibleLists.lists.has(key)) {
                 return null;
               }
@@ -170,13 +170,14 @@ export const HomePage = () => {
                   count={
                     data
                       ? result.errors
-                        ? { type: 'error', message: result.errors[0].message }
-                        : { type: 'success', count: data[key] }
-                      : { type: 'loading' }
+                        ? { type: "error", message: result.errors[0].message }
+                        : { type: "success", count: data[key] }
+                      : { type: "loading" }
                   }
                   hideCreate={
-                    data?.keystone.adminMeta.lists.find((list) => list.key === key)
-                      ?.hideCreate ?? false
+                    data?.keystone.adminMeta.lists.find(
+                      (list) => list.key === key
+                    )?.hideCreate ?? false
                   }
                   key={key}
                   listKey={key}
@@ -187,5 +188,5 @@ export const HomePage = () => {
         </Inline>
       )}
     </PageContainer>
-  )
-}
+  );
+};

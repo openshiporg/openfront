@@ -20,17 +20,13 @@ import { useMemo } from "react";
 
 export const CreateItemPage = ({ params }) => {
   const listKey = params.listKey;
-  const id = params.id;
 
-  const { key, listsObject } = useMemo(() => {
-    const tempListsObject = {};
-    for (const [tempKey, list] of Object.entries(models)) {
-      const { adminUILabels } = getNamesFromList(tempKey, list);
-      tempListsObject[adminUILabels.path] = tempKey;
-    }
-    const tempKey = tempListsObject[listKey];
-    return { key: tempKey, listsObject: tempListsObject };
-  }, [listKey]);
+  const listsObject = {};
+  for (const [key, list] of Object.entries(models)) {
+    const { adminUILabels } = getNamesFromList(key, list);
+    listsObject[adminUILabels.path] = key;
+  }
+  const key = listsObject[listKey];
 
   const list = useList(key); // Retrieve the list using the key
   const { createViewFieldModes } = useKeystone();

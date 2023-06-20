@@ -44,6 +44,8 @@ import { AdminLink } from "@keystone/components/AdminLink";
 
 import { ChevronRightIcon } from "@keystone-ui/icons/icons/ChevronRightIcon";
 import { ClipboardIcon } from '@keystone-ui/icons/icons/ClipboardIcon';
+import { models } from "@keystone/models";
+import { getNamesFromList } from "@keystone/utils/getNamesFromList";
 
 export function ItemPageHeader(props) {
   const { palette, spacing } = useTheme();
@@ -431,7 +433,20 @@ function DeleteButton({ itemLabel, itemId, list }) {
   );
 }
 
-export const ItemPage = ({ listKey, id }) => {
+export const ItemPage = ({ params }) => {
+  const listKey = params.listKey;
+  const id = params.id;
+  const listsObject = {};
+  for (const [key, list] of Object.entries(models)) {
+    const { adminUILabels } = getNamesFromList(key, list);
+    listsObject[adminUILabels.path] = key;
+  }
+  const key = listsObject[listKey];
+
+  return <ItemPageTemplate listKey={key} id={id} />;
+};
+
+export const ItemPageTemplate = ({ listKey, id }) => {
   const list = useList(listKey);
 
   const { query, selectedFields } = useMemo(() => {

@@ -205,10 +205,12 @@ export function ListTable({
                         linkTo={
                           i === 0 && Cell.supportsLinkTo
                             ? {
-                                href: `/${list.path}/[id]`,
-                                as: `/${list.path}/${encodeURIComponent(
+                                href: `/${list.path}/${encodeURIComponent(
                                   itemId
                                 )}`,
+                                // as: `/${list.path}/${encodeURIComponent(
+                                //   itemId
+                                // )}`,
                               }
                             : undefined
                         }
