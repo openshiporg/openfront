@@ -18,7 +18,7 @@ function valueToArray(obj) {
   return newObj;
 }
 
-// we add the theme aliases to the jsconfig.json so AutoImport and cmd+click works
+// we add the theme aliases to the jsconfig.json so AutoImport and cmd+click work
 if (process.env.NODE_ENV !== "production") {
   jsconfig.compilerOptions.paths = {
     ...jsconfig.compilerOptions.paths,
