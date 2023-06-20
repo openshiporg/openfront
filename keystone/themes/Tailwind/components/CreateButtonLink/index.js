@@ -3,7 +3,7 @@
 
 import { Button } from "@keystone-ui/button";
 import { jsx } from "@keystone-ui/core";
-import Link from "next/link";
+import { AdminLink } from "@keystone/components/AdminLink";
 
 export const CreateButtonLink = (props) => {
   return (
@@ -14,7 +14,7 @@ export const CreateButtonLink = (props) => {
           color: "white",
         },
       }}
-      as={Link}
+      as={AdminLink}
       href={`/${props.list.path}/create`}
       tone="active"
       size="small"

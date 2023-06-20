@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import Link from "next/link";
+import { AdminLink } from "@keystone/components/AdminLink";
+
 import { useRouter } from "next/navigation";
 import { Stack, useTheme } from "@keystone-ui/core";
 import { Select } from "@keystone-ui/fields";
@@ -110,7 +111,7 @@ export function Pagination({ currentPage, total, pageSize, list }) {
           onChange={onChange}
         />
         <span>of {limit}</span>
-        <Link
+        <AdminLink
           aria-label="Previous page"
           css={{
             color: "#415269",
@@ -122,8 +123,8 @@ export function Pagination({ currentPage, total, pageSize, list }) {
           href={{ query: prevQuery }}
         >
           <ChevronLeftIcon />
-        </Link>
-        <Link
+        </AdminLink>
+        <AdminLink
           aria-label="Next page"
           css={{
             color: "#415269",
@@ -135,7 +136,7 @@ export function Pagination({ currentPage, total, pageSize, list }) {
           href={{ query: nxtQuery }}
         >
           <ChevronRightIcon />
-        </Link>
+        </AdminLink>
       </Stack>
     </Stack>
   );

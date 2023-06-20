@@ -1,7 +1,8 @@
 /** @jsxRuntime classic */
 /** @jsx jsx */
 
-import Link from "next/link";
+import { AdminLink } from "@keystone/components/AdminLink";
+
 import { Fragment, useState } from "react";
 
 import { gql, useQuery } from "@keystone-6/core/admin-ui/apollo";
@@ -41,7 +42,7 @@ function LinkToRelatedItems({ itemId, value, list, refFieldKey }) {
   if (value.kind === "many") {
     const query = constructQuery({ refFieldKey, value, itemId });
     return (
-      <Button {...commonProps} as={Link} href={`/${list.path}?${query}`}>
+      <Button {...commonProps} as={AdminLink} href={`/${list.path}?${query}`}>
         View related {list.plural}
       </Button>
     );
@@ -50,7 +51,7 @@ function LinkToRelatedItems({ itemId, value, list, refFieldKey }) {
   return (
     <Button
       {...commonProps}
-      as={Link}
+      as={AdminLink}
       href={`/${list.path}/${value.value?.id}`}
     >
       View {list.singular} details
@@ -271,13 +272,13 @@ export const Cell = ({ field, item }) => {
       {displayItems.map((item, index) => (
         <Fragment key={item.id}>
           {!!index ? ", " : ""}
-          <Link
+          <AdminLink
             href={`/${list.path}/[id]`}
             as={`/${list.path}/${item.id}`}
             css={styles}
           >
             {item.label || item.id}
-          </Link>
+          </AdminLink>
         </Fragment>
       ))}
       {overflow ? `, and ${overflow} more` : null}
@@ -296,9 +297,9 @@ export const CardValue = ({ field, item }) => {
         .map((item, index) => (
           <Fragment key={item.id}>
             {!!index ? ", " : ""}
-            <Link href={`/${list.path}/[id]`} as={`/${list.path}/${item.id}`}>
+            <AdminLink href={`/${list.path}/[id]`} as={`/${list.path}/${item.id}`}>
               {item.label || item.id}
-            </Link>
+            </AdminLink>
           </Fragment>
         ))}
     </FieldContainer>

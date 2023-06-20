@@ -40,7 +40,8 @@ import { useToasts } from "@keystone/components/Toast";
 import { useList } from "@keystone/keystoneProviderNoUI";
 import { usePreventNavigation } from "@keystone/utils/usePreventNavigation";
 import { LoadingDots } from "@keystone-ui/loading";
-import Link from "next/link";
+import { AdminLink } from "@keystone/components/AdminLink";
+
 import { ChevronRightIcon } from "@keystone-ui/icons/icons/ChevronRightIcon";
 import { ClipboardIcon } from '@keystone-ui/icons/icons/ClipboardIcon';
 
@@ -69,12 +70,12 @@ export function ItemPageHeader(props) {
         ) : (
           <Fragment>
             <Heading type="h3">
-              <Link
+              <AdminLink
                 href={`/${props.list.path}`}
                 css={{ textDecoration: "none" }}
               >
                 {props.list.label}
-              </Link>
+              </AdminLink>
             </Heading>
             <div
               css={{

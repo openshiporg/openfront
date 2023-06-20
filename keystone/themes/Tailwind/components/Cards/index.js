@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import Link from "next/link";
+import { AdminLink } from "@keystone/components/AdminLink";
 
 import { LoadingIcon } from "@keystone/components/LoadingIcon";
 import { InlineEdit } from "@keystone/components/InlineEdit";
@@ -267,7 +267,7 @@ export function Cards({
                           weight="link"
                           tone="active"
                           css={{ textDecoration: "none" }}
-                          as={Link}
+                          as={AdminLink}
                           href={`/${foreignList.path}/${id}`}
                         >
                           View {foreignList.singular} details

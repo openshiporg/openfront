@@ -1,5 +1,5 @@
 import { useTheme } from "@keystone-ui/core";
-import Link from "next/link";
+import { AdminLink } from "@keystone/components/AdminLink";
 
 /**
  * This is the component you should use when linking a Cell to an item (i.e when the Cell supports
@@ -9,7 +9,7 @@ import Link from "next/link";
 export const CellLink = (props) => {
   const { colors, spacing } = useTheme();
   return (
-    <Link
+    <AdminLink
       css={{
         color: colors.foreground,
         display: "block",

@@ -10,7 +10,8 @@ import { useKeystone, useList } from "@keystone/keystoneProviderNoUI";
 import { GraphQLErrorNotice } from "@keystone/components/GraphQLErrorNotice";
 import { useCreateItem } from "@keystone/utils/useCreateItem";
 import { Container } from "@keystone/components/Container";
-import Link from "next/link";
+import { AdminLink } from "@keystone/components/AdminLink";
+
 import { Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { models } from "@keystone/models";
@@ -63,9 +64,9 @@ export const CreateItemPage = ({ params }) => {
             ) : (
               <Fragment>
                 <Heading type="h3">
-                  <Link href={`/${list.path}`} css={{ textDecoration: "none" }}>
+                  <AdminLink href={`/${list.path}`} css={{ textDecoration: "none" }}>
                     {list.label}
-                  </Link>
+                  </AdminLink>
                 </Heading>
                 <div
                   css={{

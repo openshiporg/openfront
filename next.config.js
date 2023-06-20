@@ -1,10 +1,8 @@
 const withPreconstruct = require("@preconstruct/next");
-const webpack = require("webpack");
-const path = require("path");
 const fs = require("fs");
 const jsconfig = require("./jsconfig.json");
 
-const theme = process.env.NEXT_PUBLIC_ADMIN_THEME || "KeystoneUI";
+const theme = process.env.ADMIN_THEME || "KeystoneUI";
 
 const themeAliases = {
   "@keystone/components": `keystone/themes/${theme}/components`,
@@ -20,6 +18,7 @@ function valueToArray(obj) {
   return newObj;
 }
 
+// we add the theme aliases to the jsconfig.json so AutoImport and cmd+click works
 if (process.env.NODE_ENV !== "production") {
   jsconfig.compilerOptions.paths = {
     ...jsconfig.compilerOptions.paths,

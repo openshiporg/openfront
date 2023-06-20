@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 
-import Link from "next/link";
-
 import { LoadingIcon } from "@keystone/components/LoadingIcon";
 import { InlineEdit } from "@keystone/components/InlineEdit";
 import { InlineCreate } from "@keystone/components/InlineCreate";
@@ -28,6 +26,7 @@ import {
   getRootGraphQLFieldsFromFieldController,
   makeDataGetter,
 } from "@keystone-6/core/admin-ui/utils";
+import { AdminLink } from "@keystone/components/AdminLink";
 
 const CardContainer = forwardRefWithAs(({ mode = "view", ...props }, ref) => {
   const { tones } = useTheme();
@@ -267,7 +266,7 @@ export function Cards({
                           weight="link"
                           tone="active"
                           css={{ textDecoration: "none" }}
-                          as={Link}
+                          as={AdminLink}
                           href={`/${foreignList.path}/${id}`}
                         >
                           View {foreignList.singular} details

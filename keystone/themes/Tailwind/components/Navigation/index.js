@@ -8,7 +8,8 @@ import { Popover } from "@keystone-ui/popover";
 import { MoreHorizontalIcon } from "@keystone-ui/icons/icons/MoreHorizontalIcon";
 import { ChevronRightIcon } from "@keystone-ui/icons/icons/ChevronRightIcon";
 import { useKeystone } from "@keystone/keystoneProviderNoUI";
-import Link from "next/link";
+import { AdminLink } from "@keystone/components/AdminLink";
+
 import { SignoutButton } from "@keystone/components/SignoutButton";
 import { usePathname } from "next/navigation";
 
@@ -20,7 +21,7 @@ export const NavItem = ({ href, children, isSelected: _isSelected }) => {
     _isSelected !== undefined ? _isSelected : pathname === href;
   return (
     <li>
-      <Link
+      <AdminLink
         aria-current={isSelected ? "location" : false}
         href={href}
         css={{
@@ -48,7 +49,7 @@ export const NavItem = ({ href, children, isSelected: _isSelected }) => {
         }}
       >
         {children}
-      </Link>
+      </AdminLink>
     </li>
   );
 };

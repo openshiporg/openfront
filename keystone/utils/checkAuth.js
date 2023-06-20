@@ -19,8 +19,9 @@ export const checkAuth = async (req) => {
 };
 
 export function gqlClient(req) {
-  return new GraphQLClient(`/api/graphql`, {
-    headers: req ? { cookie: req.headers?.cookie } : undefined,
-    credentials: 'include' 
+  return new GraphQLClient(`http://localhost:3001/api/graphql`, {
+    headers: req ? { cookie: req.cookies } : undefined,
+    credentials: "include",
+    fetch,
   });
 }

@@ -4,7 +4,8 @@
 import { jsx, Box, VisuallyHidden } from "@keystone-ui/core";
 import { CheckboxControl } from "@keystone-ui/fields";
 import { ArrowRightCircleIcon } from "@keystone-ui/icons/icons/ArrowRightCircleIcon";
-import Link from "next/link";
+import { AdminLink } from "@keystone/components/AdminLink";
+
 import { useRouter } from "next/navigation";
 
 import { getRootGraphQLFieldsFromFieldController } from "@keystone-6/core/admin-ui/utils";
@@ -81,7 +82,7 @@ export function ListTable({
             }
             return (
               <TableHeaderCell key={path}>
-                <Link
+                <AdminLink
                   css={{
                     display: "block",
                     textDecoration: "none",
@@ -102,7 +103,7 @@ export function ListTable({
                   {sort?.field === path && (
                     <SortDirectionArrow direction={sort.direction} />
                   )}
-                </Link>
+                </AdminLink>
               </TableHeaderCell>
             );
           })}
@@ -150,7 +151,7 @@ export function ListTable({
                 </TableBodyCell>
                 {shouldShowLinkIcon && (
                   <TableBodyCell>
-                    <Link
+                    <AdminLink
                       css={{
                         textDecoration: "none",
                         minHeight: 38,
@@ -165,7 +166,7 @@ export function ListTable({
                         size="smallish"
                         aria-label="Go to item"
                       />
-                    </Link>
+                    </AdminLink>
                   </TableBodyCell>
                 )}
                 {[...selectedFields].map((path, i) => {
