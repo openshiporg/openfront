@@ -17,7 +17,7 @@ import { makeDataGetter } from "@keystone-6/core/admin-ui/utils"
 import { PageContainer } from "@keystone/components/PageContainer"
 import { gql, useQuery } from "@keystone-6/core/admin-ui/apollo"
 import { useKeystone, useList } from "@keystone/keystoneProviderNoUI"
-import Link from "next/link"
+import { AdminLink } from "@keystone/components/AdminLink"
 
 const HEADER_HEIGHT = 80;
 
@@ -26,7 +26,7 @@ const ListCard = ({ listKey, count, hideCreate }) => {
   const list = useList(listKey)
   return (
     <div css={{ position: "relative" }}>
-      <Link
+      <AdminLink
         href={`/${list.path}${list.isSingleton ? "/1" : ""}`}
         css={{
           backgroundColor: colors.background,
@@ -63,7 +63,7 @@ const ListCard = ({ listKey, count, hideCreate }) => {
         ) : (
           "No access"
         )}
-      </Link>
+      </AdminLink>
       {hideCreate === false && !list.isSingleton && (
         <CreateButton
           title={`Create ${list.singular}`}
@@ -80,7 +80,7 @@ const ListCard = ({ listKey, count, hideCreate }) => {
 const CreateButton = props => {
   const theme = useTheme()
   return (
-    <Link
+    <AdminLink
       css={{
         alignItems: "center",
         backgroundColor: theme.palette.neutral400,

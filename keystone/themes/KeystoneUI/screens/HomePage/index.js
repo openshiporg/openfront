@@ -18,7 +18,6 @@ import { PageContainer } from "@keystone/components/PageContainer";
 import { gql, useQuery } from "@keystone-6/core/admin-ui/apollo";
 import { useKeystone, useList } from "@keystone/keystoneProviderNoUI";
 import { AdminLink } from "@keystone/components/AdminLink";
-import Link from "next/link"
 
 const HEADER_HEIGHT = 80;
 
@@ -81,7 +80,7 @@ const ListCard = ({ listKey, count, hideCreate }) => {
 const CreateButton = (props) => {
   const theme = useTheme();
   return (
-    <Link
+    <AdminLink
       css={{
         alignItems: "center",
         backgroundColor: theme.palette.neutral400,
