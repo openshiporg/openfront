@@ -18,8 +18,7 @@ function valueToArray(obj) {
   return newObj;
 }
 
-// we add the theme aliases to the jsconfig.json so AutoImport and cmd+click work
-if (process.env.NODE_ENV !== "production") {
+function updateJsconfigAliases() {
   jsconfig.compilerOptions.paths = {
     ...jsconfig.compilerOptions.paths,
     ...valueToArray(themeAliases),
@@ -28,62 +27,23 @@ if (process.env.NODE_ENV !== "production") {
   fs.writeFileSync("jsconfig.json", JSON.stringify(jsconfig, null, 2));
 }
 
+function configureWebpack(config, { isServer }) {
+  config.externals = [...(config.externals || []), ".prisma/client"];
+
+  config.resolve.alias = {
+    ...config.resolve.alias,
+    ...themeAliases,
+  };
+
+  return config;
+}
+
+if (process.env.NODE_ENV !== "production") {
+  updateJsconfigAliases();
+}
+
 const nextConfig = {
-  /*
-      next@13 automatically bundles server code for server components.
-      This causes a problem for the prisma binary built by Keystone.
-      We need to explicitly ask Next.js to opt-out from bundling
-      dependencies that use native Node.js APIs.
-      More here: https://beta.nextjs.org/docs/api-reference/next.config.js#servercomponentsexternalpackages
-    */
-  webpack: (config, { isServer }) => {
-    config.externals = [...(config.externals || []), ".prisma/client"];
-
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      ...themeAliases,
-    };
-    // Components
-    // config.plugins.push(
-    //   new webpack.NormalModuleReplacementPlugin(
-    //     /keystone\/components\/(.*)$/,
-    //     function (resource) {
-    //       resource.request = resource.request.replace(
-    //         /keystone\/components\/(.*)$/,
-    //         `keystone/components/$1/${theme}`
-    //       );
-    //     }
-    //   )
-    // );
-
-    // // Screens
-    // config.plugins.push(
-    //   new webpack.NormalModuleReplacementPlugin(
-    //     /keystone\/screens\/(.*)$/,
-    //     function (resource) {
-    //       resource.request = resource.request.replace(
-    //         /keystone\/screens\/(.*)$/,
-    //         `keystone/screens/$1/${theme}`
-    //       );
-    //     }
-    //   )
-    // );
-
-    // // Views
-    // config.plugins.push(
-    //   new webpack.NormalModuleReplacementPlugin(
-    //     /keystone\/views\/(.*)$/,
-    //     function (resource) {
-    //       resource.request = resource.request.replace(
-    //         /keystone\/views\/(.*)$/,
-    //         `keystone/views/$1/${theme}`
-    //       );
-    //     }
-    //   )
-    // );
-
-    return config;
-  },
+  webpack: configureWebpack,
   async redirects() {
     return [
       {

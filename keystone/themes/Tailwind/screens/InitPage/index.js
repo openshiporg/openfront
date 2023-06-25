@@ -9,7 +9,7 @@ import {
   useInvalidFields,
 } from "@keystone-6/core/admin-ui/utils";
 import { useRedirect } from "@keystone/utils/useRedirect";
-import { useReinitContext, useKeystone } from "@keystone/keystoneProviderNoUI";
+import { useReinitContext, useKeystone } from "@keystone/keystoneProvider";
 import { Box, Center, H1, Stack, useTheme } from "@keystone-ui/core";
 import { Button } from "@keystone-ui/button";
 import Head from "next/head";

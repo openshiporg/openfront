@@ -1,10 +1,9 @@
 import { useEffect } from "react";
-import { AdminLink } from "@keystone/components/AdminLink";
-
 import { useRouter } from "next/navigation";
 import { Stack, useTheme } from "@keystone-ui/core";
 import { Select } from "@keystone-ui/fields";
 import { ChevronRightIcon, ChevronLeftIcon } from "@keystone-ui/icons";
+import { AdminLink } from "@keystone/components/AdminLink";
 
 const getPaginationStats = ({ list, pageSize, currentPage, total }) => {
   let stats = "";

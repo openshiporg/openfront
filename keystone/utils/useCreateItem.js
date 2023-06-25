@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react"
 import isDeepEqual from "fast-deep-equal"
 import { usePreventNavigation } from "./usePreventNavigation"
 import { useMutation, gql } from "@keystone-6/core/admin-ui/apollo"
-import { useKeystone } from "@keystone/keystoneProviderNoUI"
+import { useKeystone } from "@keystone/keystoneProvider"
 import { useToasts } from "@keystone/components/Toast"
 
 export function useCreateItem(list) {

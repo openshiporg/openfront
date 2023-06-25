@@ -6,7 +6,7 @@ import { ChevronRightIcon } from "@keystone-ui/icons/icons/ChevronRightIcon";
 import { Button } from "@keystone-ui/button";
 import { Fields } from "@keystone/components/Fields";
 import { PageContainer } from "@keystone/components/PageContainer";
-import { useKeystone, useList } from "@keystone/keystoneProviderNoUI";
+import { useKeystone, useList } from "@keystone/keystoneProvider";
 import { GraphQLErrorNotice } from "@keystone/components/GraphQLErrorNotice";
 import { useCreateItem } from "@keystone/utils/useCreateItem";
 import { Container } from "@keystone/components/Container";

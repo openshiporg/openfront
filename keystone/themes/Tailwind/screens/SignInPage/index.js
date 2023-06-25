@@ -18,7 +18,7 @@ import { useRouter } from "next/navigation";
 import {
   useReinitContext,
   useRawKeystone,
-} from "@keystone/keystoneProviderNoUI";
+} from "@keystone/keystoneProvider";
 import { useRedirect } from "@keystone/utils/useRedirect";
 
 import { Button } from "@keystone-ui/button";

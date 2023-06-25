@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 
-import { AdminLink } from "@keystone/components/AdminLink";
-
 import { LoadingIcon } from "@keystone/components/LoadingIcon";
 import { InlineEdit } from "@keystone/components/InlineEdit";
 import { InlineCreate } from "@keystone/components/InlineCreate";
@@ -28,6 +26,7 @@ import {
   getRootGraphQLFieldsFromFieldController,
   makeDataGetter,
 } from "@keystone-6/core/admin-ui/utils";
+import { AdminLink } from "@keystone/components/AdminLink";
 
 const CardContainer = forwardRefWithAs(({ mode = "view", ...props }, ref) => {
   const { tones } = useTheme();

@@ -3,7 +3,7 @@
 
 import { Fragment } from "react";
 import { jsx, Heading } from "@keystone-ui/core";
-import { useList } from "@keystone/keystoneProviderNoUI";
+import { useList } from "@keystone/keystoneProvider";
 
 export const ListPageHeader = ({ listKey }) => {
   const list = useList(listKey);

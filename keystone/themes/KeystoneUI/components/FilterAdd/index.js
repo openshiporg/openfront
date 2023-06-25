@@ -18,7 +18,7 @@ import { ChevronRightIcon } from "@keystone-ui/icons/icons/ChevronRightIcon";
 import { ChevronDownIcon } from "@keystone-ui/icons/icons/ChevronDownIcon";
 import { OptionPrimitive, Options } from "@keystone-ui/options";
 import { PopoverDialog, usePopover } from "@keystone-ui/popover";
-import { useList } from "@keystone/keystoneProviderNoUI";
+import { useList } from "@keystone/keystoneProvider";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 const fieldSelectComponents = {

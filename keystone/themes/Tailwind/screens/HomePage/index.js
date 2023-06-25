@@ -16,7 +16,7 @@ import { LoadingDots } from "@keystone-ui/loading";
 import { makeDataGetter } from "@keystone-6/core/admin-ui/utils";
 import { PageContainer } from "@keystone/components/PageContainer";
 import { gql, useQuery } from "@keystone-6/core/admin-ui/apollo";
-import { useKeystone, useList } from "@keystone/keystoneProviderNoUI";
+import { useKeystone, useList } from "@keystone/keystoneProvider";
 import { AdminLink } from "@keystone/components/AdminLink";
 
 const HEADER_HEIGHT = 80;

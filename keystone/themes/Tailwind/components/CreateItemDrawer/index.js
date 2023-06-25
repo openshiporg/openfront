@@ -8,7 +8,7 @@ import { LoadingDots } from "@keystone-ui/loading";
 import { Fields } from "@keystone/components/Fields";
 import { GraphQLErrorNotice } from "@keystone/components/GraphQLErrorNotice";
 
-import { useKeystone, useList } from "@keystone/keystoneProviderNoUI";
+import { useKeystone, useList } from "@keystone/keystoneProvider";
 import { useCreateItem } from "@keystone/utils/useCreateItem";
 
 export function CreateItemDrawer({ listKey, onClose, onCreate }) {

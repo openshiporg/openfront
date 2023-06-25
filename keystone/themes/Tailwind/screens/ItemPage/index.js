@@ -37,7 +37,7 @@ import {
 } from "@keystone/components/PageContainer";
 import { TextInput } from "@keystone/components/TextInput";
 import { useToasts } from "@keystone/components/Toast";
-import { useList } from "@keystone/keystoneProviderNoUI";
+import { useList } from "@keystone/keystoneProvider";
 import { usePreventNavigation } from "@keystone/utils/usePreventNavigation";
 import { LoadingDots } from "@keystone-ui/loading";
 import { AdminLink } from "@keystone/components/AdminLink";

@@ -20,7 +20,7 @@ export const CreateButtonLink = (props) => {
       size="small"
       weight="bold"
     >
-      Create fuck {props.list.singular}
+      Create {props.list.singular}
     </Button>
   );
 };

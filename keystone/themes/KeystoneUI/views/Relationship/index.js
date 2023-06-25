@@ -13,7 +13,7 @@ import { FieldDescription } from "@keystone/components/FieldDescription";
 import { FieldLabel } from "@keystone/components/FieldLabel";
 import { FieldLegend } from "@keystone/components/FieldLegend";
 import { DrawerController } from "@keystone/components/Modals";
-import { useKeystone, useList } from "@keystone/keystoneProviderNoUI";
+import { useKeystone, useList } from "@keystone/keystoneProvider";
 
 import { Button } from "@keystone-ui/button";
 import { jsx, Stack, useTheme } from "@keystone-ui/core";

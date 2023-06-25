@@ -2,7 +2,7 @@
 /** @jsx jsx */
 
 import { jsx, useTheme, H3 } from '@keystone-ui/core';
-import { useRawKeystone } from '@keystone/keystoneProviderNoUI';
+import { useRawKeystone } from '@keystone/keystoneProvider';
 import Link from 'next/link';
 
 

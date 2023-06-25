@@ -41,7 +41,7 @@
     "graphql-upload": "^15.0.2",
     "graphql-yoga": "^3.1.0",
     "medusa-react": "^6.0.0",
-    "next": "^13.4.4",
+    "next": "^13.4.6",
     "nodemailer": "^6.7.1",
     "pluralize": "^8.0.0",
     "react": "18.2.0",

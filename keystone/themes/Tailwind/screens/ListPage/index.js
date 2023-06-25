@@ -25,7 +25,7 @@ import { ListPageHeader } from "@keystone/components/ListPageHeader";
 import { ListTable } from "@keystone/components/ListTable";
 import { ResultsSummaryContainer } from "@keystone/components/ResultsSummaryContainer";
 import { SortSelection } from "@keystone/components/SortSelection";
-import { useList } from "@keystone/keystoneProviderNoUI";
+import { useList } from "@keystone/keystoneProvider";
 import { useFilter } from "@keystone/utils/useFilter";
 import { useFilters } from "@keystone/utils/useFilters";
 import { useQueryParamsFromLocalStorage } from "@keystone/utils/useQueryParamsFromLocalStorage";

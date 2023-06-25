@@ -17,7 +17,7 @@ import { TableBodyCell } from '@keystone/components/TableBodyCell';
 import { TableContainer } from "@keystone/components/TableContainer";
 import { TableHeaderCell } from "@keystone/components/TableHeaderCell";
 import { TableHeaderRow } from "@keystone/components/TableHeaderRow";
-import { useList } from "@keystone/keystoneProviderNoUI";
+import { useList } from "@keystone/keystoneProvider";
 
 export function ListTable({
   selectedFields,

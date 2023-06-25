@@ -1,18 +1,86 @@
 import React, { createContext, useContext, useMemo } from "react";
-import { ErrorBoundary } from "@keystone-6/core/admin-ui/components";
-import * as view0 from "@keystone-6/core/___internal-do-not-use-will-break-in-patch/admin-ui/id-field-view";
-import * as view1 from "@keystone-6/core/fields/types/text/views";
-import * as view2 from "@keystone-6/core/fields/types/password/views";
-import * as view3 from "@keystone-6/core/fields/types/relationship/views";
-import * as view4 from "@keystone-6/core/fields/types/json/views";
-import * as view5 from "@keystone-6/core/fields/types/timestamp/views";
-import * as view6 from "@keystone-6/core/fields/types/checkbox/views";
-import * as view7 from "@keystone-6/core/fields/types/select/views";
-import * as view8 from "@keystone-6/core/fields/types/integer/views";
-import * as view9 from "@keystone-6/core/fields/types/float/views";
-import * as view10 from "@keystone-6/core/fields/types/image/views";
+import * as view0 from "@keystone/views/IDField";
+import * as view1 from "@keystone/views/Text";
+import * as view2 from "@keystone/views/Password";
+import * as view3 from "@keystone/views/Relationship";
+import * as view4 from "@keystone/views/JSON";
+import * as view5 from "@keystone/views/Timestamp";
+import * as view6 from "@keystone/views/Checkbox";
+import * as view7 from "@keystone/views/Select";
+import * as view8 from "@keystone/views/Integer";
+import * as view9 from "@keystone/views/Float";
+import * as view10 from "@keystone/views/Image";
+import * as view11 from "@keystone/views/FieldsDocument/views";
 import { keystoneDefinitions } from "./keystoneDefinitions";
-import { KeystoneProvider as Provider } from "@keystone-6/core/admin-ui/context";
+import { createUploadLink } from "apollo-upload-client";
+import { useAdminMeta } from "./utils/useAdminMeta";
+import {
+  ApolloProvider,
+  ApolloClient,
+  InMemoryCache,
+} from "@keystone-6/core/admin-ui/apollo";
+import { useLazyMetadata } from "./utils/useLazyMetadata";
+import { LoadingIcon } from "@keystone/components/LoadingIcon";
+import { ErrorBoundary } from "@keystone/components/ErrorBoundary";
+
+const KeystoneContext = createContext(undefined);
+
+function InternalKeystoneProvider({
+  adminConfig,
+  fieldViews,
+  adminMetaHash,
+  children,
+  lazyMetadataQuery,
+  apiPath,
+}) {
+  const adminMeta = useAdminMeta(adminMetaHash, fieldViews);
+  const { authenticatedItem, visibleLists, createViewFieldModes, refetch } =
+    useLazyMetadata(lazyMetadataQuery);
+  const reinitContext = async () => {
+    await adminMeta?.refetch?.();
+    await refetch();
+  };
+
+  if (adminMeta.state === "loading") {
+    return <LoadingIcon label="Loading Admin Metadata" size="large" />;
+  }
+  return (
+    <KeystoneContext.Provider
+      value={{
+        adminConfig,
+        adminMeta,
+        fieldViews,
+        authenticatedItem,
+        reinitContext,
+        visibleLists,
+        createViewFieldModes,
+        apiPath,
+      }}
+    >
+      {children}
+    </KeystoneContext.Provider>
+  );
+}
+
+export const Provider = (props) => {
+  const apolloClient = useMemo(
+    () =>
+      new ApolloClient({
+        cache: new InMemoryCache(),
+        link: createUploadLink({
+          uri: props.apiPath,
+          headers: { "Apollo-Require-Preflight": "true" },
+        }),
+      }),
+    [props.apiPath]
+  );
+
+  return (
+    <ApolloProvider client={apolloClient}>
+      <InternalKeystoneProvider {...props} />
+    </ApolloProvider>
+  );
+};
 
 export const KeystoneProvider = ({ children }) => {
   const lazyMetadataQuery = {
@@ -32,6 +100,7 @@ export const KeystoneProvider = ({ children }) => {
     view8,
     view9,
     view10,
+    view11,
   ];
 
   return (
@@ -47,41 +116,55 @@ export const KeystoneProvider = ({ children }) => {
   );
 };
 
-// useEffect(() => {
-//   if (!pathname?.startsWith('/admin')) return;
+export const useKeystone = () => {
+  const value = useContext(KeystoneContext);
+  if (!value) {
+    throw new Error(
+      "useKeystone must be called inside a KeystoneProvider component"
+    );
+  }
+  if (value.adminMeta.state === "error") {
+    console.log(value.adminMeta);
+    throw new Error("An error occurred when loading Admin Metadata");
+  }
+  return {
+    adminConfig: value.adminConfig,
+    adminMeta: value.adminMeta.value,
+    authenticatedItem: value.authenticatedItem,
+    visibleLists: value.visibleLists,
+    createViewFieldModes: value.createViewFieldModes,
+    apiPath: value.apiPath,
+  };
+};
 
-//   const adminPathname = path =>
-//     path.startsWith('/admin') ? path : `/admin${path}`;
+export const useReinitContext = () => {
+  const value = useContext(KeystoneContext);
+  if (!value) {
+    throw new Error(
+      "useReinitContext must be called inside a KeystoneProvider component"
+    );
+  }
+  return value.reinitContext;
+};
 
-//   const handleClick = event => {
-//     const target = event.target.closest('a');
-//     if (!target) return;
+export const useRawKeystone = () => {
+  const value = useContext(KeystoneContext);
+  if (!value) {
+    throw new Error(
+      "useRawKeystone must be called inside a KeystoneProvider component"
+    );
+  }
+  console.log({ value });
+  return value;
+};
 
-//     event.preventDefault();
-//     const href = target.getAttribute('href');
-//     if (href.startsWith('/')) router.push(adminPathname(href));
-//   };
-
-//   const replaceLinks = () => {
-//     const links = document.querySelectorAll("a[href^='/']");
-//     links.forEach(link => {
-//       link.removeEventListener('click', handleClick);
-//       link.addEventListener('click', handleClick);
-
-//       const href = link.getAttribute('href');
-//       if (!href.startsWith('/admin')) {
-//         link.setAttribute('href', `/admin${href}`);
-//       }
-//     });
-//   };
-
-//   replaceLinks();
-
-//   const observer = new MutationObserver(() => replaceLinks());
-//   observer.observe(document.documentElement, {
-//     childList: true,
-//     subtree: true,
-//   });
-
-//   return () => observer.disconnect();
-// }, [pathname, router]);
+export const useList = (key) => {
+  const {
+    adminMeta: { lists },
+  } = useKeystone();
+  if (lists[key]) {
+    return lists[key];
+  } else {
+    throw new Error(`Invalid list key provided to useList: ${key}`);
+  }
+};

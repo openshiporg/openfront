@@ -3,7 +3,7 @@
 import { DrawerProvider } from "@keystone/components/Modals";
 import { ToastProvider } from "@keystone/components/Toast";
 import { UIProvider } from "@keystone/components/UIProvider";
-import { KeystoneProvider } from "@keystone/keystoneProviderNoUI";
+import { KeystoneProvider } from "@keystone/keystoneProvider";
 
 export default function RootLayout({ children }) {
   return (
