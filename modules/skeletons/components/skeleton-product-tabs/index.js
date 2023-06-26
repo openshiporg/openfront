@@ -1,4 +1,4 @@
-import repeat from "@lib/storefront/util/repeat"
+import repeat from "@storefront/util/repeat"
 
 const SkeletonProductTabs = () => {
   return (

@@ -1,4 +1,4 @@
-import { useMobileMenu } from "@lib/storefront/context/mobile-menu-context";
+import { useMobileMenu } from "@storefront/context/mobile-menu-context";
 import Hit from "@modules/search/components/hit";
 import { useRouter } from "next/router";
 

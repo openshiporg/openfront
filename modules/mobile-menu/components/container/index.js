@@ -1,5 +1,5 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { useMobileMenu } from "@lib/storefront/context/mobile-menu-context";
+import { useMobileMenu } from "@storefront/context/mobile-menu-context";
 import { Fragment } from "react";
 
 const Container = ({ children }) => {

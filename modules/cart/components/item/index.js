@@ -1,4 +1,4 @@
-import { useStore } from "@lib/storefront/context/store-context";
+import { useStore } from "@storefront/context/store-context";
 import LineItemOptions from "@modules/common/components/line-item-options";
 import LineItemPrice from "@modules/common/components/line-item-price";
 import NativeSelect from "@modules/common/components/native-select";

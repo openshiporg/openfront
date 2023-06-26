@@ -1,4 +1,4 @@
-import { emailRegex } from "@lib/storefront/util/regex";
+import { emailRegex } from "@storefront/util/regex";
 import ConnectForm from "@modules/common/components/connect-form";
 import Input from "@modules/common/components/input";
 import { useMeCustomer } from "medusa-react";

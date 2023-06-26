@@ -1,5 +1,5 @@
 import { Disclosure } from "@headlessui/react"
-import useToggleState from "@lib/storefront/hooks/use-toggle-state"
+import useToggleState from "@storefront/hooks/use-toggle-state"
 import Button from "@modules/common/components/button"
 import clsx from "clsx"
 import { useEffect } from "react"

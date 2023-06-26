@@ -1,5 +1,5 @@
-import { medusaClient } from "@lib/storefront/config"
-import { handleError } from "@lib/storefront/util/handle-error"
+import { medusaClient } from "@storefront/config"
+import { handleError } from "@storefront/util/handle-error"
 import {
   useCart,
   useCreateLineItem,

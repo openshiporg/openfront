@@ -1,4 +1,4 @@
-import useEnrichedLineItems from "@lib/storefront/hooks/use-enrich-line-items";
+import useEnrichedLineItems from "@storefront/hooks/use-enrich-line-items";
 import DiscountCode from "@modules/checkout/components/discount-code";
 import SkeletonCartPage from "@modules/skeletons/templates/skeleton-cart-page";
 import { useCart, useMeCustomer } from "medusa-react";

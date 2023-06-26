@@ -1,4 +1,4 @@
-import { useModal } from "@lib/storefront/context/modal-context";
+import { useModal } from "@storefront/context/modal-context";
 import Hit from "@modules/search/components/hit";
 import { useRouter } from "next/router";
 

@@ -1,4 +1,4 @@
-import repeat from "@lib/storefront/util/repeat"
+import repeat from "@storefront/util/repeat"
 import SkeletonCartItem from "@modules/skeletons/components/skeleton-cart-item"
 import SkeletonCodeForm from "@modules/skeletons/components/skeleton-code-form"
 import SkeletonOrderSummary from "@modules/skeletons/components/skeleton-order-summary"

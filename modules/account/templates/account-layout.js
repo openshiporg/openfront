@@ -1,4 +1,4 @@
-import { useAccount } from "@lib/storefront/context/account-context";
+import { useAccount } from "@storefront/context/account-context";
 import UnderlineLink from "@modules/common/components/underline-link";
 import Spinner from "@modules/common/icons/spinner";
 import React, { useEffect } from "react";

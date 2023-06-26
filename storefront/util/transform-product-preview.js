@@ -1,4 +1,4 @@
-import { getPercentageDiff } from "@lib/storefront/util/get-precentage-diff"
+import { getPercentageDiff } from "@storefront/util/get-precentage-diff"
 import { formatAmount } from "medusa-react"
 
 const transformProductPreview = (product, region) => {

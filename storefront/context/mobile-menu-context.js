@@ -1,6 +1,6 @@
-import useCurrentWidth from "@lib/storefront/hooks/use-current-width"
-import useDebounce from "@lib/storefront/hooks/use-debounce"
-import useToggleState from "@lib/storefront/hooks/use-toggle-state"
+import useCurrentWidth from "@storefront/hooks/use-current-width"
+import useDebounce from "@storefront/hooks/use-debounce"
+import useToggleState from "@storefront/hooks/use-toggle-state"
 import {
   createContext,
   useCallback,

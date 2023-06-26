@@ -1,4 +1,4 @@
-import { medusaClient } from "@lib/storefront/config"
+import { medusaClient } from "@storefront/config"
 import Input from "@modules/common/components/input"
 import { useUpdateMe } from "medusa-react"
 import React, { useEffect } from "react"

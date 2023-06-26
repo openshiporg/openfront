@@ -1,4 +1,4 @@
-import { getPercentageDiff } from "@lib/storefront/util/get-precentage-diff";
+import { getPercentageDiff } from "@storefront/util/get-precentage-diff";
 import clsx from "clsx";
 import { formatAmount } from "medusa-react";
 

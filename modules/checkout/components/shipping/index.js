@@ -1,6 +1,6 @@
 import { RadioGroup } from "@headlessui/react";
 import { ErrorMessage } from "@hookform/error-message";
-import { useCheckout } from "@lib/storefront/context/checkout-context";
+import { useCheckout } from "@storefront/context/checkout-context";
 import Radio from "@modules/common/components/radio";
 import Spinner from "@modules/common/icons/spinner";
 import clsx from "clsx";

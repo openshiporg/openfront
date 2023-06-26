@@ -1,4 +1,4 @@
-import { useCheckout } from "@lib/storefront/context/checkout-context";
+import { useCheckout } from "@storefront/context/checkout-context";
 import Button from "@modules/common/components/button";
 import Spinner from "@modules/common/icons/spinner";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";

@@ -1,4 +1,4 @@
-import { useAccount } from "@lib/storefront/context/account-context";
+import { useAccount } from "@storefront/context/account-context";
 import Input from "@modules/common/components/input";
 import NativeSelect from "@modules/common/components/native-select";
 import { useRegions, useUpdateMe } from "medusa-react";

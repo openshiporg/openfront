@@ -2,8 +2,8 @@ import { Popover, Transition } from "@headlessui/react"
 import {
   useFeaturedProductsQuery,
   useNavigationCollections,
-} from "@lib/storefront/hooks/use-layout-data"
-import repeat from "@lib/storefront/util/repeat"
+} from "@storefront/hooks/use-layout-data"
+import repeat from "@storefront/util/repeat"
 import ProductPreview from "@modules/products/components/product-preview"
 import SkeletonProductPreview from "@modules/skeletons/components/skeleton-product-preview"
 import clsx from "clsx"

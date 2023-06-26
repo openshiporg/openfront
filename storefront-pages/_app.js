@@ -5,16 +5,13 @@
 // import { StoreProvider } from "@lib/storefront/context/store-context";
 // import { Hydrate } from "@tanstack/react-query";
 // import { CartProvider, MedusaProvider } from "medusa-react";
-import { KeystoneProvider } from "@keystone/keystoneProvider";
 import "../styles/globals.css";
-import { Core } from "@keystone-ui/core";
 
 function App({ Component, pageProps }) {
   const getLayout = Component.getLayout ?? ((page) => page);
 
   return (
-    <Core>
-      <KeystoneProvider>
+    <>
         {/* <MedusaProvider
         baseUrl={MEDUSA_BACKEND_URL}
         queryClientProviderProps={{
@@ -35,8 +32,8 @@ function App({ Component, pageProps }) {
           </CartDropdownProvider>
         </Hydrate>
       </MedusaProvider> */}
-      </KeystoneProvider>
-    </Core>
+
+    </>
   );
 }
 

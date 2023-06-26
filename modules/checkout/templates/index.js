@@ -1,4 +1,4 @@
-import { CheckoutProvider } from "@lib/storefront/context/checkout-context"
+import { CheckoutProvider } from "@storefront/context/checkout-context"
 import ChevronDown from "@modules/common/icons/chevron-down"
 import MedusaCTA from "@modules/layout/components/medusa-cta"
 import Link from "next/link"

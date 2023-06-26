@@ -1,5 +1,5 @@
-import { medusaClient } from "@lib/storefront/config";
-import { getPercentageDiff } from "@lib/storefront/util/get-precentage-diff";
+import { medusaClient } from "@storefront/config";
+import { getPercentageDiff } from "@storefront/util/get-precentage-diff";
 import { useQuery } from "@tanstack/react-query";
 import { formatAmount, useCart } from "medusa-react";
 

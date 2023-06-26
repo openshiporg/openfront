@@ -1,6 +1,6 @@
-import { medusaClient } from "@lib/storefront/config";
-import { useAccount } from "@lib/storefront/context/account-context";
-import useToggleState from "@lib/storefront/hooks/use-toggle-state";
+import { medusaClient } from "@storefront/config";
+import { useAccount } from "@storefront/context/account-context";
+import useToggleState from "@storefront/hooks/use-toggle-state";
 import CountrySelect from "@modules/checkout/components/country-select";
 import Button from "@modules/common/components/button";
 import Input from "@modules/common/components/input";

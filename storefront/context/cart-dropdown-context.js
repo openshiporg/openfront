@@ -1,4 +1,4 @@
-import useToggleState from "@lib/storefront/hooks/use-toggle-state";
+import useToggleState from "@storefront/hooks/use-toggle-state";
 import { createContext, useContext, useEffect, useState } from "react";
 
 export const CartDropdownContext = createContext(null);

@@ -1,4 +1,4 @@
-import { medusaClient } from "@lib/storefront/config";
+import { medusaClient } from "@storefront/config";
 import { useMutation } from "@tanstack/react-query";
 import { useMeCustomer } from "medusa-react";
 import { useRouter } from "next/router";

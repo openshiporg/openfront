@@ -1,4 +1,4 @@
-import { useAccount } from "@lib/storefront/context/account-context";
+import { useAccount } from "@storefront/context/account-context";
 import AddressBook from "../components/address-book";
 
 const AddressesTemplate = () => {

@@ -1,4 +1,4 @@
-import transformProductPreview from "@lib/storefront/util/transform-product-preview";
+import transformProductPreview from "@storefront/util/transform-product-preview";
 import { useMemo } from "react";
 
 const usePreviews = ({ pages, region }) => {

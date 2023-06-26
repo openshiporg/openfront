@@ -1,5 +1,5 @@
-import { useMobileMenu } from "@lib/storefront/context/mobile-menu-context";
-// import { searchClient, SEARCH_INDEX_NAME } from "@lib/storefront/search-client";
+import { useMobileMenu } from "@storefront/context/mobile-menu-context";
+import { searchClient, SEARCH_INDEX_NAME } from "@storefront/search-client";
 import Search from "@modules/common/icons/search";
 import MobileHit from "@modules/search/components/mobile-hit";
 import MobileHits from "@modules/search/components/mobile-hits";

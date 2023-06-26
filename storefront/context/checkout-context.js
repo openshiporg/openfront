@@ -1,5 +1,5 @@
-import { medusaClient } from "@lib/storefront/config"
-import useToggleState from "@lib/storefront/hooks/use-toggle-state"
+import { medusaClient } from "@storefront/config"
+import useToggleState from "@storefront/hooks/use-toggle-state"
 import Wrapper from "@modules/checkout/components/payment-wrapper"
 import { isEqual } from "lodash"
 import {

@@ -1,7 +1,7 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { useProductActions } from "@lib/storefront/context/product-context";
-import useProductPrice from "@lib/storefront/hooks/use-product-price";
-import useToggleState from "@lib/storefront/hooks/use-toggle-state";
+import { useProductActions } from "@storefront/context/product-context";
+import useProductPrice from "@storefront/hooks/use-product-price";
+import useToggleState from "@storefront/hooks/use-toggle-state";
 import Button from "@modules/common/components/button";
 import ChevronDown from "@modules/common/icons/chevron-down";
 import X from "@modules/common/icons/x";

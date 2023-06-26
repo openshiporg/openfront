@@ -1,24 +1,29 @@
-import Head from "next/head";
-import Image from "next/image";
+// import { keystoneContext } from "@keystone/keystoneContext";
 import Link from "next/link";
 
-const Home = () => {
+const Home = async () => {
+//   const users = await keystoneContext.sudo().query.User.findMany({
+//     query: "id name",
+//   });
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center py-2">
       <main className="flex w-full flex-1 flex-col items-center justify-center px-20 text-center">
         <h1 className="text-6xl font-bold">
           Welcome to{" "}
-          <Link legacyBehavior href="/">
-            <a className="text-blue-600">Openfront!</a>
-          </Link>
+          <a
+            className="text-blue-600"
+            href="https://github.com/openshiporg/openfront"
+          >
+            Openfront!
+          </a>
         </h1>
-
         <div className="mt-6 flex max-w-4xl flex-wrap items-center justify-around sm:w-full">
           <Link legacyBehavior href="/">
             <a className="mt-6 w-96 rounded-xl border p-6 text-left hover:text-blue-600 focus:text-blue-600">
               <div className="flex justify-between items-start">
                 <h3 className="text-2xl font-bold">Storefront</h3>
-                <span className="bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 mt-1.5 rounded ">
+                <span className="bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 mt-1.5 rounded ">
                   SOON
                 </span>
               </div>

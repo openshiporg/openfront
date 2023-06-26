@@ -1,4 +1,4 @@
-import { useCheckout } from "@lib/storefront/context/checkout-context";
+import { useCheckout } from "@storefront/context/checkout-context";
 import Spinner from "@modules/common/icons/spinner";
 import { useEffect } from "react";
 import PaymentContainer from "../payment-container";

@@ -1,6 +1,6 @@
-import { useMobileMenu } from "@lib/storefront/context/mobile-menu-context";
-import { useStore } from "@lib/storefront/context/store-context";
-import useCountryOptions from "@lib/storefront/hooks/use-country-options";
+import { useMobileMenu } from "@storefront/context/mobile-menu-context";
+import { useStore } from "@storefront/context/store-context";
+import useCountryOptions from "@storefront/hooks/use-country-options";
 import ChevronDown from "@modules/common/icons/chevron-down";
 import Search from "@modules/common/icons/search";
 import X from "@modules/common/icons/x";

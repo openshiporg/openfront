@@ -1,5 +1,5 @@
-import { ProductProvider } from "@lib/storefront/context/product-context";
-import { useIntersection } from "@lib/storefront/hooks/use-in-view";
+import { ProductProvider } from "@storefront/context/product-context";
+import { useIntersection } from "@storefront/hooks/use-in-view";
 import ProductTabs from "@modules/products/components/product-tabs";
 import RelatedProducts from "@modules/products/components/related-products";
 import ProductInfo from "@modules/products/templates/product-info";

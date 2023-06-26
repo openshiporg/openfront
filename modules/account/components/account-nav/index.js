@@ -1,4 +1,4 @@
-import { useAccount } from "@lib/storefront/context/account-context";
+import { useAccount } from "@storefront/context/account-context";
 import ChevronDown from "@modules/common/icons/chevron-down";
 import clsx from "clsx";
 import Link from "next/link";

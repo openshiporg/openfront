@@ -26,6 +26,9 @@
       "@keystone/*": [
         "keystone/*"
       ],
+      "@storefront/*": [
+        "storefront/*"
+      ],
       "@modules/*": [
         "modules/*"
       ],

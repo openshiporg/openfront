@@ -1,4 +1,4 @@
-import { useAccount } from "@lib/storefront/context/account-context";
+import { useAccount } from "@storefront/context/account-context";
 import Register from "@modules/account/components/register";
 import { useRouter } from "next/router";
 import { useEffect } from "react";

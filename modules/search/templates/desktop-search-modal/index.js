@@ -1,4 +1,4 @@
-import useToggleState from "@lib/storefront/hooks/use-toggle-state"
+import useToggleState from "@storefront/hooks/use-toggle-state"
 // import { searchClient, SEARCH_INDEX_NAME } from "@lib/storefront/search-client"
 import Modal from "@modules/common/components/modal"
 import Search from "@modules/common/icons/search"

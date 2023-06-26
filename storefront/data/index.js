@@ -1,4 +1,4 @@
-import { medusaClient } from "@lib/storefront/config"
+import { medusaClient } from "@storefront/config"
 
 const COL_LIMIT = 15
 

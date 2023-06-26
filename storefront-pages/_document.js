@@ -1,4 +1,4 @@
-// import { MEDUSA_BACKEND_URL } from "@lib/storefront/config";
+import { MEDUSA_BACKEND_URL } from "@storefront/config";
 import Document, { Head, Html, Main, NextScript } from "next/document";
 
 class MyDocument extends Document {

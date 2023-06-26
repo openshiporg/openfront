@@ -1,4 +1,4 @@
-import { useMobileMenu } from "@lib/storefront/context/mobile-menu-context"
+import { useMobileMenu } from "@storefront/context/mobile-menu-context"
 import Container from "@modules/mobile-menu/components/container"
 import MainMenu from "@modules/mobile-menu/components/main-menu"
 import CountryMenu from "../components/country-menu"

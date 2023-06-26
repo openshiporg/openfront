@@ -1,5 +1,5 @@
-import { useProductActions } from "@lib/storefront/context/product-context";
-import useProductPrice from "@lib/storefront/hooks/use-product-price";
+import { useProductActions } from "@storefront/context/product-context";
+import useProductPrice from "@storefront/hooks/use-product-price";
 import Button from "@modules/common/components/button";
 import OptionSelect from "@modules/products/components/option-select";
 import clsx from "clsx";

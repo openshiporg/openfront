@@ -1,7 +1,7 @@
-import { fetchProductsList } from "@lib/storefront/data";
-import usePreviews from "@lib/storefront/hooks/use-previews";
-import getNumberOfSkeletons from "@lib/storefront/util/get-number-of-skeletons";
-import repeat from "@lib/storefront/util/repeat";
+import { fetchProductsList } from "@storefront/data";
+import usePreviews from "@storefront/hooks/use-previews";
+import getNumberOfSkeletons from "@storefront/util/get-number-of-skeletons";
+import repeat from "@storefront/util/repeat";
 import ProductPreview from "@modules/products/components/product-preview";
 import SkeletonProductPreview from "@modules/skeletons/components/skeleton-product-preview";
 import { useCart } from "medusa-react";

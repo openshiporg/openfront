@@ -1,4 +1,4 @@
-import { useMobileMenu } from "@lib/storefront/context/mobile-menu-context"
+import { useMobileMenu } from "@storefront/context/mobile-menu-context"
 import Hamburger from "@modules/common/components/hamburger"
 import CartDropdown from "@modules/layout/components/cart-dropdown"
 import DropdownMenu from "@modules/layout/components/dropdown-menu"

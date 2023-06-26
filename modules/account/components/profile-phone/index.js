@@ -1,4 +1,4 @@
-import { useAccount } from "@lib/storefront/context/account-context"
+import { useAccount } from "@storefront/context/account-context"
 import Input from "@modules/common/components/input"
 import { useUpdateMe } from "medusa-react"
 import React, { useEffect } from "react"

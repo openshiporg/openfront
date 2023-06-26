@@ -1,4 +1,4 @@
-import { useAccount } from "@lib/storefront/context/account-context"
+import { useAccount } from "@storefront/context/account-context"
 import ProfileEmail from "@modules/account/components/profile-email"
 import ProfileName from "@modules/account/components/profile-name"
 import ProfilePassword from "@modules/account/components/profile-password"

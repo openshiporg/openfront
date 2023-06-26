@@ -1,6 +1,6 @@
-import { medusaClient } from "@lib/storefront/config";
-import { IS_BROWSER } from "@lib/storefront/constants";
-import { getProductHandles } from "@lib/storefront/util/get-product-handles";
+import { medusaClient } from "@storefront/config";
+import { IS_BROWSER } from "@storefront/constants";
+import { getProductHandles } from "@storefront/util/get-product-handles";
 import Head from "@modules/common/components/head";
 import Layout from "@modules/layout/templates";
 import ProductTemplate from "@modules/products/templates";

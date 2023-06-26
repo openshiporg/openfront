@@ -1,5 +1,5 @@
-import { canBuy } from "@lib/storefront/util/can-buy"
-import { findCheapestPrice } from "@lib/storefront/util/prices"
+import { canBuy } from "@storefront/util/can-buy"
+import { findCheapestPrice } from "@storefront/util/prices"
 import isEqual from "lodash/isEqual"
 import { formatVariantPrice, useCart } from "medusa-react"
 import React, {

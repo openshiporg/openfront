@@ -1,5 +1,5 @@
 import { Listbox, Transition } from "@headlessui/react";
-import { useCheckout } from "@lib/storefront/context/checkout-context";
+import { useCheckout } from "@storefront/context/checkout-context";
 import Radio from "@modules/common/components/radio";
 import ChevronDown from "@modules/common/icons/chevron-down";
 import clsx from "clsx";

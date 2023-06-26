@@ -1,4 +1,4 @@
-import useEnrichedLineItems from "@lib/storefront/hooks/use-enrich-line-items";
+import useEnrichedLineItems from "@storefront/hooks/use-enrich-line-items";
 import LineItemOptions from "@modules/common/components/line-item-options";
 import LineItemPrice from "@modules/common/components/line-item-price";
 import Thumbnail from "@modules/products/components/thumbnail";

@@ -1,4 +1,4 @@
-import { onlyUnique } from "@lib/storefront/util/only-unique";
+import { onlyUnique } from "@storefront/util/only-unique";
 import clsx from "clsx";
 import React from "react";
 

@@ -1,6 +1,6 @@
-import { useAccount } from "@lib/storefront/context/account-context";
-import useToggleState from "@lib/storefront/hooks/use-toggle-state";
-import { emailRegex } from "@lib/storefront/util/regex";
+import { useAccount } from "@storefront/context/account-context";
+import useToggleState from "@storefront/hooks/use-toggle-state";
+import { emailRegex } from "@storefront/util/regex";
 import EditButton from "@modules/account/components/edit-button";
 import Button from "@modules/common/components/button";
 import Input from "@modules/common/components/input";

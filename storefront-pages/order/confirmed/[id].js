@@ -1,5 +1,5 @@
-import { medusaClient } from "@lib/storefront/config";
-import { IS_BROWSER } from "@lib/storefront/constants";
+import { medusaClient } from "@storefront/config";
+import { IS_BROWSER } from "@storefront/constants";
 import Head from "@modules/common/components/head";
 import Layout from "@modules/layout/templates";
 import OrderCompletedTemplate from "@modules/order/templates/order-completed-template";

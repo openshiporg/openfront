@@ -1,4 +1,4 @@
-import { medusaClient } from "@lib/storefront/config"
+import { medusaClient } from "@storefront/config"
 import Button from "@modules/common/components/button"
 import Input from "@modules/common/components/input"
 import Trash from "@modules/common/icons/trash"

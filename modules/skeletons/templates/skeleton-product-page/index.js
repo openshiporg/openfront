@@ -1,4 +1,4 @@
-import repeat from "@lib/storefront/util/repeat"
+import repeat from "@storefront/util/repeat"
 import SkeletonButton from "@modules/skeletons/components/skeleton-button"
 import SkeletonProductTabs from "@modules/skeletons/components/skeleton-product-tabs"
 

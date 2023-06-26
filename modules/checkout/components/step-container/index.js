@@ -1,5 +1,5 @@
 import { Disclosure } from "@headlessui/react"
-import { useCheckout } from "@lib/storefront/context/checkout-context"
+import { useCheckout } from "@storefront/context/checkout-context"
 import clsx from "clsx"
 
 const StepContainer = ({
