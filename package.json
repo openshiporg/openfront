@@ -8,8 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "migrate:gen": "keystone build --no-ui && keystone prisma migrate dev",
-    "migrate": "keystone prisma migrate deploy",
-    "postinstall": "prisma generate"
+    "migrate": "keystone prisma migrate deploy"
   },
   "dependencies": {
     "@emotion/react": "^11.10.0",
