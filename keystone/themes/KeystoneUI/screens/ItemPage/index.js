@@ -382,6 +382,8 @@ function DeleteButton({ itemLabel, itemId, list }) {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
 
+  const adminPath = process.env.NEXT_PUBLIC_ADMIN_PATH || "/dashboard";
+
   return (
     <Fragment>
       <Button
@@ -410,7 +412,7 @@ function DeleteButton({ itemLabel, itemId, list }) {
                   tone: "negative",
                 });
               }
-              router.push(list.isSingleton ? "/" : `/${list.path}`);
+              router.push(list.isSingleton ? `${adminPath}` : `${adminPath}/${list.path}`);
               return toasts.addToast({
                 title: itemLabel,
                 message: `Deleted ${list.singular} item successfully`,

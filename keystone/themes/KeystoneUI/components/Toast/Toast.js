@@ -1,5 +1,8 @@
+/** @jsxRuntime classic */
+/** @jsx jsx */
+
 import { forwardRef, useEffect, useMemo, useState } from "react";
-import { keyframes, Portal, useTheme } from "@keystone-ui/core";
+import { jsx, keyframes, Portal, useTheme } from "@keystone-ui/core";
 import { AlertOctagonIcon } from "@keystone-ui/icons/icons/AlertOctagonIcon";
 import { AlertTriangleIcon } from "@keystone-ui/icons/icons/AlertTriangleIcon";
 import { CheckCircleIcon } from "@keystone-ui/icons/icons/CheckCircleIcon";

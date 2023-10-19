@@ -14,19 +14,19 @@
     "@emotion/react": "^11.10.0",
     "@emotion/server": "^11.10.0",
     "@graphql-tools/schema": "^9.0.10",
-    "@hapi/iron": "^7.0.0",
+    "@hapi/iron": "^7.0.1",
     "@headlessui/react": "^1.7.14",
     "@hookform/error-message": "^2.0.1",
-    "@keystone-6/auth": "^7.0.0",
-    "@keystone-6/cloudinary": "^6.0.0",
-    "@keystone-6/core": "^5.0.0",
-    "@keystone-6/fields-document": "^7.0.0",
+    "@keystone-6/auth": "^7.0.2",
+    "@keystone-6/cloudinary": "^7.0.1",
+    "@keystone-6/core": "^5.5.0",
+    "@keystone-6/fields-document": "^8.0.0",
     "@keystone-ui/core": "^5.0.2",
     "@meilisearch/instant-meilisearch": "^0.13.0",
     "@next/bundle-analyzer": "^13.4.1",
     "@paypal/react-paypal-js": "^7.8.3",
     "@preconstruct/next": "^4.0.0",
-    "@prisma/client": "^4.12.0",
+    "@prisma/client": "^5.1.1",
     "@stripe/react-stripe-js": "^2.1.0",
     "@stripe/stripe-js": "^1.52.1",
     "@tanstack/react-query": "^4.29.5",
@@ -37,6 +37,7 @@
     "dumb-passwords": "^0.2.1",
     "encoding": "^0.1.13",
     "execa": "^6.1.0",
+    "graphql": "^16.6.0",
     "graphql-request": "^6.1.0",
     "graphql-upload": "^15.0.2",
     "graphql-yoga": "^3.1.0",
@@ -59,5 +60,8 @@
     "eslint-config-next": "12.2.5",
     "postcss": "^8.4.21",
     "tailwindcss": "^3.3.0"
+  },
+  "resolutions": {
+    "graphql": "16.6.0"
   }
 }

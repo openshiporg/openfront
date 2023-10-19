@@ -44,6 +44,9 @@ if (process.env.NODE_ENV !== "production") {
 
 const nextConfig = {
   webpack: configureWebpack,
+  experimental: {
+    serverComponentsExternalPackages: ["graphql"],
+  },
   async redirects() {
     return [
       {

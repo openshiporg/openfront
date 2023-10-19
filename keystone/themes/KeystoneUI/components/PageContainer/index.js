@@ -13,7 +13,7 @@ const PageWrapper = (props) => {
   return (
     <Fragment>
       {/* TODO: not sure where to put this */}
-      <style>{`body { overflow: hidden; }`}</style>
+      <style>{`body { overflow: hidden; background: white; }`}</style>
       <div
         css={{
           // background: colors.background,

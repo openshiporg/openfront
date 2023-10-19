@@ -16,7 +16,6 @@ import { Fragment } from "react";
 import { useRouter } from "next/navigation";
 import { models } from "@keystone/models";
 import { getNamesFromList } from "@keystone/utils/getNamesFromList";
-import { useMemo } from "react";
 
 export const CreateItemPage = ({ params }) => {
   const listKey = params.listKey;
@@ -34,6 +33,8 @@ export const CreateItemPage = ({ params }) => {
   const createItem = useCreateItem(list);
 
   const router = useRouter();
+
+  const adminPath = process.env.NEXT_PUBLIC_ADMIN_PATH || "/dashboard";
 
   return (
     <PageContainer
@@ -149,7 +150,7 @@ export const CreateItemPage = ({ params }) => {
                   onClick={async () => {
                     const item = await createItem.create();
                     if (item) {
-                      router.push(`/${list.path}/${item.id}`);
+                      router.push(`${adminPath}/${list.path}/${item.id}`);
                     }
                   }}
                 >
