@@ -53,7 +53,7 @@ export const Logo = () => {
             transform="translate(-238.9 -47)"
           />
         </svg>
-        Keystone 6
+        Openfront
       </Link>
     </H3>
   );

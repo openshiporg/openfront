@@ -1,4 +1,3 @@
-import { jsx } from "@keystone-ui/core";
 import { Button } from "@keystone-ui/button";
 
 export function SignoutButton({ loading, endSession, children }) {

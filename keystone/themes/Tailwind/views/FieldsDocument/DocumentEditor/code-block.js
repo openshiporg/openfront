@@ -1,6 +1,4 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-import { jsx } from "@keystone-ui/core";
+
 import { Tooltip } from "@keystone-ui/tooltip";
 import { useMemo, Fragment } from "react";
 import { Editor, Transforms, Element, Text, Range, Point } from "slate";

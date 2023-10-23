@@ -1,7 +1,3 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
-import { jsx } from "@keystone-ui/core";
 import { FieldContainer, FieldLabel } from "@keystone-ui/fields";
 
 import { useEffect, useMemo, useRef } from "react";

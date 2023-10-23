@@ -1,7 +1,4 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
 
-import { jsx } from "@keystone-ui/core";
 import { Editor, Transforms, Range, Point, Path, Node, Text } from "slate";
 
 const headingStylesMap = {

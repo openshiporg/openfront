@@ -1,7 +1,3 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-import { jsx } from "@keystone-ui/core";
-
 export const ResultsSummaryContainer = ({ children }) => (
   <p
     css={{
@@ -10,7 +6,7 @@ export const ResultsSummaryContainer = ({ children }) => (
       minHeight: 38,
 
       display: "flex",
-      alignItems: "center"
+      alignItems: "center",
     }}
   >
     {children}

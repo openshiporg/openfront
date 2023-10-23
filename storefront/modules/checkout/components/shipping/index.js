@@ -1,0 +1,139 @@
+import { RadioGroup } from "@headlessui/react"
+import { ErrorMessage } from "@hookform/error-message"
+import { useCheckout } from "@lib/context/checkout-context"
+import Radio from "@modules/common/components/radio"
+import Spinner from "@modules/common/icons/spinner"
+import clsx from "clsx"
+import { formatAmount, useCart, useCartShippingOptions } from "medusa-react"
+import React, { useEffect, useMemo } from "react"
+import { Controller, useForm } from "react-hook-form"
+import StepContainer from "../step-container"
+
+const Shipping = ({ cart }) => {
+  const { addShippingMethod, setCart } = useCart()
+  const {
+    control,
+    setError,
+    formState: { errors },
+  } = useForm({
+    defaultValues: {
+      soId: cart.shipping_methods?.[0]?.shipping_option_id,
+    },
+  })
+
+  // Fetch shipping options
+  const { shipping_options, refetch } = useCartShippingOptions(cart.id, {
+    enabled: !!cart.id,
+  })
+
+  // Any time the cart changes we need to ensure that we are displaying valid shipping options
+  useEffect(() => {
+    const refetchShipping = async () => {
+      await refetch()
+    }
+
+    refetchShipping()
+  }, [cart, refetch])
+
+  const submitShippingOption = (soId) => {
+    addShippingMethod.mutate({ option_id: soId }, {
+      onSuccess: ({ cart }) => setCart(cart),
+      onError: () =>
+        setError("soId", {
+          type: "validate",
+          message:
+            "An error occurred while adding shipping. Please try again.",
+        }, { shouldFocus: true }),
+    })
+  }
+
+  const handleChange = (value, fn) => {
+    submitShippingOption(value)
+    fn(value)
+  }
+
+  // Memoized shipping method options
+  const shippingMethods = useMemo(() => {
+    if (shipping_options && cart?.region) {
+      return shipping_options?.map((option) => ({
+        value: option.id,
+        label: option.name,
+        price: formatAmount({
+          amount: option.amount || 0,
+          region: cart.region,
+        }),
+      }));
+    }
+
+    return []
+  }, [shipping_options, cart])
+
+  const {
+    sameAsBilling: { state: sameBilling },
+  } = useCheckout()
+
+  return (
+    <StepContainer
+      index={sameBilling ? 2 : 3}
+      title="Delivery"
+      closedState={
+        <div className="px-8 pb-8 text-small-regular">
+          <p>Enter your address to see available delivery options.</p>
+        </div>
+      }>
+      <Controller
+        name="soId"
+        control={control}
+        render={({ field: { value, onChange } }) => {
+          return (
+            <div>
+              <RadioGroup value={value} onChange={(value) => handleChange(value, onChange)}>
+                {shippingMethods && shippingMethods.length ? (
+                  (shippingMethods.map((option) => {
+                    return (
+                      <RadioGroup.Option
+                        key={option.value}
+                        value={option.value}
+                        className={clsx(
+                          "flex items-center justify-between text-small-regular cursor-pointer py-4 border-b border-gray-200 last:border-b-0 px-8",
+                          {
+                            "bg-gray-50": option.value === value,
+                          }
+                        )}>
+                        <div className="flex items-center gap-x-4">
+                          <Radio checked={value === option.value} />
+                          <span className="text-base-regular">
+                            {option.label}
+                          </span>
+                        </div>
+                        <span className="justify-self-end text-gray-700">
+                          {option.price}
+                        </span>
+                      </RadioGroup.Option>
+                    );
+                  }))
+                ) : (
+                  <div
+                    className="flex flex-col items-center justify-center px-4 py-8 text-gray-900">
+                    <Spinner />
+                  </div>
+                )}
+              </RadioGroup>
+              <ErrorMessage
+                errors={errors}
+                name="soId"
+                render={({ message }) => {
+                  return (
+                    <div className="pt-2 text-rose-500 text-small-regular">
+                      <span>{message}</span>
+                    </div>
+                  );
+                }} />
+            </div>
+          );
+        }} />
+    </StepContainer>
+  );
+}
+
+export default Shipping

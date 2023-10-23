@@ -1,6 +1,4 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-import { jsx } from "@keystone-ui/core";
+
 import React, { useContext } from "react"
 import { useMemo } from "react"
 import { createGetPreviewProps, getKeysForArrayValue } from "./preview-props"

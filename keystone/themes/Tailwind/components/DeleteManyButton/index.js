@@ -1,7 +1,3 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-import { jsx } from "@keystone-ui/core";
-
 import { Fragment, useMemo, useState } from "react";
 import { gql, useMutation } from "@keystone-6/core/admin-ui/apollo";
 

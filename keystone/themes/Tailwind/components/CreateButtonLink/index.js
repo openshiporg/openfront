@@ -1,8 +1,4 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
 import { Button } from "@keystone-ui/button";
-import { jsx } from "@keystone-ui/core";
 import { AdminLink } from "@keystone/components/AdminLink";
 
 export const CreateButtonLink = (props) => {

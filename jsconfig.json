@@ -39,19 +39,20 @@
         "svg"
       ],
       "@keystone/components/*": [
-        "keystone/themes/KeystoneUI/components/*"
+        "keystone/themes/Tailwind/components/*"
       ],
       "@keystone/screens/*": [
-        "keystone/themes/KeystoneUI/screens/*"
+        "keystone/themes/Tailwind/screens/*"
       ],
       "@keystone/views/*": [
-        "keystone/themes/KeystoneUI/views/*"
+        "keystone/themes/Tailwind/views/*"
       ]
     }
   },
   "include": [
     "**/*.js",
-    "*.js"
+    "*.js",
+    "keystone/themes/Tailwind/primitives/default/ui/accordion.tsx"
   ],
   "exclude": [
     "node_modules"

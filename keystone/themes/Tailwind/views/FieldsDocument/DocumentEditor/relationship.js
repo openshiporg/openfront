@@ -1,6 +1,4 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-import { jsx } from "@keystone-ui/core";
+
 import { createContext, Fragment, useContext } from "react";
 import { ReactEditor } from "slate-react";
 import { Transforms } from "slate";
