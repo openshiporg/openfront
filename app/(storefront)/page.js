@@ -69,7 +69,7 @@ export default function Home() {
                 </div>
                 <div className="flex flex-col items-center space-y-2 border-gray-800 p-4 rounded-lg">
                   <Link
-                    href="/"
+                    href="/dashboard"
                     className="group rounded-lg border border-transparent px-4 py-3 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
                   >
                     <h2 className={`mb-3 text-xl md:text-2xl font-semibold`}>
@@ -104,7 +104,7 @@ export default function Home() {
                 </div>
                 <div className="flex flex-col items-center space-y-2 border-gray-800 p-4 rounded-lg">
                   <Link
-                    href="/"
+                    href="/api/graphql"
                     className="group rounded-lg border border-transparent px-4 py-3 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
                   >
                     <h2 className={`mb-3 text-xl md:text-2xl font-semibold`}>
