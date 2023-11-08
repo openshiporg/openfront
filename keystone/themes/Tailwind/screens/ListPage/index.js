@@ -1,20 +1,20 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
 import { useRouter, useSearchParams } from "next/navigation";
 import { Fragment, useMemo, useState } from "react";
 
-import { Button } from "@keystone-ui/button";
-import { jsx, Center, Stack, useTheme } from "@keystone-ui/core";
-import { TextInput } from "@keystone-ui/fields";
+import { Center, Stack, useTheme } from "@keystone-ui/core";
 import { LoadingDots } from "@keystone-ui/loading";
-
-import { SearchIcon } from "@keystone-ui/icons/icons/SearchIcon";
 
 import { gql, useQuery } from "@keystone-6/core/admin-ui/apollo";
 import { makeDataGetter } from "@keystone-6/core/admin-ui/utils";
-// import { HEADER_HEIGHT } from "@keystone-6/core/dist/declarations/src/admin-ui/components/PageContainer";
-// import { PaginationLabel } from "@keystone-6/core/dist/declarations/src/admin-ui/components/Pagination";
+
+import { useList } from "@keystone/keystoneProvider";
+import { useFilter } from "@keystone/utils/useFilter";
+import { useFilters } from "@keystone/utils/useFilters";
+import { useQueryParamsFromLocalStorage } from "@keystone/utils/useQueryParamsFromLocalStorage";
+import { useSelectedFields } from "@keystone/utils/useSelectedFields";
+import { useSort } from "@keystone/utils/useSort";
+import { models } from "@keystone/models";
+import { getNamesFromList } from "@keystone/utils/getNamesFromList";
 
 import { CreateButtonLink } from "@keystone/components/CreateButtonLink";
 import { DeleteManyButton } from "@keystone/components/DeleteManyButton";
@@ -25,16 +25,17 @@ import { ListPageHeader } from "@keystone/components/ListPageHeader";
 import { ListTable } from "@keystone/components/ListTable";
 import { ResultsSummaryContainer } from "@keystone/components/ResultsSummaryContainer";
 import { SortSelection } from "@keystone/components/SortSelection";
-import { useList } from "@keystone/keystoneProvider";
-import { useFilter } from "@keystone/utils/useFilter";
-import { useFilters } from "@keystone/utils/useFilters";
-import { useQueryParamsFromLocalStorage } from "@keystone/utils/useQueryParamsFromLocalStorage";
-import { useSelectedFields } from "@keystone/utils/useSelectedFields";
-import { useSort } from "@keystone/utils/useSort";
 import { PageContainer } from "@keystone/components/PageContainer";
 import { PaginationLabel } from "@keystone/components/Pagination";
-import { models } from "@keystone/models";
-import { getNamesFromList } from "@keystone/utils/getNamesFromList";
+import { Input } from "../../primitives/default/ui/input";
+import { Button } from "../../primitives/default/ui/button";
+import { Ban, SlashIcon } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../../primitives/default/ui/tooltip";
 
 const HEADER_HEIGHT = 80;
 
@@ -131,12 +132,22 @@ export const ListPageTemplate = ({ listKey }) => {
   const search = useFilter(searchParam, list, searchFields);
 
   const updateSearch = (value) => {
+    // Extract search and the rest of the queries from the current URL
     const { search, ...queries } = query;
 
+    // Construct the new query string
+    const newQueryString = new URLSearchParams(queries).toString();
+
     if (value.trim()) {
-      push({ query: { ...queries, search: value } });
+      // If there is a value, add it to the query string
+      const searchQuery = `search=${encodeURIComponent(value)}`;
+      const queryString = newQueryString
+        ? `${newQueryString}&${searchQuery}`
+        : searchQuery;
+      push(`?${queryString}`);
     } else {
-      push({ query: queries });
+      // If there is no value, just push the queries without 'search'
+      push(`?${newQueryString}`);
     }
   };
 
@@ -219,44 +230,6 @@ export const ListPageTemplate = ({ listKey }) => {
   const showCreate =
     !(metaQuery.data?.keystone.adminMeta.list?.hideCreate ?? true) || null;
 
-  const selectedItemsPagination = () => {
-    const selectedItems = selectedItemsState.selectedItems;
-    const selectedItemsCount = selectedItems.size;
-    if (selectedItemsCount) {
-      return (
-        <Fragment>
-          <span css={{ marginRight: theme.spacing.small }}>
-            Selected {selectedItemsCount} of {data.items.length}
-          </span>
-          {!(metaQuery.data?.keystone.adminMeta.list?.hideDelete ?? true) && (
-            <DeleteManyButton
-              list={list}
-              selectedItems={selectedItems}
-              refetch={refetch}
-            />
-          )}
-        </Fragment>
-      );
-    }
-    return (
-      <Fragment>
-        <PaginationLabel
-          currentPage={currentPage}
-          pageSize={pageSize}
-          plural={list.plural}
-          singular={list.singular}
-          total={data.count}
-        />
-        , sorted by{" "}
-        <SortSelection list={list} orderableFields={orderableFields} />
-        with{" "}
-        <FieldSelection
-          list={list}
-          fieldModesByFieldPath={listViewFieldModesByField}
-        />{" "}
-      </Fragment>
-    );
-  };
   return (
     <PageContainer
       header={<ListPageHeader listKey={listKey} />}
@@ -272,54 +245,85 @@ export const ListPageTemplate = ({ listKey }) => {
               {list.description}
             </p>
           )}
-          <Stack across gap="medium" align="center" marginTop="xlarge">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                updateSearch(searchString);
-              }}
-            >
-              <Stack across>
-                <TextInput
-                  css={{ borderRadius: "4px 0px 0px 4px" }}
-                  autoFocus
-                  value={searchString}
-                  onChange={(e) => updateSearchString(e.target.value)}
-                  placeholder={`Search by ${
-                    searchLabels.length ? searchLabels.join(", ") : "ID"
-                  }`}
+          <div className="w-full flex flex-1 items-center">
+            <div className="flex space-x-4 items-center">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  updateSearch(searchString);
+                }}
+              >
+                <Stack across>
+                  <div className="flex items-center py-4">
+                    <Input
+                      value={searchString}
+                      onChange={(e) => updateSearchString(e.target.value)}
+                      placeholder={`Search by ${
+                        searchLabels.length ? searchLabels.join(", ") : "ID"
+                      }`}
+                      className="max-w-sm"
+                    />
+                  </div>
+                </Stack>
+              </form>
+              {showCreate && <CreateButtonLink list={list} />}
+              {data.count || filters.filters.length ? (
+                <FilterAdd
+                  listKey={listKey}
+                  filterableFields={filterableFields}
                 />
-                <Button css={{ borderRadius: "0px 4px 4px 0px" }} type="submit">
-                  <SearchIcon />
-                </Button>
-              </Stack>
-            </form>
-            {showCreate && <CreateButtonLink list={list} />}
-            {data.count || filters.filters.length ? (
-              <FilterAdd
-                listKey={listKey}
-                filterableFields={filterableFields}
+              ) : null}
+              {filters.filters.length ? (
+                <FilterList filters={filters.filters} list={list} />
+              ) : null}
+            </div>
+            <div className="ml-auto flex space-x-4 items-center">
+              <SortSelection list={list} orderableFields={orderableFields} />
+              <FieldSelection
+                list={list}
+                fieldModesByFieldPath={listViewFieldModesByField}
               />
-            ) : null}
-            {filters.filters.length ? (
-              <FilterList filters={filters.filters} list={list} />
-            ) : null}
-            {Boolean(
-              filters.filters.length ||
-                query.sortBy ||
-                query.fields ||
-                query.search
-            ) && (
-              <Button size="small" onClick={resetToDefaults}>
-                Reset to defaults
-              </Button>
-            )}
-          </Stack>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      className="border-dashed"
+                      size="icon"
+                      variant="outline"
+                      onClick={resetToDefaults}
+                      isDisabled={
+                        !Boolean(
+                          filters.filters.length ||
+                            query.sortBy ||
+                            query.fields ||
+                            query.search
+                        )
+                      }
+                    >
+                      <Ban className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Reset to defaults</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              {!(
+                metaQuery.data?.keystone.adminMeta.list?.hideDelete ?? true
+              ) && (
+                <DeleteManyButton
+                  list={list}
+                  selectedItems={selectedItemsState.selectedItems}
+                  refetch={refetch}
+                  isDisabled={!selectedItemsState.selectedItems.size > 0}
+                  totalItems={data.items.length}
+                />
+              )}
+            </div>
+          </div>
           {data.count ? (
             <Fragment>
-              <ResultsSummaryContainer>
-                {selectedItemsPagination()}
-              </ResultsSummaryContainer>
               <ListTable
                 count={data.count}
                 currentPage={currentPage}

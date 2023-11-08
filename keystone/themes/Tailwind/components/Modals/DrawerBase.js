@@ -1,10 +1,7 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
 import { Fragment, useCallback, useRef } from "react";
 import FocusLock from "react-focus-lock";
 import { RemoveScroll } from "react-remove-scroll";
-import { jsx, makeId, useId, useTheme, Portal } from "@keystone-ui/core";
+import { makeId, useId, useTheme, Portal } from "@keystone-ui/core";
 import { Blanket } from "./Blanket";
 
 import { useDrawerManager } from "./drawer-context";

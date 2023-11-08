@@ -1,6 +1,4 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-import { jsx, Stack, useTheme } from "@keystone-ui/core";
+import { Stack, useTheme } from "@keystone-ui/core";
 import { CellContainer } from "@keystone/components/CellContainer";
 import { CellLink } from "@keystone/components/CellLink";
 import { Checkbox } from "@keystone/components/Checkbox";
@@ -110,7 +108,7 @@ export const Field = ({
           {!!validationMessages.length &&
             (shouldShowErrors || forceValidation) &&
             validationMessages.map((message, i) => (
-              <span key={i} css={{ color: "red" }}>
+              <span key={i} className="text-red-500">
                 {message}
               </span>
             ))}

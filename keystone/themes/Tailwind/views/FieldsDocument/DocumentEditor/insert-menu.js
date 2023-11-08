@@ -1,6 +1,4 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-import { jsx, Portal } from "@keystone-ui/core";
+import { Portal } from "@keystone-ui/core";
 import { useControlledPopover } from "@keystone-ui/popover";
 import { Fragment, useContext, useEffect, useRef, useState } from "react";
 import { Transforms, Text, Editor, Path, Point, Node } from "slate";

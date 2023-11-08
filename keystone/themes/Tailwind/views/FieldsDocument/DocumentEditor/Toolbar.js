@@ -1,11 +1,8 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
 import { Fragment, forwardRef, useState, useMemo, useContext } from "react";
 import { Editor, Transforms } from "slate";
 import { applyRefs } from "apply-ref";
 
-import { jsx, useTheme } from "@keystone-ui/core";
+import { useTheme } from "@keystone-ui/core";
 import { useControlledPopover } from "@keystone-ui/popover";
 import { Tooltip } from "@keystone-ui/tooltip";
 

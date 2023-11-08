@@ -1,5 +1,3 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
 import { useTheme } from "@keystone-ui/core"
 import { Trash2Icon } from "@keystone-ui/icons/icons/Trash2Icon"
 import { useControlledPopover } from "@keystone-ui/popover"

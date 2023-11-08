@@ -1,19 +1,17 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-import { jsx, useTheme } from "@keystone-ui/core"
-import ReactSelect, { mergeStyles } from "react-select"
-import { useInputTokens } from "@keystone/components/Fields/hooks/useInputTokens"
-export { components as selectComponents } from "react-select"
+import { useTheme } from "@keystone-ui/core";
+import ReactSelect, { mergeStyles } from "react-select";
+import { useInputTokens } from "@keystone/components/Fields/hooks/useInputTokens";
+export { components as selectComponents } from "react-select";
 
 const useStyles = ({ tokens, multi = false }) => {
-  const { palette } = useTheme()
+  const { palette } = useTheme();
   const indicatorStyles = (provided, state) => ({
     ...provided,
     color: state.isFocused ? palette.neutral600 : palette.neutral500,
     ":hover": {
-      color: state.isFocused ? palette.neutral800 : palette.neutral700
-    }
-  })
+      color: state.isFocused ? palette.neutral800 : palette.neutral700,
+    },
+  });
   return {
     control: (provided, state) => {
       const base = {
@@ -24,68 +22,69 @@ const useStyles = ({ tokens, multi = false }) => {
         borderWidth: tokens.borderWidth,
         fontSize: tokens.fontSize,
         boxShadow: tokens.shadow,
-        transition: tokens.transition
-      }
+        transition: tokens.transition,
+      };
       const variant = state.isDisabled
         ? {
             backgroundColor: tokens.disabled.background || tokens.background,
             borderColor: tokens.disabled.borderColor || tokens.borderColor,
             boxShadow: tokens.disabled.shadow || tokens.shadow,
-            color: tokens.disabled.foreground || tokens.foreground
+            color: tokens.disabled.foreground || tokens.foreground,
           }
         : state.isFocused
         ? {
             backgroundColor: tokens.focus.background || tokens.background,
             borderColor: tokens.focus.borderColor || tokens.borderColor,
             boxShadow: tokens.focus.shadow || tokens.shadow,
-            color: tokens.focus.foreground || tokens.foreground
+            color: tokens.focus.foreground || tokens.foreground,
           }
         : {
             ":hover": {
               backgroundColor: tokens.hover.background,
               borderColor: tokens.hover.borderColor,
               boxShadow: tokens.hover.shadow,
-              color: tokens.hover.foreground
-            }
-          }
-      return { ...provided, ...base, ...variant }
+              color: tokens.hover.foreground,
+            },
+          };
+      return { ...provided, ...base, ...variant };
     },
     clearIndicator: indicatorStyles,
     dropdownIndicator: indicatorStyles,
-    menu: provided => ({
+    menu: (provided) => ({
       ...provided,
       border: `1px solid ${palette.neutral400}`,
       boxShadow: "0 4px 11px hsla(0, 0%, 0%, 0.1)",
       borderRadius: tokens.borderRadius,
-      zIndex: 9999
+      zIndex: 9999,
     }),
-    menuPortal: provided => ({ ...provided, zIndex: 9999 }),
-    multiValue: provided => ({
+    menuPortal: (provided) => ({ ...provided, zIndex: 9999 }),
+    multiValue: (provided) => ({
       ...provided,
       backgroundColor: palette.neutral300,
-      borderRadius: tokens.borderRadius
+      borderRadius: tokens.borderRadius,
     }),
-    multiValueLabel: provided => ({
+    multiValueLabel: (provided) => ({
       ...provided,
       // fontSize: typography.fontSize.medium,
-      fontSize: "90%"
+      fontSize: "90%",
     }),
-    multiValueRemove: provided => ({
+    multiValueRemove: (provided) => ({
       ...provided,
-      borderRadius: tokens.borderRadius
+      borderRadius: tokens.borderRadius,
     }),
-    placeholder: provided => ({
+    placeholder: (provided) => ({
       ...provided,
-      color: tokens.placeholder
+      color: tokens.placeholder,
     }),
-    valueContainer: provided => ({
+    valueContainer: (provided) => ({
       ...provided,
-      padding: multi ? `0 4px` : `0 6px`
-    })
-  }
-}
+      padding: multi ? `0 4px` : `0 6px`,
+    }),
+  };
+};
 
-const portalTarget = typeof document !== "undefined" ? document.body : undefined
+const portalTarget =
+  typeof document !== "undefined" ? document.body : undefined;
 
 export function Select({
   id,
@@ -96,11 +95,11 @@ export function Select({
   styles,
   ...props
 }) {
-  const tokens = useInputTokens({ width: widthKey })
-  const defaultStyles = useStyles({ tokens })
+  const tokens = useInputTokens({ width: widthKey });
+  const defaultStyles = useStyles({ tokens });
   const composedStyles = styles
     ? mergeStyles(defaultStyles, styles)
-    : defaultStyles
+    : defaultStyles;
 
   return (
     <ReactSelect
@@ -108,18 +107,18 @@ export function Select({
       value={value}
       // css={{ width: tokens.width }}
       styles={composedStyles}
-      onChange={value => {
+      onChange={(value) => {
         if (!value) {
-          onChange(null)
+          onChange(null);
         } else {
-          onChange(value)
+          onChange(value);
         }
       }}
       {...props}
       isMulti={false}
       menuPortalTarget={portalMenu && portalTarget}
     />
-  )
+  );
 }
 
 export function MultiSelect({
@@ -131,11 +130,11 @@ export function MultiSelect({
   styles,
   ...props
 }) {
-  const tokens = useInputTokens({ width: widthKey })
-  const defaultStyles = useStyles({ tokens, multi: true })
+  const tokens = useInputTokens({ width: widthKey });
+  const defaultStyles = useStyles({ tokens, multi: true });
   const composedStyles = styles
     ? mergeStyles(defaultStyles, styles)
-    : defaultStyles
+    : defaultStyles;
 
   return (
     <ReactSelect
@@ -143,18 +142,18 @@ export function MultiSelect({
       inputId={id}
       styles={composedStyles}
       value={value}
-      onChange={value => {
+      onChange={(value) => {
         if (!value) {
-          onChange([])
+          onChange([]);
         } else if (Array.isArray(value)) {
-          onChange(value)
+          onChange(value);
         } else {
-          onChange([value])
+          onChange([value]);
         }
       }}
       {...props}
       isMulti
       menuPortalTarget={portalMenu && portalTarget}
     />
-  )
+  );
 }

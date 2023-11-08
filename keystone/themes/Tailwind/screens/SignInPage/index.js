@@ -1,10 +1,6 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
 import { useState, Fragment, FormEvent, useRef, useEffect } from "react";
 
 import {
-  jsx,
   H1,
   Stack,
   VisuallyHidden,
@@ -15,10 +11,7 @@ import {
 import { useMutation, gql } from "@keystone-6/core/admin-ui/apollo";
 import { useRouter } from "next/navigation";
 // import { useRawKeystone, useReinitContext } from "@keystone-6/core/admin-ui/context";
-import {
-  useReinitContext,
-  useRawKeystone,
-} from "@keystone/keystoneProvider";
+import { useReinitContext, useRawKeystone } from "@keystone/keystoneProvider";
 import { useRedirect } from "@keystone/utils/useRedirect";
 
 import { Button } from "@keystone-ui/button";

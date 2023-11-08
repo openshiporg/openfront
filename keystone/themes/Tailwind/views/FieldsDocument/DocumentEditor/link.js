@@ -1,11 +1,7 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
 import { ReactEditor, useFocused, useSelected } from "slate-react";
 import { Editor, Node, Range, Transforms, Text } from "slate";
 import { forwardRef, memo, useEffect, useMemo, useState } from "react";
 
-import { jsx, useTheme } from "@keystone-ui/core";
 import { useControlledPopover } from "@keystone-ui/popover";
 import { Tooltip } from "@keystone-ui/tooltip";
 import { LinkIcon } from "@keystone-ui/icons/icons/LinkIcon";
@@ -70,7 +66,6 @@ export const LinkElement = ({
   children,
   element: __elementForGettingPath,
 }) => {
-  const { typography } = useTheme();
   const editor = useStaticEditor();
   const [currentElement, setNode] = useElementWithSetNodes(
     editor,
@@ -152,7 +147,7 @@ export const LinkElement = ({
           <div css={{ display: "flex", flexDirection: "column" }}>
             <ToolbarGroup>
               <input
-                css={{ fontSize: typography.fontSize.small, width: 240 }}
+                className="text-sm w-[240px]"
                 value={href}
                 onChange={(event) => {
                   setNode({ href: event.target.value });
@@ -179,7 +174,7 @@ export const LinkElement = ({
               <UnlinkButton onUnlink={unlink} />
             </ToolbarGroup>
             {showInvalidState && (
-              <span css={{ color: "red" }}>Please enter a valid URL</span>
+              <span className="text-red-500">Please enter a valid URL</span>
             )}
           </div>
         </InlineDialog>

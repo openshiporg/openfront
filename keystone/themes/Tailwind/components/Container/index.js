@@ -1,13 +1,5 @@
 export const Container = ({ children, ...props }) => (
-  <div
-    css={{
-      minWidth: 0, // fix flex text truncation
-      maxWidth: 1080,
-      // marginLeft: 'auto',
-      // marginRight: 'auto',
-    }}
-    {...props}
-  >
+  <div className="min-w-0 max-w-[1080px]" {...props}>
     {children}
   </div>
 );

@@ -1,10 +1,6 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
 import { Fragment, useState } from "react";
 
-import { Button } from "@keystone-ui/button";
-import { jsx, Stack, Text, VisuallyHidden, useTheme } from "@keystone-ui/core";
+import { Stack, Text, VisuallyHidden, useTheme } from "@keystone-ui/core";
 import { EyeIcon } from "@keystone-ui/icons/icons/EyeIcon";
 import { EyeOffIcon } from "@keystone-ui/icons/icons/EyeOffIcon";
 import { XIcon } from "@keystone-ui/icons/icons/XIcon";
@@ -16,6 +12,7 @@ import { FieldDescription } from "@keystone/components/FieldDescription";
 import { FieldContainer } from "@keystone/components/FieldContainer";
 import { FieldLabel } from "@keystone/components/FieldLabel";
 import { TextInput } from "@keystone/components/TextInput";
+import { Button } from "../../primitives/default/ui/button";
 
 function validate(value, validation, fieldLabel) {
   if (
@@ -88,6 +85,8 @@ export const Field = ({
         <Fragment>
           <Button
             autoFocus={autoFocus}
+            variant="secondary"
+            size="sm"
             onClick={() => {
               onChange({
                 kind: "editing",

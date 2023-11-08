@@ -1,7 +1,4 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
-import { Heading, jsx, useTheme, Box } from "@keystone-ui/core";
+import { Heading, useTheme, Box } from "@keystone-ui/core";
 import { ChevronRightIcon } from "@keystone-ui/icons/icons/ChevronRightIcon";
 import { Button } from "@keystone-ui/button";
 import { Fields } from "@keystone/components/Fields";
@@ -57,14 +54,17 @@ export const CreateItemPage = ({ params }) => {
             }}
           >
             {list.isSingleton ? (
-              <Heading type="h3">{list.label}</Heading>
+              <h3>{list.label}</h3>
             ) : (
               <Fragment>
-                <Heading type="h3">
-                  <AdminLink href={`/${list.path}`} css={{ textDecoration: "none" }}>
+                <h3>
+                  <AdminLink
+                    href={`/${list.path}`}
+                    css={{ textDecoration: "none" }}
+                  >
                     {list.label}
                   </AdminLink>
-                </Heading>
+                </h3>
                 <div
                   css={{
                     color: palette.neutral500,

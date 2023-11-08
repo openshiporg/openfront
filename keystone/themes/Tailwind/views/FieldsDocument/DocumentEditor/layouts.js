@@ -1,11 +1,8 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
 import { createContext, useContext, useMemo } from "react";
 import { Editor, Element, Node, Transforms, Range, Point } from "slate";
 import { ReactEditor, useFocused, useSelected } from "slate-react";
 
-import { jsx, useTheme } from "@keystone-ui/core";
+import { useTheme } from "@keystone-ui/core";
 import { Tooltip } from "@keystone-ui/tooltip";
 import { Trash2Icon } from "@keystone-ui/icons/icons/Trash2Icon";
 

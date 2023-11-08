@@ -1,5 +1,21 @@
-import { Core } from "@keystone-ui/core";
+// import { Core } from "@keystone-ui/core";
+import "../../../../../styles/dashboard.css";
+import { Inter } from "next/font/google";
+import { ThemeProvider } from "./themeProvider";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const UIProvider = ({ children }) => {
-  return <Core>{children}</Core>;
+  return (
+    <body className={inter.className}>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange
+      >
+        {children}
+      </ThemeProvider>
+    </body>
+  );
 };

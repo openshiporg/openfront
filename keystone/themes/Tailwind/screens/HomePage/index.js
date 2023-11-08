@@ -1,10 +1,6 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
 import { useMemo } from "react";
 
 import {
-  jsx,
   Center,
   Inline,
   Heading,
@@ -135,7 +131,7 @@ export const HomePage = () => {
   const dataGetter = makeDataGetter(data, error?.graphQLErrors);
 
   return (
-    <PageContainer header={<Heading type="h3">Dashboard</Heading>}>
+    <PageContainer header={<h1>Dashboard</h1>}>
       {visibleLists.state === "loading" ? (
         <Center css={{ height: `calc(100vh - ${HEADER_HEIGHT}px)` }}>
           <LoadingDots label="Loading lists" size="large" tone="passive" />
@@ -153,7 +149,7 @@ export const HomePage = () => {
           {(() => {
             if (visibleLists.state === "error") {
               return (
-                <span css={{ color: "red" }}>
+                <span className="text-red-500">
                   {visibleLists.error instanceof Error
                     ? visibleLists.error.message
                     : visibleLists.error[0].message}

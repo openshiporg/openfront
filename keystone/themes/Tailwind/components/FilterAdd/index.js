@@ -1,15 +1,10 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
 import { Fragment, useMemo, useState } from "react";
-import { Button } from "@keystone-ui/button";
 import {
   Box,
   Divider,
   Heading,
   Stack,
   VisuallyHidden,
-  jsx,
   useTheme,
 } from "@keystone-ui/core";
 import { Select } from "@keystone-ui/fields";
@@ -20,6 +15,8 @@ import { OptionPrimitive, Options } from "@keystone-ui/options";
 import { PopoverDialog, usePopover } from "@keystone-ui/popover";
 import { useList } from "@keystone/keystoneProvider";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Button } from "../../primitives/default/ui/button";
+import { ListFilterIcon } from "lucide-react";
 
 const fieldSelectComponents = {
   Option: ({ children, ...props }) => {
@@ -54,15 +51,13 @@ export function FilterAdd({ listKey, filterableFields }) {
   return (
     <Fragment>
       <Button
-        tone="active"
         {...trigger.props}
         ref={trigger.ref}
         onClick={() => setOpen(!isOpen)}
+        variant="secondary"
       >
-        <Box as="span" marginRight="xsmall">
-          Filter List
-        </Box>
-        <ChevronDownIcon size="small" />
+        <ListFilterIcon className="mr-2 h-4 w-4" />
+        Filter
       </Button>
       <PopoverDialog
         aria-label={`Filters options, list of filters to apply to the ${listKey} list`}

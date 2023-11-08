@@ -1,6 +1,3 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
 import { AdminLink } from "@keystone/components/AdminLink";
 
 import { Fragment, useState } from "react";
@@ -15,13 +12,12 @@ import { FieldLegend } from "@keystone/components/FieldLegend";
 import { DrawerController } from "@keystone/components/Modals";
 import { useKeystone, useList } from "@keystone/keystoneProvider";
 
-import { Button } from "@keystone-ui/button";
-import { jsx, Stack, useTheme } from "@keystone-ui/core";
+import { Stack, useTheme } from "@keystone-ui/core";
 
 import { Cards } from "@keystone/components/Cards";
 import { CreateItemDrawer } from "@keystone/components/CreateItemDrawer";
 import { RelationshipSelect } from "@keystone/components/RelationshipSelect";
-
+import { Button } from "../../primitives/default/ui/button";
 
 function LinkToRelatedItems({ itemId, value, list, refFieldKey }) {
   function constructQuery({ refFieldKey, itemId, value }) {
@@ -33,16 +29,14 @@ function LinkToRelatedItems({ itemId, value, list, refFieldKey }) {
       .map(({ id }) => id)
       .join(",")}"`;
   }
-  const commonProps = {
-    size: "small",
-    tone: "active",
-    weight: "link",
-  };
-
   if (value.kind === "many") {
     const query = constructQuery({ refFieldKey, value, itemId });
     return (
-      <Button {...commonProps} as={AdminLink} href={`/${list.path}?${query}`}>
+      <Button
+        as={AdminLink}
+        href={`/${list.path}?${query}`}
+        variant="secondary"
+      >
         View related {list.plural}
       </Button>
     );
@@ -50,9 +44,10 @@ function LinkToRelatedItems({ itemId, value, list, refFieldKey }) {
 
   return (
     <Button
-      {...commonProps}
       as={AdminLink}
       href={`/${list.path}/${value.value?.id}`}
+      variant="ghost"
+      size="sm"
     >
       View {list.singular} details
     </Button>
@@ -160,11 +155,12 @@ export const Field = ({
           <Stack across gap="small">
             {onChange !== undefined && !field.hideCreate && (
               <Button
-                size="small"
+                size="sm"
                 disabled={isDrawerOpen}
                 onClick={() => {
                   setIsDrawerOpen(true);
                 }}
+                variant="secondary"
               >
                 Create related {foreignList.singular}
               </Button>
@@ -177,7 +173,7 @@ export const Field = ({
                   undefined
                 : value.value?.id !== authenticatedItem.id) && (
                 <Button
-                  size="small"
+                  size="sm"
                   onClick={() => {
                     const val = {
                       label: authenticatedItem.label,
@@ -297,7 +293,10 @@ export const CardValue = ({ field, item }) => {
         .map((item, index) => (
           <Fragment key={item.id}>
             {!!index ? ", " : ""}
-            <AdminLink href={`/${list.path}/[id]`} as={`/${list.path}/${item.id}`}>
+            <AdminLink
+              href={`/${list.path}/[id]`}
+              as={`/${list.path}/${item.id}`}
+            >
               {item.label || item.id}
             </AdminLink>
           </Fragment>

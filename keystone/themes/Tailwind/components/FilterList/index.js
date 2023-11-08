@@ -1,7 +1,4 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
-import { jsx, Inline, Stack } from "@keystone-ui/core";
+import { Inline, Stack } from "@keystone-ui/core";
 import { Button } from "@keystone-ui/button";
 import { usePopover, PopoverDialog } from "@keystone-ui/popover";
 import { Fragment, useState } from "react";

@@ -1,10 +1,7 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
 import { Fragment } from "react";
 import FocusLock from "react-focus-lock";
 import { RemoveScroll } from "react-remove-scroll";
-import { jsx, keyframes, Portal, useTheme } from "@keystone-ui/core";
+import { keyframes, Portal, useTheme } from "@keystone-ui/core";
 import { Blanket } from "./Blanket";
 
 const slideInAnim = keyframes({

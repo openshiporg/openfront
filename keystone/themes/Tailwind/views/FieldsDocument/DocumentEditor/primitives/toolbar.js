@@ -1,8 +1,5 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
 import { createContext, useContext } from "react";
-import { jsx, Box, forwardRefWithAs, useTheme } from "@keystone-ui/core";
+import { Box, forwardRefWithAs, useTheme } from "@keystone-ui/core";
 
 // Spacers and Separators
 // ------------------------------

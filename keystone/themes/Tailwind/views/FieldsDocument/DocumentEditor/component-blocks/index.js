@@ -1,5 +1,3 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
 
 import {
   Fragment,
@@ -13,7 +11,7 @@ import {
 import { ReactEditor, useFocused, useSelected } from "slate-react"
 import { Editor, Transforms } from "slate"
 
-import { jsx, useTheme } from "@keystone-ui/core"
+import { useTheme } from "@keystone-ui/core"
 
 import { ToolbarButton } from "../primitives"
 import {

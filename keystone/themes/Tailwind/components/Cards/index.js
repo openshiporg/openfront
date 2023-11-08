@@ -12,12 +12,10 @@ import {
   // Box,
   Stack,
   Text,
-  useTheme,
   VisuallyHidden,
 } from "@keystone-ui/core";
 
 import { FieldContainer, FieldLabel } from "@keystone-ui/fields";
-import { Button } from "@keystone-ui/button";
 import { Tooltip } from "@keystone-ui/tooltip";
 
 import { gql, useApolloClient } from "@keystone-6/core/admin-ui/apollo";
@@ -27,34 +25,15 @@ import {
   makeDataGetter,
 } from "@keystone-6/core/admin-ui/utils";
 import { AdminLink } from "@keystone/components/AdminLink";
+import { Button } from "../../primitives/default/ui/button";
 
 const CardContainer = forwardRefWithAs(({ mode = "view", ...props }, ref) => {
-  const { tones } = useTheme();
-
-  const tone =
-    tones[
-      mode === "edit" ? "active" : mode === "create" ? "positive" : "passive"
-    ];
 
   return (
     <Box
       ref={ref}
       paddingLeft="xlarge"
-      css={{
-        position: "relative",
-
-        ":before": {
-          content: '" "',
-          backgroundColor: tone.border,
-          borderRadius: 4,
-          width: 4,
-          position: "absolute",
-          left: 0,
-          top: 0,
-          bottom: 0,
-          zIndex: 1,
-        },
-      }}
+      className="relative before:content-[' '] before:bg-blue-500 before:rounded-full before:w-1 before:h-full before:absolute before:left-0 before:top-0 before:bottom-0 before:z-10"
       {...props}
     />
   );
@@ -130,7 +109,7 @@ export function Cards({
     );
   }
   if (itemsState.kind === "error") {
-    return <span css={{ color: "red" }}>{itemsState.message}</span>;
+    return <span className="text-red-500">{itemsState.message}</span>;
   }
 
   const currentIdsArrayWithFetchedItems = [...value.currentIds]
@@ -140,17 +119,7 @@ export function Cards({
   return (
     <Stack gap="medium">
       {currentIdsArrayWithFetchedItems.length !== 0 && (
-        <Stack
-          as="ul"
-          gap="medium"
-          css={{
-            padding: 0,
-            margin: 0,
-            li: {
-              listStyle: "none",
-            },
-          }}
-        >
+        <Stack as="ul" gap="medium" className="list-none p-0 m-0">
           {currentIdsArrayWithFetchedItems.map(({ id, itemGetter }, index) => {
             const isEditMode =
               !!(onChange !== undefined) && value.itemsBeingEdited.has(id);
@@ -232,7 +201,6 @@ export function Cards({
                               ]),
                             });
                           }}
-                          tone="active"
                         >
                           Edit
                         </Button>
@@ -253,7 +221,6 @@ export function Cards({
                                   });
                                 }}
                                 {...props}
-                                tone="negative"
                               >
                                 Remove
                               </Button>
@@ -262,10 +229,6 @@ export function Cards({
                         )}
                       {displayOptions.linkToItem && (
                         <Button
-                          size="small"
-                          weight="link"
-                          tone="active"
-                          css={{ textDecoration: "none" }}
                           as={AdminLink}
                           href={`/${foreignList.path}/${id}`}
                         >
@@ -283,17 +246,7 @@ export function Cards({
       {onChange === undefined ? null : displayOptions.inlineConnect &&
         showConnectItems ? (
         <CardContainer mode="edit">
-          <Stack
-            gap="small"
-            across
-            css={{
-              width: "100%",
-              justifyContent: "space-between",
-              "div:first-of-type": {
-                flex: "2",
-              },
-            }}
-          >
+          <Stack gap="small" across className="w-full justify-between">
             <RelationshipSelect
               autoFocus
               controlShouldRenderValue={isLoadingLazyItems}

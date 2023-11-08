@@ -1,13 +1,19 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
-import { Button } from "@keystone-ui/button";
-import { jsx, Box } from "@keystone-ui/core";
+import { Box } from "@keystone-ui/core";
 import { ChevronDownIcon } from "@keystone-ui/icons/icons/ChevronDownIcon";
 import { CheckMark, OptionPrimitive, Options } from "@keystone-ui/options";
 import { Popover } from "@keystone-ui/popover";
 import { useSelectedFields } from "@keystone/utils/useSelectedFields";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Button } from "../../primitives/default/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "../../primitives/default/ui/dropdown-menu";
+import { DropdownMenuTrigger } from "@radix-ui/react-dropdown-menu";
+import { MixerHorizontalIcon } from "@radix-ui/react-icons";
 
 function isArrayEqual(arrA, arrB) {
   if (arrA.length !== arrB.length) return false;
@@ -49,6 +55,7 @@ export function FieldSelection({ list, fieldModesByFieldPath }) {
   }
   const selectedFields = useSelectedFields(list, fieldModesByFieldPath);
 
+  console.log({ selectedFields });
   const setNewSelectedFields = (selectedFields) => {
     if (isArrayEqual(selectedFields, list.initialColumns)) {
       const { fields: _ignore, ...otherQueryFields } = query;
@@ -60,7 +67,6 @@ export function FieldSelection({ list, fieldModesByFieldPath }) {
           })
       );
     } else {
-   
       router.push(
         pathname +
           "?" +
@@ -83,39 +89,41 @@ export function FieldSelection({ list, fieldModesByFieldPath }) {
   });
 
   return (
-    <Popover
-      aria-label={`Columns options, list of column options to apply to the ${list.key} list`}
-      triggerRenderer={({ triggerProps }) => {
-        return (
-          <Button weight="link" css={{ padding: 4 }} {...triggerProps}>
-            <span
-              css={{
-                display: "inline-flex",
-                justifyContent: "center",
-                alignItems: "center",
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          className="border-dashed hidden lg:flex data-[state=open]:bg-muted"
+        >
+          <MixerHorizontalIcon className="mr-2 h-4 w-4" />
+          Viewing {selectedFields.size} column
+          {selectedFields.size === 1 ? "" : "s"}{" "}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-[200px]">
+        <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {fields.map((field) => {
+          return (
+            <DropdownMenuCheckboxItem
+              key={field.value}
+              className="capitalize"
+              checked={selectedFields.has(field.value)}
+              onCheckedChange={(isChecked) => {
+                const newSelectedFields = new Set(selectedFields);
+                if (isChecked) {
+                  newSelectedFields.add(field.value);
+                } else {
+                  newSelectedFields.delete(field.value);
+                }
+                setNewSelectedFields(Array.from(newSelectedFields));
               }}
             >
-              {selectedFields.size} column{selectedFields.size === 1 ? "" : "s"}{" "}
-              <ChevronDownIcon size="smallish" />
-            </span>
-          </Button>
-        );
-      }}
-    >
-      <div css={{ width: 320 }}>
-        <Box padding="medium">
-          <Options
-            onChange={(options) => {
-              if (!Array.isArray(options)) return;
-              setNewSelectedFields(options.map((x) => x.value));
-            }}
-            isMulti
-            value={fields.filter((option) => selectedFields.has(option.value))}
-            options={fields}
-            components={fieldSelectionOptionsComponents}
-          />
-        </Box>
-      </div>
-    </Popover>
+              {field.label}
+            </DropdownMenuCheckboxItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

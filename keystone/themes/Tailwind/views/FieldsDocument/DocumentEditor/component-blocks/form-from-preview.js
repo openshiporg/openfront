@@ -1,9 +1,8 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
+
 import { useKeystone } from "@keystone-6/core/admin-ui/context"
 import { RelationshipSelect } from "@keystone-6/core/fields/types/relationship/views/RelationshipSelect"
 import { Button } from "@keystone-ui/button"
-import { jsx, Stack } from "@keystone-ui/core"
+import { Stack } from "@keystone-ui/core"
 import { FieldContainer, FieldLabel } from "@keystone-ui/fields"
 import { PlusCircleIcon } from "@keystone-ui/icons/icons/PlusCircleIcon"
 import { AlertDialog } from "@keystone-ui/modals"

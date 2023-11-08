@@ -1,9 +1,5 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
 import { Fragment, useCallback, useEffect, useRef, useState } from "react"
 import FocusLock from "react-focus-lock"
-import { jsx } from '@keystone-ui/core';
 import { PopoverDialog, useControlledPopover } from "@keystone-ui/popover"
 
 import { InputButton } from "@keystone/components/InputButton"

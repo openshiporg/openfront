@@ -1,8 +1,5 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
 import { DayPicker } from "react-day-picker"
-import { jsx, useTheme } from '@keystone-ui/core';
+import { useTheme } from '@keystone-ui/core';
 import { hexToRgb } from "@keystone/utils/hexToRgb"
 import { getContrastText } from "@keystone/utils/getContrastText"
 

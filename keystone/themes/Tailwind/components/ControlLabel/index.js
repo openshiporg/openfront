@@ -1,33 +1,15 @@
-import { useTheme } from "@keystone-ui/core"
-
 export const ControlLabel = ({
   children,
   className,
   control,
-  size: sizeKey = "medium"
+  size: sizeKey = "medium",
 }) => {
-  const { controlSizes, spacing, typography } = useTheme()
-
-  const size = controlSizes[sizeKey]
-
   return (
-    <label
-      className={className}
-      css={{ alignItems: "flex-start", display: "inline-flex" }}
-    >
+    <label className="items-start inline-flex">
       {control}
       {children && (
-        <div
-          css={{
-            fontSize: size.fontSize,
-            lineHeight: typography.leading.tight,
-            marginLeft: spacing.small,
-            userSelect: "none"
-          }}
-        >
-          {children}
-        </div>
+        <div className="text-sm leading-tight ml-2 select-none">{children}</div>
       )}
     </label>
-  )
-}
+  );
+};

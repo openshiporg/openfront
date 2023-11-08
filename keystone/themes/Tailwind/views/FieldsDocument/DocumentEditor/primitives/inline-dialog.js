@@ -1,7 +1,4 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
-import { jsx, Portal, useTheme } from "@keystone-ui/core";
+import { Portal, useTheme } from "@keystone-ui/core";
 import { forwardRef } from "react";
 
 export const InlineDialog = forwardRef(({ isRelative, ...props }, ref) => {

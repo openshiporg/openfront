@@ -1,22 +1,14 @@
-import { Button } from "@keystone-ui/button";
 import { AdminLink } from "@keystone/components/AdminLink";
+import { Button } from "../../primitives/default/ui/button";
+import { PlusCircledIcon } from "@radix-ui/react-icons";
 
 export const CreateButtonLink = (props) => {
   return (
-    <Button
-      css={{
-        textDecoration: "none",
-        ":hover": {
-          color: "white",
-        },
-      }}
-      as={AdminLink}
-      href={`/${props.list.path}/create`}
-      tone="active"
-      size="small"
-      weight="bold"
-    >
-      Create {props.list.singular}
-    </Button>
+    <AdminLink href={`/${props.list.path}/create`}>
+      <Button color="blue">
+        <PlusCircledIcon className="mr-2 h-4 w-4" /> Create{" "}
+        {props.list.singular}
+      </Button>
+    </AdminLink>
   );
 };

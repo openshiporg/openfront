@@ -1,6 +1,3 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
 import copyToClipboard from "clipboard-copy";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -13,8 +10,7 @@ import {
   useState,
 } from "react";
 
-import { Button } from "@keystone-ui/button";
-import { jsx, Box, Center, Heading, Stack, Text, useTheme } from "@keystone-ui/core";
+import { Box, Center, Stack, Text, useTheme } from "@keystone-ui/core";
 import { Notice } from "@keystone-ui/notice";
 import { Tooltip } from "@keystone-ui/tooltip";
 
@@ -43,65 +39,30 @@ import { LoadingDots } from "@keystone-ui/loading";
 import { AdminLink } from "@keystone/components/AdminLink";
 
 import { ChevronRightIcon } from "@keystone-ui/icons/icons/ChevronRightIcon";
-import { ClipboardIcon } from '@keystone-ui/icons/icons/ClipboardIcon';
+import { ClipboardIcon } from "@keystone-ui/icons/icons/ClipboardIcon";
 import { models } from "@keystone/models";
 import { getNamesFromList } from "@keystone/utils/getNamesFromList";
+import { Button } from "../../primitives/default/ui/button";
 
 export function ItemPageHeader(props) {
-  const { palette, spacing } = useTheme();
-
   return (
-    <Container
-      css={{
-        alignItems: "center",
-        display: "flex",
-        flex: 1,
-        justifyContent: "space-between",
-      }}
-    >
-      <div
-        css={{
-          alignItems: "center",
-          display: "flex",
-          flex: 1,
-          minWidth: 0,
-        }}
-      >
+    <Container className="items-center flex flex-1 justify-between">
+      <div className="items-center flex flex-1 min-w-0">
         {props.list.isSingleton ? (
-          <Heading type="h3">{props.list.label}</Heading>
+          <h3>{props.list.label}</h3>
         ) : (
           <Fragment>
-            <Heading type="h3">
-              <AdminLink
-                href={`/${props.list.path}`}
-                css={{ textDecoration: "none" }}
-              >
+            <h3>
+              <AdminLink href={`/${props.list.path}`} className="no-underline">
                 {props.list.label}
               </AdminLink>
-            </Heading>
-            <div
-              css={{
-                color: palette.neutral500,
-                marginLeft: spacing.xsmall,
-                marginRight: spacing.xsmall,
-              }}
-            >
+            </h3>
+            <div className="text-gray-500 ml-2 mr-2">
               <ChevronRightIcon />
             </div>
-            <Heading
-              as="h1"
-              type="h3"
-              css={{
-                minWidth: 0,
-                maxWidth: "100%",
-                overflow: "hidden",
-                flex: 1,
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
+            <h1 className="min-w-0 max-w-full overflow-hidden flex-1 truncate">
               {props.label}
-            </Heading>
+            </h1>
           </Fragment>
         )}
       </div>
@@ -110,19 +71,13 @@ export function ItemPageHeader(props) {
 }
 
 export function ColumnLayout(props) {
-  const { spacing } = useTheme();
-
   return (
     // this container must be relative to catch absolute children
     // particularly the "expanded" document-field, which needs a height of 100%
-    <Container css={{ position: "relative", height: "100%" }}>
+    <Container className="relative h-full">
       <div
-        css={{
-          alignItems: "start",
-          display: "grid",
-          gap: spacing.xlarge,
-          gridTemplateColumns: `2fr 1fr`,
-        }}
+        className="items-start grid gap-8"
+        style={{ gridTemplateColumns: "2fr 1fr" }}
         {...props}
       />
     </Container>
@@ -130,23 +85,8 @@ export function ColumnLayout(props) {
 }
 
 export function BaseToolbar(props) {
-  const { colors, spacing } = useTheme();
-
   return (
-    <div
-      css={{
-        background: colors.background,
-        borderTop: `1px solid ${colors.border}`,
-        bottom: 0,
-        display: "flex",
-        justifyContent: "space-between",
-        marginTop: spacing.xlarge,
-        paddingBottom: spacing.xlarge,
-        paddingTop: spacing.xlarge,
-        position: "sticky",
-        zIndex: 20,
-      }}
-    >
+    <div className="border-t bottom-0 flex justify-between mt-16 pb-16 pt-16 sticky z-20 bg-background text-foreground">
       {props.children}
     </div>
   );
@@ -387,7 +327,7 @@ function DeleteButton({ itemLabel, itemId, list }) {
   return (
     <Fragment>
       <Button
-        tone="negative"
+        variant="destructive"
         onClick={() => {
           setIsOpen(true);
         }}
@@ -412,7 +352,9 @@ function DeleteButton({ itemLabel, itemId, list }) {
                   tone: "negative",
                 });
               }
-              router.push(list.isSingleton ? `${adminPath}` : `${adminPath}/${list.path}`);
+              router.push(
+                list.isSingleton ? `${adminPath}` : `${adminPath}/${list.path}`
+              );
               return toasts.addToast({
                 title: itemLabel,
                 message: `Deleted ${list.singular} item successfully`,
@@ -623,8 +565,6 @@ const Toolbar = memo(function Toolbar({
       <Button
         isDisabled={!hasChangedFields}
         isLoading={loading}
-        weight="bold"
-        tone="active"
         onClick={onSave}
       >
         Save changes
@@ -678,16 +618,5 @@ function ResetChangesButton(props) {
 }
 
 const StickySidebar = (props) => {
-  const { spacing } = useTheme();
-  return (
-    <div
-      css={{
-        marginTop: spacing.xlarge,
-        marginBottom: spacing.xxlarge,
-        position: "sticky",
-        top: spacing.xlarge,
-      }}
-      {...props}
-    />
-  );
+  return <div className="mt-8 mb-20 sticky top-8" {...props} />;
 };

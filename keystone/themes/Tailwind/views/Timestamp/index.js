@@ -1,8 +1,6 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
 import { useState } from "react";
 
-import { jsx, Inline, Stack, VisuallyHidden, Text } from "@keystone-ui/core";
+import { Inline, Stack, VisuallyHidden, Text } from "@keystone-ui/core";
 import { FieldContainer } from "@keystone/components/FieldContainer";
 import { FieldLabel } from "@keystone/components/FieldLabel";
 import { TextInput } from "@keystone/components/TextInput";

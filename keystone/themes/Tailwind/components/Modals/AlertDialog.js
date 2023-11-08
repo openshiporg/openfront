@@ -1,8 +1,5 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
 import { Button } from "@keystone-ui/button";
-import { jsx, Box, Heading, useTheme, makeId, useId } from "@keystone-ui/core";
+import { Box, Heading, useTheme, makeId, useId } from "@keystone-ui/core";
 import { DialogBase } from "./DialogBase";
 
 export const AlertDialog = ({

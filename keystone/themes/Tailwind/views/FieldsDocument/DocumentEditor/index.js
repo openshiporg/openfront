@@ -1,7 +1,4 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
-import { jsx, useTheme } from "@keystone-ui/core";
+import { useTheme } from "@keystone-ui/core";
 import { useContext, useState } from "react";
 import isHotkey from "is-hotkey";
 import { useCallback, useMemo } from "react";

@@ -1,8 +1,5 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
 import { Fragment, forwardRef } from "react";
-import { jsx, VisuallyHidden } from "@keystone-ui/core";
+import { VisuallyHidden } from "@keystone-ui/core";
 import { useIndicatorStyles, useIndicatorTokens } from "./hooks/indicators";
 import { ControlLabel } from "@keystone/components/ControlLabel";
 

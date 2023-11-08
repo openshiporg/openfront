@@ -1,25 +1,25 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
-import { forwardRef } from "react"
-import { jsx, useTheme, VisuallyHidden } from "@keystone-ui/core"
-import { XIcon } from "@keystone-ui/icons/icons/XIcon"
-import { CalendarIcon } from "@keystone-ui/icons/icons/CalendarIcon"
-import { Adornment, AdornmentWrapper } from "@keystone/components/Adornment"
-import { useInputTokens, useInputStyles } from "@keystone/components/Fields/hooks/useInputTokens"
+import { forwardRef } from "react";
+import { useTheme, VisuallyHidden } from "@keystone-ui/core";
+import { XIcon } from "@keystone-ui/icons/icons/XIcon";
+import { CalendarIcon } from "@keystone-ui/icons/icons/CalendarIcon";
+import { Adornment, AdornmentWrapper } from "@keystone/components/Adornment";
+import {
+  useInputTokens,
+  useInputStyles,
+} from "@keystone/components/Fields/hooks/useInputTokens";
 
 export const InputButton = forwardRef(
   ({ invalid = false, isSelected, onClear, ...props }, ref) => {
-    const { spacing } = useTheme()
-    const inputTokens = useInputTokens({ size: "medium" })
-    const inputStyles = useInputStyles({ invalid, tokens: inputTokens })
+    const { spacing } = useTheme();
+    const inputTokens = useInputTokens({ size: "medium" });
+    const inputStyles = useInputStyles({ invalid, tokens: inputTokens });
     const focusStyles = isSelected
       ? {
           ...inputStyles[":focus"],
           ":hover": inputStyles[":focus"],
-          ":focus": inputStyles[":focus"]
+          ":focus": inputStyles[":focus"],
         }
-      : null
+      : null;
     const buttonStyles = {
       ...inputStyles,
       ...focusStyles,
@@ -28,8 +28,8 @@ export const InputButton = forwardRef(
       // let the button vertically align its text; the have different native behaviour to inputs
       lineHeight: "initial",
 
-      textAlign: "left"
-    }
+      textAlign: "left",
+    };
 
     return (
       <AdornmentWrapper shape="square" size="medium">
@@ -48,12 +48,12 @@ export const InputButton = forwardRef(
           <CalendarIcon color="dim" />
         </Adornment>
       </AdornmentWrapper>
-    )
+    );
   }
-)
+);
 
-const ClearButton = props => {
-  const { colors } = useTheme()
+const ClearButton = (props) => {
+  const { colors } = useTheme();
 
   return (
     <Adornment
@@ -76,16 +76,16 @@ const ClearButton = props => {
 
         // No focus styles because this button is not focusable
         ":focus": {
-          color: "hotpink"
+          color: "hotpink",
         },
         ":hover": {
-          color: colors.foregroundMuted
-        }
+          color: colors.foregroundMuted,
+        },
       }}
       {...props}
     >
       <VisuallyHidden as="span">clear date value</VisuallyHidden>
       <XIcon size="small" />
     </Adornment>
-  )
-}
+  );
+};

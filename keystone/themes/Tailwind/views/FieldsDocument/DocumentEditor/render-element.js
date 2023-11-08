@@ -1,7 +1,4 @@
-/** @jsxRuntime classic */
-/** @jsx jsx */
-
-import { jsx, useTheme } from "@keystone-ui/core";
+import { useTheme } from "@keystone-ui/core";
 import { useSelected } from "slate-react";
 
 import { LayoutArea, LayoutContainer } from "./layouts";
