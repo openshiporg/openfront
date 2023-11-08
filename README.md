@@ -14,7 +14,7 @@ yarn dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the storefront (coming soon).
 
-Open [http://localhost:3000/admin](http://localhost:3000/admin) with your browser to see the Admin UI.
+Open [http://localhost:3000/dashboard](http://localhost:3000/dashboard) with your browser to see the Admin UI.
 
 Open [http://localhost:3000/api/graphql](http://localhost:3000/api/graphql) with your browser to see the GraphQL Playground.
 
