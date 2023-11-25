@@ -1,4 +1,3 @@
-import { Stack } from "@keystone-ui/core";
 import { memo, useId, useMemo } from "react";
 import { FieldDescription } from "@keystone/components/FieldDescription";
 
@@ -53,7 +52,7 @@ export function Fields({
           fieldKey,
           <div key={fieldKey}>
             {field.label}:{" "}
-            <span className="text-red-500">{val.errors[0].message}</span>
+            <span className="text-red-600 dark:text-red-500">{val.errors[0].message}</span>
           </div>,
         ];
       }
@@ -108,7 +107,7 @@ export function Fields({
 
   return (
     <div className="flex flex-col items-stretch gap-2">
-      {rendered.length === 0
+      {console.log(rendered) && rendered.length === 0
         ? "There are no fields that you can read or edit"
         : rendered}
     </div>
@@ -118,7 +117,6 @@ export function Fields({
 function FieldGroup(props) {
   const descriptionId = useId();
   const labelId = useId();
-  const buttonSize = 24;
 
   const divider = <div className="h-full w-px" />;
   return (
@@ -129,7 +127,7 @@ function FieldGroup(props) {
     >
       <details open>
         <summary className="list-none outline-none">
-          <Stack across gap="medium">
+          <div className="flex space-x-4">
             <div className="p-0 h-10 w-10 focus:[apply-focus-styles] open:rotate-90">
               {downChevron}
             </div>
@@ -137,10 +135,10 @@ function FieldGroup(props) {
             <text id={labelId} className="relative text-lg font-bold">
               {props.label}
             </text>
-          </Stack>
+          </div>
         </summary>
-        <Stack across gap="medium">
-          <div css={{ width: buttonSize }} />
+        <div className="flex space-x-4">
+          <div />
           {divider}
           <div>
             {props.description !== null && (
@@ -148,11 +146,9 @@ function FieldGroup(props) {
                 {props.description}
               </FieldDescription>
             )}
-            <Stack marginTop="xlarge" gap="xlarge">
-              {props.children}
-            </Stack>
+            <div className="mt-12 space-y-12">{props.children}</div>
           </div>
-        </Stack>
+        </div>
       </details>
     </div>
   );

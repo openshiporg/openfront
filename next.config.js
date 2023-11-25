@@ -1,4 +1,3 @@
-const withPreconstruct = require("@preconstruct/next");
 const fs = require("fs");
 const jsconfig = require("./jsconfig.json");
 
@@ -8,6 +7,7 @@ const themeAliases = {
   "@keystone/components": `keystone/themes/${theme}/components`,
   "@keystone/screens": `keystone/themes/${theme}/screens`,
   "@keystone/views": `keystone/themes/${theme}/views`,
+  "@keystone/primitives": `keystone/themes/${theme}/primitives`,
 };
 
 function valueToArray(obj) {
@@ -62,4 +62,4 @@ const nextConfig = {
   },
 };
 
-module.exports = withPreconstruct(nextConfig);
+module.exports = nextConfig;

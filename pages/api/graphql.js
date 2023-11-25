@@ -13,6 +13,7 @@ export default async function handler(req, res) {
   if (contentType?.startsWith("multipart/form-data")) {
     req.body = await processRequest(req, res);
   }
+
   return createYoga({
     graphqlEndpoint: "/api/graphql",
     schema: keystoneContext.graphql.schema,

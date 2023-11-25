@@ -1,13 +1,15 @@
 import { Fragment, useMemo } from "react";
 import { Editor, Node, Path, Range, Transforms } from "slate";
 
-import { useTheme } from "@keystone-ui/core";
-import { Tooltip } from "@keystone-ui/tooltip";
-
 import { IconBase } from "./Toolbar";
 import { KeyboardInTooltip, ToolbarButton } from "./primitives";
 import { isElementActive } from "./utils";
 import { useToolbarState } from "./toolbar-state";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@keystone/primitives/default/ui/tooltip";
 
 export const insertBlockquote = (editor) => {
   const isActive = isElementActive(editor, "blockquote");
@@ -92,15 +94,9 @@ export function withBlockquote(editor) {
 }
 
 export const BlockquoteElement = ({ attributes, children }) => {
-  const { colors, spacing } = useTheme();
   return (
     <blockquote
-      css={{
-        borderLeft: "3px solid #CBD5E0",
-        color: colors.foregroundDim,
-        margin: 0,
-        padding: `0 ${spacing.xlarge}px`,
-      }}
+      className="border-l-4 border-blue-200 my-0 py-0 px-6"
       {...attributes}
     >
       {children}
@@ -131,15 +127,15 @@ const BlockquoteButton = ({ attrs }) => {
   );
 };
 export const blockquoteButton = (
-  <Tooltip
-    content={
+  <Tooltip>
+    <TooltipTrigger>
+      <BlockquoteButton />
+    </TooltipTrigger>
+    <TooltipContent>
       <Fragment>
         Quote<KeyboardInTooltip>{"> "}</KeyboardInTooltip>
       </Fragment>
-    }
-    weight="subtle"
-  >
-    {(attrs) => <BlockquoteButton attrs={attrs} />}
+    </TooltipContent>
   </Tooltip>
 );
 

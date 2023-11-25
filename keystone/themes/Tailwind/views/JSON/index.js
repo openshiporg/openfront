@@ -1,11 +1,9 @@
-import { Stack, Text } from "@keystone-ui/core";
-
 import { CellLink } from "@keystone/components/CellLink";
 import { CellContainer } from "@keystone/components/CellContainer";
 import { FieldContainer } from "@keystone/components/FieldContainer";
 import { FieldLabel } from "@keystone/components/FieldLabel";
 import { FieldDescription } from "@keystone/components/FieldDescription";
-import { Textarea } from "../../primitives/default/ui/textarea";
+import { TextArea } from "@keystone/components/TextArea";
 
 export const Field = ({
   field,
@@ -20,25 +18,24 @@ export const Field = ({
       <FieldDescription id={`${field.path}-description`}>
         {field.description}
       </FieldDescription>
-      <Stack>
-        <Textarea
+      <div>
+        <TextArea
           id={field.path}
           className="bg-muted mb-2"
           aria-describedby={
             field.description === null ? undefined : `${field.path}-description`
           }
           readOnly={onChange === undefined}
-    
           autoFocus={autoFocus}
           onChange={(event) => onChange?.(event.target.value)}
           value={value}
         />
         {forceValidation && (
-          <Text color="red600" size="small">
+          <span className="text-red-600 dark:text-red-500 text-sm">
             {"Invalid JSON"}
-          </Text>
+          </span>
         )}
-      </Stack>
+      </div>
     </FieldContainer>
   );
 };

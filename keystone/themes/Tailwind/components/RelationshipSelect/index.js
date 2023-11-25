@@ -9,7 +9,6 @@ import {
   useRef,
 } from "react";
 
-import { MultiSelect, Select, selectComponents } from "@keystone-ui/fields";
 import { validate as validateUUID } from "uuid";
 
 import {
@@ -19,6 +18,7 @@ import {
   useApolloClient,
   useQuery,
 } from "@keystone-6/core/admin-ui/apollo";
+import { MultiSelect, Select, selectComponents } from "@keystone/components/Select";
 
 function useIntersectionObserver(cb, ref) {
   const cbRef = useRef(cb);
@@ -320,9 +320,9 @@ const relationshipSelectComponents = {
     return (
       <selectComponents.MenuList {...props}>
         {children}
-        <div css={{ textAlign: "center" }} ref={ref}>
+        <div ref={ref}>
           {props.options.length < count && (
-            <span css={{ padding: 8 }}>Loading...</span>
+            <span>Loading...</span>
           )}
         </div>
       </selectComponents.MenuList>

@@ -46,6 +46,9 @@
       ],
       "@keystone/views/*": [
         "keystone/themes/Tailwind/views/*"
+      ],
+      "@keystone/primitives/*": [
+        "keystone/themes/Tailwind/primitives/*"
       ]
     }
   },

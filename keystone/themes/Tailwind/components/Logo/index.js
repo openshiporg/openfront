@@ -11,13 +11,13 @@ export const Logo = () => {
   return (
     <h3>
       <Link href="/">
-        <div className="mt-2">
+        <div className="ml-4 mt-2">
           <h1
-            className={`mb-3 text-2xl md:text-3xl font-semibold text-center`}
+            className={`mb-3 text-xl md:text-2xl font-semibold text-center`}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="inline-block w-8 h-8 mr-2 stroke-rose-700"
+              className="inline-block w-6 h-6 mr-2 stroke-orange-700"
               viewBox="0 0 24 24"
               strokeWidth="2"
               stroke="currentColor"

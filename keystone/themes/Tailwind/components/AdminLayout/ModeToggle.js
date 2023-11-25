@@ -3,13 +3,13 @@
 import * as React from "react";
 import { MoonIcon, SunIcon } from "@radix-ui/react-icons";
 import { useTheme } from "next-themes";
-import { Button } from "../../primitives/default/ui/button";
+import { Button } from "@keystone/primitives/default/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../../primitives/default/ui/dropdown-menu";
+} from "@keystone/primitives/default/ui/dropdown-menu";
 
 export function ModeToggle() {
   const { setTheme } = useTheme();

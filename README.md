@@ -1,23 +1,96 @@
 # Openfront
 
-Shopify alternative built on Next.js and Keystone.js 
+Shopify alternative built on Next.js and Keystone.js
 
-## Getting Started
+## Running locally
 
-First, run the development server:
+To get Openfront running on your local machine:
 
-```bash
-npm run dev
-# or
-yarn dev
+### Clone the repo
+
+```
+git clone https://github.com/openshiporg/openfront
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the storefront (coming soon).
+### Rename example.env to .env
 
-Open [http://localhost:3000/dashboard](http://localhost:3000/dashboard) with your browser to see the Admin UI.
+```shell
+//.env
+FRONTEND_URL=http://localhost:3000
+DATABASE_URL=postgresql://postgres:example@url:3000/postgres
+SESSION_SECRET=please_change_me
+```
 
-Open [http://localhost:3000/api/graphql](http://localhost:3000/api/graphql) with your browser to see the GraphQL Playground.
+Be sure to replace DATABASE_URL with a postgres connection string.
 
-## Deploy on Vercel
+You can run postgres locally or get a database online.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fopenshiporg%2Fopenfront&env=FRONTEND_URL,DATABASE_URL,COOKIE_SECRET&envDescription=VERCEL_URL%20for%20FRONTEND_URL%2C%2032%20characters%20long%20random%20string%20for%20COOKIE_SECRET%2C%20A%20postgres%20connection%20string%20for%20DATABASE_URL&build-command=yarn%20build)
+> Railway offers a free, temporary [postgres database](https://railway.app/new/postgresql).
+
+### Start the application
+
+Run the following commands start up Openfront:
+
+```js
+$ cd Openfront
+$ yarn install
+$ yarn dev
+```
+
+### Openfront: http://localhost:3000
+
+Once the application is running, go to localhost:3000. If there are no users in the database, you'll be redirected to localhost:3000/init where you can create the admin user.
+
+### GraphQL Playground: http://localhost:3000/api/graphql
+
+Use the playground to build and run queries/mutations against the API.
+
+### Keystone CMS: http://localhost:3000/dashboard
+
+Openfront uses [Keystone.js](https://github.com/keystonejs/keystone). Openfront mounts the Keystone Admin UI to /dashboard. It's a great way to see and interact with your database.
+
+## Deployment
+
+Openfront uses Next.js, so naturally, it can be hosted anywhere that supports Node.js. Openfront also requires a `postgres` database.
+
+### 1-Click Deployment
+
+These deployment services offer `Node.js` and `postgres` databases so Openfront can be deployed in 1-click.
+
+#### Railway
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template/31ZaPV?referralCode=fQpsld)
+
+#### Render
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/openshiporg/openfront)
+
+### Next.js Deployment
+
+To deploy on platforms that don't support databases like [Netlify](https://netlify.com) and [Vercel](https://vercel.com), you'll need to pass a `postgres` connection string as the `DATABASE_URL` variable.
+
+#### Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fopenshiporg%2FOpenfront&env=SESSION_SECRET,FRONTEND_URL,DATABASE_URL&envDescription=A%20postgres%20connection%20string%20is%20used%20for%20DATABASE_URL)
+
+#### Netlify
+
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/openshiporg/openfront)
+
+Go to site settings > build & deploy > environment and add these variables:
+
+```bash
+  FRONTEND_URL=http://localhost:3000
+  DATABASE_URL=postgresql://postgres:example@url:3000/postgres
+  SESSION_SECRET=OH_PLEASE_PLEASE_CHANGE_ME
+```
+
+Replace DATABASE_URL with a postgres database connection string and FRONTEND_URL with the url ending in netlify.app. Redeploy the site.
+
+## Credits
+
+Openfront wouldn't be here without these great projects
+
+- [Next.js](https://nextjs.org/)
+- [Keystone.js](https://keystonejs.com/)
+- [Prisma](https://prisma.io/)

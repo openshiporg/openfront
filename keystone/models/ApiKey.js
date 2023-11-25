@@ -21,15 +21,15 @@ export const ApiKey = list({
       resolvedData,
       context,
     }) => {
-      if (operation === "create") {
-        const aIds = await context.query.apiKey.findMany({
-          where: { user: { id: { equals: context.session.itemId } } },
-        });
-        if (aIds.length > 0)
-          await context.query.apiKey.deleteMany({
-            where: aIds,
-          });
-      }
+      // if (operation === "create") {
+      //   const aIds = await context.query.ApiKey.findMany({
+      //     where: { user: { id: { equals: context.session.itemId } } },
+      //   });
+      //   if (aIds.length > 0)
+      //     await context.query.ApiKey.deleteMany({
+      //       where: aIds,
+      //     });
+      // }
     },
   },
   access: {
@@ -37,7 +37,7 @@ export const ApiKey = list({
       create: isSignedIn,
       read: canManageKeys,
       update: canManageKeys,
-      delete: canManageKeys,
+      delete: ({ session }) => canManageKeys({ session }) !== false,
     },
   },
   fields: {

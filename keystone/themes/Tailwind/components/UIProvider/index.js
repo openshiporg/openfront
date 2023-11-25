@@ -1,4 +1,3 @@
-// import { Core } from "@keystone-ui/core";
 import "../../../../../styles/dashboard.css";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "./themeProvider";

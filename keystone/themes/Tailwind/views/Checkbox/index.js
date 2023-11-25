@@ -1,4 +1,3 @@
-import { useTheme } from "@keystone-ui/core";
 import { Checkbox } from "@keystone/components/Checkbox";
 import { FieldContainer } from "@keystone/components/FieldContainer";
 import { FieldLabel } from "@keystone/components/FieldLabel";
@@ -6,7 +5,6 @@ import { FieldDescription } from "@keystone/components/FieldDescription";
 import { CellContainer } from "@keystone/components/CellContainer";
 
 export const Field = ({ field, value, onChange, autoFocus }) => {
-  const { fields, typography, spacing } = useTheme();
   return (
     <FieldContainer>
       <Checkbox
@@ -20,17 +18,7 @@ export const Field = ({ field, value, onChange, autoFocus }) => {
           field.description === null ? undefined : `${field.path}-description`
         }
       >
-        <span
-          css={{
-            color: fields.labelColor,
-            display: "block",
-            fontWeight: typography.fontWeight.semibold,
-            marginBottom: spacing.xsmall,
-            minWidth: 120,
-          }}
-        >
-          {field.label}
-        </span>
+        <span>{field.label}</span>
         <FieldDescription id={`${field.path}-description`}>
           {field.description}
         </FieldDescription>
@@ -44,7 +32,7 @@ export const Cell = ({ item, field }) => {
   return (
     <CellContainer>
       <Checkbox disabled checked={value} size="small">
-        <span css={{}}>{value ? "True" : "False"}</span>
+        <span>{value ? "True" : "False"}</span>
       </Checkbox>
     </CellContainer>
   );

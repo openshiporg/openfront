@@ -44,6 +44,7 @@ export function DeleteManyButton({
   );
   const [isOpen, setIsOpen] = useState(false);
   const toasts = useToasts();
+
   return (
     <Fragment>
       <AlertDialog open={isOpen}>
@@ -55,7 +56,7 @@ export function DeleteManyButton({
                   onClick={async () => {
                     setIsOpen(true);
                   }}
-                  variant="destructive"
+                  color="rose"
                   size="icon"
                   isLoading={deleteItemsState.loading}
                   isDisabled={isDisabled}
@@ -94,6 +95,8 @@ export function DeleteManyButton({
                     where: [...selectedItems].map((id) => ({ id })),
                   },
                 });
+
+                console.log({ data, errors });
 
                 const { successfulItems, unsuccessfulItems, successMessage } =
                   data[list.gqlNames.deleteManyMutationName].reduce(

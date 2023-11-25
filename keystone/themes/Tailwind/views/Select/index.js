@@ -1,8 +1,4 @@
 import { Fragment, useState } from "react";
-import { Stack } from "@keystone-ui/core";
-import { SegmentedControl } from "@keystone-ui/segmented-control";
-import { Button } from "@keystone-ui/button";
-import { Text } from "@keystone-ui/core";
 import { CellContainer } from "@keystone/components/CellContainer";
 import { FieldContainer } from "@keystone/components/FieldContainer";
 import { FieldDescription } from "@keystone/components/FieldDescription";
@@ -10,6 +6,11 @@ import { FieldLabel } from "@keystone/components/FieldLabel";
 import { Select, MultiSelect } from "@keystone/components/Select";
 import { Radio } from "@keystone/components/Radio";
 import { CellLink } from "@keystone/components/CellLink";
+import { Button } from "@keystone/primitives/default/ui/button";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@keystone/primitives/default/ui/toggle-group";
 
 export const Field = ({
   field,
@@ -21,9 +22,9 @@ export const Field = ({
   const [hasChanged, setHasChanged] = useState(false);
   const validationMessage =
     (hasChanged || forceValidation) && !validate(value, field.isRequired) ? (
-      <Text color="red600" size="small">
+      <span className="text-red-600 dark:text-red-500 text-sm">
         {field.label} is required
-      </Text>
+      </span>
     ) : null;
   return (
     <FieldContainer as={field.displayMode === "select" ? "div" : "fieldset"}>
@@ -59,10 +60,9 @@ export const Field = ({
           <FieldDescription id={`${field.path}-description`}>
             {field.description}
           </FieldDescription>
-          <Stack gap="small" marginTop={"small"}>
+          <div>
             {field.options.map((option) => (
               <Radio
-                css={{ alignItems: "center" }}
                 key={option.value}
                 value={option.value}
                 checked={value.value?.value === option.value}
@@ -88,7 +88,7 @@ export const Field = ({
                   Clear
                 </Button>
               )}
-          </Stack>
+          </div>
           {validationMessage}
         </Fragment>
       ) : (
@@ -97,22 +97,25 @@ export const Field = ({
           <FieldDescription id={`${field.path}-description`}>
             {field.description}
           </FieldDescription>
-          <Stack across gap="small" align="center">
-            <SegmentedControl
-              segments={field.options.map((x) => x.label)}
-              selectedIndex={
+          <div>
+            <ToggleGroup
+              type="single"
+              value={
                 value.value
                   ? field.options.findIndex(
                       (x) => x.value === value.value.value
                     )
                   : undefined
               }
-              isReadOnly={onChange === undefined}
-              onChange={(index) => {
+              onValueChange={(index) => {
                 onChange?.({ ...value, value: field.options[index] });
                 setHasChanged(true);
               }}
-            />
+            >
+              {field.options.map((x) => (
+                <ToggleGroupItem value={x.value}>{x.label}</ToggleGroupItem>
+              ))}
+            </ToggleGroup>
             {value.value !== null &&
               onChange !== undefined &&
               !field.isRequired && (
@@ -125,7 +128,7 @@ export const Field = ({
                   Clear
                 </Button>
               )}
-          </Stack>
+          </div>
           {validationMessage}
         </Fragment>
       )}

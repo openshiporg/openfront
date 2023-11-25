@@ -8,16 +8,6 @@ import { RelationshipSelect } from "@keystone/components/RelationshipSelect";
 import { forwardRefWithAs } from "@keystone/utils/forwardRefWithAs";
 import { useItemState } from "@keystone/utils/useItemState";
 
-import {
-  // Box,
-  Stack,
-  Text,
-  VisuallyHidden,
-} from "@keystone-ui/core";
-
-import { FieldContainer, FieldLabel } from "@keystone-ui/fields";
-import { Tooltip } from "@keystone-ui/tooltip";
-
 import { gql, useApolloClient } from "@keystone-6/core/admin-ui/apollo";
 
 import {
@@ -25,15 +15,20 @@ import {
   makeDataGetter,
 } from "@keystone-6/core/admin-ui/utils";
 import { AdminLink } from "@keystone/components/AdminLink";
-import { Button } from "../../primitives/default/ui/button";
+import { Button } from "@keystone/primitives/default/ui/button";
+import { FieldContainer } from "@keystone/components/FieldContainer";
+import { FieldLabel } from "@keystone/components/FieldLabel";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@keystone/primitives/default/ui/tooltip";
 
 const CardContainer = forwardRefWithAs(({ mode = "view", ...props }, ref) => {
-
   return (
-    <Box
+    <div
       ref={ref}
-      paddingLeft="xlarge"
-      className="relative before:content-[' '] before:bg-blue-500 before:rounded-full before:w-1 before:h-full before:absolute before:left-0 before:top-0 before:bottom-0 before:z-10"
+      className="pl-8 relative before:content-[' '] before:bg-blue-500 before:rounded-full before:w-1 before:h-full before:absolute before:left-0 before:top-0 before:bottom-0 before:z-10"
       {...props}
     />
   );
@@ -109,7 +104,11 @@ export function Cards({
     );
   }
   if (itemsState.kind === "error") {
-    return <span className="text-red-500">{itemsState.message}</span>;
+    return (
+      <span className="text-red-600 dark:text-red-500">
+        {itemsState.message}
+      </span>
+    );
   }
 
   const currentIdsArrayWithFetchedItems = [...value.currentIds]
@@ -117,9 +116,9 @@ export function Cards({
     .filter((x) => x.itemGetter);
 
   return (
-    <Stack gap="medium">
+    <div className="space-y-4">
       {currentIdsArrayWithFetchedItems.length !== 0 && (
-        <Stack as="ul" gap="medium" className="list-none p-0 m-0">
+        <ul className="list-none p-0 m-0 space-y-4">
           {currentIdsArrayWithFetchedItems.map(({ id, itemGetter }, index) => {
             const isEditMode =
               !!(onChange !== undefined) && value.itemsBeingEdited.has(id);
@@ -129,9 +128,9 @@ export function Cards({
                 mode={isEditMode ? "edit" : "view"}
                 key={id}
               >
-                <VisuallyHidden as="h2">{`${field.label} ${index + 1} ${
+                <h2 className="sr-only">{`${field.label} ${index + 1} ${
                   isEditMode ? "edit" : "view"
-                } mode`}</VisuallyHidden>
+                } mode`}</h2>
                 {isEditMode ? (
                   <InlineEdit
                     list={foreignList}
@@ -160,7 +159,7 @@ export function Cards({
                     }}
                   />
                 ) : (
-                  <Stack gap="xlarge">
+                  <div className="space-y-10">
                     {displayOptions.cardFields.map((fieldPath) => {
                       const field = foreignList.fields[fieldPath];
                       const itemForField = {};
@@ -187,10 +186,9 @@ export function Cards({
                         />
                       );
                     })}
-                    <Stack across gap="small">
+                    <div className="flex space-x-2">
                       {displayOptions.inlineEdit && onChange !== undefined && (
                         <Button
-                          size="small"
                           disabled={onChange === undefined}
                           onClick={() => {
                             onChange({
@@ -207,10 +205,9 @@ export function Cards({
                       )}
                       {displayOptions.removeMode === "disconnect" &&
                         onChange !== undefined && (
-                          <Tooltip content="This item will not be deleted. It will only be removed from this field.">
-                            {(props) => (
+                          <Tooltip>
+                            <TooltipTrigger>
                               <Button
-                                size="small"
                                 disabled={onChange === undefined}
                                 onClick={() => {
                                   const currentIds = new Set(value.currentIds);
@@ -224,29 +221,31 @@ export function Cards({
                               >
                                 Remove
                               </Button>
-                            )}
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {/* Content of the tooltip */}
+                              This item will not be deleted. It will only be
+                              removed from this field.
+                            </TooltipContent>
                           </Tooltip>
                         )}
                       {displayOptions.linkToItem && (
-                        <Button
-                          as={AdminLink}
-                          href={`/${foreignList.path}/${id}`}
-                        >
-                          View {foreignList.singular} details
-                        </Button>
+                        <AdminLink href={`/${foreignList.path}/${id}`}>
+                          <Button>View {foreignList.singular} details</Button>
+                        </AdminLink>
                       )}
-                    </Stack>
-                  </Stack>
+                    </div>
+                  </div>
                 )}
               </CardContainer>
             );
           })}
-        </Stack>
+        </ul>
       )}
       {onChange === undefined ? null : displayOptions.inlineConnect &&
         showConnectItems ? (
         <CardContainer mode="edit">
-          <Stack gap="small" across className="w-full justify-between">
+          <div className="flex space-x-2 w-full justify-between">
             <RelationshipSelect
               autoFocus
               controlShouldRenderValue={isLoadingLazyItems}
@@ -322,7 +321,7 @@ export function Cards({
             <Button onClick={() => setShowConnectItems(false)}>
               {hideConnectItemsLabel}
             </Button>
-          </Stack>
+          </div>
         </CardContainer>
       ) : value.itemBeingCreated ? (
         <CardContainer mode="create">
@@ -348,12 +347,10 @@ export function Cards({
         </CardContainer>
       ) : displayOptions.inlineCreate || displayOptions.inlineConnect ? (
         <CardContainer mode="create">
-          <Stack gap="small" across>
+          <div className="flex space-x-2">
             {displayOptions.inlineCreate && (
               <Button
-                size="small"
                 disabled={onChange === undefined}
-                tone="positive"
                 onClick={() => {
                   onChange({
                     ...value,
@@ -366,9 +363,6 @@ export function Cards({
             )}
             {displayOptions.inlineConnect && (
               <Button
-                size="small"
-                weight="none"
-                tone="passive"
                 onClick={() => {
                   setShowConnectItems(true);
                   setHideConnectItemsLabel("Cancel");
@@ -377,17 +371,17 @@ export function Cards({
                 Link existing {foreignList.singular}
               </Button>
             )}
-          </Stack>
+          </div>
         </CardContainer>
       ) : null}
       {/* TODO: this may not be visible to the user when they invoke the save action. Maybe scroll to it? */}
       {forceValidation && (
-        <Text color="red600" size="small">
+        <span className="text-red-600 dark:text-red-500 text-sm">
           You must finish creating and editing any related{" "}
           {foreignList.label.toLowerCase()} before saving the{" "}
           {localList.singular.toLowerCase()}
-        </Text>
+        </span>
       )}
-    </Stack>
+    </div>
   );
 }

@@ -1,9 +1,6 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Fragment, useMemo, useState } from "react";
 
-import { Center, Stack, useTheme } from "@keystone-ui/core";
-import { LoadingDots } from "@keystone-ui/loading";
-
 import { gql, useQuery } from "@keystone-6/core/admin-ui/apollo";
 import { makeDataGetter } from "@keystone-6/core/admin-ui/utils";
 
@@ -25,17 +22,19 @@ import { ListPageHeader } from "@keystone/components/ListPageHeader";
 import { ListTable } from "@keystone/components/ListTable";
 import { ResultsSummaryContainer } from "@keystone/components/ResultsSummaryContainer";
 import { SortSelection } from "@keystone/components/SortSelection";
-import { PageContainer } from "@keystone/components/PageContainer";
 import { PaginationLabel } from "@keystone/components/Pagination";
-import { Input } from "../../primitives/default/ui/input";
-import { Button } from "../../primitives/default/ui/button";
+import { Input } from "@keystone/primitives/default/ui/input";
+import { Button } from "@keystone/primitives/default/ui/button";
 import { Ban, SlashIcon } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../../primitives/default/ui/tooltip";
+} from "@keystone/primitives/default/ui/tooltip";
+import { Card } from "@keystone/primitives/default/ui/card";
+import { LoadingIcon } from "@keystone/components/LoadingIcon";
+import Link from "next/link";
 
 const HEADER_HEIGHT = 80;
 
@@ -226,47 +225,91 @@ export const ListPageTemplate = ({ listKey }) => {
     });
   }
 
-  const theme = useTheme();
   const showCreate =
     !(metaQuery.data?.keystone.adminMeta.list?.hideCreate ?? true) || null;
 
   return (
-    <PageContainer
-      header={<ListPageHeader listKey={listKey} />}
-      title={list.label}
-    >
+    <>
       {metaQuery.error ? (
         // TODO: Show errors nicely and with information
         "Error..."
       ) : data && metaQuery.data ? (
-        <Fragment>
-          {list.description !== null && (
-            <p css={{ marginTop: "24px", maxWidth: "704px" }}>
-              {list.description}
-            </p>
-          )}
-          <div className="w-full flex flex-1 items-center">
-            <div className="flex space-x-4 items-center">
+        <div className="max-w-4xl">
+          <div className="flex">
+            <nav className="pb-2 rounded-lg" aria-label="Breadcrumb">
+              <ol className="inline-flex items-center space-x-1 md:space-x-3">
+                <li className="inline-flex items-center">
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex items-center text-md font-medium text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white"
+                  >
+                    <svg
+                      className="w-3 h-3 mr-2.5"
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="m19.707 9.293-2-2-7-7a1 1 0 0 0-1.414 0l-7 7-2 2a1 1 0 0 0 1.414 1.414L2 10.414V18a2 2 0 0 0 2 2h3a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h3a2 2 0 0 0 2-2v-7.586l.293.293a1 1 0 0 0 1.414-1.414Z" />
+                    </svg>
+                    Home
+                  </Link>
+                </li>
+                <li>
+                  <div className="flex items-center">
+                    <svg
+                      className="w-3 h-3 mx-1 text-gray-400"
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 6 10"
+                    >
+                      <path
+                        stroke="currentColor"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        strokeWidth="2"
+                        d="m1 9 4-4-4-4"
+                      />
+                    </svg>
+                    <div className="ml-1 text-md font-medium text-gray-700 hover:text-blue-600 md:ml-2 dark:text-gray-400 dark:hover:text-white">
+                      {list.label}
+                    </div>
+                  </div>
+                </li>
+              </ol>
+            </nav>
+          </div>
+          <div className="flex items-center justify-between pt-8 pb-4">
+            <div className="grid gap-1">
+              <h1 className="font-bold text-3xl md:text-4xl">{list.label}</h1>
+              <p className="text-lg text-muted-foreground">
+                Create and manage {list.label}
+              </p>
+            </div>
+            {showCreate && <CreateButtonLink list={list} />}
+          </div>
+          {list.description !== null && <p>{list.description}</p>}
+
+          <div className="w-full flex flex-1 items-center mb-4">
+            <div className="flex-1 space-x-4 items-center mr-4">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   updateSearch(searchString);
                 }}
               >
-                <Stack across>
-                  <div className="flex items-center py-4">
-                    <Input
-                      value={searchString}
-                      onChange={(e) => updateSearchString(e.target.value)}
-                      placeholder={`Search by ${
-                        searchLabels.length ? searchLabels.join(", ") : "ID"
-                      }`}
-                      className="max-w-sm"
-                    />
-                  </div>
-                </Stack>
+                <Input
+                  value={searchString}
+                  onChange={(e) => updateSearchString(e.target.value)}
+                  placeholder={`Search by ${
+                    searchLabels.length ? searchLabels.join(", ") : "ID"
+                  }`}
+                  className="max-w-sm"
+                />
               </form>
-              {showCreate && <CreateButtonLink list={list} />}
+            </div>
+            <div className="ml-auto flex space-x-4 items-center">
               {data.count || filters.filters.length ? (
                 <FilterAdd
                   listKey={listKey}
@@ -276,8 +319,6 @@ export const ListPageTemplate = ({ listKey }) => {
               {filters.filters.length ? (
                 <FilterList filters={filters.filters} list={list} />
               ) : null}
-            </div>
-            <div className="ml-auto flex space-x-4 items-center">
               <SortSelection list={list} orderableFields={orderableFields} />
               <FieldSelection
                 list={list}
@@ -323,36 +364,32 @@ export const ListPageTemplate = ({ listKey }) => {
             </div>
           </div>
           {data.count ? (
-            <Fragment>
-              <ListTable
-                count={data.count}
-                currentPage={currentPage}
-                itemsGetter={dataGetter.get("items")}
-                listKey={listKey}
-                pageSize={pageSize}
-                selectedFields={selectedFields}
-                sort={sort}
-                selectedItems={selectedItemsState.selectedItems}
-                onSelectedItemsChange={(selectedItems) => {
-                  setSelectedItems({
-                    itemsFromServer: selectedItemsState.itemsFromServer,
-                    selectedItems,
-                  });
-                }}
-                orderableFields={orderableFields}
-              />
-            </Fragment>
+            <ListTable
+              count={data.count}
+              currentPage={currentPage}
+              itemsGetter={dataGetter.get("items")}
+              listKey={listKey}
+              pageSize={pageSize}
+              selectedFields={selectedFields}
+              sort={sort}
+              selectedItems={selectedItemsState.selectedItems}
+              onSelectedItemsChange={(selectedItems) => {
+                setSelectedItems({
+                  itemsFromServer: selectedItemsState.itemsFromServer,
+                  selectedItems,
+                });
+              }}
+              orderableFields={orderableFields}
+            />
           ) : (
-            <ResultsSummaryContainer>
-              No {list.plural} found.
-            </ResultsSummaryContainer>
+            <Card className="text-lg bg-muted shadow-inner border-dashed flex justify-center py-[100px] mt-6 text-foreground/60 font-medium">
+              {list.plural} will appear here
+            </Card>
           )}
-        </Fragment>
+        </div>
       ) : (
-        <Center css={{ height: `calc(100vh - ${HEADER_HEIGHT}px)` }}>
-          <LoadingDots label="Loading item data" size="large" tone="passive" />
-        </Center>
+        <LoadingIcon label="Loading item data" />
       )}
-    </PageContainer>
+    </>
   );
 };

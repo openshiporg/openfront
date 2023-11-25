@@ -2,14 +2,20 @@ export const ControlLabel = ({
   children,
   className,
   control,
-  size: sizeKey = "medium",
 }) => {
   return (
-    <label className="items-start inline-flex">
+    <div className="flex items-center space-x-2">
       {control}
-      {children && (
-        <div className="text-sm leading-tight ml-2 select-none">{children}</div>
-      )}
-    </label>
+      <label
+        htmlFor="terms"
+        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+      >
+        {children && (
+          <div className="text-sm leading-tight ml-2 select-none">
+            {children}
+          </div>
+        )}
+      </label>
+    </div>
   );
 };

@@ -1,19 +1,16 @@
-import { Box } from "@keystone-ui/core";
-import { ChevronDownIcon } from "@keystone-ui/icons/icons/ChevronDownIcon";
-import { CheckMark, OptionPrimitive, Options } from "@keystone-ui/options";
-import { Popover } from "@keystone-ui/popover";
 import { useSelectedFields } from "@keystone/utils/useSelectedFields";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Button } from "../../primitives/default/ui/button";
+import { Button } from "@keystone/primitives/default/ui/button";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-} from "../../primitives/default/ui/dropdown-menu";
+} from "@keystone/primitives/default/ui/dropdown-menu";
 import { DropdownMenuTrigger } from "@radix-ui/react-dropdown-menu";
-import { MixerHorizontalIcon } from "@radix-ui/react-icons";
+import { CheckIcon, MixerHorizontalIcon } from "@radix-ui/react-icons";
+import { ScrollArea } from "@keystone/primitives/default/ui/scroll-area";
 
 function isArrayEqual(arrA, arrB) {
   if (arrA.length !== arrB.length) return false;
@@ -25,16 +22,18 @@ function isArrayEqual(arrA, arrB) {
   return true;
 }
 
-const Option = (props) => {
+const Option = ({ children, isDisabled, isFocused, isSelected }) => {
+  // Replace with Shadcn UI's equivalent, if available
   return (
-    <OptionPrimitive {...props}>
-      {props.children}
-      <CheckMark
-        isDisabled={props.isDisabled}
-        isFocused={props.isFocused}
-        isSelected={props.isSelected}
-      />
-    </OptionPrimitive>
+    <div
+      className={`option ${isFocused ? "focused" : ""} ${
+        isSelected ? "selected" : ""
+      }`}
+    >
+      {children}
+      {/* Assuming Shadcn UI has an equivalent of CheckMark */}
+      {isSelected && !isDisabled && <CheckIcon name="check" />}
+    </div>
   );
 };
 
@@ -103,26 +102,28 @@ export function FieldSelection({ list, fieldModesByFieldPath }) {
       <DropdownMenuContent align="end" className="w-[200px]">
         <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {fields.map((field) => {
-          return (
-            <DropdownMenuCheckboxItem
-              key={field.value}
-              className="capitalize"
-              checked={selectedFields.has(field.value)}
-              onCheckedChange={(isChecked) => {
-                const newSelectedFields = new Set(selectedFields);
-                if (isChecked) {
-                  newSelectedFields.add(field.value);
-                } else {
-                  newSelectedFields.delete(field.value);
-                }
-                setNewSelectedFields(Array.from(newSelectedFields));
-              }}
-            >
-              {field.label}
-            </DropdownMenuCheckboxItem>
-          );
-        })}
+        <ScrollArea className="min-h-72">
+          {fields.map((field) => {
+            return (
+              <DropdownMenuCheckboxItem
+                key={field.value}
+                className="capitalize"
+                checked={selectedFields.has(field.value)}
+                onCheckedChange={(isChecked) => {
+                  const newSelectedFields = new Set(selectedFields);
+                  if (isChecked) {
+                    newSelectedFields.add(field.value);
+                  } else {
+                    newSelectedFields.delete(field.value);
+                  }
+                  setNewSelectedFields(Array.from(newSelectedFields));
+                }}
+              >
+                {field.label}
+              </DropdownMenuCheckboxItem>
+            );
+          })}
+        </ScrollArea>
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -1,7 +1,6 @@
 import { Component } from "react";
-import { Box, Center, Stack, useTheme } from "@keystone-ui/core";
-import { AlertTriangleIcon } from "@keystone-ui/icons/icons/AlertTriangleIcon";
-import { Button } from "../../primitives/default/ui/button";
+import { Button } from "@keystone/primitives/default/ui/button";
+import { AlertTriangleIcon } from "lucide-react";
 
 export class ErrorBoundary extends Component {
   state = { hasError: false, isReloading: false };
@@ -16,7 +15,7 @@ export class ErrorBoundary extends Component {
     if (this.state.hasError) {
       return (
         <ErrorContainer>
-          <Stack align="center" gap="medium">
+          <div className="flex flex-col items-center space-y-4">
             <AlertTriangleIcon size="large" />
             <div>Something went wrong.</div>
             <Button
@@ -26,7 +25,7 @@ export class ErrorBoundary extends Component {
             >
               reload page
             </Button>
-          </Stack>
+          </div>
         </ErrorContainer>
       );
     }
@@ -35,12 +34,9 @@ export class ErrorBoundary extends Component {
 }
 
 export const ErrorContainer = ({ children }) => {
-  const { colors, shadow } = useTheme();
   return (
-    <Center rounding="medium">
-      <Box margin="medium" padding="xlarge" rounding="medium">
-        {children}
-      </Box>
-    </Center>
+    <div className="flex items-center justify-center rounded-md">
+      <div className="m-4 p-8 rounded-md">{children}</div>
+    </div>
   );
 };

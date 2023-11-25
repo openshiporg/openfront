@@ -1,18 +1,20 @@
-import { useTheme } from "@keystone-ui/core";
-import { Trash2Icon } from "@keystone-ui/icons/icons/Trash2Icon";
-import { Tooltip } from "@keystone-ui/tooltip";
 import { useMemo, useState, useCallback, Fragment } from "react";
 import { useSelected } from "slate-react";
-import { Stack } from "@keystone-ui/core";
-import { Button as KeystoneUIButton } from "@keystone-ui/button";
 import { ToolbarGroup, ToolbarButton, ToolbarSeparator } from "../primitives";
 import { NotEditable } from "./api";
 import { clientSideValidateProp } from "./utils";
 import { FormValueContentFromPreviewProps } from "./form-from-preview";
+import { Trash2Icon } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@keystone/primitives/default/ui/tooltip";
+import { Button } from "@keystone/primitives/default/ui/button";
 
 export function ChromefulComponentBlockElement(props) {
   const selected = useSelected();
-  const { colors, fields, spacing, typography } = useTheme();
 
   const isValid = useMemo(
     () =>
@@ -34,43 +36,8 @@ export function ChromefulComponentBlockElement(props) {
   const ChromefulToolbar =
     props.componentBlock.toolbar ?? DefaultToolbarWithChrome;
   return (
-    <div
-      {...props.attributes}
-      css={{
-        marginBottom: spacing.xlarge,
-        marginTop: spacing.xlarge,
-        paddingLeft: spacing.xlarge,
-        position: "relative",
-        ":before": {
-          content: '" "',
-          backgroundColor: selected
-            ? colors.focusRing
-            : editMode
-            ? colors.linkColor
-            : colors.border,
-          borderRadius: 4,
-          width: 4,
-          position: "absolute",
-          left: 0,
-          top: 0,
-          bottom: 0,
-          zIndex: 1,
-        },
-      }}
-    >
-      <NotEditable
-        css={{
-          color: fields.legendColor,
-          display: "block",
-          fontSize: typography.fontSize.small,
-          fontWeight: typography.fontWeight.bold,
-          lineHeight: 1,
-          marginBottom: spacing.small,
-          textTransform: "uppercase",
-        }}
-      >
-        {props.componentBlock.label}
-      </NotEditable>
+    <div {...props.attributes}>
+      <NotEditable>{props.componentBlock.label}</NotEditable>
       {editMode ? (
         <Fragment>
           <FormValue
@@ -78,7 +45,7 @@ export function ChromefulComponentBlockElement(props) {
             props={props.previewProps}
             onClose={onCloseEditMode}
           />
-          <div css={{ display: "none" }}>{props.children}</div>
+          <div>{props.children}</div>
         </Fragment>
       ) : (
         <Fragment>
@@ -96,7 +63,6 @@ export function ChromefulComponentBlockElement(props) {
 }
 
 function DefaultToolbarWithChrome({ onShowEditMode, onRemove, isValid }) {
-  const theme = useTheme();
   return (
     <ToolbarGroup as={NotEditable} marginTop="small">
       <ToolbarButton
@@ -107,32 +73,26 @@ function DefaultToolbarWithChrome({ onShowEditMode, onRemove, isValid }) {
         Edit
       </ToolbarButton>
       <ToolbarSeparator />
-      <Tooltip content="Remove" weight="subtle">
-        {(attrs) => (
-          <ToolbarButton
-            variant="destructive"
-            onClick={() => {
-              onRemove();
-            }}
-            {...attrs}
-          >
-            <Trash2Icon size="small" />
-          </ToolbarButton>
-        )}
-      </Tooltip>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger>
+            <ToolbarButton
+              variant="destructive"
+              onClick={() => {
+                onRemove();
+              }}
+            >
+              <Trash2Icon size="small" />
+            </ToolbarButton>
+          </TooltipTrigger>
+          <TooltipContent>Remove</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       {!isValid && (
         <Fragment>
           <ToolbarSeparator />
-          <span
-            css={{
-              color: theme.palette.red500,
-              display: "flex",
-              alignItems: "center",
-              paddingLeft: theme.spacing.small,
-            }}
-          >
-            Please edit the form, there are invalid fields.
-          </span>
+          <span>Please edit the form, there are invalid fields.</span>
         </Fragment>
       )}
     </ToolbarGroup>
@@ -143,15 +103,13 @@ function FormValue({ onClose, props, isValid }) {
   const [forceValidation, setForceValidation] = useState(false);
 
   return (
-    <Stack gap="xlarge" contentEditable={false}>
+    <div className="space-y-2" contentEditable={false}>
       <FormValueContentFromPreviewProps
         {...props}
         forceValidation={forceValidation}
       />
-      <KeystoneUIButton
+      <Button
         size="small"
-        tone="active"
-        weight="bold"
         onClick={() => {
           if (isValid) {
             onClose();
@@ -161,7 +119,7 @@ function FormValue({ onClose, props, isValid }) {
         }}
       >
         Done
-      </KeystoneUIButton>
-    </Stack>
+      </Button>
+    </div>
   );
 }

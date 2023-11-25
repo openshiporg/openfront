@@ -35,7 +35,7 @@ export default function Home() {
                 <div className="flex flex-col items-center space-y-2 border-gray-800 p-4 rounded-lg">
                   <Link
                     href="/"
-                    className="group rounded-lg border border-transparent px-4 py-3 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
+                    className="group rounded-lg border border-transparent px-4 py-3 transition-colors hover:border-neutral-700 hover:bg-neutral-800/30"
                   >
                     <h2 className={`mb-3 text-xl md:text-2xl font-semibold`}>
                       <svg
@@ -70,7 +70,7 @@ export default function Home() {
                 <div className="flex flex-col items-center space-y-2 border-gray-800 p-4 rounded-lg">
                   <Link
                     href="/dashboard"
-                    className="group rounded-lg border border-transparent px-4 py-3 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
+                    className="group rounded-lg border border-transparent px-4 py-3 transition-colors hover:border-neutral-700 hover:bg-neutral-800/30"
                   >
                     <h2 className={`mb-3 text-xl md:text-2xl font-semibold`}>
                       <svg
@@ -105,7 +105,7 @@ export default function Home() {
                 <div className="flex flex-col items-center space-y-2 border-gray-800 p-4 rounded-lg">
                   <Link
                     href="/api/graphql"
-                    className="group rounded-lg border border-transparent px-4 py-3 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
+                    className="group rounded-lg border border-transparent px-4 py-3 transition-colors hover:border-neutral-700 hover:bg-neutral-800/30"
                   >
                     <h2 className={`mb-3 text-xl md:text-2xl font-semibold`}>
                       <svg

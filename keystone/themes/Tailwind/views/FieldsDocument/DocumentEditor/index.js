@@ -1,4 +1,3 @@
-import { useTheme } from "@keystone-ui/core";
 import { useContext, useState } from "react";
 import isHotkey from "is-hotkey";
 import { useCallback, useMemo } from "react";
@@ -175,7 +174,6 @@ export function DocumentEditor({
   initialExpanded = false,
   ...props
 }) {
-  const { radii, colors, spacing, fields } = useTheme();
   const [expanded, setExpanded] = useState(initialExpanded);
   const editor = useMemo(
     () =>
@@ -184,12 +182,7 @@ export function DocumentEditor({
   );
 
   return (
-    <div
-      css={{
-        border: `1px solid ${colors.border}`,
-        borderRadius: radii.small,
-      }}
-    >
+    <div>
       <DocumentEditorProvider
         componentBlocks={componentBlocks}
         documentFeatures={documentFeatures}
@@ -226,25 +219,7 @@ export function DocumentEditor({
           [expanded, documentFeatures, onChange]
         )}
 
-        <DocumentEditorEditable
-          css={[
-            {
-              borderRadius: "inherit",
-              background: fields.focus.inputBackground,
-              borderColor: fields.inputBorderColor,
-              paddingLeft: spacing.medium,
-              paddingRight: spacing.medium,
-              minHeight: 120,
-              scrollbarGutter: "stable",
-              // the !important is necessary to override the width set by resizing as an inline style
-              height: expanded ? "auto !important" : 224,
-              resize: expanded ? undefined : "vertical",
-              overflowY: "auto",
-            },
-          ]}
-          {...props}
-          readOnly={onChange === undefined}
-        />
+        <DocumentEditorEditable {...props} readOnly={onChange === undefined} />
         {
           // for debugging
           false && <Debugger />

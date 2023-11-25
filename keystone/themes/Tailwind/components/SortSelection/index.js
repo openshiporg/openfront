@@ -1,30 +1,20 @@
-import { Divider, Heading, Stack } from "@keystone-ui/core";
-import { ChevronDownIcon } from "@keystone-ui/icons/icons/ChevronDownIcon";
-import { Options } from "@keystone-ui/options";
-import { PopoverDialog, usePopover } from "@keystone-ui/popover";
-import { Fragment } from "react";
 import { useSort } from "@keystone/utils/useSort";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { fieldSelectionOptionsComponents } from "@keystone/components/FieldSelection";
-import { Button } from "../../primitives/default/ui/button";
+import { Button } from "@keystone/primitives/default/ui/button";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuItem,
-} from "../../primitives/default/ui/dropdown-menu";
+} from "@keystone/primitives/default/ui/dropdown-menu";
 import { DropdownMenuTrigger } from "@radix-ui/react-dropdown-menu";
-import { MixerHorizontalIcon, MixerVerticalIcon } from "@radix-ui/react-icons";
+import { MixerVerticalIcon } from "@radix-ui/react-icons";
 import { ArrowDownAz, ArrowDownZa } from "lucide-react";
+import { ScrollArea } from "@keystone/primitives/default/ui/scroll-area";
 
 export function SortSelection({ list, orderableFields }) {
   const sort = useSort(list, orderableFields);
-  const { isOpen, setOpen, trigger, dialog, arrow } = usePopover({
-    placement: "bottom",
-    modifiers: [{ name: "offset", options: { offset: [0, 8] } }],
-  });
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -43,7 +33,10 @@ export function SortSelection({ list, orderableFields }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="ml-auto hidden lg:flex border-dashed data-[state=open]:bg-muted">
+        <Button
+          variant="outline"
+          className="ml-auto hidden lg:flex border-dashed data-[state=open]:bg-muted"
+        >
           {sort ? (
             <>
               {sort.direction === "ASC" ? (
@@ -64,45 +57,46 @@ export function SortSelection({ list, orderableFields }) {
       <DropdownMenuContent align="end" className="w-[200px]">
         <DropdownMenuLabel>Sort by</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {[...orderableFields, noFieldOption.value].map((fieldPath) => {
-          const isNoFieldOption = fieldPath === noFieldOption.value;
-          const option = isNoFieldOption
-            ? noFieldOption
-            : {
-                label: list.fields[fieldPath].label,
-                value: fieldPath,
-              };
+        <ScrollArea className="min-h-72">
+          {[...orderableFields, noFieldOption.value].map((fieldPath) => {
+            const isNoFieldOption = fieldPath === noFieldOption.value;
+            const option = isNoFieldOption
+              ? noFieldOption
+              : {
+                  label: list.fields[fieldPath].label,
+                  value: fieldPath,
+                };
 
-          return (
-            <DropdownMenuItem
-              key={option.value}
-              onSelect={() => {
-                let newSortQuery;
-                if (isNoFieldOption) {
-                  newSortQuery = ""; // No sort is applied
-                } else {
-                  const newSortDirection =
-                    sort?.field === option.value && sort.direction === "ASC"
-                      ? "DESC"
-                      : "ASC";
-                  newSortQuery = `${newSortDirection === "DESC" ? "-" : ""}${
-                    option.value
-                  }`;
-                }
+            return (
+              <DropdownMenuItem
+                key={option.value}
+                onSelect={() => {
+                  let newSortQuery;
+                  if (isNoFieldOption) {
+                    newSortQuery = ""; // No sort is applied
+                  } else {
+                    const newSortDirection =
+                      sort?.field === option.value && sort.direction === "ASC"
+                        ? "DESC"
+                        : "ASC";
+                    newSortQuery = `${newSortDirection === "DESC" ? "-" : ""}${
+                      option.value
+                    }`;
+                  }
 
-                const newQueryParams = new URLSearchParams({
-                  ...query,
-                  sortBy: newSortQuery,
-                }).toString();
+                  const newQueryParams = new URLSearchParams({
+                    ...query,
+                    sortBy: newSortQuery,
+                  }).toString();
 
-                router.push(`${pathname}?${newQueryParams}`);
-                setOpen(false); // Close the dropdown
-              }}
-            >
-              {option.label}
-            </DropdownMenuItem>
-          );
-        })}
+                  router.push(`${pathname}?${newQueryParams}`);
+                }}
+              >
+                {option.label}
+              </DropdownMenuItem>
+            );
+          })}
+        </ScrollArea>
       </DropdownMenuContent>
     </DropdownMenu>
   );

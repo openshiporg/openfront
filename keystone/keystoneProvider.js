@@ -44,6 +44,7 @@ function InternalKeystoneProvider({
   if (adminMeta.state === "loading") {
     return <LoadingIcon label="Loading Admin Metadata" size="large" />;
   }
+
   return (
     <KeystoneContext.Provider
       value={{

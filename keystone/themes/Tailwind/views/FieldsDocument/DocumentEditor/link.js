@@ -2,12 +2,6 @@ import { ReactEditor, useFocused, useSelected } from "slate-react";
 import { Editor, Node, Range, Transforms, Text } from "slate";
 import { forwardRef, memo, useEffect, useMemo, useState } from "react";
 
-import { useControlledPopover } from "@keystone-ui/popover";
-import { Tooltip } from "@keystone-ui/tooltip";
-import { LinkIcon } from "@keystone-ui/icons/icons/LinkIcon";
-import { Trash2Icon } from "@keystone-ui/icons/icons/Trash2Icon";
-import { ExternalLinkIcon } from "@keystone-ui/icons/icons/ExternalLinkIcon";
-
 import {
   InlineDialog,
   ToolbarButton,
@@ -28,6 +22,13 @@ import {
 import { useEventCallback } from "./utils";
 import { isValidURL } from "./isValidURL";
 import { isInlineContainer } from ".";
+import { ExternalLinkIcon, LinkIcon, Trash2Icon } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@keystone/primitives/default/ui/tooltip";
 
 const isLinkActive = (editor) => {
   return isElementActive(editor, "link");
@@ -93,23 +94,6 @@ export const LinkElement = ({
     };
   }, [focused]);
   const [localForceValidation, setLocalForceValidation] = useState(false);
-  const { dialog, trigger } = useControlledPopover(
-    {
-      isOpen: (selected && focused) || focusedInInlineDialog,
-      onClose: () => {},
-    },
-    {
-      placement: "bottom-start",
-      modifiers: [
-        {
-          name: "offset",
-          options: {
-            offset: [0, 8],
-          },
-        },
-      ],
-    }
-  );
   const unlink = useEventCallback(() => {
     Transforms.unwrapNodes(editor, {
       at: ReactEditor.findPath(editor, __elementForGettingPath),
@@ -120,22 +104,10 @@ export const LinkElement = ({
     ? false
     : forceValidation || localForceValidation;
   return (
-    <span
-      {...attributes}
-      css={{ position: "relative", display: "inline-block" }}
-    >
-      <a
-        {...trigger.props}
-        css={{ color: showInvalidState ? "red" : undefined }}
-        ref={trigger.ref}
-        href={href}
-      >
-        {children}
-      </a>
+    <span {...attributes} className="relative inline-block">
+      <a href={href}>{children}</a>
       {((selected && delayedFocused) || focusedInInlineDialog) && (
         <InlineDialog
-          {...dialog.props}
-          ref={dialog.ref}
           onFocus={() => {
             setFocusedInInlineDialog(true);
           }}
@@ -144,7 +116,7 @@ export const LinkElement = ({
             setLocalForceValidation(true);
           }}
         >
-          <div css={{ display: "flex", flexDirection: "column" }}>
+          <div className="flex flex-col">
             <ToolbarGroup>
               <input
                 className="text-sm w-[240px]"
@@ -153,28 +125,33 @@ export const LinkElement = ({
                   setNode({ href: event.target.value });
                 }}
               />
-              <Tooltip content="Open link in new tab" weight="subtle">
-                {(attrs) => (
-                  <ToolbarButton
-                    as="a"
-                    onMouseDown={(event) => {
-                      event.preventDefault();
-                    }}
-                    href={href}
-                    target="_blank"
-                    rel="noreferrer"
-                    variant="action"
-                    {...attrs}
-                  >
-                    {externalLinkIcon}
-                  </ToolbarButton>
-                )}
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <ToolbarButton
+                      as="a"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                      }}
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer"
+                      variant="action"
+                      {...attrs}
+                    >
+                      {externalLinkIcon}
+                    </ToolbarButton>
+                  </TooltipTrigger>
+                  <TooltipContent>Open link in new tab</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               {separator}
               <UnlinkButton onUnlink={unlink} />
             </ToolbarGroup>
             {showInvalidState && (
-              <span className="text-red-500">Please enter a valid URL</span>
+              <span className="text-red-600 dark:text-red-500">
+                Please enter a valid URL
+              </span>
             )}
           </div>
         </InlineDialog>
@@ -188,20 +165,23 @@ const externalLinkIcon = <ExternalLinkIcon size="small" />;
 
 const UnlinkButton = memo(function UnlinkButton({ onUnlink }) {
   return (
-    <Tooltip content="Unlink" weight="subtle">
-      {(attrs) => (
-        <ToolbarButton
-          variant="destructive"
-          onMouseDown={(event) => {
-            event.preventDefault();
-            onUnlink();
-          }}
-          {...attrs}
-        >
-          <Trash2Icon size="small" />
-        </ToolbarButton>
-      )}
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger>
+          <ToolbarButton
+            variant="destructive"
+            onMouseDown={(event) => {
+              event.preventDefault();
+              onUnlink();
+            }}
+            {...attrs}
+          >
+            <Trash2Icon size="small" />
+          </ToolbarButton>
+        </TooltipTrigger>
+        <TooltipContent>Unlink</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 });
 
@@ -232,9 +212,14 @@ const LinkButton = forwardRef(function LinkButton(props, ref) {
 });
 
 export const linkButton = (
-  <Tooltip content="Link" weight="subtle">
-    {(attrs) => <LinkButton {...attrs} />}
-  </Tooltip>
+  <TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger>
+        <LinkButton />
+      </TooltipTrigger>
+      <TooltipContent>Link</TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
 );
 
 const markdownLinkPattern = /(^|\s)\[(.+?)\]\((\S+)\)$/;

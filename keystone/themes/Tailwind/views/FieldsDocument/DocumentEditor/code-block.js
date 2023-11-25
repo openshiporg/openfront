@@ -1,10 +1,13 @@
-
-import { Tooltip } from "@keystone-ui/tooltip";
 import { useMemo, Fragment } from "react";
 import { Editor, Transforms, Element, Text, Range, Point } from "slate";
-import { CodeIcon } from "@keystone-ui/icons/icons/CodeIcon";
 import { ToolbarButton, KeyboardInTooltip } from "./primitives";
 import { useToolbarState } from "./toolbar-state";
+import { CodeIcon } from "lucide-react";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@keystone/primitives/default/ui/tooltip";
 
 export function withCodeBlock(editor) {
   const { insertBreak, normalizeNode } = editor;
@@ -92,14 +95,14 @@ function CodeButton({ attrs }) {
 }
 
 export const codeButton = (
-  <Tooltip
-    weight="subtle"
-    content={
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <CodeIcon />
+    </TooltipTrigger>
+    <TooltipContent>
       <Fragment>
         Code block <KeyboardInTooltip>```</KeyboardInTooltip>
       </Fragment>
-    }
-  >
-    {(attrs) => <CodeButton attrs={attrs} />}
+    </TooltipContent>
   </Tooltip>
 );

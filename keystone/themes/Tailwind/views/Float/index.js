@@ -92,7 +92,7 @@ function FloatInput({
         {...props}
       />
       {(hasBlurred || forceValidation) && validationMessage && (
-        <span className="text-red-500">{validationMessage}</span>
+        <span className="text-red-600 dark:text-red-500">{validationMessage}</span>
       )}
     </span>
   );
