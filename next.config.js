@@ -1,9 +1,7 @@
 const fs = require("fs");
-const path = require("path");
-// const jsconfig = require("./jsconfig.json");
-let jsconfig;
+const jsconfig = require("./jsconfig.json");
+
 const theme = process.env.ADMIN_THEME || "KeystoneUI";
-const jsconfigPath = path.join(__dirname, "jsconfig.json");
 
 const themeAliases = {
   "@keystone/components": `keystone/themes/${theme}/components`,
@@ -20,56 +18,13 @@ function valueToArray(obj) {
   return newObj;
 }
 
-function getDefaultJsconfig() {
-  return {
-    "compilerOptions": {
-      "target": "ESNext",
-      "lib": ["dom", "dom.iterable", "esnext"],
-      "allowJs": true,
-      "skipLibCheck": true,
-      "strict": true,
-      "forceConsistentCasingInFileNames": true,
-      "noEmit": true,
-      "esModuleInterop": true,
-      "module": "esnext",
-      "moduleResolution": "node",
-      "resolveJsonModule": true,
-      "isolatedModules": true,
-      "jsx": "preserve",
-      "incremental": true,
-      "baseUrl": ".",
-      "paths": {
-        "@lib/*": ["lib/*"],
-        "@keystone/*": ["keystone/*"],
-        "@storefront/*": ["storefront/*"],
-        "@modules/*": ["modules/*"],
-        "@pages/*": ["pages/*"],
-        "@svg": ["svg"],
-        ...valueToArray(themeAliases), // Includes the dynamic theme aliases
-      }
-    },
-    "include": [
-      "**/*.js",
-      "*.js",
-    ],
-    "exclude": ["node_modules"]
-  };
-}
-
-
 function updateJsconfigAliases() {
-  if (fs.existsSync(jsconfigPath)) {
-    jsconfig = require(jsconfigPath);
-  } else {
-    jsconfig = getDefaultJsconfig();
-  }
-
   jsconfig.compilerOptions.paths = {
     ...jsconfig.compilerOptions.paths,
     ...valueToArray(themeAliases),
   };
 
-  fs.writeFileSync(jsconfigPath, JSON.stringify(jsconfig, null, 2));
+  fs.writeFileSync("jsconfig.json", JSON.stringify(jsconfig, null, 2));
 }
 
 function configureWebpack(config, { isServer }) {
