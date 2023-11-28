@@ -20,17 +20,48 @@ function valueToArray(obj) {
   return newObj;
 }
 
+function getDefaultJsconfig() {
+  return {
+    "compilerOptions": {
+      "target": "ESNext",
+      "lib": ["dom", "dom.iterable", "esnext"],
+      "allowJs": true,
+      "skipLibCheck": true,
+      "strict": true,
+      "forceConsistentCasingInFileNames": true,
+      "noEmit": true,
+      "esModuleInterop": true,
+      "module": "esnext",
+      "moduleResolution": "node",
+      "resolveJsonModule": true,
+      "isolatedModules": true,
+      "jsx": "preserve",
+      "incremental": true,
+      "baseUrl": ".",
+      "paths": {
+        "@lib/*": ["lib/*"],
+        "@keystone/*": ["keystone/*"],
+        "@storefront/*": ["storefront/*"],
+        "@modules/*": ["modules/*"],
+        "@pages/*": ["pages/*"],
+        "@svg": ["svg"],
+        ...valueToArray(themeAliases), // Includes the dynamic theme aliases
+      }
+    },
+    "include": [
+      "**/*.js",
+      "*.js",
+    ],
+    "exclude": ["node_modules"]
+  };
+}
+
+
 function updateJsconfigAliases() {
   if (fs.existsSync(jsconfigPath)) {
     jsconfig = require(jsconfigPath);
   } else {
-    // Initialize a default jsconfig structure if the file does not exist
-    jsconfig = {
-      compilerOptions: {
-        baseUrl: ".",
-        paths: {}
-      }
-    };
+    jsconfig = getDefaultJsconfig();
   }
 
   jsconfig.compilerOptions.paths = {
