@@ -34,9 +34,14 @@ const ListCard = ({ listKey, count, hideCreate }) => {
         )}
       </AdminLink>
       {hideCreate === false && !list.isSingleton && (
-        <Button variant="secondary" size="icon" className="ml-auto my-auto border" >
-          <PlusIcon />
-        </Button>
+        <AdminLink
+          className="ml-auto my-auto"
+          href={`/${list.path}${list.isSingleton ? "/1" : ""}/create`}
+        >
+          <Button variant="secondary" size="icon" className="border">
+            <PlusIcon />
+          </Button>
+        </AdminLink>
       )}
     </Card>
   );
