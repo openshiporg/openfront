@@ -8,7 +8,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../../primitives/default/ui/tooltip";
+} from "@keystone/primitives/default/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "../../primitives/default/ui/alert-dialog";
+} from "@keystone/primitives/default/ui/alert-dialog";
 
 export function DeleteManyButton({
   selectedItems,

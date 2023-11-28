@@ -376,7 +376,7 @@ export function Cards({
       ) : null}
       {/* TODO: this may not be visible to the user when they invoke the save action. Maybe scroll to it? */}
       {forceValidation && (
-        <span className="text-red-600 dark:text-red-500 text-sm">
+        <span className="text-red-600 dark:text-red-500">
           You must finish creating and editing any related{" "}
           {foreignList.label.toLowerCase()} before saving the{" "}
           {localList.singular.toLowerCase()}

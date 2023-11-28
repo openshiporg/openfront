@@ -27,9 +27,9 @@ export const Role = list({
     assignedTo: relationship({
       ref: 'User.role', // TODO: Add this to the User
       many: true,
-      ui: {
-        itemView: { fieldMode: 'read' },
-      },
+      // ui: {
+      //   itemView: { fieldMode: 'read' },
+      // },
     }),
     ...trackingFields
   },

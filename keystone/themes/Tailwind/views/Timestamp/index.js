@@ -92,7 +92,7 @@ export const Field = ({ field, value, onChange, forceValidation }) => {
               value={value.value.dateValue ?? ""}
             />
             {validationMessages?.date && (
-              <p className="text-red-600 dark:text-red-500 text-sm">{validationMessages.date}</p>
+              <p className="text-red-600 dark:text-red-500">{validationMessages.date}</p>
             )}
           </div>
           <div className="flex flex-col">
@@ -107,7 +107,7 @@ export const Field = ({ field, value, onChange, forceValidation }) => {
               placeholder="00:00"
             />
             {validationMessages?.time && (
-              <p className="text-red-600 dark:text-red-500 text-sm">{validationMessages.time}</p>
+              <p className="text-red-600 dark:text-red-500">{validationMessages.time}</p>
             )}
           </div>
         </div>

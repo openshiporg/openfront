@@ -48,6 +48,11 @@ export const User = list({
         create: permissions.canManageUsers,
         update: permissions.canManageUsers,
       },
+      ui: {
+        itemView: {
+          fieldMode: args => (permissions.canManageUsers(args) ? 'edit' : 'read'),
+        },
+      },
     }),
     apiKeys: relationship({ ref: "ApiKey.user", many: true }),
     metadata: json(),

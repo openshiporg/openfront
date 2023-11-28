@@ -17,7 +17,6 @@ import {
   useChangedFieldsAndDataForUpdate,
   useInvalidFields,
 } from "@keystone-6/core/admin-ui/utils";
-import { Container } from "@keystone/components/Container";
 import { CreateButtonLink } from "@keystone/components/CreateButtonLink";
 import { FieldLabel } from "@keystone/components/FieldLabel";
 import { Fields } from "@keystone/components/Fields";
@@ -35,13 +34,23 @@ import { LoadingIcon } from "@keystone/components/LoadingIcon";
 import Link from "next/link";
 import { Skeleton } from "@keystone/primitives/default/ui/skeleton";
 import { ClipboardIcon } from "lucide-react";
-import { Alert } from "../../primitives/default/ui/alert";
+import { Alert } from "@keystone/primitives/default/ui/alert";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "../../primitives/default/ui/tooltip";
+} from "@keystone/primitives/default/ui/tooltip";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@keystone/primitives/default/ui/dialog";
 
 export function ItemPageHeader(props) {
   return (
@@ -255,7 +264,7 @@ function ItemForm({
   );
   return (
     <Fragment>
-      <div className="mt-8">
+      <div>
         <GraphQLErrorNotice
           networkError={error?.networkError}
           // we're checking for path.length === 1 because errors with a path larger than 1 will be field level errors
@@ -331,7 +340,7 @@ function ItemForm({
             </TooltipProvider>
           </code>
         </div>
-        <div className="mt-8">
+        <div>
           <Fields
             groups={list.groups}
             fieldModes={fieldModes}
@@ -367,61 +376,58 @@ function DeleteButton({ itemLabel, itemId, list }) {
   }`,
     { variables: { id: itemId } }
   );
-  const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
 
   const adminPath = process.env.NEXT_PUBLIC_ADMIN_PATH || "/dashboard";
 
   return (
     <Fragment>
-      <Button
-        variant="secondary"
-        color="red"
-        onClick={() => {
-          setIsOpen(true);
-        }}
-      >
-        Delete
-      </Button>
-      <AlertDialog
-        // TODO: change the copy in the title and body of the modal
-        title="Delete Confirmation"
-        isOpen={isOpen}
-        tone="negative"
-        actions={{
-          confirm: {
-            label: "Delete",
-            action: async () => {
-              try {
-                await deleteItem();
-              } catch (err) {
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant="secondary" color="red">
+            Delete
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete Confirmation</DialogTitle>
+          </DialogHeader>
+          <text>
+            Are you sure you want to delete <strong>{itemLabel}</strong>?
+          </text>
+          <DialogFooter className="mt-4">
+            <DialogClose asChild>
+              <Button variant="ghost">Close</Button>
+            </DialogClose>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                try {
+                  await deleteItem();
+                } catch (err) {
+                  return toasts.addToast({
+                    title: `Failed to delete ${list.singular} item: ${itemLabel}`,
+                    message: err.message,
+                    tone: "negative",
+                  });
+                }
+                router.push(
+                  list.isSingleton
+                    ? `${adminPath}`
+                    : `${adminPath}/${list.path}`
+                );
                 return toasts.addToast({
-                  title: `Failed to delete ${list.singular} item: ${itemLabel}`,
-                  message: err.message,
-                  tone: "negative",
+                  title: itemLabel,
+                  message: `Deleted ${list.singular} item successfully`,
+                  tone: "positive",
                 });
-              }
-              router.push(
-                list.isSingleton ? `${adminPath}` : `${adminPath}/${list.path}`
-              );
-              return toasts.addToast({
-                title: itemLabel,
-                message: `Deleted ${list.singular} item successfully`,
-                tone: "positive",
-              });
-            },
-            loading,
-          },
-          cancel: {
-            label: "Cancel",
-            action: () => {
-              setIsOpen(false);
-            },
-          },
-        }}
-      >
-        Are you sure you want to delete <strong>{itemLabel}</strong>?
-      </AlertDialog>
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Fragment>
   );
 }
@@ -543,13 +549,13 @@ export const ItemPageTemplate = ({ listKey, id }) => {
       {loading ? (
         <LoadingIcon label="Loading item data" />
       ) : metaQueryErrors ? (
-        <div className="mt-8">
+        <div>
           <Alert variant="destructive">{metaQueryErrors[0].message}</Alert>
         </div>
       ) : (
         <ColumnLayout>
           {data?.item == null ? (
-            <div className="mt-8">
+            <div>
               {error?.graphQLErrors.length || error?.networkError ? (
                 <GraphQLErrorNotice
                   errors={error?.graphQLErrors}
@@ -628,7 +634,7 @@ const Toolbar = memo(function Toolbar({
         {hasChangedFields ? (
           <ResetChangesButton onReset={onReset} />
         ) : (
-          <text className="font-medium px-5">No changes</text>
+          <text className="font-medium px-5 text-sm">No changes</text>
         )}
         {deleteButton}
       </div>
@@ -641,35 +647,29 @@ function ResetChangesButton(props) {
 
   return (
     <Fragment>
-      <Button
-        onClick={() => {
-          setConfirmModalOpen(true);
-        }}
-        variant="link"
-      >
-        Reset changes
-      </Button>
-      <AlertDialog
-        actions={{
-          confirm: {
-            action: () => props.onReset(),
-            label: "Reset changes",
-          },
-          cancel: {
-            action: () => setConfirmModalOpen(false),
-            label: "Cancel",
-          },
-        }}
-        isOpen={isConfirmModalOpen}
-        title="Are you sure you want to reset changes?"
-        tone="negative"
-      >
-        {null}
-      </AlertDialog>
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant="link">Reset changes</Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Reset Confirmation</DialogTitle>
+          </DialogHeader>
+          <text>Are you sure you want to reset changes?</text>
+          <DialogFooter className="mt-4">
+            <DialogClose asChild>
+              <Button variant="ghost">Close</Button>
+            </DialogClose>
+            <Button onClick={() => props.onReset()}>Reset Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Fragment>
   );
 }
 
 const StickySidebar = (props) => {
-  return <div className="hidden lg:block mt-10 mb-20 sticky top-8" {...props} />;
+  return (
+    <div className="hidden lg:block mt-2 mb-20 sticky top-8" {...props} />
+  );
 };

@@ -102,7 +102,7 @@ export function FieldSelection({ list, fieldModesByFieldPath }) {
       <DropdownMenuContent align="end" className="w-[200px]">
         <DropdownMenuLabel>Toggle columns</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <ScrollArea className="min-h-72">
+        <ScrollArea className="h-72">
           {fields.map((field) => {
             return (
               <DropdownMenuCheckboxItem

@@ -8,21 +8,21 @@ import { LoadingIcon } from "@keystone/components/LoadingIcon";
 import { Card } from "@keystone/primitives/default/ui/card";
 import { Button } from "@keystone/primitives/default/ui/button";
 import { Skeleton } from "@keystone/primitives/default/ui/skeleton";
-import { PlusIcon } from "lucide-react";
+import { ExternalLink, PlusIcon } from "lucide-react";
 
 const ListCard = ({ listKey, count, hideCreate }) => {
   const list = useList(listKey);
   return (
-    <Card className="flex p-4 bg-muted shadow-inner">
+    <Card className="flex p-3 bg-muted/20 shadow-sm">
       <AdminLink
         className="pr-4"
         href={`/${list.path}${list.isSingleton ? "/1" : ""}`}
       >
-        <h3 className="scroll-m-20 text-lg font-bold tracking-tight lg:text-xl text-muted-foreground">
+        <h3 className="scroll-m-20 text-md font-bold tracking-tight lg:text-lg text-muted-foreground/80">
           {list.label}{" "}
         </h3>
         {list.isSingleton ? null : count.type === "success" ? (
-          <span>
+          <span className="text-foreground/80 text-sm">
             {count.count} item{count.count !== 1 ? "s" : ""}
           </span>
         ) : count.type === "error" ? (
@@ -34,13 +34,9 @@ const ListCard = ({ listKey, count, hideCreate }) => {
         )}
       </AdminLink>
       {hideCreate === false && !list.isSingleton && (
-        <div className="ml-auto">
-          <Button size="icon" variant="outline" className="border-dashed">
-            <AdminLink href={`/${list.path}/create`}>
-              <PlusIcon />
-            </AdminLink>
-          </Button>
-        </div>
+        <Button variant="secondary" size="icon" className="ml-auto my-auto border" >
+          <PlusIcon />
+        </Button>
       )}
     </Card>
   );
@@ -81,7 +77,7 @@ export const HomePage = () => {
       {visibleLists.state === "loading" ? (
         <LoadingIcon label="Loading lists" size="large" tone="passive" />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 pb-12">
           {(() => {
             if (visibleLists.state === "error") {
               return (

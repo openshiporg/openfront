@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Separator } from "@keystone/primitives/default/ui/separator";
 import { ScrollArea } from "@keystone/primitives/default/ui/scroll-area";
 
-export function DashboardNav({ items }) {
+export function DashboardNav({ items, open }) {
   const path = usePathname();
 
   if (!items?.length) {
@@ -15,13 +15,18 @@ export function DashboardNav({ items }) {
   const adminPath = process.env.NEXT_PUBLIC_ADMIN_PATH || "/dashboard";
 
   return (
-    <nav className="flex pb-10 h-full">
+    <nav
+      className={cn(
+        "flex h-full transition-opacity duration-500 ease-in-out motion-reduce:transition-none",
+        open ? "opacity-100" : "opacity-0"
+      )}
+    >
       <Separator
         orientation="vertical"
         className="w-[2px] ml-[1.75rem] bg-gradient-to-b dark:from-[#13255a] dark:to-blue-900"
         // style={{ height: `calc(100% + 60px)` }}
       />
-      <ScrollArea>
+      <ScrollArea className="flex-1 overflow-auto">
         <div className="pl-3">
           {items.map((item, index) => {
             if (item.href) {

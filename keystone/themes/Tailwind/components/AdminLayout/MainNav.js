@@ -4,21 +4,29 @@ import * as React from "react";
 import Link from "next/link";
 import { useSelectedLayoutSegment } from "next/navigation";
 
-import { MobileNav } from "./MobileNav";
 import { cn } from "@keystone/utils/cn";
 import { Logo } from "@keystone/components/Logo";
+import { MoreHorizontalIcon } from "lucide-react";
+import { Button } from "@keystone/primitives/default/ui/button";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "../../primitives/default/ui/sheet";
 
-
-export function MainNav({ items, children }) {
+export function MainNav({ items, children, sideData }) {
   const segment = useSelectedLayoutSegment();
-  const [showMobileMenu, setShowMobileMenu] = React.useState(false);
+  const [open, setOpen] = React.useState(false);
 
   return (
-    <div className="flex gap-6 md:gap-10">
-      <Link href="/" className="hidden items-center space-x-2 md:flex">
-        <span className="hidden font-bold sm:inline-block">
-          <Logo />
-        </span>
+    <div className="flex items-center">
+      <Link href="/" className="items-center space-x-2 md:flex">
+        <Logo />
       </Link>
       {items?.length ? (
         <nav className="hidden gap-6 md:flex">
@@ -39,16 +47,20 @@ export function MainNav({ items, children }) {
           ))}
         </nav>
       ) : null}
-      <button
-        className="flex items-center space-x-2 md:hidden"
-        onClick={() => setShowMobileMenu(!showMobileMenu)}
-      >
-        {/* {showMobileMenu ? <Icons.close /> : <Icons.logo />} */}
-        <span className="font-bold">Menu</span>
-      </button>
-      {showMobileMenu && items && (
-        <MobileNav items={items}>{children}</MobileNav>
-      )}
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetTrigger asChild>
+          <Button className="md:hidden" size="icon" variant="ghost">
+            <MoreHorizontalIcon />
+          </Button>
+        </SheetTrigger>
+        <SheetContent
+          side={"left"}
+          className="w-1/2 pt-8"
+          onClick={() => setOpen(false)}
+        >
+          {sideData}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
