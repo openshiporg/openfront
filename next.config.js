@@ -1,7 +1,9 @@
 const fs = require("fs");
-const jsconfig = require("./jsconfig.json");
-
+const path = require("path");
+// const jsconfig = require("./jsconfig.json");
+let jsconfig;
 const theme = process.env.ADMIN_THEME || "KeystoneUI";
+const jsconfigPath = path.join(__dirname, "jsconfig.json");
 
 const themeAliases = {
   "@keystone/components": `keystone/themes/${theme}/components`,
@@ -19,12 +21,24 @@ function valueToArray(obj) {
 }
 
 function updateJsconfigAliases() {
+  if (fs.existsSync(jsconfigPath)) {
+    jsconfig = require(jsconfigPath);
+  } else {
+    // Initialize a default jsconfig structure if the file does not exist
+    jsconfig = {
+      compilerOptions: {
+        baseUrl: ".",
+        paths: {}
+      }
+    };
+  }
+
   jsconfig.compilerOptions.paths = {
     ...jsconfig.compilerOptions.paths,
     ...valueToArray(themeAliases),
   };
 
-  fs.writeFileSync("jsconfig.json", JSON.stringify(jsconfig, null, 2));
+  fs.writeFileSync(jsconfigPath, JSON.stringify(jsconfig, null, 2));
 }
 
 function configureWebpack(config, { isServer }) {
