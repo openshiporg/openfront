@@ -6,7 +6,7 @@ import { useSelectedLayoutSegment } from "next/navigation";
 
 import { cn } from "@keystone/utils/cn";
 import { Logo } from "@keystone/components/Logo";
-import { MoreHorizontalIcon } from "lucide-react";
+import { MoreVerticalIcon } from "lucide-react";
 import { Button } from "@keystone/primitives/default/ui/button";
 import {
   Sheet,
@@ -17,7 +17,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "../../primitives/default/ui/sheet";
+} from "@keystone/primitives/default/ui/sheet";
 
 export function MainNav({ items, children, sideData }) {
   const segment = useSelectedLayoutSegment();
@@ -25,9 +25,6 @@ export function MainNav({ items, children, sideData }) {
 
   return (
     <div className="flex items-center">
-      <Link href="/" className="items-center space-x-2 md:flex">
-        <Logo />
-      </Link>
       {items?.length ? (
         <nav className="hidden gap-6 md:flex">
           {items?.map((item, index) => (
@@ -49,13 +46,16 @@ export function MainNav({ items, children, sideData }) {
       ) : null}
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
-          <Button className="md:hidden" size="icon" variant="ghost">
-            <MoreHorizontalIcon />
+          <Button className="md:hidden px-0 h-7" variant="ghost">
+            <MoreVerticalIcon className="w-4 h-4" />
           </Button>
         </SheetTrigger>
+        <Link href="/" className="px-4 items-center space-x-2 md:flex">
+          <Logo />
+        </Link>
         <SheetContent
           side={"left"}
-          className="w-1/2 pt-8"
+          className="w-3/5 sm:w-1/2 pt-8 px-2"
           onClick={() => setOpen(false)}
         >
           {sideData}

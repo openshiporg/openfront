@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useState } from "react";
 import { gql, useMutation } from "@keystone-6/core/admin-ui/apollo";
 import { useToasts } from "@keystone/components/Toast";
-import { Button } from "../../primitives/default/ui/button";
+import { Button } from "@keystone/primitives/default/ui/button";
 import { Trash } from "lucide-react";
 import {
   Tooltip,

@@ -14,7 +14,7 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "../../primitives/default/ui/collapsible";
+} from "@keystone/primitives/default/ui/collapsible";
 import { cn } from "@keystone/utils/cn";
 
 export const HEADER_HEIGHT = 80;

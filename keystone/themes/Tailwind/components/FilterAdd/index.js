@@ -23,8 +23,8 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
 } from "@keystone/primitives/default/ui/dropdown-menu";
-import { ScrollArea } from "../../primitives/default/ui/scroll-area";
-import { Separator } from "../../primitives/default/ui/separator";
+import { ScrollArea } from "@keystone/primitives/default/ui/scroll-area";
+import { Separator } from "@keystone/primitives/default/ui/separator";
 
 export function FilterAdd({ listKey, filterableFields }) {
   const [isOpen, setIsOpen] = useState(false);
