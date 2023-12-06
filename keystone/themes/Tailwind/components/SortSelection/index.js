@@ -57,7 +57,7 @@ export function SortSelection({ list, orderableFields }) {
       <DropdownMenuContent align="end" className="w-[200px]">
         <DropdownMenuLabel>Sort by</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <ScrollArea className="h-72">
+        <ScrollArea vpClassName="max-h-72">
           {[...orderableFields, noFieldOption.value].map((fieldPath) => {
             const isNoFieldOption = fieldPath === noFieldOption.value;
             const option = isNoFieldOption

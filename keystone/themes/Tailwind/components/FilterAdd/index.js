@@ -147,7 +147,7 @@ function FilterAddPopoverContent({ onClose, listKey, filterableFields }) {
         </DropdownMenuLabel>
       </div>
       <DropdownMenuSeparator />
-      <ScrollArea className="h-72">
+      <ScrollArea vpClassName="max-h-72">
         {state.kind === "selecting-field" &&
           Object.keys(filtersByFieldThenType).map((fieldPath) => (
             <button
