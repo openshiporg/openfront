@@ -6,6 +6,7 @@ import {
   ChevronRightIcon,
   ChevronLeftIcon,
   ListFilterIcon,
+  PlusIcon,
 } from "lucide-react";
 import {
   Select,
@@ -33,11 +34,11 @@ export function FilterAdd({ listKey, filterableFields }) {
     <DropdownMenu>
       <DropdownMenuTrigger>
         <Button
-          variant="outline"
-          className="border-dashed flex items-center"
+          variant="secondary"
+          className="flex items-center border"
           onClick={() => setIsOpen(true)}
         >
-          <ListFilterIcon className="mr-2 w-4 h-4" />
+          <PlusIcon className="mr-2 w-4 h-4" />
           Filter
         </Button>
       </DropdownMenuTrigger>
@@ -106,7 +107,7 @@ function FilterAddPopoverContent({ onClose, listKey, filterableFields }) {
   };
 
   return (
-    <DropdownMenuContent align="end" className="w-[200px]">
+    <DropdownMenuContent align="start" className="w-[200px]">
       <form
         onSubmit={(event) => {
           event.preventDefault();
