@@ -291,7 +291,7 @@ export const ListPageTemplate = ({ listKey }) => {
           </div>
           {list.description !== null && <p>{list.description}</p>}
 
-          <div className="w-full flex flex-1 items-center mb-4">
+          <div className="w-full flex flex-1 items-center">
             <div className="flex-1 space-x-4 items-center mr-4">
               <form
                 onSubmit={(e) => {
@@ -310,15 +310,6 @@ export const ListPageTemplate = ({ listKey }) => {
               </form>
             </div>
             <div className="ml-auto flex space-x-4 items-center">
-              {data.count || filters.filters.length ? (
-                <FilterAdd
-                  listKey={listKey}
-                  filterableFields={filterableFields}
-                />
-              ) : null}
-              {filters.filters.length ? (
-                <FilterList filters={filters.filters} list={list} />
-              ) : null}
               <SortSelection list={list} orderableFields={orderableFields} />
               <FieldSelection
                 list={list}
@@ -345,11 +336,30 @@ export const ListPageTemplate = ({ listKey }) => {
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Reset to defaults</p>
+                    <p>Reset columns to default</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+            </div>
+          </div>
 
+          <div className="flex mt-4 mb-2 gap-3">
+            {data.count || filters.filters.length ? (
+              <FilterAdd
+                listKey={listKey}
+                filterableFields={filterableFields}
+              />
+            ) : null}
+            {filters.filters.length ? (
+              <FilterList filters={filters.filters} list={list} />
+            ) : null}
+          </div>
+          {selectedItemsState.selectedItems.size > 0 && (
+            <div className="flex gap-6 items-center bg-muted/50 border mb-2 px-4 py-2 rounded-md">
+              <span className="text-sm text-muted-foreground font-medium">
+                {selectedItemsState.selectedItems.size} of {data.items.length}{" "}
+                {list.label} selected
+              </span>
               {!(
                 metaQuery.data?.keystone.adminMeta.list?.hideDelete ?? true
               ) && (
@@ -357,12 +367,10 @@ export const ListPageTemplate = ({ listKey }) => {
                   list={list}
                   selectedItems={selectedItemsState.selectedItems}
                   refetch={refetch}
-                  isDisabled={!selectedItemsState.selectedItems.size > 0}
-                  totalItems={data.items.length}
                 />
               )}
             </div>
-          </div>
+          )}
           {data.count ? (
             <ListTable
               count={data.count}
