@@ -1,6 +1,8 @@
-import "./dashboard.css";
+"use client";
+
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "./themeProvider";
+import "./dashboard.css";
 
 const inter = Inter({ subsets: ["latin"] });
 

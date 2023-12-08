@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"
+import * as React from "react";
+import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
 
-import { cn } from "@keystone/utils/cn"
+import { cn } from "@keystone/utils/cn";
 
 const ScrollArea = React.forwardRef(
   ({ className, vpClassName, children, ...props }, ref) => (
@@ -13,7 +13,7 @@ const ScrollArea = React.forwardRef(
       {...props}
     >
       <ScrollAreaPrimitive.Viewport
-        className={cn("h-full w-full rounded-[inherit]", vpClassName)}
+        className={cn("[&>div]:!block h-full w-full rounded-[inherit]", vpClassName)}
       >
         {children}
       </ScrollAreaPrimitive.Viewport>
@@ -22,7 +22,7 @@ const ScrollArea = React.forwardRef(
     </ScrollAreaPrimitive.Root>
   )
 );
-ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName
+ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName;
 
 const ScrollBar = React.forwardRef(
   ({ className, orientation = "vertical", ...props }, ref) => (
@@ -47,7 +47,7 @@ const ScrollBar = React.forwardRef(
       />
     </ScrollAreaPrimitive.ScrollAreaScrollbar>
   )
-)
-ScrollBar.displayName = ScrollAreaPrimitive.ScrollAreaScrollbar.displayName
+);
+ScrollBar.displayName = ScrollAreaPrimitive.ScrollAreaScrollbar.displayName;
 
-export { ScrollArea, ScrollBar }
+export { ScrollArea, ScrollBar };

@@ -7,6 +7,7 @@ import {
 } from "@keystone/primitives/default/ui/popover";
 import { Button } from "@keystone/primitives/default/ui/button";
 import { ChevronDownIcon, XIcon } from "lucide-react";
+import { Separator } from "../../primitives/default/ui/separator";
 
 export function FilterList({ filters, list }) {
   return (
@@ -52,23 +53,10 @@ function FilterPill({ filter, field }) {
       placement="bottom"
     >
       <PopoverTrigger asChild>
-        {/* <div className="flex">
-          <Button variant="secondary">
-            {field.label}{" "}
-            <Label
-              label={field.controller.filter.types[filter.type].label}
-              type={filter.type}
-              value={filter.value}
-            />
-          </Button>
-          <Button onClick={onRemove} variant="secondary" className="rounded-l-0">
-            <XIcon size={16} className="stroke-muted-foreground" />
-          </Button>
-        </div> */}
         <div class="inline-flex rounded-md shadow-sm" role="group">
           <button
             type="button"
-            class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 border-r-0 rounded-s-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white"
+            class="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 border-r-0 rounded-s-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white"
           >
             {field.label}{" "}
             <Label
@@ -84,13 +72,13 @@ function FilterPill({ filter, field }) {
               e.stopPropagation();
               onRemove();
             }}
-            class="px-2.5 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-e-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white"
+            class="px-2.5 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-e-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white"
           >
             <XIcon size={16} className="stroke-muted-foreground" />
           </button>
         </div>
       </PopoverTrigger>
-      <PopoverContent>
+      <PopoverContent className="p-0">
         <EditDialog
           onClose={() => setPopoverOpen(false)}
           field={field}
@@ -129,12 +117,15 @@ function EditDialog({ filter, field, onClose }) {
 
   return (
     <form className="space-y-2" onSubmit={handleSubmit}>
-      <Filter type={filter.type} value={value} onChange={setValue} />
-      <div className="flex justify-between">
-        <Button variant="ghost" onClick={onClose}>
+      <div className="px-2 pt-3 pb-1">
+        <Filter type={filter.type} value={value} onChange={setValue} />
+      </div>
+      <Separator />
+      <div className="flex justify-between px-2 pb-2">
+        <Button variant="secondary" onClick={onClose} size="xs">
           Cancel
         </Button>
-        <Button type="submit">Save</Button>
+        <Button type="submit" size="xs">Save</Button>
       </div>
     </form>
   );
