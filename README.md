@@ -32,14 +32,14 @@ You can run postgres locally or get a database online.
 Run the following commands start up Openfront:
 
 ```js
-$ cd Openfront
+$ cd openfront
 $ yarn install
 $ yarn dev
 ```
 
-### Openfront: http://localhost:3000
+### Storefront: http://localhost:3000
 
-Once the application is running, go to localhost:3000. If there are no users in the database, you'll be redirected to localhost:3000/init where you can create the admin user.
+Once the application is running, go to localhost:3000. The storefront will appear here when ready. For now, use it to navigate to the GraphQL Playground and Admin UI.
 
 ### GraphQL Playground: http://localhost:3000/api/graphql
 
@@ -59,7 +59,7 @@ These deployment services offer `Node.js` and `postgres` databases so Openfront 
 
 #### Railway
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template/31ZaPV?referralCode=fQpsld)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/jx2-F4?referralCode=fQpsld)
 
 #### Render
 
