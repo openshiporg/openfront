@@ -1,3 +1,4 @@
+import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react";
 import { useSearchBox } from "react-instantsearch-hooks-web";
 
@@ -6,9 +7,11 @@ const SearchBoxWrapper = ({
   placeholder = "Search products...",
   ...rest
 }) => {
-  const { query, refine, isSearchStalled } = useSearchBox(rest)
+  const { query, refine } = useSearchBox(rest)
   const [value, setValue] = useState(query)
   const inputRef = useRef(null)
+
+  const router = useRouter()
 
   const onReset = () => {
     setValue("")
@@ -16,6 +19,12 @@ const SearchBoxWrapper = ({
 
   const onChange = (event) => {
     setValue(event.currentTarget.value)
+  }
+
+  const onSubmit = () => {
+    if (value) {
+      router.push(`/results/${value}`)
+    }
   }
 
   useEffect(() => {
@@ -45,8 +54,8 @@ const SearchBoxWrapper = ({
   const state = {
     value,
     inputRef,
-    isSearchStalled,
     onChange,
+    onSubmit,
     onReset,
     placeholder,
   }

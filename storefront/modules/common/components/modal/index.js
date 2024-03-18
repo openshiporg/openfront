@@ -1,10 +1,17 @@
 import { Dialog, Transition } from "@headlessui/react"
-import { ModalProvider, useModal } from "@lib/context/modal-context"
-import X from "@modules/common/icons/x"
-import clsx from "clsx"
+import { clx } from "@medusajs/ui"
 import React, { Fragment } from "react"
 
-const Modal = ({ isOpen, close, size = "medium", children }) => {
+import { ModalProvider, useModal } from "@storefront/lib/context/modal-context"
+import X from "@storefront/modules/common/icons/x"
+
+const Modal = ({
+  isOpen,
+  close,
+  size = "medium",
+  search = false,
+  children
+}) => {
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-[75]" onClose={close}>
@@ -16,12 +23,15 @@ const Modal = ({ isOpen, close, size = "medium", children }) => {
           leave="ease-in duration-200"
           leaveFrom="opacity-100"
           leaveTo="opacity-0">
-          <div className="fixed inset-0 bg-gray-700 bg-opacity-75 backdrop-blur-sm" />
+          <div className="fixed inset-0 bg-opacity-75 backdrop-blur-md  h-screen" />
         </Transition.Child>
 
-        <div className="fixed inset-0 overflow-y-auto">
+        <div className="fixed inset-0 overflow-y-hidden">
           <div
-            className="flex min-h-full h-full items-center justify-center p-4 text-center">
+            className={clx("flex min-h-full h-full justify-center p-4 text-center", {
+              "items-center": !search,
+              "items-start": search,
+            })}>
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-300"
@@ -31,12 +41,14 @@ const Modal = ({ isOpen, close, size = "medium", children }) => {
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95">
               <Dialog.Panel
-                className={clsx(
-                  "flex flex-col justify-start w-full h-full transform overflow-auto bg-white p-10 text-left align-middle shadow-xl transition-all max-h-[65vh]",
+                className={clx(
+                  "flex flex-col justify-start w-full transform p-5 text-left align-middle transition-all max-h-[75vh] h-fit",
                   {
                     "max-w-md": size === "small",
                     "max-w-xl": size === "medium",
                     "max-w-3xl": size === "large",
+                    "bg-transparent shadow-none": search,
+                    "bg-white shadow-xl border rounded-rounded": !search,
                   }
                 )}>
                 <ModalProvider close={close}>{children}</ModalProvider>
@@ -67,14 +79,14 @@ const Title = ({ children }) => {
 const Description = ({ children }) => {
   return (
     <Dialog.Description
-      className="flex text-small-regular text-gray-700 items-center justify-center pt-2 pb-4 h-full">
+      className="flex text-small-regular text-ui-fg-base items-center justify-center pt-2 pb-4 h-full">
       {children}
     </Dialog.Description>
   );
 }
 
 const Body = ({ children }) => {
-  return <div className="flex-1">{children}</div>;
+  return <div className="flex justify-center">{children}</div>;
 }
 
 const Footer = ({ children }) => {

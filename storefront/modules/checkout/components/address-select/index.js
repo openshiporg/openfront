@@ -1,57 +1,43 @@
 import { Listbox, Transition } from "@headlessui/react"
-import { useCheckout } from "@lib/context/checkout-context"
-import Radio from "@modules/common/components/radio"
-import ChevronDown from "@modules/common/icons/chevron-down"
-import clsx from "clsx"
-import { isEqual, omit } from "lodash"
-import { Fragment, useMemo, useState } from "react"
-import { useWatch } from "react-hook-form"
+import { ChevronUpDown } from "@medusajs/icons"
+import { clx } from "@medusajs/ui"
+import { omit } from "lodash"
+import { Fragment, useMemo } from "react"
+
+import Radio from "@storefront/modules/common/components/radio"
+import { cartUpdate } from "@storefront/modules/checkout/actions"
+import compareAddresses from "@storefront/lib/util/compare-addresses"
 
 const AddressSelect = ({
-  addresses
+  addresses,
+  cart
 }) => {
-  const [selected, setSelected] = useState(undefined)
-
-  const { control, setSavedAddress } = useCheckout()
-
   const handleSelect = (id) => {
     const savedAddress = addresses.find((a) => a.id === id)
-
     if (savedAddress) {
-      setSavedAddress(savedAddress)
+      cartUpdate({
+        shipping_address: omit(savedAddress, [
+          "id",
+          "created_at",
+          "updated_at",
+          "country",
+          "deleted_at",
+          "metadata",
+          "customer_id",
+        ]),
+      })
     }
-
-    setSelected(id)
   }
 
-  const currentShippingAddress = useWatch({
-    control,
-    name: "shipping_address",
-  })
-
   const selectedAddress = useMemo(() => {
-    for (const address of addresses) {
-      const checkEquality = isEqual(omit(address, [
-        "id",
-        "created_at",
-        "updated_at",
-        "country",
-        "deleted_at",
-        "metadata",
-        "customer_id",
-      ]), currentShippingAddress)
-
-      if (checkEquality) {
-        return address
-      }
-    }
-  }, [currentShippingAddress, addresses])
+    return addresses.find((a) => compareAddresses(a, cart?.shipping_address));
+  }, [addresses, cart?.shipping_address])
 
   return (
-    <Listbox onChange={handleSelect} value={selected}>
+    <Listbox onChange={handleSelect} value={selectedAddress?.id}>
       <div className="relative">
         <Listbox.Button
-          className="relative w-full flex justify-between items-center px-4 py-[10px] text-left bg-white cursor-default focus:outline-none border border-gray-200 focus-visible:ring-2 focus-visible:ring-opacity-75 focus-visible:ring-white focus-visible:ring-offset-gray-300 focus-visible:ring-offset-2 focus-visible:border-gray-300 text-base-regular">
+          className="relative w-full flex justify-between items-center px-4 py-[10px] text-left bg-white cursor-default focus:outline-none border rounded-rounded focus-visible:ring-2 focus-visible:ring-opacity-75 focus-visible:ring-white focus-visible:ring-offset-gray-300 focus-visible:ring-offset-2 focus-visible:border-gray-300 text-base-regular">
           {({ open }) => (
             <>
               <span className="block truncate">
@@ -59,7 +45,10 @@ const AddressSelect = ({
                   ? selectedAddress.address_1
                   : "Choose an address"}
               </span>
-              <ChevronDown size={16} className={clsx({ "transform rotate-180": open })} />
+              <ChevronUpDown
+                className={clx("transition-rotate duration-200", {
+                  "transform rotate-180": open,
+                })} />
             </>
           )}
         </Listbox.Button>
@@ -69,7 +58,7 @@ const AddressSelect = ({
           leaveFrom="opacity-100"
           leaveTo="opacity-0">
           <Listbox.Options
-            className="absolute z-20 w-full overflow-auto text-small-regular bg-white border border-gray-200 border-top-0 max-h-60 focus:outline-none sm:text-sm">
+            className="absolute z-20 w-full overflow-auto text-small-regular bg-white border border-top-0 max-h-60 focus:outline-none sm:text-sm">
             {addresses.map((address) => {
               return (
                 <Listbox.Option
@@ -77,13 +66,13 @@ const AddressSelect = ({
                   value={address.id}
                   className="cursor-default select-none relative pl-6 pr-10 hover:bg-gray-50 py-4">
                   <div className="flex gap-x-4 items-start">
-                    <Radio checked={selected === address.id} />
+                    <Radio checked={selectedAddress?.id === address.id} />
                     <div className="flex flex-col">
                       <span className="text-left text-base-semi">
                         {address.first_name} {address.last_name}
                       </span>
                       {address.company && (
-                        <span className="text-small-regular text-gray-700">
+                        <span className="text-small-regular text-ui-fg-base">
                           {address.company}
                         </span>
                       )}

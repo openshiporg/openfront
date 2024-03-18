@@ -1,21 +1,20 @@
-import Link from "next/link"
+import { Heading } from "@medusajs/ui"
+import LocalizedClientLink from "@storefront/modules/common/components/localized-client-link"
 import React from "react"
 
 const Help = () => {
   return (
-    <div>
-      <h2 className="text-base-semi">Need help?</h2>
+    <div className="mt-6">
+      <Heading className="text-base-semi">Need help?</Heading>
       <div className="text-base-regular my-2">
         <ul className="gap-y-2 flex flex-col">
           <li>
-            <Link href="/contact">
-              Contact
-            </Link>
+            <LocalizedClientLink href="/contact">Contact</LocalizedClientLink>
           </li>
           <li>
-            <Link href="/contact">
+            <LocalizedClientLink href="/contact">
               Returns & Exchanges
-            </Link>
+            </LocalizedClientLink>
           </li>
         </ul>
       </div>

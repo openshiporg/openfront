@@ -1,6 +1,7 @@
-import Footer from "@modules/layout/templates/footer"
-import Nav from "@modules/layout/templates/nav"
 import React from "react"
+
+import Footer from "@storefront/modules/layout/templates/footer"
+import Nav from "@storefront/modules/layout/templates/nav"
 
 const Layout = ({ children }) => {
   return (

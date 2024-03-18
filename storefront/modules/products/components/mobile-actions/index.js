@@ -1,22 +1,37 @@
 import { Dialog, Transition } from "@headlessui/react"
-import { useProductActions } from "@lib/context/product-context"
-import useProductPrice from "@lib/hooks/use-product-price"
-import useToggleState from "@lib/hooks/use-toggle-state"
-import Button from "@modules/common/components/button"
-import ChevronDown from "@modules/common/icons/chevron-down"
-import X from "@modules/common/icons/x"
-import clsx from "clsx"
+import { Button, clx } from "@medusajs/ui"
 import React, { Fragment, useMemo } from "react"
+
+import useToggleState from "@storefront/lib/hooks/use-toggle-state"
+import ChevronDown from "@storefront/modules/common/icons/chevron-down"
+import X from "@storefront/modules/common/icons/x"
+
+import { getProductPrice } from "@storefront/lib/util/get-product-price"
 import OptionSelect from "../option-select"
 
-const MobileActions = ({ product, show }) => {
-  const { variant, addToCart, options, inStock, updateOptions } =
-    useProductActions()
+const MobileActions = ({
+  product,
+  variant,
+  region,
+  options,
+  updateOptions,
+  inStock,
+  handleAddToCart,
+  isAdding,
+  show,
+}) => {
   const { state, open, close } = useToggleState()
 
-  const price = useProductPrice({ id: product.id, variantId: variant?.id })
+  const price = getProductPrice({
+    product: product,
+    variantId: variant?.id,
+    region,
+  })
 
   const selectedPrice = useMemo(() => {
+    if (!price) {
+      return null
+    }
     const { variantPrice, cheapestPrice } = price
 
     return variantPrice || cheapestPrice || null
@@ -24,7 +39,7 @@ const MobileActions = ({ product, show }) => {
 
   return <>
     <div
-      className={clsx("lg:hidden sticky inset-x-0 bottom-0", {
+      className={clx("lg:hidden inset-x-0 bottom-0 fixed", {
         "pointer-events-none": !show,
       })}>
       <Transition
@@ -42,7 +57,7 @@ const MobileActions = ({ product, show }) => {
             <span>{product.title}</span>
             <span>—</span>
             {selectedPrice ? (
-              <div className="flex items-end gap-x-2 text-gray-700">
+              <div className="flex items-end gap-x-2 text-ui-fg-base">
                 {selectedPrice.price_type === "sale" && (
                   <p>
                     <span className="line-through text-small-regular">
@@ -51,8 +66,9 @@ const MobileActions = ({ product, show }) => {
                   </p>
                 )}
                 <span
-                  className={clsx({
-                    "text-rose-600": selectedPrice.price_type === "sale",
+                  className={clx({
+                    "text-ui-fg-interactive":
+                      selectedPrice.price_type === "sale",
                   })}>
                   {selectedPrice.calculated_price}
                 </span>
@@ -62,7 +78,7 @@ const MobileActions = ({ product, show }) => {
             )}
           </div>
           <div className="grid grid-cols-2 w-full gap-x-4">
-            <Button onClick={open} variant="secondary">
+            <Button onClick={open} variant="secondary" className="w-full">
               <div className="flex items-center justify-between w-full">
                 <span>
                   {variant
@@ -72,8 +88,16 @@ const MobileActions = ({ product, show }) => {
                 <ChevronDown />
               </div>
             </Button>
-            <Button onClick={addToCart}>
-              {!inStock ? "Out of stock" : "Add to cart"}
+            <Button
+              onClick={handleAddToCart}
+              disabled={!inStock || !variant}
+              className="w-full"
+              isLoading={isAdding}>
+              {!variant
+                ? "Select variant"
+                : !inStock
+                ? "Out of stock"
+                : "Add to cart"}
             </Button>
           </div>
         </div>
@@ -108,7 +132,7 @@ const MobileActions = ({ product, show }) => {
                 <div className="w-full flex justify-end pr-6">
                   <button
                     onClick={close}
-                    className="bg-white w-12 h-12 rounded-full text-gray-900 flex justify-center items-center">
+                    className="bg-white w-12 h-12 rounded-full text-ui-fg-base flex justify-center items-center">
                     <X />
                   </button>
                 </div>

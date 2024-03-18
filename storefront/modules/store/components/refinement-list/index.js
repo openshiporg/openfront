@@ -1,64 +1,32 @@
-import { useCollections } from "medusa-react"
+"use client";
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useCallback } from "react"
+
+import SortProducts from "./sort-products";
 
 const RefinementList = ({
-  refinementList,
-  setRefinementList
+  sortBy
 }) => {
-  const { collections, isLoading } = useCollections()
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
 
-  const handleCollectionChange = (
-    e,
-    id
-  ) => {
-    const { checked } = e.target
+  const createQueryString = useCallback((name, value) => {
+    const params = new URLSearchParams(searchParams)
+    params.set(name, value)
 
-    const collectionIds = refinementList.collection_id || []
+    return params.toString();
+  }, [searchParams])
 
-    const exists = collectionIds.includes(id)
-
-    if (checked && !exists) {
-      setRefinementList({
-        ...refinementList,
-        collection_id: [...collectionIds, id],
-      })
-
-      return
-    }
-
-    if (!checked && exists) {
-      setRefinementList({
-        ...refinementList,
-        collection_id: collectionIds.filter((c) => c !== id),
-      })
-
-      return
-    }
-
-    return
+  const setQueryParams = (name, value) => {
+    const query = createQueryString(name, value)
+    router.push(`${pathname}?${query}`)
   }
 
   return (
-    <div>
-      <div className="px-8 py-4  small:pr-0 small:pl-8 small:min-w-[250px]">
-        <div className="flex gap-x-3 small:flex-col small:gap-y-3">
-          <span className="text-base-semi">Collections</span>
-          <ul
-            className="text-base-regular flex items-center gap-x-4 small:grid small:grid-cols-1 small:gap-y-2">
-            {collections?.map((c) => (
-              <li key={c.id}>
-                <label className="flex items-center gap-x-2">
-                  <input
-                    type="checkbox"
-                    defaultChecked={refinementList.collection_id?.includes(c.id)}
-                    onChange={(e) => handleCollectionChange(e, c.id)}
-                    className="accent-amber-200" />
-                  {c.title}
-                </label>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+    <div
+      className="flex small:flex-col gap-12 py-4 mb-8 small:px-0 pl-6 small:min-w-[250px] small:ml-[1.675rem]">
+      <SortProducts sortBy={sortBy} setQueryParams={setQueryParams} />
     </div>
   );
 }

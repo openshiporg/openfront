@@ -1,47 +1,49 @@
-"use client";
-import React, { useEffect, useRef, useState } from "react"
-import { ProductProvider } from "@lib/context/product-context"
-import { useIntersection } from "@lib/hooks/use-in-view"
-import ProductInfo from "@modules/products/templates/product-info"
-import ProductTabs from "@modules/products/components/product-tabs"
-import RelatedProducts from "@modules/products/components/related-products"
-import ImageGallery from "@modules/products/components/image-gallary"
-import MobileActions from "@modules/products/components/mobile-actions"
-import ProductOnboardingCta from "@modules/products/components/product-onboarding-cta"
+import React, { Suspense } from "react"
 
-const ProductTemplate = ({ product }) => {
-  const [isOnboarding, setIsOnboarding] = useState(false)
+import ImageGallery from "@storefront/modules/products/components/image-gallery"
+import ProductActions from "@storefront/modules/products/components/product-actions"
+import ProductOnboardingCta from "@storefront/modules/products/components/product-onboarding-cta"
+import ProductTabs from "@storefront/modules/products/components/product-tabs"
+import RelatedProducts from "@storefront/modules/products/components/related-products"
+import ProductInfo from "@storefront/modules/products/templates/product-info"
+import SkeletonRelatedProducts from "@storefront/modules/skeletons/templates/skeleton-related-products"
+import { notFound } from "next/navigation"
+import ProductActionsWrapper from "./product-actions-wrapper"
 
-  const info = useRef(null)
+const ProductTemplate = ({
+  product,
+  region,
+  countryCode,
+}) => {
+  if (!product || !product.id) {
+    return notFound();
+  }
 
-  const inView = useIntersection(info, "0px")
-
-  useEffect(() => {
-    const onboarding = window.sessionStorage.getItem("onboarding")
-    setIsOnboarding(onboarding === "true")
-  }, [])
-
-  return (
-    <ProductProvider product={product}>
+  return <>
+    <div
+      className="content-container flex flex-col small:flex-row small:items-start py-6 relative">
       <div
-        className="content-container flex flex-col small:flex-row small:items-start py-6 relative">
-        <div className="flex flex-col gap-y-8 w-full">
-          <ImageGallery images={product?.images || []} />
-        </div>
-        <div
-          className="small:sticky small:top-20 w-full py-8 small:py-0 small:max-w-[344px] medium:max-w-[400px] flex flex-col gap-y-12"
-          ref={info}>
-          {isOnboarding && <ProductOnboardingCta />}
-          <ProductInfo product={product} />
-          <ProductTabs product={product} />
-        </div>
+        className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
+        <ProductInfo product={product} />
+        <ProductTabs product={product} />
       </div>
-      <div className="content-container my-16 px-6 small:px-8 small:my-32">
-        <RelatedProducts product={product} />
+      <div className="block w-full relative">
+        <ImageGallery images={product?.images || []} />
       </div>
-      <MobileActions product={product} show={!inView} />
-    </ProductProvider>
-  );
+      <div
+        className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">
+        <ProductOnboardingCta />
+        <Suspense fallback={<ProductActions product={product} region={region} />}>
+          <ProductActionsWrapper id={product.id} region={region} />
+        </Suspense>
+      </div>
+    </div>
+    <div className="content-container my-16 small:my-32">
+      <Suspense fallback={<SkeletonRelatedProducts />}>
+        <RelatedProducts product={product} countryCode={countryCode} />
+      </Suspense>
+    </div>
+  </>;
 }
 
 export default ProductTemplate

@@ -1,5 +1,5 @@
-import { getPercentageDiff } from "@lib/util/get-precentage-diff"
-import { formatAmount } from "medusa-react"
+import { getPercentageDiff } from "@storefront/lib/util/get-precentage-diff"
+import { formatAmount } from "@storefront/lib/util/prices"
 
 const transformProductPreview = (product, region) => {
   const variants = product.variants
@@ -20,6 +20,7 @@ const transformProductPreview = (product, region) => {
     title: product.title,
     handle: product.handle,
     thumbnail: product.thumbnail,
+    created_at: product.created_at,
     price: cheapestVariant
       ? {
           calculated_price: formatAmount({

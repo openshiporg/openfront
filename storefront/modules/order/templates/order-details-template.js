@@ -1,28 +1,33 @@
-import Help from "@modules/order/components/help"
-import Items from "@modules/order/components/items"
-import OrderDetails from "@modules/order/components/order-details"
-import OrderSummary from "@modules/order/components/order-summary"
-import ShippingDetails from "@modules/order/components/shipping-details"
+"use client";
+import { XMark } from "@medusajs/icons"
 import React from "react"
+
+import Help from "@storefront/modules/order/components/help"
+import Items from "@storefront/modules/order/components/items"
+import OrderDetails from "@storefront/modules/order/components/order-details"
+import OrderSummary from "@storefront/modules/order/components/order-summary"
+import ShippingDetails from "@storefront/modules/order/components/shipping-details"
+import LocalizedClientLink from "@storefront/modules/common/components/localized-client-link"
 
 const OrderDetailsTemplate = ({
   order,
 }) => {
   return (
-    <div className="bg-gray-50 py-6 min-h-[calc(100vh-64px)]">
-      <div className="content-container flex justify-center">
-        <div className="max-w-4xl h-full bg-white w-full">
-          <OrderDetails order={order} showStatus />
-          <Items items={order.items} region={order.region} cartId={order.cart_id} />
-          <div
-            className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-10 border-b border-gray-200">
-            <ShippingDetails shippingMethods={order.shipping_methods} address={order.shipping_address} />
-            <OrderSummary order={order} />
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-10">
-            <Help />
-          </div>
-        </div>
+    <div className="flex flex-col justify-center gap-y-4">
+      <div className="flex gap-2 justify-between items-center">
+        <h1 className="text-2xl-semi">Order details</h1>
+        <LocalizedClientLink
+          href="/account/orders"
+          className="flex gap-2 items-center text-ui-fg-subtle hover:text-ui-fg-base">
+          <XMark /> Back to overview
+        </LocalizedClientLink>
+      </div>
+      <div className="flex flex-col gap-4 h-full bg-white w-full">
+        <OrderDetails order={order} showStatus />
+        <Items items={order.items} region={order.region} />
+        <ShippingDetails order={order} />
+        <OrderSummary order={order} />
+        <Help />
       </div>
     </div>
   );

@@ -1,7 +1,10 @@
-import { formatAmount } from "medusa-react"
+"use client";
+import { formatAmount } from "@storefront/lib/util/prices"
+import { InformationCircleSolid } from "@medusajs/icons"
+import { Tooltip } from "@medusajs/ui"
 import React from "react"
 
-const CartTotals = ({ cart }) => {
+const CartTotals = ({ data }) => {
   const {
     subtotal,
     discount_total,
@@ -9,53 +12,60 @@ const CartTotals = ({ cart }) => {
     tax_total,
     shipping_total,
     total,
-  } = cart
+  } = data
 
   const getAmount = (amount) => {
     return formatAmount({
       amount: amount || 0,
-      region: cart.region,
+      region: data.region,
       includeTaxes: false,
     });
   }
 
   return (
     <div>
-      <div className="text-small-regular text-gray-700">
-        <div
-          className="flex items-center justify-between text-base-regular text-gray-900 mb-2">
-          <span>Subtotal</span>
+      <div className="flex flex-col gap-y-2 txt-medium text-ui-fg-subtle ">
+        <div className="flex items-center justify-between">
+          <span className="flex gap-x-1 items-center">
+            Subtotal
+            <Tooltip content="Cart total excluding shipping and taxes.">
+              <InformationCircleSolid color="var(--fg-muted)" />
+            </Tooltip>
+          </span>
           <span>{getAmount(subtotal)}</span>
         </div>
-        <div className="flex flex-col gap-y-1">
-          {!!discount_total && (
-            <div className="flex items-center justify-between">
-              <span>Discount</span>
-              <span>- {getAmount(discount_total)}</span>
-            </div>
-          )}
-          {!!gift_card_total && (
-            <div className="flex items-center justify-between">
-              <span>Gift card</span>
-              <span>- {getAmount(gift_card_total)}</span>
-            </div>
-          )}
+        {!!discount_total && (
           <div className="flex items-center justify-between">
-            <span>Shipping</span>
-            <span>{getAmount(shipping_total)}</span>
+            <span>Discount</span>
+            <span className="text-ui-fg-interactive">
+              - {getAmount(discount_total)}
+            </span>
           </div>
+        )}
+        {!!gift_card_total && (
           <div className="flex items-center justify-between">
-            <span>Taxes</span>
-            <span>{getAmount(tax_total)}</span>
+            <span>Gift card</span>
+            <span className="text-ui-fg-interactive">
+              - {getAmount(gift_card_total)}
+            </span>
           </div>
+        )}
+        <div className="flex items-center justify-between">
+          <span>Shipping</span>
+          <span>{getAmount(shipping_total)}</span>
         </div>
-        <div className="h-px w-full border-b border-gray-200 border-dashed my-4" />
-        <div
-          className="flex items-center justify-between text-base-regular text-gray-900 mb-2">
-          <span>Total</span>
-          <span>{getAmount(total)}</span>
+        <div className="flex justify-between">
+          <span className="flex gap-x-1 items-center ">Taxes</span>
+          <span>{getAmount(tax_total)}</span>
         </div>
       </div>
+      <div className="h-px w-full border-b border-gray-200 my-4" />
+      <div
+        className="flex items-center justify-between text-ui-fg-base mb-2 txt-medium ">
+        <span>Total</span>
+        <span className="txt-xlarge-plus">{getAmount(total)}</span>
+      </div>
+      <div className="h-px w-full border-b border-gray-200 mt-4" />
     </div>
   );
 }

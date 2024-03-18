@@ -1,28 +1,27 @@
-import Thumbnail from "@modules/products/components/thumbnail"
-import Link from "next/link"
+import { Container, Text } from "@medusajs/ui"
+
+import Thumbnail from "@storefront/modules/products/components/thumbnail"
+import LocalizedClientLink from "@storefront/modules/common/components/localized-client-link"
 
 const Hit = ({
   hit
 }) => {
   return (
-    <div key={hit.id} className="grid grid-cols-[86px_1fr] gap-4 w-full">
-      <Thumbnail thumbnail={hit.thumbnail} size="full" />
-      <div className="flex flex-col justify-between">
-        <div className="flex flex-col">
-          {hit.collection_id && (
-            <Link
-              href={`/collections/${hit.collection_handle}`}
-              className="text-small-regular text-gray-500">
-              {hit.collection_handle}
-            </Link>
-          )}
-          <span className="text-base-regular">{hit.title}</span>
-          <span className="text-small-regular text-gray-700">
-            {hit.description}
-          </span>
+    <LocalizedClientLink href={`/products/${hit.handle}`}>
+      <Container
+        key={hit.id}
+        className="flex sm:flex-col gap-2 w-full p-4 shadow-elevation-card-rest hover:shadow-elevation-card-hover items-center sm:justify-center">
+        <Thumbnail
+          thumbnail={hit.thumbnail}
+          size="square"
+          className="group h-12 w-12 sm:h-full sm:w-full" />
+        <div className="flex flex-col justify-between group">
+          <div className="flex flex-col">
+            <Text className="text-ui-fg-subtle">{hit.title}</Text>
+          </div>
         </div>
-      </div>
-    </div>
+      </Container>
+    </LocalizedClientLink>
   );
 }
 

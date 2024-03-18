@@ -1,20 +1,24 @@
-import { medusaClient } from "@lib/config"
-import Button from "@modules/common/components/button"
-import Input from "@modules/common/components/input"
-import Trash from "@modules/common/icons/trash"
-import { formatAmount, useCart, useUpdateCart } from "medusa-react"
+"use client";
+import { InformationCircleSolid } from "@medusajs/icons"
+import { Heading, Label, Text, Tooltip } from "@medusajs/ui"
 import React, { useMemo } from "react"
-import { useForm } from "react-hook-form"
-import { useMutation } from "@tanstack/react-query"
+import { useFormState } from "react-dom"
+
+import Input from "@storefront/modules/common/components/input"
+import Trash from "@storefront/modules/common/icons/trash"
+import ErrorMessage from "@storefront/modules/checkout/components/error-message"
+import { SubmitButton } from "@storefront/modules/checkout/components/submit-button"
+import {
+  removeDiscount,
+  removeGiftCard,
+  submitDiscountForm,
+} from "@storefront/modules/checkout/actions"
+import { formatAmount } from "@storefront/lib/util/prices"
 
 const DiscountCode = ({ cart }) => {
-  const { id, discounts, region } = cart
-  const { mutate, isLoading } = useUpdateCart(id)
-  const { setCart } = useCart()
+  const [isOpen, setIsOpen] = React.useState(false)
 
-  const { isLoading: mutationLoading, mutate: removeDiscount } = useMutation((payload) => {
-    return medusaClient.carts.deleteDiscount(payload.cartId, payload.code);
-  })
+  const { discounts, gift_cards, region } = cart
 
   const appliedDiscount = useMemo(() => {
     if (!discounts || !discounts.length) {
@@ -35,78 +39,87 @@ const DiscountCode = ({ cart }) => {
     }
   }, [discounts, region])
 
-  const {
-    register,
-    handleSubmit,
-    setError,
-    formState: { errors },
-  } = useForm({
-    mode: "onSubmit",
-  })
-
-  const onApply = (data) => {
-    mutate({
-      discounts: [{ code: data.discount_code }],
-    }, {
-      onSuccess: ({ cart }) => setCart(cart),
-      onError: () => {
-        setError("discount_code", {
-          message: "Code is invalid",
-        }, {
-          shouldFocus: true,
-        })
-      },
-    })
+  const removeGiftCardCode = async (code) => {
+    await removeGiftCard(code, gift_cards)
   }
 
-  const onRemove = () => {
-    removeDiscount({ cartId: id, code: discounts[0].code }, {
-      onSuccess: ({ cart }) => {
-        setCart(cart)
-      },
-    })
+  const removeDiscountCode = async () => {
+    await removeDiscount(discounts[0].code)
   }
+
+  const [message, formAction] = useFormState(submitDiscountForm, null)
 
   return (
     <div className="w-full bg-white flex flex-col">
-      <div className="mb-4">
-        <h3 className="text-base-semi">Discount</h3>
-      </div>
-      <div className="text-small-regular">
+      <div className="txt-medium">
+        {gift_cards.length > 0 && (
+          <div className="flex flex-col mb-4">
+            <Heading className="txt-medium">Gift card(s) applied:</Heading>
+            {gift_cards?.map((gc) => (
+              <div className="flex items-center justify-between txt-small-plus" key={gc.id}>
+                <Text className="flex gap-x-1 items-baseline">
+                  <span>Code: </span>
+                  <span className="truncate">{gc.code}</span>
+                </Text>
+                <Text className="font-semibold">
+                  {formatAmount({
+                    region: region,
+                    amount: gc.balance,
+                    includeTaxes: false,
+                  })}
+                </Text>
+                <button
+                  className="flex items-center gap-x-2 !background-transparent !border-none"
+                  onClick={() => removeGiftCardCode(gc.code)}>
+                  <Trash size={14} />
+                  <span className="sr-only">Remove gift card from order</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {appliedDiscount ? (
-          <div className="flex items-center justify-between">
-            <div>
-              <span>Code: </span>
-              <span className="font-semibold">{appliedDiscount}</span>
-            </div>
-            <div>
-              <button
-                className="flex items-center gap-x-2"
-                onClick={onRemove}
-                disabled={isLoading}>
-                <Trash size={16} />
-                <span className="sr-only">Remove gift card from order</span>
-              </button>
+          <div className="w-full flex items-center">
+            <div className="flex flex-col w-full">
+              <Heading className="txt-medium">Discount applied:</Heading>
+              <div className="flex items-center justify-between w-full max-w-full">
+                <Text className="flex gap-x-1 items-baseline txt-small-plus w-4/5 pr-1">
+                  <span>Code:</span>
+                  <span className="truncate">{discounts[0].code}</span>
+                  <span className="min-w-fit">({appliedDiscount})</span>
+                </Text>
+                <button className="flex items-center" onClick={removeDiscountCode}>
+                  <Trash size={14} />
+                  <span className="sr-only">
+                    Remove discount code from order
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit(onApply)} className="w-full">
-            <div className="grid grid-cols-[1fr_80px] gap-x-2">
-              <Input
-                label="Code"
-                {...register("discount_code", {
-                  required: "Code is required",
-                })}
-                errors={errors} />
-              <div>
-                <Button
-                  className="!min-h-[0] h-[46px] w-[80px]"
-                  disabled={isLoading}
-                  isLoading={isLoading}>
-                  Apply
-                </Button>
-              </div>
-            </div>
+          <form action={formAction} className="w-full">
+            <Label className="flex gap-x-1 my-2 items-center">
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                type="button"
+                className="txt-medium text-ui-fg-interactive hover:text-ui-fg-interactive-hover">
+                Add gift card or discount code
+              </button>
+              <Tooltip content="You can add multiple gift cards, but only one discount code.">
+                <InformationCircleSolid color="var(--fg-muted)" />
+              </Tooltip>
+            </Label>
+            {isOpen && (
+              <>
+                <div className="flex w-full gap-x-2 items-center">
+                  <Input label="Please enter code" name="code" type="text" autoFocus={false} />
+                  <SubmitButton variant="secondary">Apply</SubmitButton>
+                </div>
+                <ErrorMessage error={message} />
+              </>
+            )}
           </form>
         )}
       </div>

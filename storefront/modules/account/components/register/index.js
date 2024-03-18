@@ -1,100 +1,55 @@
-import { medusaClient } from "@lib/config"
-import { LOGIN_VIEW, useAccount } from "@lib/context/account-context"
-import Button from "@modules/common/components/button"
-import Input from "@modules/common/components/input"
-import Spinner from "@modules/common/icons/spinner"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import { useForm } from "react-hook-form";
+"use client";
+import { useFormState } from "react-dom"
 
-const Register = () => {
-  const { loginView, refetchCustomer } = useAccount()
-  const [_, setCurrentView] = loginView
-  const [authError, setAuthError] = useState(undefined)
-  const router = useRouter()
+import Input from "@storefront/modules/common/components/input"
+import { LOGIN_VIEW } from "@storefront/modules/account/templates/login-template"
+import { signUp } from "@storefront/modules/account/actions"
+import ErrorMessage from "@storefront/modules/checkout/components/error-message"
+import { SubmitButton } from "@storefront/modules/checkout/components/submit-button"
+import LocalizedClientLink from "@storefront/modules/common/components/localized-client-link"
 
-  const handleError = (e) => {
-    setAuthError("An error occured. Please try again.")
-  }
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm()
-
-  const onSubmit = handleSubmit(async (credentials) => {
-    await medusaClient.customers
-      .create(credentials)
-      .then(() => {
-        refetchCustomer()
-        router.push("/account")
-      })
-      .catch(handleError)
-  })
+const Register = ({
+  setCurrentView
+}) => {
+  const [message, formAction] = useFormState(signUp, null)
 
   return (
-    <div className="max-w-sm flex flex-col items-center mt-12">
-      {isSubmitting && (
-        <div
-          className="z-10 fixed inset-0 bg-white bg-opacity-50 flex items-center justify-center">
-          <Spinner size={24} />
-        </div>
-      )}
-      <h1 className="text-large-semi uppercase mb-6">Become a Acme Member</h1>
-      <p className="text-center text-base-regular text-gray-700 mb-4">
-        Create your Acme Member profile, and get access to an enhanced shopping
-        experience.
+    <div className="max-w-sm flex flex-col items-center">
+      <h1 className="text-large-semi uppercase mb-6">
+        Become a Openfront Store Member
+      </h1>
+      <p className="text-center text-base-regular text-ui-fg-base mb-4">
+        Create your Openfront Store Member profile, and get access to an enhanced
+        shopping experience.
       </p>
-      <form className="w-full flex flex-col" onSubmit={onSubmit}>
+      <form className="w-full flex flex-col" action={formAction}>
         <div className="flex flex-col w-full gap-y-2">
-          <Input
-            label="First name"
-            {...register("first_name", { required: "First name is required" })}
-            autoComplete="given-name"
-            errors={errors} />
-          <Input
-            label="Last name"
-            {...register("last_name", { required: "Last name is required" })}
-            autoComplete="family-name"
-            errors={errors} />
-          <Input
-            label="Email"
-            {...register("email", { required: "Email is required" })}
-            autoComplete="email"
-            errors={errors} />
-          <Input label="Phone" {...register("phone")} autoComplete="tel" errors={errors} />
+          <Input label="First name" name="first_name" required autoComplete="given-name" />
+          <Input label="Last name" name="last_name" required autoComplete="family-name" />
+          <Input label="Email" name="email" required type="email" autoComplete="email" />
+          <Input label="Phone" name="phone" type="tel" autoComplete="tel" />
           <Input
             label="Password"
-            {...register("password", {
-              required: "Password is required",
-            })}
+            name="password"
+            required
             type="password"
-            autoComplete="new-password"
-            errors={errors} />
+            autoComplete="new-password" />
         </div>
-        {authError && (
-          <div>
-            <span className="text-rose-500 w-full text-small-regular">
-              These credentials do not match our records
-            </span>
-          </div>
-        )}
-        <span className="text-center text-gray-700 text-small-regular mt-6">
-          By creating an account, you agree to Acme&apos;s{" "}
-          <Link href="/content/privacy-policy" className="underline">
+        <ErrorMessage error={message} />
+        <span className="text-center text-ui-fg-base text-small-regular mt-6">
+          By creating an account, you agree to Openfront Store&apos;s{" "}
+          <LocalizedClientLink href="/content/privacy-policy" className="underline">
             Privacy Policy
-          </Link>{" "}
+          </LocalizedClientLink>{" "}
           and{" "}
-          <Link href="/content/terms-of-use" className="underline">
+          <LocalizedClientLink href="/content/terms-of-use" className="underline">
             Terms of Use
-          </Link>
+          </LocalizedClientLink>
           .
         </span>
-        <Button className="mt-6">Join</Button>
+        <SubmitButton className="w-full mt-6">Join</SubmitButton>
       </form>
-      <span className="text-center text-gray-700 text-small-regular mt-6">
+      <span className="text-center text-ui-fg-base text-small-regular mt-6">
         Already a member?{" "}
         <button onClick={() => setCurrentView(LOGIN_VIEW.SIGN_IN)} className="underline">
           Sign in
