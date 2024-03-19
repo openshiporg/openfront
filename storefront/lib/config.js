@@ -4,3 +4,5 @@ export const openfrontClient = new Client({
   url: "/api/graphql",
   exchanges: [cacheExchange, fetchExchange],
 });
+
+
