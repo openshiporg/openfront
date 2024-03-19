@@ -1,46 +1,49 @@
-import { notFound } from "next/navigation"
+import { notFound } from "next/navigation";
 
-import { getCategoryByHandle, listCategories, listRegions } from "@storefront/lib/data"
-import CategoryTemplate from "@storefront/modules/categories/templates"
+import {
+  getCategoryByHandle,
+  listCategories,
+  listRegions,
+} from "@storefront/lib/data";
+import CategoryTemplate from "@storefront/modules/categories/templates";
 
 export async function generateStaticParams() {
-  const product_categories = await listCategories()
+  // const product_categories = await listCategories()
 
-  if (!product_categories) {
-    return []
-  }
+  // if (!product_categories) {
+  //   return []
+  // }
 
-  const countryCodes = await listRegions().then((regions) =>
-    regions?.map((r) => r.countries.map((c) => c.iso_2)).flat())
+  // const countryCodes = await listRegions().then((regions) =>
+  //   regions?.map((r) => r.countries.map((c) => c.iso_2)).flat())
 
-  const categoryHandles = product_categories.map((category) => category.handle)
+  // const categoryHandles = product_categories.map((category) => category.handle)
 
-  const staticParams = countryCodes
-    ?.map((countryCode) =>
-      categoryHandles.map((handle) => ({
-        countryCode,
-        category: [handle],
-      })))
-    .flat()
+  // const staticParams = countryCodes
+  //   ?.map((countryCode) =>
+  //     categoryHandles.map((handle) => ({
+  //       countryCode,
+  //       category: [handle],
+  //     })))
+  //   .flat()
 
-  return staticParams
+  // return staticParams
+  return [];
 }
 
-export async function generateMetadata(
-  {
-    params
-  }
-) {
+export async function generateMetadata({ params }) {
   try {
-    const { product_categories } = await getCategoryByHandle(params.category).then((product_categories) => product_categories)
+    const { product_categories } = await getCategoryByHandle(
+      params.category
+    ).then((product_categories) => product_categories);
 
     const title = product_categories
       .map((category) => category.name)
-      .join(" | ")
+      .join(" | ");
 
     const description =
       product_categories[product_categories.length - 1].description ??
-      `${title} category.`
+      `${title} category.`;
 
     return {
       title: `${title} | Openfront Store`,
@@ -50,20 +53,19 @@ export async function generateMetadata(
       },
     };
   } catch (error) {
-    notFound()
+    notFound();
   }
 }
 
-export default async function CategoryPage({
-  params,
-  searchParams
-}) {
-  const { sortBy, page } = searchParams
+export default async function CategoryPage({ params, searchParams }) {
+  const { sortBy, page } = searchParams;
 
-  const { product_categories } = await getCategoryByHandle(params.category).then((product_categories) => product_categories)
+  const { product_categories } = await getCategoryByHandle(
+    params.category
+  ).then((product_categories) => product_categories);
 
   if (!product_categories) {
-    notFound()
+    notFound();
   }
 
   return (
@@ -71,6 +73,7 @@ export default async function CategoryPage({
       categories={product_categories}
       sortBy={sortBy}
       page={page}
-      countryCode={params.countryCode} />
+      countryCode={params.countryCode}
+    />
   );
 }

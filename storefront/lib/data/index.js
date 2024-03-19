@@ -4,7 +4,7 @@ import { cache } from "react"
 import sortProducts from "@storefront/lib/util/sort-products"
 import transformProductPreview from "@storefront/lib/util/transform-product-preview"
 
-import { medusaClient } from "@storefront/lib/config"
+import { openfrontClient } from "@storefront/lib/config"
 import medusaError from "@storefront/lib/util/medusa-error"
 import { cookies } from "next/headers"
 
@@ -39,7 +39,7 @@ const getMedusaHeaders = (tags = []) => {
 export async function createCart(data = {}) {
   const headers = getMedusaHeaders(["cart"])
 
-  return medusaClient.carts
+  return openfrontClient.carts
     .create(data, headers)
     .then(({ cart }) => cart)
     .catch((err) => {
@@ -51,7 +51,7 @@ export async function createCart(data = {}) {
 export async function updateCart(cartId, data) {
   const headers = getMedusaHeaders(["cart"])
 
-  return medusaClient.carts
+  return openfrontClient.carts
     .update(cartId, data, headers)
     .then(({ cart }) => cart)
     .catch((error) => medusaError(error));
@@ -60,7 +60,7 @@ export async function updateCart(cartId, data) {
 export const getCart = cache(async function (cartId) {
   const headers = getMedusaHeaders(["cart"])
 
-  return medusaClient.carts
+  return openfrontClient.carts
     .retrieve(cartId, headers)
     .then(({ cart }) => cart)
     .catch((err) => {
@@ -76,7 +76,7 @@ export async function addItem({
 }) {
   const headers = getMedusaHeaders(["cart"])
 
-  return medusaClient.carts.lineItems
+  return openfrontClient.carts.lineItems
     .create(cartId, { variant_id: variantId, quantity }, headers)
     .then(({ cart }) => cart)
     .catch((err) => {
@@ -92,7 +92,7 @@ export async function updateItem({
 }) {
   const headers = getMedusaHeaders(["cart"])
 
-  return medusaClient.carts.lineItems
+  return openfrontClient.carts.lineItems
     .update(cartId, lineId, { quantity }, headers)
     .then(({ cart }) => cart)
     .catch((err) => medusaError(err));
@@ -104,7 +104,7 @@ export async function removeItem({
 }) {
   const headers = getMedusaHeaders(["cart"])
 
-  return medusaClient.carts.lineItems
+  return openfrontClient.carts.lineItems
     .delete(cartId, lineId, headers)
     .then(({ cart }) => cart)
     .catch((err) => {
@@ -116,7 +116,7 @@ export async function removeItem({
 export async function deleteDiscount(cartId, code) {
   const headers = getMedusaHeaders(["cart"])
 
-  return medusaClient.carts
+  return openfrontClient.carts
     .deleteDiscount(cartId, code, headers)
     .then(({ cart }) => cart)
     .catch((err) => {
@@ -128,7 +128,7 @@ export async function deleteDiscount(cartId, code) {
 export async function createPaymentSessions(cartId) {
   const headers = getMedusaHeaders(["cart"])
 
-  return medusaClient.carts
+  return openfrontClient.carts
     .createPaymentSessions(cartId, headers)
     .then(({ cart }) => cart)
     .catch((err) => {
@@ -143,7 +143,7 @@ export async function setPaymentSession({
 }) {
   const headers = getMedusaHeaders(["cart"])
 
-  return medusaClient.carts
+  return openfrontClient.carts
     .setPaymentSession(cartId, { provider_id: providerId }, headers)
     .then(({ cart }) => cart)
     .catch((err) => medusaError(err));
@@ -152,7 +152,7 @@ export async function setPaymentSession({
 export async function completeCart(cartId) {
   const headers = getMedusaHeaders(["cart"])
 
-  return medusaClient.carts
+  return openfrontClient.carts
     .complete(cartId, headers)
     .then((res) => res)
     .catch((err) => medusaError(err));
@@ -162,7 +162,7 @@ export async function completeCart(cartId) {
 export const retrieveOrder = cache(async function (id) {
   const headers = getMedusaHeaders(["order"])
 
-  return medusaClient.orders
+  return openfrontClient.orders
     .retrieve(id, headers)
     .then(({ order }) => order)
     .catch((err) => medusaError(err));
@@ -177,7 +177,7 @@ export const listShippingMethods = cache(async function listShippingMethods(
 
   const product_ids = productIds?.join(",")
 
-  return medusaClient.shippingOptions
+  return openfrontClient.shippingOptions
     .list({
     region_id: regionId,
     product_ids,
@@ -195,7 +195,7 @@ export async function addShippingMethod({
 }) {
   const headers = getMedusaHeaders(["cart"])
 
-  return medusaClient.carts
+  return openfrontClient.carts
     .addShippingMethod(cartId, { option_id: shippingMethodId }, headers)
     .then(({ cart }) => cart)
     .catch((err) => medusaError(err));
@@ -203,7 +203,7 @@ export async function addShippingMethod({
 
 // Authentication actions
 export async function getToken(credentials) {
-  return medusaClient.auth
+  return openfrontClient.auth
     .getToken(credentials, {
       next: {
         tags: ["auth"],
@@ -221,7 +221,7 @@ export async function getToken(credentials) {
 export async function authenticate(credentials) {
   const headers = getMedusaHeaders(["auth"])
 
-  return medusaClient.auth
+  return openfrontClient.auth
     .authenticate(credentials, headers)
     .then(({ customer }) => customer)
     .catch((err) => medusaError(err));
@@ -230,7 +230,7 @@ export async function authenticate(credentials) {
 export const getSession = cache(async function getSession() {
   const headers = getMedusaHeaders(["auth"])
 
-  return medusaClient.auth
+  return openfrontClient.auth
     .getSession(headers)
     .then(({ customer }) => customer)
     .catch((err) => medusaError(err));
@@ -240,7 +240,7 @@ export const getSession = cache(async function getSession() {
 export async function getCustomer() {
   const headers = getMedusaHeaders(["customer"])
 
-  return medusaClient.customers
+  return openfrontClient.customers
     .retrieve(headers)
     .then(({ customer }) => customer)
     .catch((err) => null);
@@ -249,7 +249,7 @@ export async function getCustomer() {
 export async function createCustomer(data) {
   const headers = getMedusaHeaders(["customer"])
 
-  return medusaClient.customers
+  return openfrontClient.customers
     .create(data, headers)
     .then(({ customer }) => customer)
     .catch((err) => medusaError(err));
@@ -258,7 +258,7 @@ export async function createCustomer(data) {
 export async function updateCustomer(data) {
   const headers = getMedusaHeaders(["customer"])
 
-  return medusaClient.customers
+  return openfrontClient.customers
     .update(data, headers)
     .then(({ customer }) => customer)
     .catch((err) => medusaError(err));
@@ -269,7 +269,7 @@ export async function addShippingAddress(
 ) {
   const headers = getMedusaHeaders(["customer"])
 
-  return medusaClient.customers.addresses
+  return openfrontClient.customers.addresses
     .addAddress(data, headers)
     .then(({ customer }) => customer)
     .catch((err) => medusaError(err));
@@ -278,7 +278,7 @@ export async function addShippingAddress(
 export async function deleteShippingAddress(addressId) {
   const headers = getMedusaHeaders(["customer"])
 
-  return medusaClient.customers.addresses
+  return openfrontClient.customers.addresses
     .deleteAddress(addressId, headers)
     .then(({ customer }) => customer)
     .catch((err) => medusaError(err));
@@ -290,7 +290,7 @@ export async function updateShippingAddress(
 ) {
   const headers = getMedusaHeaders(["customer"])
 
-  return medusaClient.customers.addresses
+  return openfrontClient.customers.addresses
     .updateAddress(addressId, data, headers)
     .then(({ customer }) => customer)
     .catch((err) => medusaError(err));
@@ -302,7 +302,7 @@ export const listCustomerOrders = cache(async function (
 ) {
   const headers = getMedusaHeaders(["customer"])
 
-  return medusaClient.customers
+  return openfrontClient.customers
     .listOrders({ limit, offset }, headers)
     .then(({ orders }) => orders)
     .catch((err) => medusaError(err));
@@ -310,7 +310,7 @@ export const listCustomerOrders = cache(async function (
 
 // Region actions
 export const listRegions = cache(async function () {
-  return medusaClient.regions
+  return openfrontClient.regions
     .list()
     .then(({ regions }) => regions)
     .catch((err) => {
@@ -322,7 +322,7 @@ export const listRegions = cache(async function () {
 export const retrieveRegion = cache(async function (id) {
   const headers = getMedusaHeaders(["regions"])
 
-  return medusaClient.regions
+  return openfrontClient.regions
     .retrieve(id, headers)
     .then(({ region }) => region)
     .catch((err) => medusaError(err));
@@ -366,7 +366,7 @@ export const getProductsById = cache(async function ({
 }) {
   const headers = getMedusaHeaders(["products"])
 
-  return medusaClient.products
+  return openfrontClient.products
     .list({ id: ids, region_id: regionId }, headers)
     .then(({ products }) => products)
     .catch((err) => {
@@ -381,7 +381,7 @@ export const retrievePricedProductById = cache(async function ({
 }) {
   const headers = getMedusaHeaders(["products"])
 
-  return medusaClient.products
+  return openfrontClient.products
     .retrieve(`${id}?region_id=${regionId}`, headers)
     .then(({ product }) => product)
     .catch((err) => {
@@ -393,7 +393,7 @@ export const retrievePricedProductById = cache(async function ({
 export const getProductByHandle = cache(async function(handle) {
   const headers = getMedusaHeaders(["products"])
 
-  const product = await medusaClient.products
+  const product = await openfrontClient.products
     .list({ handle }, headers)
     .then(({ products }) => products[0])
     .catch((err) => {
@@ -418,7 +418,7 @@ export const getProductsList = cache(async function(
     return emptyResponse
   }
 
-  const { products, count } = await medusaClient.products
+  const { products, count } = await openfrontClient.products
     .list({
     limit,
     offset: pageParam,
@@ -510,7 +510,7 @@ export const getHomepageProducts = cache(async function getHomepageProducts({
 
 // Collection actions
 export const retrieveCollection = cache(async function (id) {
-  return medusaClient.collections
+  return openfrontClient.collections
     .retrieve(id, {
       next: {
         tags: ["collections"],
@@ -523,7 +523,7 @@ export const retrieveCollection = cache(async function (id) {
 })
 
 export const getCollectionsList = cache(async function(offset = 0, limit = 100) {
-  const collections = await medusaClient.collections
+  const collections = await openfrontClient.collections
     .list({ limit, offset }, { next: { tags: ["collections"] } })
     .then(({ collections }) => collections)
     .catch((err) => {
@@ -539,7 +539,7 @@ export const getCollectionsList = cache(async function(offset = 0, limit = 100) 
 })
 
 export const getCollectionByHandle = cache(async function(handle) {
-  const collection = await medusaClient.collections
+  const collection = await openfrontClient.collections
     .list({ handle: [handle] }, { next: { tags: ["collections"] } })
     .then(({ collections }) => collections[0])
     .catch((err) => {
@@ -583,7 +583,7 @@ export const listCategories = cache(async function () {
     }
   }
 
-  return medusaClient.productCategories
+  return openfrontClient.productCategories
     .list({ expand: "category_children" }, headers)
     .then(({ product_categories }) => product_categories)
     .catch((err) => {
@@ -592,7 +592,7 @@ export const listCategories = cache(async function () {
 })
 
 export const getCategoriesList = cache(async function(offset = 0, limit = 100) {
-  const { product_categories, count } = await medusaClient.productCategories
+  const { product_categories, count } = await openfrontClient.productCategories
     .list({ limit, offset }, { next: { tags: ["categories"] } })
     .catch((err) => {
       throw err
@@ -611,7 +611,7 @@ export const getCategoryByHandle = cache(async function(categoryHandle) {
   const product_categories = []
 
   for (const handle of handles) {
-    const category = await medusaClient.productCategories
+    const category = await openfrontClient.productCategories
       .list({
       handle: handle,
     }, {

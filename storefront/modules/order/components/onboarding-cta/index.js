@@ -1,11 +1,9 @@
-"use client"
+"use client";
 
-import { Button, Container, Text } from "@medusajs/ui"
-import { resetOnboardingState } from "app/actions"
+import { Button, Container, Text } from "@medusajs/ui";
+// import { resetOnboardingState } from "app/actions";
 
-const OnboardingCta = ({
-  orderId
-}) => {
+const OnboardingCta = ({ orderId }) => {
   return (
     <Container className="max-w-4xl h-full bg-ui-bg-subtle w-full">
       <div className="flex flex-col gap-y-4 center p-4 md:items-center">
@@ -18,12 +16,13 @@ const OnboardingCta = ({
         <Button
           className="w-fit"
           size="xlarge"
-          onClick={() => resetOnboardingState(orderId)}>
+          // onClick={() => resetOnboardingState(orderId)}
+        >
           Complete setup in admin
         </Button>
       </div>
     </Container>
   );
-}
+};
 
-export default OnboardingCta
+export default OnboardingCta;

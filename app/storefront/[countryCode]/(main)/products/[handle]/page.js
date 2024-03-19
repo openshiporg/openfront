@@ -1,5 +1,5 @@
 "use server";
-import { notFound } from "next/navigation"
+import { notFound } from "next/navigation";
 
 import {
   getProductByHandle,
@@ -7,86 +7,29 @@ import {
   getRegion,
   listRegions,
   retrievePricedProductById,
-} from "@storefront/lib/data"
-import ProductTemplate from "@storefront/modules/products/templates"
+} from "@storefront/lib/data";
+import ProductTemplate from "@storefront/modules/products/templates";
 
-export async function generateStaticParams() {
-  const countryCodes = await listRegions().then((regions) =>
-    regions?.map((r) => r.countries.map((c) => c.iso_2)).flat())
+export default async function ProductPage({ params }) {
+  // const region = await getRegion(params.countryCode);
 
-  if (!countryCodes) {
-    return null
-  }
+  // if (!region) {
+  //   notFound();
+  // }
 
-  const products = await Promise.all(countryCodes.map((countryCode) => {
-    return getProductsList({ countryCode });
-  })).then((responses) =>
-    responses.map(({ response }) => response.products).flat())
+  // const pricedProduct = await getPricedProductByHandle(params.handle, region);
 
-  const staticParams = countryCodes
-    ?.map((countryCode) =>
-      products.map((product) => ({
-        countryCode,
-        handle: product.handle,
-      })))
-    .flat()
+  // if (!pricedProduct) {
+  //   notFound();
+  // }
 
-  return staticParams
-}
-
-export async function generateMetadata(
-  {
-    params
-  }
-) {
-  const { handle } = params
-
-  const { product } = await getProductByHandle(handle).then((product) => product)
-
-  if (!product) {
-    notFound()
-  }
-
-  return {
-    title: `${product.title} | Openfront Store`,
-    description: `${product.title}`,
-    openGraph: {
-      title: `${product.title} | Openfront Store`,
-      description: `${product.title}`,
-      images: product.thumbnail ? [product.thumbnail] : [],
-    },
-  }
-}
-
-const getPricedProductByHandle = async (handle, region) => {
-  const { product } = await getProductByHandle(handle).then((product) => product)
-
-  if (!product || !product.id) {
-    return null
-  }
-
-  const pricedProduct = await retrievePricedProductById({
-    id: product.id,
-    regionId: region.id,
-  })
-
-  return pricedProduct
-}
-
-export default async function ProductPage({
-  params
-}) {
-  const region = await getRegion(params.countryCode)
-
-  if (!region) {
-    notFound()
-  }
-
-  const pricedProduct = await getPricedProductByHandle(params.handle, region)
-
-  if (!pricedProduct) {
-    notFound()
-  }
-
-  return <ProductTemplate product={pricedProduct} region={region} countryCode={params.countryCode} />;
+  // return (
+  //   <ProductTemplate
+  //     product={pricedProduct}
+  //     region={region}
+  //     countryCode={params.countryCode}
+  //   />
+  // );
+  // notFound();
+  return <div>hello</div>;
 }

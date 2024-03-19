@@ -50,6 +50,7 @@ const nextConfig = {
   webpack: configureWebpack,
   experimental: {
     serverComponentsExternalPackages: ["graphql"],
+    // serverActions: true,
   },
   async redirects() {
     return [

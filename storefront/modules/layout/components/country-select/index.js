@@ -3,7 +3,7 @@ import { Listbox, Transition } from "@headlessui/react"
 import { Fragment, useEffect, useMemo, useState } from "react"
 import ReactCountryFlag from "react-country-flag"
 
-import { updateRegion } from "app/actions"
+// import { updateRegion } from "app/actions"
 import { useParams, usePathname } from "next/navigation"
 
 const CountrySelect = ({
@@ -38,7 +38,7 @@ const CountrySelect = ({
   }, [options, countryCode])
 
   const handleChange = (option) => {
-    updateRegion(option.country, currentPath)
+    // updateRegion(option.country, currentPath)
     close()
   }
 
