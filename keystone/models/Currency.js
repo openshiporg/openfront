@@ -54,7 +54,7 @@ export const Currency = list({
       many: true,
     }),
     stores: relationship({
-      ref: "Store.currency",
+      ref: "Store.currencies",
       many: true,
     }),
     ...trackingFields,

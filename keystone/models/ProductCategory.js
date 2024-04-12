@@ -21,7 +21,7 @@ export const ProductCategory = list({
         isRequired: true,
       },
     }),
-    handle: text(),
+    handle: text({ isIndexed: "unique" }),
     metadata: json(),
     isInternal: checkbox(),
     isActive: checkbox(),

@@ -1676,6 +1676,7 @@ type ProductCategory {
 
 input ProductCategoryWhereUniqueInput {
   id: ID
+  handle: String
 }
 
 input ProductCategoryWhereInput {
@@ -1901,7 +1902,8 @@ type ProductOptionValue {
   id: ID!
   value: String
   metadata: JSON
-  productVariant: ProductVariant
+  productVariants(where: ProductVariantWhereInput! = {}, orderBy: [ProductVariantOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ProductVariantWhereUniqueInput): [ProductVariant!]
+  productVariantsCount(where: ProductVariantWhereInput! = {}): Int
   productOption: ProductOption
   createdAt: DateTime
   updatedAt: DateTime
@@ -1917,7 +1919,7 @@ input ProductOptionValueWhereInput {
   NOT: [ProductOptionValueWhereInput!]
   id: IDFilter
   value: StringFilter
-  productVariant: ProductVariantWhereInput
+  productVariants: ProductVariantManyRelationFilter
   productOption: ProductOptionWhereInput
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
@@ -1933,7 +1935,7 @@ input ProductOptionValueOrderByInput {
 input ProductOptionValueUpdateInput {
   value: String
   metadata: JSON
-  productVariant: ProductVariantRelateToOneForUpdateInput
+  productVariants: ProductVariantRelateToManyForUpdateInput
   productOption: ProductOptionRelateToOneForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
@@ -1953,7 +1955,7 @@ input ProductOptionValueUpdateArgs {
 input ProductOptionValueCreateInput {
   value: String
   metadata: JSON
-  productVariant: ProductVariantRelateToOneForCreateInput
+  productVariants: ProductVariantRelateToManyForCreateInput
   productOption: ProductOptionRelateToOneForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
@@ -2110,8 +2112,8 @@ type ProductVariant {
   claimItemsCount(where: ClaimItemWhereInput! = {}): Int
   lineItems(where: LineItemWhereInput! = {}, orderBy: [LineItemOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: LineItemWhereUniqueInput): [LineItem!]
   lineItemsCount(where: LineItemWhereInput! = {}): Int
-  moneyAmounts(where: MoneyAmountWhereInput! = {}, orderBy: [MoneyAmountOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: MoneyAmountWhereUniqueInput): [MoneyAmount!]
-  moneyAmountsCount(where: MoneyAmountWhereInput! = {}): Int
+  prices(where: MoneyAmountWhereInput! = {}, orderBy: [MoneyAmountOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: MoneyAmountWhereUniqueInput): [MoneyAmount!]
+  pricesCount(where: MoneyAmountWhereInput! = {}): Int
   productOptionValues(where: ProductOptionValueWhereInput! = {}, orderBy: [ProductOptionValueOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ProductOptionValueWhereUniqueInput): [ProductOptionValue!]
   productOptionValuesCount(where: ProductOptionValueWhereInput! = {}): Int
   createdAt: DateTime
@@ -2147,7 +2149,7 @@ input ProductVariantWhereInput {
   product: ProductWhereInput
   claimItems: ClaimItemManyRelationFilter
   lineItems: LineItemManyRelationFilter
-  moneyAmounts: MoneyAmountManyRelationFilter
+  prices: MoneyAmountManyRelationFilter
   productOptionValues: ProductOptionValueManyRelationFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
@@ -2204,7 +2206,7 @@ input ProductVariantUpdateInput {
   product: ProductRelateToOneForUpdateInput
   claimItems: ClaimItemRelateToManyForUpdateInput
   lineItems: LineItemRelateToManyForUpdateInput
-  moneyAmounts: MoneyAmountRelateToManyForUpdateInput
+  prices: MoneyAmountRelateToManyForUpdateInput
   productOptionValues: ProductOptionValueRelateToManyForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
@@ -2244,7 +2246,7 @@ input ProductVariantCreateInput {
   product: ProductRelateToOneForCreateInput
   claimItems: ClaimItemRelateToManyForCreateInput
   lineItems: LineItemRelateToManyForCreateInput
-  moneyAmounts: MoneyAmountRelateToManyForCreateInput
+  prices: MoneyAmountRelateToManyForCreateInput
   productOptionValues: ProductOptionValueRelateToManyForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
@@ -6516,7 +6518,8 @@ type Store {
   swapLinkTemplate: String
   paymentLinkTemplate: String
   inviteLinkTemplate: String
-  currency: Currency
+  currencies(where: CurrencyWhereInput! = {}, orderBy: [CurrencyOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: CurrencyWhereUniqueInput): [Currency!]
+  currenciesCount(where: CurrencyWhereInput! = {}): Int
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -6535,9 +6538,15 @@ input StoreWhereInput {
   swapLinkTemplate: StringFilter
   paymentLinkTemplate: StringFilter
   inviteLinkTemplate: StringFilter
-  currency: CurrencyWhereInput
+  currencies: CurrencyManyRelationFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
+}
+
+input CurrencyManyRelationFilter {
+  every: CurrencyWhereInput
+  some: CurrencyWhereInput
+  none: CurrencyWhereInput
 }
 
 input StoreOrderByInput {
@@ -6558,9 +6567,16 @@ input StoreUpdateInput {
   swapLinkTemplate: String
   paymentLinkTemplate: String
   inviteLinkTemplate: String
-  currency: CurrencyRelateToOneForUpdateInput
+  currencies: CurrencyRelateToManyForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
+}
+
+input CurrencyRelateToManyForUpdateInput {
+  disconnect: [CurrencyWhereUniqueInput!]
+  set: [CurrencyWhereUniqueInput!]
+  create: [CurrencyCreateInput!]
+  connect: [CurrencyWhereUniqueInput!]
 }
 
 input StoreUpdateArgs {
@@ -6575,9 +6591,14 @@ input StoreCreateInput {
   swapLinkTemplate: String
   paymentLinkTemplate: String
   inviteLinkTemplate: String
-  currency: CurrencyRelateToOneForCreateInput
+  currencies: CurrencyRelateToManyForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
+}
+
+input CurrencyRelateToManyForCreateInput {
+  create: [CurrencyCreateInput!]
+  connect: [CurrencyWhereUniqueInput!]
 }
 
 type Swap {

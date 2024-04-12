@@ -1,25 +1,128 @@
 {
   "store": {
-    "currencies": ["eur", "usd"]
+    "name": "Impossible Tees",
+    "defaultCurrencyCode": "USD",
+    "metadata": {},
+    "swapLinkTemplate": "https://example.com/swap/{id}",
+    "paymentLinkTemplate": "https://example.com/pay/{id}",
+    "inviteLinkTemplate": "https://example.com/invite/{id}"
   },
+  "currencies": [
+    {
+      "code": "eur",
+      "symbol": "€",
+      "symbolNative": "€",
+      "name": "Euro"
+    },
+    {
+      "code": "usd",
+      "symbol": "$",
+      "symbolNative": "$",
+      "name": "US Dollar"
+    }
+  ],
+  "countries": [
+    {
+      "iso2": "US",
+      "iso3": "USA",
+      "numCode": 840,
+      "name": "United States",
+      "displayName": "United States"
+    },
+    {
+      "iso2": "CA",
+      "iso3": "CAN",
+      "numCode": 124,
+      "name": "Canada",
+      "displayName": "Canada"
+    },
+    {
+      "iso2": "GB",
+      "iso3": "GBR",
+      "numCode": 826,
+      "name": "United Kingdom",
+      "displayName": "United Kingdom"
+    },
+    {
+      "iso2": "DE",
+      "iso3": "DEU",
+      "numCode": 276,
+      "name": "Germany",
+      "displayName": "Germany"
+    },
+    {
+      "iso2": "DK",
+      "iso3": "DNK",
+      "numCode": 208,
+      "name": "Denmark",
+      "displayName": "Denmark"
+    },
+    {
+      "iso2": "SE",
+      "iso3": "SWE",
+      "numCode": 752,
+      "name": "Sweden",
+      "displayName": "Sweden"
+    },
+    {
+      "iso2": "FR",
+      "iso3": "FRA",
+      "numCode": 250,
+      "name": "France",
+      "displayName": "France"
+    },
+    {
+      "iso2": "ES",
+      "iso3": "ESP",
+      "numCode": 724,
+      "name": "Spain",
+      "displayName": "Spain"
+    },
+    {
+      "iso2": "IT",
+      "iso3": "ITA",
+      "numCode": 380,
+      "name": "Italy",
+      "displayName": "Italy"
+    }
+  ],
   "regions": [
     {
       "id": "test-region-eu",
       "name": "EU",
       "currency_code": "eur",
       "tax_rate": 0,
-      "payment_providers": ["manual"],
-      "fulfillment_providers": ["manual"],
-      "countries": ["gb", "de", "dk", "se", "fr", "es", "it"]
+      "payment_providers": [
+        "manual"
+      ],
+      "fulfillment_providers": [
+        "manual"
+      ],
+      "countries": [
+        "GB",
+        "DE",
+        "DK",
+        "SE",
+        "FR",
+        "ES",
+        "IT"
+      ]
     },
     {
       "id": "test-region-na",
       "name": "NA",
       "currency_code": "usd",
       "tax_rate": 0,
-      "payment_providers": ["manual"],
-      "fulfillment_providers": ["manual"],
-      "countries": ["us", "ca"]
+      "payment_providers": [
+        "manual"
+      ],
+      "fulfillment_providers": [
+        "manual"
+      ],
+      "countries": [
+        "US",
+        "CA"
+      ]
     }
   ],
   "shipping_options": [
@@ -130,11 +233,19 @@
       "options": [
         {
           "title": "Size",
-          "values": ["S", "M", "L", "XL"]
+          "values": [
+            "S",
+            "M",
+            "L",
+            "XL"
+          ]
         },
         {
           "title": "Color",
-          "values": ["Black", "White"]
+          "values": [
+            "Black",
+            "White"
+          ]
         }
       ],
       "variants": [
@@ -343,7 +454,12 @@
       "options": [
         {
           "title": "Size",
-          "values": ["S", "M", "L", "XL"]
+          "values": [
+            "S",
+            "M",
+            "L",
+            "XL"
+          ]
         }
       ],
       "variants": [
@@ -448,7 +564,12 @@
       "options": [
         {
           "title": "Size",
-          "values": ["S", "M", "L", "XL"]
+          "values": [
+            "S",
+            "M",
+            "L",
+            "XL"
+          ]
         }
       ],
       "variants": [
@@ -553,7 +674,12 @@
       "options": [
         {
           "title": "Size",
-          "values": ["S", "M", "L", "XL"]
+          "values": [
+            "S",
+            "M",
+            "L",
+            "XL"
+          ]
         }
       ],
       "variants": [
@@ -661,7 +787,12 @@
       "options": [
         {
           "title": "Size",
-          "values": ["S", "M", "L", "XL"]
+          "values": [
+            "S",
+            "M",
+            "L",
+            "XL"
+          ]
         }
       ],
       "variants": [
@@ -769,7 +900,12 @@
       "options": [
         {
           "title": "Size",
-          "values": ["S", "M", "L", "XL"]
+          "values": [
+            "S",
+            "M",
+            "L",
+            "XL"
+          ]
         }
       ],
       "variants": [
@@ -876,7 +1012,9 @@
       "options": [
         {
           "title": "Size",
-          "values": ["One Size"]
+          "values": [
+            "One Size"
+          ]
         }
       ],
       "variants": [

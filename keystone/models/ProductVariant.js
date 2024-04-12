@@ -63,12 +63,12 @@ export const ProductVariant = list({
       ref: "LineItem.productVariant",
       many: true,
     }),
-    moneyAmounts: relationship({
+    prices: relationship({
       ref: "MoneyAmount.productVariant",
       many: true,
     }),
     productOptionValues: relationship({
-      ref: "ProductOptionValue.productVariant",
+      ref: "ProductOptionValue.productVariants",
       many: true,
     }),
     ...trackingFields,

@@ -32,13 +32,13 @@ export const Store = list({
     swapLinkTemplate: text(),
     paymentLinkTemplate: text(),
     inviteLinkTemplate: text(),
-    currency: relationship({
-      ref: "Currency.stores",
-    }),
-    // currencies: relationship({
+    // currency: relationship({
     //   ref: "Currency.stores",
-    //   many: true,
     // }),
+    currencies: relationship({
+      ref: "Currency.stores",
+      many: true,
+    }),
     ...trackingFields,
   },
 });

@@ -22,12 +22,16 @@ export const ProductOptionValue = list({
       },
     }),
     metadata: json(),
-    productVariant: relationship({
+    productVariants: relationship({
       ref: "ProductVariant.productOptionValues",
+      many: true,
     }),
     productOption: relationship({
       ref: "ProductOption.productOptionValues",
     }),
     ...trackingFields,
+  },
+  ui: {
+    labelField: "value",
   },
 });

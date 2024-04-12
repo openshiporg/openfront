@@ -206,7 +206,7 @@ model ProductCollection {
 model ProductCategory {
   id                 String              @id @default(cuid())
   title              String              @default("")
-  handle             String              @default("")
+  handle             String              @unique @default("")
   metadata           Json?
   isInternal         Boolean             @default(false)
   isActive           Boolean             @default(false)
@@ -244,17 +244,15 @@ model ProductOption {
 }
 
 model ProductOptionValue {
-  id               String          @id @default(cuid())
-  value            String          @default("")
-  metadata         Json?
-  productVariant   ProductVariant? @relation("ProductOptionValue_productVariant", fields: [productVariantId], references: [id])
-  productVariantId String?         @map("productVariant")
-  productOption    ProductOption?  @relation("ProductOptionValue_productOption", fields: [productOptionId], references: [id])
-  productOptionId  String?         @map("productOption")
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @default(now()) @updatedAt
+  id              String           @id @default(cuid())
+  value           String           @default("")
+  metadata        Json?
+  productVariants ProductVariant[] @relation("ProductOptionValue_productVariants")
+  productOption   ProductOption?   @relation("ProductOptionValue_productOption", fields: [productOptionId], references: [id])
+  productOptionId String?          @map("productOption")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @default(now()) @updatedAt
 
-  @@index([productVariantId])
   @@index([productOptionId])
 }
 
@@ -303,8 +301,8 @@ model ProductVariant {
   productId           String?              @map("product")
   claimItems          ClaimItem[]          @relation("ClaimItem_productVariant")
   lineItems           LineItem[]           @relation("LineItem_productVariant")
-  moneyAmounts        MoneyAmount[]        @relation("MoneyAmount_productVariant")
-  productOptionValues ProductOptionValue[] @relation("ProductOptionValue_productVariant")
+  prices              MoneyAmount[]        @relation("MoneyAmount_productVariant")
+  productOptionValues ProductOptionValue[] @relation("ProductOptionValue_productVariants")
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @default(now()) @updatedAt
 
@@ -512,7 +510,7 @@ model Currency {
   orders       Order[]       @relation("Order_currency")
   payments     Payment[]     @relation("Payment_currency")
   regions      Region[]      @relation("Region_currency")
-  stores       Store[]       @relation("Store_currency")
+  stores       Store[]       @relation("Currency_stores")
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @default(now()) @updatedAt
 }
@@ -1091,19 +1089,16 @@ model ShippingProfile {
 }
 
 model Store {
-  id                  String    @id @default(cuid())
-  name                String    @default("Openfront Store")
-  defaultCurrencyCode String    @default("usd")
+  id                  String     @id @default(cuid())
+  name                String     @default("Openfront Store")
+  defaultCurrencyCode String     @default("usd")
   metadata            Json?
-  swapLinkTemplate    String    @default("")
-  paymentLinkTemplate String    @default("")
-  inviteLinkTemplate  String    @default("")
-  currency            Currency? @relation("Store_currency", fields: [currencyId], references: [id])
-  currencyId          String?   @map("currency")
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @default(now()) @updatedAt
-
-  @@index([currencyId])
+  swapLinkTemplate    String     @default("")
+  paymentLinkTemplate String     @default("")
+  inviteLinkTemplate  String     @default("")
+  currencies          Currency[] @relation("Currency_stores")
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @default(now()) @updatedAt
 }
 
 model Swap {

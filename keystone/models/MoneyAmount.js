@@ -24,7 +24,7 @@ export const MoneyAmount = list({
     minQuantity: integer(),
     maxQuantity: integer(),
     productVariant: relationship({
-      ref: "ProductVariant.moneyAmounts",
+      ref: "ProductVariant.prices",
     }),
     region: relationship({
       ref: "Region.moneyAmounts",
