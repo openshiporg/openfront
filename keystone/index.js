@@ -25,7 +25,7 @@ const {
   S3_REGION: region = "ap-southeast-2",
   S3_ACCESS_KEY_ID: accessKeyId = "keystone",
   S3_SECRET_ACCESS_KEY: secretAccessKey = "keystone",
-  S3_ENDPOINT: endpoint = "keystone",
+  S3_ENDPOINT: endpoint = "https://sfo3.digitaloceanspaces.com",
 } = process.env;
 
 export function statelessSessions({
@@ -191,14 +191,14 @@ export default withAuth(
         secretAccessKey,
         endpoint,
         signed: { expiry: 5000 },
-        forcePathStyle: true
+        forcePathStyle: true,
       },
     },
     graphql: {
       extendGraphqlSchema,
     },
     ui: {
-      // Show the UI only for users who have canReadOrders permission 
+      // Show the UI only for users who have canReadOrders permission
       // (min access scope needed to access Admin UI)
       isAccessAllowed: ({ session }) => permissions.canReadOrders({ session }),
     },
