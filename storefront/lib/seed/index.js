@@ -2,7 +2,7 @@ import { GraphQLClient, gql } from "graphql-request";
 import seedData from "./seed-data.json";
 
 const endpoint = "http://localhost:3000/api/graphql";
-const apiKey = "clupcna0j0002wf8cm67qkjfc";
+const apiKey = "clv1cpclz0002wfezcssbx4es";
 
 const client = new GraphQLClient(endpoint, {
   headers: {
@@ -184,7 +184,7 @@ async function createCategories() {
 }
 
 async function createProducts() {
-  const { products } = seedData;
+  const { products, regions } = seedData;
   const productIds = {};
 
   for (const productData of products) {
@@ -271,10 +271,19 @@ async function createProducts() {
               inventoryQuantity: inventory_quantity,
               manageInventory: manage_inventory,
               prices: {
-                create: prices.map(({ currency_code, amount }) => ({
-                  amount,
-                  currency: { connect: { code: currency_code } },
-                })),
+                create: prices.map(({ currency_code, amount }) => {
+                  // Find the region_id directly inside the map function
+                  const region = regions.find(
+                    (region) => region.currency_code === currency_code
+                  );
+                  const region_id = region ? region.id : null;
+
+                  return {
+                    amount,
+                    currency: { connect: { code: currency_code } },
+                    region: { connect: { code: region_id } },
+                  };
+                }),
               },
               productOptionValues: {
                 connect: matchingIds,
@@ -362,7 +371,7 @@ async function createPaymentProvider() {
 }
 
 async function createCountries() {
-  for (const country of seedData.countries) {
+  for (const { ...country } of seedData.countries) {
     const countryDataWithRegion = {
       ...country,
     };
@@ -403,6 +412,9 @@ const createRegions = async () => {
       },
       fulfillmentProviders: {
         connect: fulfillment_providers.map((code) => ({ code })),
+      },
+      countries: {
+        connect: countries.map((iso2) => ({ iso2 })),
       },
     };
 

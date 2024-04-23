@@ -1,14 +1,16 @@
 import { relationship } from "@keystone-6/core/fields";
 import { list } from "@keystone-6/core";
-import { isSignedIn } from "../access";
+import { isSignedIn, permissions, rules } from "../access";
 import { trackingFields } from "./trackingFields";
 
 const canManageKeys = ({ session }) => {
-  if (!session) {
-    // No session? No Users.
+  if (!isSignedIn({ session })) {
     return false;
   }
-  return { user: { id: session.itemId } };
+  if (permissions.canManageKeys({ session })) {
+    return true;
+  }
+  return { user: { id: { equals: session?.itemId } } };
 };
 
 export const ApiKey = list({
@@ -35,9 +37,14 @@ export const ApiKey = list({
   access: {
     operation: {
       create: isSignedIn,
-      read: canManageKeys,
+      query: isSignedIn,
+      // only people with the permission can delete themselves!
+      // You can't delete yourself
+      delete: permissions.canManageKeys,
+    },
+    filter: {
+      query: canManageKeys,
       update: canManageKeys,
-      delete: ({ session }) => canManageKeys({ session }) !== false,
     },
   },
   fields: {

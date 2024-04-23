@@ -17,13 +17,14 @@ const canManageUsers = ({ session }) => {
   if (permissions.canManageUsers({ session })) {
     return true;
   }
+  return { id: { equals: session?.itemId } };
 };
-
 
 export const User = list({
   access: {
     operation: {
       create: () => true,
+      query: () => true,
       // only people with the permission can delete themselves!
       // You can't delete yourself
       delete: permissions.canManageUsers,
@@ -50,7 +51,8 @@ export const User = list({
       },
       ui: {
         itemView: {
-          fieldMode: args => (permissions.canManageUsers(args) ? 'edit' : 'read'),
+          fieldMode: (args) =>
+            permissions.canManageUsers(args) ? "edit" : "read",
         },
       },
     }),

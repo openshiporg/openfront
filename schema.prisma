@@ -58,6 +58,7 @@ model Role {
   canManageIdempotencyKeys Boolean  @default(false)
   canReadApps              Boolean  @default(false)
   canManageApps            Boolean  @default(false)
+  canManageKeys            Boolean  @default(false)
   assignedTo               User[]   @relation("User_role")
   createdAt                DateTime @default(now())
   updatedAt                DateTime @default(now()) @updatedAt
@@ -153,9 +154,9 @@ model LineItem {
 model Product {
   id                  String              @id @default(cuid())
   title               String              @default("")
-  subtitle            String              @default("")
   description         String              @default("")
   handle              String              @default("")
+  subtitle            String              @default("")
   isGiftcard          Boolean             @default(false)
   thumbnail           String              @default("")
   weight              Int?
@@ -218,11 +219,11 @@ model ProductCategory {
 
 model ProductImage {
   id              String    @id @default(cuid())
+  image_id        String?
   image_filesize  Int?
-  image_extension String?
   image_width     Int?
   image_height    Int?
-  image_id        String?
+  image_extension String?
   altText         String    @default("")
   products        Product[] @relation("Product_productImages")
   metadata        Json?
@@ -460,11 +461,11 @@ model ClaimItem {
 
 model ClaimImage {
   id              String     @id @default(cuid())
+  image_id        String?
   image_filesize  Int?
-  image_extension String?
   image_width     Int?
   image_height    Int?
-  image_id        String?
+  image_extension String?
   altText         String     @default("")
   claimItem       ClaimItem? @relation("ClaimImage_claimItem", fields: [claimItemId], references: [id])
   claimItemId     String?    @map("claimItem")

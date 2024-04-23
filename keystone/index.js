@@ -8,6 +8,7 @@ import { models } from "./models";
 import { sendPasswordResetEmail } from "./utils/mail";
 import Iron from "@hapi/iron";
 import * as cookie from "cookie";
+import { permissions } from "./access";
 
 const databaseURL = process.env.DATABASE_URL || "file:./keystone.db";
 
@@ -24,6 +25,7 @@ const {
   S3_REGION: region = "ap-southeast-2",
   S3_ACCESS_KEY_ID: accessKeyId = "keystone",
   S3_SECRET_ACCESS_KEY: secretAccessKey = "keystone",
+  S3_ENDPOINT: endpoint = "keystone",
 } = process.env;
 
 export function statelessSessions({
@@ -153,6 +155,7 @@ const { withAuth } = createAuth({
           canManageIdempotencyKeys: true,
           canReadApps: true,
           canManageApps: true,
+          canManageKeys: true,
         },
       },
     },
@@ -169,22 +172,9 @@ const { withAuth } = createAuth({
 
 export default withAuth(
   config({
-    // server: {
-    //   cors: {
-    //     origin: [process.env.FRONTEND_URL],
-    //     credentials: true,
-    //   },
-    // },
     db: {
       provider: "postgresql",
       url: databaseURL,
-      useMigrations: true,
-      // async onConnect(context) {
-      //   console.log("Connected to the database!");
-      //   if (process.argv.includes("--seed-data")) {
-      //     await insertSeedData(context);
-      //   }
-      // },
     },
     experimental: {
       generateNextGraphqlAPI: true,
@@ -199,21 +189,18 @@ export default withAuth(
         region,
         accessKeyId,
         secretAccessKey,
-        endpoint: "https://sfo3.digitaloceanspaces.com",
+        endpoint,
         signed: { expiry: 5000 },
-        // kind: 'local',
-        // type: 'image',
-        // generateUrl: path => `http://localhost:3000/images${path}`,
-        // serverRoute: {
-        //   path: '/images',
-        // },
-        // storagePath: 'public/images',
+        forcePathStyle: true
       },
     },
-    extendGraphqlSchema,
+    graphql: {
+      extendGraphqlSchema,
+    },
     ui: {
-      // Show the UI only for poeple who pass this test
-      isAccessAllowed: ({ session }) => !!session,
+      // Show the UI only for users who have canReadOrders permission 
+      // (min access scope needed to access Admin UI)
+      isAccessAllowed: ({ session }) => permissions.canReadOrders({ session }),
     },
     session: statelessSessions(sessionConfig),
   })

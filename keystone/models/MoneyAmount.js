@@ -1,6 +1,6 @@
-import { list } from "@keystone-6/core";
+import { graphql, list } from "@keystone-6/core";
 import { denyAll } from "@keystone-6/core/access";
-import { integer, relationship } from "@keystone-6/core/fields";
+import { integer, relationship, virtual } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
 
@@ -16,6 +16,19 @@ export const MoneyAmount = list({
     },
   },
   fields: {
+    displayPrice: virtual({
+      field: graphql.field({
+        type: graphql.String,
+        // resolve: (item) => `${item.title}`,
+        resolve: async (item, args, context) => {
+          const { currency } = await context.query.MoneyAmount.findOne({
+            where: { id: item.id.toString() },
+            query: "currency { symbol }",
+          });
+          return `${currency.symbol}${(item.amount / 100).toFixed(2)}`;
+        },
+      }),
+    }),
     amount: integer({
       validation: {
         isRequired: true,
@@ -35,6 +48,9 @@ export const MoneyAmount = list({
     priceList: relationship({
       ref: "PriceList.moneyAmounts",
     }),
-    ...trackingFields
+    ...trackingFields,
+  },
+  ui: {
+    labelField: "displayPrice",
   },
 });

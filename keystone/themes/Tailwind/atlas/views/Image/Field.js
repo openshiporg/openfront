@@ -7,7 +7,7 @@ import { FieldLabel } from "@keystone/components/FieldLabel";
 import { Button } from "@keystone/primitives/default/ui/button";
 import { Image as ImageIcon } from "lucide-react";
 
-export const SUPPORTED_IMAGE_EXTENSIONS = ["jpg", "png", "webp", "gif"];
+export const SUPPORTED_IMAGE_EXTENSIONS = ["jpg", "png", "webp", "gif", "svg"];
 
 function useObjectURL(fileData) {
   let [objectURL, setObjectURL] = useState(undefined);
@@ -216,7 +216,7 @@ function createErrorMessage(value) {
 
 export function validateImage({ file, validity }) {
   if (!validity.valid) {
-    return "Something went wrong, please reload and try again.";
+    return "System Error, please reload and try again.";
   }
   // check if the file is actually an image
   if (!file.type.includes("image")) {

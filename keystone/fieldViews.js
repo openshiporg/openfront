@@ -13,6 +13,7 @@ import * as view7 from "@keystone/views/Select";
 import * as view8 from "@keystone/views/Integer";
 import * as view9 from "@keystone/views/Float";
 import * as view10 from "@keystone/views/Image";
+import * as view11 from "@keystone/views/Virtual";
 
 export const fieldViews = [
   view0,
@@ -25,5 +26,6 @@ export const fieldViews = [
   view7,
   view8,
   view9,
-  view10
+  view10,
+  view11
 ];

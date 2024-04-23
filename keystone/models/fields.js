@@ -105,6 +105,10 @@ export const permissionFields = {
     defaultValue: false,
     label: "User can see and manage apps"
   }),
+  canManageKeys: checkbox({
+    defaultValue: false,
+    label: "User can see and manage API Keys"
+  }),
 }
 
 export const permissionsList = Object.keys(permissionFields)

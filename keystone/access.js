@@ -74,6 +74,17 @@ export const rules = {
       return true;
     }
     // Otherwise they may only update themselves!
-    // return { id: { equals: session?.itemId } };
+    return { id: { equals: session?.itemId } };
+  },
+
+  canManageKeys({ session }) {
+    if (!isSignedIn({ session })) {
+      return false;
+    }
+    if (permissions.canManageKeys({ session })) {
+      return true;
+    }
+    // Otherwise they may only update themselves!
+    return { id: { equals: session?.itemId } };
   },
 };
