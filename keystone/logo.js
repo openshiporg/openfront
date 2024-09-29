@@ -42,9 +42,9 @@ export const Logo = ({ size = "md", className }) => {
           "flex items-center text-zinc-700 dark:text-white"
         )}
       >
-        <Circle
+        <Triangle
           className={cn(
-            "mt-[2px] w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-[1.3rem] md:h-[1.3rem] fill-emerald-200 stroke-emerald-400 dark:stroke-emerald-600 dark:fill-emerald-950",
+            "mt-[2px] w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-[1.3rem] md:h-[1.3rem] fill-indigo-200 stroke-indigo-400 dark:stroke-indigo-600 dark:fill-indigo-950",
             iconClasses[size]
           )}
         />
@@ -54,7 +54,7 @@ export const Logo = ({ size = "md", className }) => {
             textClasses[size]
           )}
         >
-          open<span className="font-light">ship</span>
+          open<span className="font-light">front</span>
         </h1>
       </div>
     </h3>

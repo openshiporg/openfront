@@ -79,7 +79,7 @@
     "graphql-yoga": "^3.1.0",
     "lucide-react": "^0.364.0",
     "medusa-react": "^6.0.0",
-    "next": "13.4.8",
+    "next": "14.0.0",
     "next-nprogress-bar": "^2.1.2",
     "next-themes": "^0.2.1",
     "next-view-transitions": "^0.3.2",
