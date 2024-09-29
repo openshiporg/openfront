@@ -1,14 +1,36 @@
-import { relationship } from "@keystone-6/core/fields";
+import {
+  integer,
+  text,
+  relationship,
+  virtual,
+  float,
+} from "@keystone-6/core/fields";
 import { list } from "@keystone-6/core";
-import { isSignedIn } from "../access";
+import { isSignedIn, rules, permissions } from "../access";
 import { trackingFields } from "./trackingFields";
 
-const canManageKeys = ({ session }) => {
+const canReadKeys = ({ session }) => {
   if (!session) {
     // No session? No Users.
     return false;
   }
-  return { user: { id: session.itemId } };
+  if (permissions.canReadUsers({ session })) {
+    return true; // They can read everything!
+  }
+  // Can only see yourself
+  return { user: { id: { equals: session.itemId } } };
+};
+
+const canUpdateKeys = ({ session }) => {
+  if (!session) {
+    // No session? No Users.
+    return false;
+  }
+  if (permissions.canManageUsers({ session })) {
+    return true; // They can read everything!
+  }
+  // Can only see yourself
+  return { user: { id: { equals: session.itemId } } };
 };
 
 export const ApiKey = list({
@@ -21,23 +43,38 @@ export const ApiKey = list({
       resolvedData,
       context,
     }) => {
-      // if (operation === "create") {
-      //   const aIds = await context.query.ApiKey.findMany({
-      //     where: { user: { id: { equals: context.session.itemId } } },
-      //   });
-      //   if (aIds.length > 0)
-      //     await context.query.ApiKey.deleteMany({
-      //       where: aIds,
-      //     });
-      // }
+      if (operation === "create") {
+        const aIds = await context.query.apiKey.findMany({
+          where: { user: { id: { equals: context.session.itemId } } },
+        });
+        if (aIds.length > 0)
+          await context.query.apiKey.deleteMany({
+            where: aIds,
+          });
+      }
     },
   },
   access: {
+    // operation: {
+    //   create: isSignedIn,
+    //   query: isSignedIn,
+    //   delete: isSignedIn,
+    // },
+    // filter: {
+    //   query: canManageKeys,
+    //   update: canManageKeys,
+    // },
     operation: {
       create: isSignedIn,
-      read: canManageKeys,
-      update: canManageKeys,
-      delete: ({ session }) => canManageKeys({ session }) !== false,
+      query: isSignedIn,
+      delete: isSignedIn,
+      update: isSignedIn,
+    },
+    filter: {
+      // we use user rules since ApiKey is connected to the user
+      query: canReadKeys,
+      update: canUpdateKeys,
+      delete: canUpdateKeys,
     },
   },
   fields: {

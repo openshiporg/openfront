@@ -218,11 +218,11 @@ model ProductCategory {
 
 model ProductImage {
   id              String    @id @default(cuid())
+  image_id        String?
   image_filesize  Int?
-  image_extension String?
   image_width     Int?
   image_height    Int?
-  image_id        String?
+  image_extension String?
   altText         String    @default("")
   products        Product[] @relation("Product_productImages")
   metadata        Json?
@@ -460,11 +460,11 @@ model ClaimItem {
 
 model ClaimImage {
   id              String     @id @default(cuid())
+  image_id        String?
   image_filesize  Int?
-  image_extension String?
   image_width     Int?
   image_height    Int?
-  image_id        String?
+  image_extension String?
   altText         String     @default("")
   claimItem       ClaimItem? @relation("ClaimImage_claimItem", fields: [claimItemId], references: [id])
   claimItemId     String?    @map("claimItem")

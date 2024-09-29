@@ -12,51 +12,34 @@ import { useSelectedFields } from "@keystone/utils/useSelectedFields";
 import { useSort } from "@keystone/utils/useSort";
 import { models } from "@keystone/models";
 import { getNamesFromList } from "@keystone/utils/getNamesFromList";
-
-import { CreateButtonLink } from "@keystone/components/CreateButtonLink";
-import { DeleteManyButton } from "@keystone/components/DeleteManyButton";
-import { FieldSelection } from "@keystone/components/FieldSelection";
-import { FilterAdd } from "@keystone/components/FilterAdd";
-import { FilterList } from "@keystone/components/FilterList";
-import { ListPageHeader } from "@keystone/components/ListPageHeader";
-import { ListTable } from "@keystone/components/ListTable";
-import { ResultsSummaryContainer } from "@keystone/components/ResultsSummaryContainer";
-import { SortSelection } from "@keystone/components/SortSelection";
-import { PaginationLabel } from "@keystone/components/Pagination";
-import { Input } from "@keystone/primitives/default/ui/input";
-import { Button } from "@keystone/primitives/default/ui/button";
 import {
   ArrowUpDown,
-  ChevronRight,
   Circle,
-  Columns3,
-  EllipsisVertical,
-  File,
-  GripVertical,
-  Home,
-  LineChart,
-  ListFilter,
-  MoreHorizontal,
-  Package,
-  Package2,
-  PanelLeft,
-  PlusCircle,
-  PlusIcon,
   Search,
-  Settings,
-  ShoppingCart,
   Square,
+  SquareArrowRight,
   Triangle,
-  Users2,
+  PlusCircleIcon,
+  PlusIcon as PlusIcon2,
+  ChevronDown,
+  SearchIcon,
+  Filter,
+  ArrowRight,
+  ChevronRight,
+  Columns3,
 } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@keystone/primitives/default/ui/tooltip";
-import { LoadingIcon } from "@keystone/components/LoadingIcon";
-import Link from "next/link";
+import { Link } from "next-view-transitions";
+
+import { CreateButtonLink } from "../../components/CreateButtonLink";
+import { DeleteManyButton } from "../../components/DeleteManyButton";
+import { FieldSelection } from "../../components/FieldSelection";
+import { FilterAdd } from "../../components/FilterAdd";
+import { FilterList } from "../../components/FilterList";
+import { ListTable } from "../../components/ListTable";
+import { SortSelection } from "../../components/SortSelection";
+import { Button } from "../../primitives/default/ui/button";
+
+import { LoadingIcon } from "../../components/LoadingIcon";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -64,48 +47,15 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@keystone/primitives/default/ui/breadcrumb";
+} from "../../primitives/default/ui/breadcrumb";
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@keystone/primitives/default/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@keystone/primitives/default/ui/sheet";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@keystone/primitives/default/ui/table";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@keystone/primitives/default/ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@keystone/primitives/default/ui/card";
-import { Badge } from "@keystone/primitives/default/ui/badge";
-import Image from "next/image";
-import { Separator } from "../../primitives/default/ui/separator";
-
-const HEADER_HEIGHT = 80;
+  Pagination,
+  PaginationDropdown,
+  PaginationNavigation,
+  PaginationStats,
+} from "../../components/Pagination";
+import { Input } from "../../primitives/default/ui/input";
+import { Badge } from "../../primitives/default/ui/badge";
 
 let listMetaGraphqlQuery = gql`
   query ($listKey: String!) {
@@ -189,6 +139,7 @@ export const ListPageTemplate = ({ listKey }) => {
 
   const sort = useSort(list, orderableFields);
   const filters = useFilters(list, filterableFields);
+
 
   const searchFields = Object.keys(list.fields).filter(
     (key) => list.fields[key].search
@@ -303,18 +254,17 @@ export const ListPageTemplate = ({ listKey }) => {
         // TODO: Show errors nicely and with information
         "Error..."
       ) : data && metaQuery.data ? (
-        <div className="w-4xl max-w-full">
-          <main className="items-start gap-2 sm:py-0 md:gap-4">
-            <Breadcrumb className="hidden md:flex">
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink asChild>
-                    <Link href="/dashboard">Dashboard</Link>
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>{list.label}</BreadcrumbItem>
-                {/* {list.isSingleton ? (
+        <main className="items-start gap-2 sm:py-0 md:gap-4">
+          <Breadcrumb className="hidden md:flex">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink>
+                  <Link href="/dashboard">Dashboard</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>{list.label}</BreadcrumbItem>
+              {/* {list.isSingleton ? (
                   <BreadcrumbItem>
                     <BreadcrumbLink asChild>
                       <Link href={`/dashboard/${list.path}`}>{list.label}</Link>
@@ -327,102 +277,76 @@ export const ListPageTemplate = ({ listKey }) => {
                     </BreadcrumbLink>
                   </BreadcrumbItem>
                 )} */}
-              </BreadcrumbList>
-            </Breadcrumb>
-            <div className="flex mt-2 mb-4">
-              <div className="flex-col items-center">
-                <h1 className="text-lg font-semibold md:text-2xl">
-                  {list.label}
-                </h1>
-                <p className="text-muted-foreground">
-                  {list.description ? (
-                    <p>{list.description}</p>
-                  ) : (
-                    <span>
-                      Create and manage{" "}
-                      <span className="lowercase">{list.label}</span>
-                    </span>
-                  )}
-                </p>
-              </div>
-              {data.count || searchString || filters.filters.length ? (
-                <div className="ml-auto">
-                  {showCreate && <CreateButtonLink list={list} />}
-                </div>
-              ) : null}
+            </BreadcrumbList>
+          </Breadcrumb>
+          <div className="flex mt-2 mb-4">
+            <div className="flex-col items-center">
+              <h1 className="text-lg font-semibold md:text-2xl">
+                {list.label}
+              </h1>
+              <p className="text-muted-foreground">
+                {list.description ? (
+                  <p>{list.description}</p>
+                ) : (
+                  <span>
+                    Create and manage{" "}
+                    <span className="lowercase">{list.label}</span>
+                  </span>
+                )}
+              </p>
             </div>
-            <div class="no-scrollbar overflow-x-auto border rounded-lg divide-y">
-              <div class="flex gap-3 py-3 px-3">
-                <div className="relative flex-1 md:grow-0">
-                  <Search className="absolute left-2.5 top-2.5 h-5 w-5 text-muted-foreground" />
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      updateSearch(searchString);
-                    }}
-                  >
-                    <Input
-                      type="search"
-                      className="w-full rounded-md bg-muted/40 pl-10 md:w-[300px] lg:w-[350px]"
-                      value={searchString}
-                      onChange={(e) => updateSearchString(e.target.value)}
-                      placeholder={`Search by ${
-                        searchLabels.length
-                          ? searchLabels.join(", ").toLowerCase()
-                          : "ID"
-                      }`}
-                    />
-                  </form>
-                </div>
-                {/* <div className="gap-3 hidden lg:flex">
-                  <SortSelection
-                    list={list}
-                    orderableFields={orderableFields}
-                  />
-                  <FieldSelection
-                    list={list}
-                    fieldModesByFieldPath={listViewFieldModesByField}
-                    rightSection={
-                      <Button
-                        variant="plain"
-                        size="xs"
-                        onClick={resetToDefaults}
-                        className="opacity-85 text-red-800"
-                        isDisabled={
-                          !Boolean(
-                            filters.filters.length ||
-                              query.sortBy ||
-                              query.fields ||
-                              query.search
-                          )
-                        }
-                      >
-                        Reset
-                      </Button>
-                    }
-                  />
-                </div> */}
+            {data.count || query.search || filters.filters.length ? (
+              <div className="ml-auto">
+                {showCreate && <CreateButtonLink list={list} />}
               </div>
-              {/* {data.count || filters.filters.length ? (
-                <FilterAdd
-                  listKey={listKey}
-                  filterableFields={filterableFields}
+            ) : null}
+          </div>
+          <div className="no-scrollbar overflow-x-auto border rounded-lg divide-y dark:bg-zinc-950">
+            <div className="flex gap-3 py-3 px-3">
+              <div className="relative w-full">
+                <Search className="absolute left-2.5 top-2.5 h-5 w-5 text-muted-foreground" />
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    updateSearch(searchString);
+                  }}
+                >
+                  <Input
+                    type="search"
+                    className="w-full rounded-md bg-muted/40 pl-10"
+                    value={searchString}
+                    onChange={(e) => updateSearchString(e.target.value)}
+                    placeholder={`Search by ${
+                      searchLabels.length
+                        ? searchLabels.join(", ").toLowerCase()
+                        : "ID"
+                    }`}
+                  />
+                </form>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-start bg-zinc-300/20 dark:bg-muted/10 px-3 py-2">
+              <div className="flex flex-wrap gap-2 w-full items-center">
+                <PaginationNavigation
+                  list={list}
+                  total={data.count}
+                  currentPage={currentPage}
+                  pageSize={pageSize}
                 />
-              ) : null}
-              {filters.filters.length ? (
-                <FilterList filters={filters.filters} list={list} />
-              ) : null} */}
-              <div className="flex gap-2 items-center bg-slate-300/20 dark:bg-muted/10 px-3 py-2">
-                {/* <span className="py-0.5 my-1.5 border-r-[1.5px] pr-3 mr-1.5 text-zinc-400 font-medium text-sm">
-                  Filter
-                </span> */}
+                <PaginationDropdown
+                  list={list}
+                  total={data.count}
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                />
                 <SortSelection
                   list={list}
                   orderableFields={orderableFields}
                   dropdownTrigger={
                     <button
                       type="button"
-                      className="flex gap-1.5 pr-2 pl-2 tracking-wider items-center text-xs shadow-sm border p-[.15rem] font-medium text-gray-600 bg-white dark:bg-slate-800 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:border-gray-600 dark:text-slate-300 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white"
+                      className="flex gap-1.5 pr-2 pl-2 tracking-wider items-center text-xs shadow-sm border p-[.15rem] font-medium text-zinc-600 bg-white dark:bg-zinc-800 rounded-md hover:bg-zinc-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:border-zinc-600 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-600 dark:focus:ring-blue-500 dark:focus:text-white"
                     >
                       <ArrowUpDown
                         size={12}
@@ -463,117 +387,141 @@ export const ListPageTemplate = ({ listKey }) => {
                     </button>
                   }
                 />
-                {data.count || filters.filters.length ? (
-                  <FilterAdd
-                    listKey={listKey}
-                    filterableFields={filterableFields}
-                    dropdownTrigger={
-                      <button
-                        type="button"
-                        className="flex gap-1.5 pr-2 pl-2 tracking-wider items-center text-xs shadow-sm border p-[.15rem] font-medium text-gray-600 bg-white dark:bg-slate-800 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:border-gray-600 dark:text-slate-300 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white"
-                      >
-                        <PlusIcon
-                          size={13}
-                          className="stroke-muted-foreground"
-                        />
-                        FILTER
-                      </button>
-                    }
-                  />
-                ) : null}
-                <ChevronRight className="min-w-4 min-h-4 -mr-2 mt-[1px] stroke-muted-foreground" />
-                {filters.filters.length ? (
-                  <FilterList filters={filters.filters} list={list} />
-                ) : null}
-              </div>
-              {selectedItemsState.selectedItems.size > 0 && (
-                <div className="py-2 pr-2 pl-3 border fixed bottom-4 z-50 shadow-lg rounded-lg bg-white dark:bg-slate-800">
-                  <div className="flex gap-4 items-center">
-                    <span className="text-sm text-muted-foreground font-medium">
-                      {selectedItemsState.selectedItems.size} of{" "}
-                      {data.items.length} {list.label} selected
-                    </span>
-                    {!(
-                      metaQuery.data?.keystone.adminMeta.list?.hideDelete ??
-                      true
-                    ) && (
-                      <DeleteManyButton
-                        list={list}
-                        selectedItems={selectedItemsState.selectedItems}
-                        refetch={refetch}
-                      />
-                    )}
-                  </div>
-                </div>
-              )}
-              {data.count ? (
-                <ListTable
-                  count={data.count}
-                  currentPage={currentPage}
-                  itemsGetter={dataGetter.get("items")}
+                <FilterAdd
                   listKey={listKey}
-                  pageSize={pageSize}
-                  selectedFields={selectedFields}
-                  sort={sort}
-                  selectedItems={selectedItemsState.selectedItems}
-                  onSelectedItemsChange={(selectedItems) => {
-                    setSelectedItems({
-                      itemsFromServer: selectedItemsState.itemsFromServer,
-                      selectedItems,
-                    });
-                  }}
-                  orderableFields={orderableFields}
+                  filterableFields={filterableFields}
+                  dropdownTrigger={
+                    <button
+                      type="button"
+                      className="flex gap-1.5 pr-2 pl-2 tracking-wider items-center text-xs shadow-sm border p-[.15rem] font-medium text-zinc-600 bg-white dark:bg-zinc-800 rounded-md hover:bg-zinc-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:border-zinc-600 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-600 dark:focus:ring-blue-500 dark:focus:text-white"
+                    >
+                      <PlusIcon2
+                        size={13}
+                        className="stroke-muted-foreground"
+                      />
+                      FILTER
+                    </button>
+                  }
                 />
-              ) : (
+              </div>
+            </div>
+
+            {filters.filters.length > 0 && (
+              <div className="py-2 px-3 flex gap-2">
                 <div>
-                  <div className="flex flex-col items-center p-10 border-dashed border-2 rounded-lg m-5">
-                    <div className="flex opacity-40">
-                      <Triangle className="w-8 h-8 fill-indigo-200 stroke-indigo-400 dark:stroke-indigo-600 dark:fill-indigo-950" />
-                      <Circle className="w-8 h-8 fill-emerald-200 stroke-emerald-400 dark:stroke-emerald-600 dark:fill-emerald-950" />
-                      <Square className="w-8 h-8 fill-orange-300 stroke-orange-500 dark:stroke-amber-600 dark:fill-amber-950" />
-                    </div>
-                    {searchString || filters.filters.length ? (
-                      <>
-                        <span className="pt-4 font-semibold">
-                          No <span className="lowercase"> {list.label} </span>{" "}
-                        </span>
-                        <span className="text-muted-foreground pb-4">
-                          Found{" "}
-                          {searchString
-                            ? `matching your search`
-                            : `matching your filters`}{" "}
-                        </span>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            updateSearchString("");
-                            const { search, ...queries } = query;
-                            const newQueryString = new URLSearchParams(
-                              queries
-                            ).toString();
-                            push(`?${newQueryString}`);
-                          }}
-                        >
-                          Clear filters &amp; search
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <span className="pt-4 font-semibold">
-                          No <span className="lowercase"> {list.label} </span>
-                        </span>
-                        <span className="text-muted-foreground pb-4">
-                          Get started by creating a new one.{" "}
-                        </span>
-                        {showCreate && <CreateButtonLink list={list} />}
-                      </>
-                    )}
+                  <Badge
+                    color="zinc"
+                    className="flex items-center gap-2 py-0.5 border text-muted-foreground text-xs font-medium tracking-wide uppercase"
+                  >
+                    <Filter className="w-2.5 h-2.5" />
+                    Filters
+                    <SquareArrowRight className="w-3 h-3 opacity-75" />
+                  </Badge>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <FilterList filters={filters.filters} list={list} />
                   </div>
                 </div>
-              )}
+              </div>
+            )}
+            {selectedItemsState.selectedItems.size > 0 && (
+              <div className="py-2 pr-2 pl-3 border fixed bottom-4 z-50 shadow-lg rounded-lg bg-white dark:bg-zinc-800">
+                <div className="flex gap-4 items-center">
+                  <span className="text-sm text-muted-foreground font-medium">
+                    {selectedItemsState.selectedItems.size} of{" "}
+                    {data.items.length} {list.label} selected
+                  </span>
+                  {!(
+                    metaQuery.data?.keystone.adminMeta.list?.hideDelete ?? true
+                  ) && (
+                    <DeleteManyButton
+                      list={list}
+                      selectedItems={selectedItemsState.selectedItems}
+                      refetch={refetch}
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="pb-1 pr-2 pl-3.5">
+              <PaginationStats
+                list={list}
+                total={data.count}
+                currentPage={currentPage}
+                pageSize={pageSize}
+              />
             </div>
-          </main>
-        </div>
+
+            {data.count ? (
+              <ListTable
+                count={data.count}
+                currentPage={currentPage}
+                itemsGetter={dataGetter.get("items")}
+                listKey={listKey}
+                pageSize={pageSize}
+                selectedFields={selectedFields}
+                sort={sort}
+                selectedItems={selectedItemsState.selectedItems}
+                onSelectedItemsChange={(selectedItems) => {
+                  setSelectedItems({
+                    itemsFromServer: selectedItemsState.itemsFromServer,
+                    selectedItems,
+                  });
+                }}
+                orderableFields={orderableFields}
+              />
+            ) : (
+              <div>
+                <div className="flex flex-col items-center p-10 border-dashed border-2 rounded-lg m-5">
+                  <div className="flex opacity-40">
+                    <Triangle className="w-8 h-8 fill-indigo-200 stroke-indigo-400 dark:stroke-indigo-600 dark:fill-indigo-950" />
+                    <Circle className="w-8 h-8 fill-emerald-200 stroke-emerald-400 dark:stroke-emerald-600 dark:fill-emerald-950" />
+                    <Square className="w-8 h-8 fill-orange-300 stroke-orange-500 dark:stroke-amber-600 dark:fill-amber-950" />
+                  </div>
+                  {query.search || filters.filters.length ? (
+                    <>
+                      <span className="pt-4 font-semibold">
+                        No <span className="lowercase"> {list.label} </span>{" "}
+                      </span>
+                      <span className="text-muted-foreground pb-4">
+                        Found{" "}
+                        {searchParam
+                          ? `matching your search`
+                          : `matching your filters`}{" "}
+                      </span>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          updateSearchString("");
+                          const { search, ...queries } = query;
+                          // const newQueryString = new URLSearchParams(
+                          //   // queries
+                          // ).toString();
+                          // push(`?${newQueryString}`);
+                          const path = window.location.pathname; // Get the current path
+                          push(path); // Navigate to the current path without query params
+                        }}
+                      >
+                        Clear filters &amp; search
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="pt-4 font-semibold">
+                        No <span className="lowercase"> {list.label} </span>
+                      </span>
+                      <span className="text-muted-foreground pb-4">
+                        Get started by creating a new one.{" "}
+                      </span>
+                      {showCreate && <CreateButtonLink list={list} />}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </main>
       ) : (
         <LoadingIcon label="Loading item data" />
       )}

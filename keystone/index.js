@@ -13,6 +13,9 @@ const databaseURL = process.env.DATABASE_URL || "file:./keystone.db";
 
 const listKey = "User";
 
+export const basePath = "/dashboard"
+
+
 const sessionConfig = {
   maxAge: 60 * 60 * 24 * 360, // How long they stay signed in?
   secret:
@@ -210,7 +213,9 @@ export default withAuth(
         // storagePath: 'public/images',
       },
     },
-    extendGraphqlSchema,
+    graphql: {
+      extendGraphqlSchema,
+    },
     ui: {
       // Show the UI only for poeple who pass this test
       isAccessAllowed: ({ session }) => !!session,

@@ -9,7 +9,12 @@ import {
   useRef,
   useState,
 } from "react";
-
+import { models } from "@keystone/models";
+import { getNamesFromList } from "@keystone/utils/getNamesFromList";
+import { AlertTriangle } from "lucide-react";
+import { Link } from "next-view-transitions";
+import { useList } from "@keystone/keystoneProvider";
+import { usePreventNavigation } from "@keystone/utils/usePreventNavigation";
 import { gql, useMutation, useQuery } from "@keystone-6/core/admin-ui/apollo";
 import {
   deserializeValue,
@@ -17,30 +22,11 @@ import {
   useChangedFieldsAndDataForUpdate,
   useInvalidFields,
 } from "@keystone-6/core/admin-ui/utils";
-import { CreateButtonLink } from "@keystone/components/CreateButtonLink";
-import { FieldLabel } from "@keystone/components/FieldLabel";
-import { Fields } from "@keystone/components/Fields";
-import { GraphQLErrorNotice } from "@keystone/components/GraphQLErrorNotice";
-import { AlertDialog } from "@keystone/components/Modals";
-import { useToasts } from "@keystone/components/Toast";
-import { useList } from "@keystone/keystoneProvider";
-import { usePreventNavigation } from "@keystone/utils/usePreventNavigation";
-import { AdminLink } from "@keystone/components/AdminLink";
-
-import { models } from "@keystone/models";
-import { getNamesFromList } from "@keystone/utils/getNamesFromList";
-import { Button } from "@keystone/primitives/default/ui/button";
-import { LoadingIcon } from "@keystone/components/LoadingIcon";
-import Link from "next/link";
-import { Skeleton } from "@keystone/primitives/default/ui/skeleton";
-import { ClipboardIcon } from "lucide-react";
-import { Alert } from "@keystone/primitives/default/ui/alert";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@keystone/primitives/default/ui/tooltip";
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "../../primitives/default/ui/alert";
 import {
   Dialog,
   DialogClose,
@@ -50,7 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@keystone/primitives/default/ui/dialog";
+} from "../../primitives/default/ui/dialog";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -58,7 +44,17 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@keystone/primitives/default/ui/breadcrumb";
+} from "../../primitives/default/ui/breadcrumb";
+import { CreateButtonLink } from "../../components/CreateButtonLink";
+import { FieldLabel } from "../../components/FieldLabel";
+import { Fields } from "../../components/Fields";
+import { GraphQLErrorNotice } from "../../components/GraphQLErrorNotice";
+import { useToasts } from "../../components/Toast";
+import { AdminLink } from "../../components/AdminLink";
+import { Button } from "../../primitives/default/ui/button";
+import { LoadingIcon } from "../../components/LoadingIcon";
+import { Skeleton } from "../../primitives/default/ui/skeleton";
+import { basePath } from "@keystone/index";
 
 export function ItemPageHeader(props) {
   return (
@@ -68,7 +64,7 @@ export function ItemPageHeader(props) {
           <li className="inline-flex items-center">
             <Link
               href="/dashboard"
-              className="inline-flex items-center text-md font-medium text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white"
+              className="inline-flex items-center text-md font-medium text-zinc-700 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-white"
             >
               <svg
                 className="w-3 h-3 mr-2.5"
@@ -90,7 +86,7 @@ export function ItemPageHeader(props) {
               <li>
                 <div className="flex items-center">
                   <svg
-                    className="w-3 h-3 mx-1 text-gray-400"
+                    className="w-3 h-3 mx-1 text-zinc-400"
                     aria-hidden="true"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
@@ -106,7 +102,7 @@ export function ItemPageHeader(props) {
                   </svg>
                   <AdminLink
                     href={`/${props.list.path}`}
-                    className="ml-1 text-md font-medium text-gray-700 hover:text-blue-600 md:ml-2 dark:text-gray-400 dark:hover:text-white"
+                    className="ml-1 text-md font-medium text-zinc-700 hover:text-blue-600 md:ml-2 dark:text-zinc-400 dark:hover:text-white"
                   >
                     {props.list.label}
                   </AdminLink>
@@ -115,7 +111,7 @@ export function ItemPageHeader(props) {
               <li>
                 <div className="flex items-center">
                   <svg
-                    className="w-3 h-3 mx-1 text-gray-400"
+                    className="w-3 h-3 mx-1 text-zinc-400"
                     aria-hidden="true"
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
@@ -129,7 +125,7 @@ export function ItemPageHeader(props) {
                       d="m1 9 4-4-4-4"
                     />
                   </svg>
-                  <div className="ml-1 text-md font-medium text-gray-700 hover:text-blue-600 md:ml-2 dark:text-gray-400 dark:hover:text-white">
+                  <div className="ml-1 text-md font-medium text-zinc-700 hover:text-blue-600 md:ml-2 dark:text-zinc-400 dark:hover:text-white">
                     {props.label}
                   </div>
                 </div>
@@ -156,7 +152,8 @@ export function ColumnLayout(props) {
 
 export function BaseToolbar(props) {
   return (
-    <div className="border-t-2 bottom-0 flex justify-between mt-16 pb-6 pt-12 sticky z-20 bg-background text-foreground">
+    // <div className="border-t-2 bottom-0 flex justify-between mt-10 pb-2 pt-2 sticky z-20 bg-background text-foreground">
+    <div className="shadow-sm bottom-3 border flex justify-between p-2 rounded-lg sticky z-20 mt-5 bg-zinc-200 dark:bg-zinc-950">
       {props.children}
     </div>
   );
@@ -324,7 +321,7 @@ function ItemForm({
       <StickySidebar>
         <div className="ml-4 w-72">
           <FieldLabel>Item ID</FieldLabel>
-          <code className="py-[9px] mt-1 border flex px-4 items-center relative rounded-md shadow-sm bg-muted/40 font-mono text-sm font-medium">
+          <code className="py-[10px] mt-1 border flex px-4 items-center relative rounded-md shadow-sm bg-muted/40 font-mono text-sm font-medium">
             {item.id}
           </code>
         </div>
@@ -366,27 +363,28 @@ function DeleteButton({ itemLabel, itemId, list }) {
   );
   const router = useRouter();
 
-  const adminPath = process.env.NEXT_PUBLIC_ADMIN_PATH || "/dashboard";
+  const adminPath = basePath;
 
   return (
     <Fragment>
       <Dialog>
         <DialogTrigger asChild>
-          <Button color="red">Delete</Button>
+          <Button variant="destructive">Delete</Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Delete Confirmation</DialogTitle>
           </DialogHeader>
-          <text>
+          <text className="text-sm">
             Are you sure you want to delete <strong>{itemLabel}</strong>?
           </text>
           <DialogFooter className="mt-4">
             <DialogClose asChild>
-              <Button variant="ghost">Close</Button>
+              <Button variant="light">Close</Button>
             </DialogClose>
             <Button
               variant="destructive"
+              isLoading={loading}
               onClick={async () => {
                 try {
                   await deleteItem();
@@ -434,6 +432,8 @@ export const ItemPage = ({ params }) => {
 export const ItemPageTemplate = ({ listKey, id }) => {
   const list = useList(listKey);
 
+  console.log(list.fields);
+
   const { query, selectedFields } = useMemo(() => {
     const selectedFields = Object.entries(list.fields)
       .filter(
@@ -446,6 +446,7 @@ export const ItemPageTemplate = ({ listKey, id }) => {
         return list.fields[fieldKey].controller.graphqlSelection;
       })
       .join("\n");
+    console.log({ selectedFields });
     return {
       selectedFields,
       query: gql`
@@ -513,9 +514,8 @@ export const ItemPageTemplate = ({ listKey, id }) => {
   const pageTitle = list.isSingleton
     ? list.label
     : loading
-      ? undefined
-      : (data && data.item && (data.item[list.labelField] || data.item.id)) ||
-        id;
+    ? undefined
+    : (data && data.item && (data.item[list.labelField] || data.item.id)) || id;
 
   return (
     <div>
@@ -531,7 +531,7 @@ export const ItemPageTemplate = ({ listKey, id }) => {
             <BreadcrumbItem>
               <BreadcrumbLink asChild>
                 {list.isSingleton ? (
-                  <div className="ml-1 text-md font-medium text-gray-700 hover:text-blue-600 md:ml-2 dark:text-gray-400 dark:hover:text-white">
+                  <div className="ml-1 text-md font-medium text-zinc-700 hover:text-blue-600 md:ml-2 dark:text-zinc-400 dark:hover:text-white">
                     {list.label}
                   </div>
                 ) : (
@@ -582,7 +582,11 @@ export const ItemPageTemplate = ({ listKey, id }) => {
                 id === "1" ? (
                   <div className="space-y-4">
                     <Alert variant="destructive">
-                      {list.label} doesn't exist or you don't have access to it.
+                      <AlertTitle>System Error</AlertTitle>
+                      <AlertDescription>
+                        {list.label} doesn't exist or you don't have access to
+                        it.
+                      </AlertDescription>
                     </Alert>
                     {!data.keystone.adminMeta.list.hideCreate && (
                       <CreateButtonLink list={list} />
@@ -590,13 +594,21 @@ export const ItemPageTemplate = ({ listKey, id }) => {
                   </div>
                 ) : (
                   <Alert variant="destructive">
-                    The item with id "{id}" does not exist
+                    <AlertTitle>System Error</AlertTitle>
+                    <AlertDescription>
+                      The item with id "{id}" does not exist
+                    </AlertDescription>
                   </Alert>
                 )
               ) : (
                 <Alert variant="destructive">
-                  The item with id "{id}" could not be found or you don't have
-                  access to it.
+                  <AlertTriangle className="h-4 w-4 stroke-red-900 dark:stroke-red-500" />
+
+                  <AlertTitle>System Error</AlertTitle>
+                  <AlertDescription>
+                    The item with id "{id}" could not be found or you don't have
+                    access to it.
+                  </AlertDescription>
                 </Alert>
               )}
             </div>
@@ -648,10 +660,9 @@ const Toolbar = memo(function Toolbar({
           <text className="font-medium px-5 text-sm">No changes</text>
         )}
         <Button
-          isDisabled={!hasChangedFields}
+          disabled={!hasChangedFields}
           isLoading={loading}
           onClick={onSave}
-          color="blue"
         >
           Save changes
         </Button>
@@ -667,18 +678,22 @@ function ResetChangesButton(props) {
     <Fragment>
       <Dialog>
         <DialogTrigger asChild>
-          <Button variant="plain">Reset changes</Button>
+          <Button variant="secondary">Reset changes</Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Reset Confirmation</DialogTitle>
           </DialogHeader>
-          <text>Are you sure you want to reset changes?</text>
+          <text className="text-sm">
+            Are you sure you want to reset changes?
+          </text>
           <DialogFooter className="mt-4">
             <DialogClose asChild>
-              <Button>Close</Button>
+              <Button variant="secondary">Close</Button>
             </DialogClose>
-            <Button onClick={() => props.onReset()}>Reset Changes</Button>
+            <Button variant="destructive" onClick={() => props.onReset()}>
+              Reset Changes
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -687,5 +702,7 @@ function ResetChangesButton(props) {
 }
 
 const StickySidebar = (props) => {
-  return <div className="hidden lg:block mt-0.5 mb-20 sticky top-8" {...props} />;
+  return (
+    <div className="hidden lg:block mt-0.5 mb-20 sticky top-8" {...props} />
+  );
 };

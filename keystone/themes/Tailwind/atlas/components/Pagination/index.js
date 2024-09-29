@@ -1,20 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { AdminLink } from "@keystone/components/AdminLink";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-} from "@keystone/primitives/default/ui/select";
+import { MoveLeft, MoveRight } from "lucide-react";
+import { PaginationDropdown } from "./PaginationDropdown";
+import { PaginationNavigation } from "./PaginationNavigation";
+import { PaginationStats } from "./PaginationStats";
 
 const getPaginationStats = ({ list, pageSize, currentPage, total }) => {
   let stats = "";
   if (total > pageSize) {
     const start = pageSize * (currentPage - 1) + 1;
     const end = Math.min(start + pageSize - 1, total);
-    stats = `${start} - ${end} of ${total} ${list.plural}`;
+    stats = `${start} ${start !== end ? `- ${end}` : ""} of ${total}`;
   } else {
     if (total > 1 && list.plural) {
       stats = `${total} ${list.plural}`;
@@ -25,124 +21,132 @@ const getPaginationStats = ({ list, pageSize, currentPage, total }) => {
   return { stats };
 };
 
-export function Pagination({ currentPage, total, pageSize, list }) {
-  const { push } = useRouter();
-  const pathname = usePathname();
+function Pagination({ currentPage, total, pageSize, list }) {
   const searchParams = useSearchParams();
   const query = {};
   for (let [key, value] of searchParams.entries()) {
     query[key] = value;
   }
 
-  const { stats } = getPaginationStats({ list, currentPage, total, pageSize });
-
-  const nextPage = currentPage + 1;
-  const prevPage = currentPage - 1;
-  const minPage = 1;
-
-  const nxtQuery = { ...query, page: nextPage };
-  const prevQuery = { ...query, page: prevPage };
-
-  const limit = Math.ceil(total / pageSize);
-  const pages = [];
-
-  useEffect(() => {
-    // Check if the current page is larger than
-    // the maximal page given the total and associated page size value.
-    // (This could happen due to a deletion event, in which case we want to reroute the user to a previous page).
-    if (currentPage > Math.ceil(total / pageSize)) {
-      // push({
-      //   pathname,
-      //   query: {
-      //     ...query,
-      //     page: Math.ceil(total / pageSize),
-      //   },
-      // });
-      push(`${pathname}?${searchParams}&page=${Math.ceil(total / pageSize)}`);
-    }
-  }, [total, pageSize, currentPage, pathname, query, push]);
-
-  // Don't render the pagiantion component if the pageSize is greater than the total number of items in the list.
   if (total <= pageSize) return null;
 
-  const onChange = (selectedOption) => {
-    // push({
-    //   pathname,
-    //   query: {
-    //     ...query,
-    //     page: selectedOption.value,
-    //   },
-    // });
-    push(`${pathname}?${searchParams}&page=${selectedOption.value}`);
-  };
-
-  for (let page = minPage; page <= limit; page++) {
-    pages.push({
-      label: String(page),
-      value: String(page),
-    });
-  }
-
   return (
-    <nav className="flex justify-between p-4" aria-label="Pagination">
-      <div className="flex gap-x-8 items-center">
-        <span>{`${list.plural} per page: ${pageSize}`}</span>
-        <span>
-          <strong>{stats}</strong>
-        </span>
-      </div>
+    <nav className="flex gap-4 px-3.5 py-1.5" aria-label="Pagination">
+      <div className="flex flex-col gap-0.5">
+        <PaginationDropdown />
 
-      <div className="flex gap-x-4 items-center">
-        <Select
-          onValueChange={(newPage) =>
-            onChange({ label: String(newPage), value: newPage })
-          }
-        >
-          <SelectTrigger className="w-medium ...">
-            <SelectValue>{String(currentPage)}</SelectValue>
-            <ChevronDown />
-          </SelectTrigger>
-          <SelectContent>
-            {pages.map((page) => (
-              <SelectItem key={page} value={page}>
-                {String(page)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <span>of {limit}</span>
-        <AdminLink aria-label="Previous page" href={{ query: prevQuery }}>
-          <ChevronLeftIcon />
-        </AdminLink>
-        <AdminLink aria-label="Next page" href={{ query: nxtQuery }}>
-          <ChevronRightIcon />
-        </AdminLink>
+        <PaginationDropdown list={list} />
+
+        <PaginationNavigation
+          currentPage={currentPage}
+          total={total}
+          pageSize={pageSize}
+        />
       </div>
     </nav>
   );
 }
 
-export function PaginationLabel({
-  currentPage,
-  pageSize,
-  plural,
-  singular,
-  total,
-}) {
-  const { stats } = getPaginationStats({
-    list: { plural, singular },
-    currentPage,
-    total,
-    pageSize,
-  });
+export {
+  Pagination,
+  PaginationNavigation,
+  PaginationStats,
+  PaginationDropdown,
+};
 
-  if (!total) {
-    return <span>No {plural}</span>;
-  }
+// function PaginationDropdown({ currentPage, total, pageSize, list }) {
+//   const { push } = useRouter();
+//   const searchParams = useSearchParams();
+//   const pathname = usePathname();
 
-  return (
-    <span>
-      Showing <strong>{stats}</strong>
-    </span>
-  );
-}
+//   const query = {};
+//   for (let [key, value] of searchParams.entries()) {
+//     query[key] = value;
+//   }
+
+//   const [pageSizeInput, setPageSizeInput] = useState(pageSize.toString());
+//   const [selectedPageSize, setSelectedPageSize] = useState(
+//     [1, 5, 10, 25, 50, 100].includes(pageSize) ? pageSize : "Custom"
+//   );
+
+//   const handlePageSizeInputChange = (e) => {
+//     const newValue = e.target.value;
+//     if (newValue === "" || /^\d+$/.test(newValue)) {
+//       setPageSizeInput(newValue);
+//     }
+//   };
+
+//   const handlePageSizeInputBlur = () => {
+//     if (pageSizeInput === "") {
+//       setPageSizeInput(pageSize.toString());
+//     } else {
+//       handlePageSizeInputCommit(pageSizeInput);
+//     }
+//   };
+
+//   const handlePageSizeChange = (newSize) => {
+//     if (newSize === "Custom") {
+//       setSelectedPageSize("Custom");
+//       setPageSizeInput(pageSize.toString());
+//     } else {
+//       const size = Math.max(1, Number(newSize));
+//       const newQuery = getQueryString({ pageSize: size });
+//       push(`${pathname}?${newQuery}`);
+//       setSelectedPageSize(size);
+//       setPageSizeInput(size.toString());
+//     }
+//   };
+
+//   const handlePageSizeInputCommit = (value) => {
+//     const newSize = Math.max(1, parseInt(value, 10) || 1);
+//     const newQuery = getQueryString({ pageSize: newSize });
+//     push(`${pathname}?${newQuery}`);
+//     setSelectedPageSize("Custom");
+//     setPageSizeInput(newSize.toString());
+//   };
+
+//   const getQueryString = (newParams) => {
+//     const allParams = new URLSearchParams(query);
+//     Object.keys(newParams).forEach((key) => {
+//       allParams.set(key, newParams[key]); // Use `set` to ensure unique keys
+//     });
+//     return allParams.toString();
+//   };
+
+//   return (
+//     <div className="flex items-center text-xs">
+//       <select
+//         value={selectedPageSize}
+//         onChange={(e) => handlePageSizeChange(e.target.value)}
+//         className="bg-transparent border-0 text-zinc-800 focus:ring-0 dark:text-zinc-100 mr-2"
+//       >
+//         <option value={1}>1</option>
+//         <option value={5}>5</option>
+//         <option value={10}>10</option>
+//         <option value={25}>25</option>
+//         <option value={50}>50</option>
+//         <option value={100}>100</option>
+//         <option value="Custom">Custom</option>
+//       </select>
+//       {selectedPageSize === "Custom" && (
+//         <div className="flex items-center">
+//           <input
+//             className={`-ml-[0.02rem] mr-1 bg-transparent border-0 text-zinc-800 focus:ring-0 dark:text-zinc-100 text-center appearance-none`}
+//             style={{
+//               width: `${Math.max(1.2, pageSizeInput.length * 0.6)}em`, // Adjust width dynamically based on input length
+//             }}
+//             type="text"
+//             value={pageSizeInput}
+//             onChange={handlePageSizeInputChange}
+//             onBlur={handlePageSizeInputBlur}
+//             onKeyDown={(e) => {
+//               if (e.key === "Enter") {
+//                 handlePageSizeInputCommit(e.target.value);
+//               }
+//             }}
+//           />
+//         </div>
+//       )}
+//     </div>
+//   );
+// }

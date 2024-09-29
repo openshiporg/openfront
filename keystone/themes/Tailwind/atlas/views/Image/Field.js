@@ -1,13 +1,12 @@
 import bytes from "bytes";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
-import { FieldContainer } from "@keystone/components/FieldContainer";
-import { FieldDescription } from "@keystone/components/FieldDescription";
-import { FieldLabel } from "@keystone/components/FieldLabel";
-import { Button } from "@keystone/primitives/default/ui/button";
-import { Image as ImageIcon } from "lucide-react";
+import { FieldContainer } from "../../components/FieldContainer";
+import { FieldDescription } from "../../components/FieldDescription";
+import { FieldLabel } from "../../components/FieldLabel";
+import { Button } from "../../primitives/default/ui/button";
 
-export const SUPPORTED_IMAGE_EXTENSIONS = ["jpg", "png", "webp", "gif"];
+export const SUPPORTED_IMAGE_EXTENSIONS = ["jpg", "png", "webp", "gif", "svg"];
 
 function useObjectURL(fileData) {
   let [objectURL, setObjectURL] = useState(undefined);
@@ -146,8 +145,7 @@ function ImgView({ errorMessage, value, onChange, field, inputRef }) {
             ) : null}
             <div className="flex space-x-2 items-center">
               <Button
-                size="sm"
-                variant="plain"
+                variant="light"
                 onClick={() => {
                   inputRef.current?.click();
                 }}
@@ -156,7 +154,6 @@ function ImgView({ errorMessage, value, onChange, field, inputRef }) {
               </Button>
               {value.kind === "from-server" && (
                 <Button
-                  size="sm"
                   variant="destructive"
                   onClick={() => {
                     onChange({ kind: "remove", previous: value });
@@ -183,7 +180,7 @@ function ImgView({ errorMessage, value, onChange, field, inputRef }) {
         <div className="flex space-x-2 items-center">
           <Button
             disabled={onChange === undefined}
-            variant="plain"
+            variant="light"
             onClick={() => {
               inputRef.current?.click();
             }}
@@ -216,7 +213,7 @@ function createErrorMessage(value) {
 
 export function validateImage({ file, validity }) {
   if (!validity.valid) {
-    return "Something went wrong, please reload and try again.";
+    return "System Error, please reload and try again.";
   }
   // check if the file is actually an image
   if (!file.type.includes("image")) {

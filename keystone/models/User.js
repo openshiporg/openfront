@@ -24,6 +24,7 @@ export const User = list({
   access: {
     operation: {
       create: () => true,
+      query:  () => true,
       // only people with the permission can delete themselves!
       // You can't delete yourself
       delete: permissions.canManageUsers,
