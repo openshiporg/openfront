@@ -3,9 +3,8 @@ import { FieldDescription } from "@keystone/components/FieldDescription";
 import { FieldLabel } from "@keystone/components/FieldLabel";
 import { CellContainer } from "@keystone/components/CellContainer";
 import { CellLink } from "@keystone/components/CellLink";
-import { Badge } from "@keystone/primitives/default/ui/badge";
-
 import { PrettyData } from "./prettyData";
+import { Badge } from "../../../atlas/primitives/default/ui/badge";
 
 export const Field = ({ field, value }) =>
   value === createViewValue ? null : (

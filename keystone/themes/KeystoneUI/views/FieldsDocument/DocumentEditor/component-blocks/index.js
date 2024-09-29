@@ -15,7 +15,7 @@ import { Editor, Transforms } from "slate"
 
 import { jsx, useTheme } from "@keystone-ui/core"
 
-import { ToolbarButton } from "@keystone/primitives"
+import { ToolbarButton } from "../primitives"
 import {
   insertNodesButReplaceIfSelectionIsAtEmptyParagraphOrHeading,
   useElementWithSetNodes,

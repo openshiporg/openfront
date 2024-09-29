@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback, Fragment } from "react";
 import { useSelected } from "slate-react";
-import { ToolbarGroup, ToolbarButton, ToolbarSeparator } from "@keystone/primitives";
+import { ToolbarGroup, ToolbarButton, ToolbarSeparator } from "../primitives";
 import { NotEditable } from "./api";
 import { clientSideValidateProp } from "./utils";
 import { FormValueContentFromPreviewProps } from "./form-from-preview";
