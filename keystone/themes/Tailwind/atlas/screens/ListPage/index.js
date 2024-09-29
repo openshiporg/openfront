@@ -18,6 +18,7 @@ import {
   Search,
   Square,
   SquareArrowRight,
+  SquareArrowRight,
   Triangle,
   PlusCircleIcon,
   PlusIcon as PlusIcon2,

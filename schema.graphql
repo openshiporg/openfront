@@ -222,6 +222,7 @@ type Role {
   canManageIdempotencyKeys: Boolean
   canReadApps: Boolean
   canManageApps: Boolean
+  canManageKeys: Boolean
   assignedTo(where: UserWhereInput! = {}, orderBy: [UserOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: UserWhereUniqueInput): [User!]
   assignedToCount(where: UserWhereInput! = {}): Int
   createdAt: DateTime
@@ -264,6 +265,7 @@ input RoleWhereInput {
   canManageIdempotencyKeys: BooleanFilter
   canReadApps: BooleanFilter
   canManageApps: BooleanFilter
+  canManageKeys: BooleanFilter
   assignedTo: UserManyRelationFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
@@ -309,6 +311,7 @@ input RoleOrderByInput {
   canManageIdempotencyKeys: OrderDirection
   canReadApps: OrderDirection
   canManageApps: OrderDirection
+  canManageKeys: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
 }
@@ -341,6 +344,7 @@ input RoleUpdateInput {
   canManageIdempotencyKeys: Boolean
   canReadApps: Boolean
   canManageApps: Boolean
+  canManageKeys: Boolean
   assignedTo: UserRelateToManyForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
@@ -386,6 +390,7 @@ input RoleCreateInput {
   canManageIdempotencyKeys: Boolean
   canReadApps: Boolean
   canManageApps: Boolean
+  canManageKeys: Boolean
   assignedTo: UserRelateToManyForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
@@ -1210,9 +1215,9 @@ input ReturnItemRelateToManyForCreateInput {
 type Product {
   id: ID!
   title: String
-  subtitle: String
   description: String
   handle: String
+  subtitle: String
   isGiftcard: Boolean
   thumbnail: String
   weight: Int
@@ -1267,9 +1272,9 @@ input ProductWhereInput {
   NOT: [ProductWhereInput!]
   id: IDFilter
   title: StringFilter
-  subtitle: StringFilter
   description: StringFilter
   handle: StringFilter
+  subtitle: StringFilter
   isGiftcard: BooleanFilter
   thumbnail: StringFilter
   weight: IntNullableFilter
@@ -1356,9 +1361,9 @@ input ProductVariantManyRelationFilter {
 input ProductOrderByInput {
   id: OrderDirection
   title: OrderDirection
-  subtitle: OrderDirection
   description: OrderDirection
   handle: OrderDirection
+  subtitle: OrderDirection
   isGiftcard: OrderDirection
   thumbnail: OrderDirection
   weight: OrderDirection
@@ -1378,9 +1383,9 @@ input ProductOrderByInput {
 
 input ProductUpdateInput {
   title: String
-  subtitle: String
   description: String
   handle: String
+  subtitle: String
   isGiftcard: Boolean
   thumbnail: String
   weight: Int
@@ -1491,9 +1496,9 @@ input ProductUpdateArgs {
 
 input ProductCreateInput {
   title: String
-  subtitle: String
   description: String
   handle: String
+  subtitle: String
   isGiftcard: Boolean
   thumbnail: String
   weight: Int
@@ -2089,6 +2094,7 @@ input ProductTypeCreateInput {
 
 type ProductVariant {
   id: ID!
+  fullTitle: String
   title: String
   sku: String
   barcode: String
@@ -4916,6 +4922,7 @@ input LineItemTaxLineCreateInput {
 
 type MoneyAmount {
   id: ID!
+  displayPrice: String
   amount: Int
   minQuantity: Int
   maxQuantity: Int

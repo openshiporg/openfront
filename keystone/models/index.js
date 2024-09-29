@@ -1,6 +1,6 @@
 import { User } from "./User";
-import { Order } from "./Order";
 import { Role } from "./Role";
+import { Order } from "./Order";
 import { LineItem } from "./LineItem";
 import { Product } from "./Product";
 import { ProductCollection } from "./ProductCollection";

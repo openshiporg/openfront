@@ -1,4 +1,4 @@
-import { list } from "@keystone-6/core";
+import { graphql, list } from "@keystone-6/core";
 import { denyAll } from "@keystone-6/core/access";
 import {
   checkbox,
@@ -6,6 +6,7 @@ import {
   json,
   text,
   relationship,
+  virtual,
 } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
@@ -22,6 +23,19 @@ export const ProductVariant = list({
     },
   },
   fields: {
+    fullTitle: virtual({
+      field: graphql.field({
+        type: graphql.String,
+        // resolve: (item) => `${item.title}`,
+        resolve: async (item, args, context) => {
+          const { product } = await context.query.ProductVariant.findOne({
+            where: { id: item.id.toString() },
+            query: "product { title }",
+          });
+          return `${product.title} - ${item.title}`;
+        },
+      }),
+    }),
     title: text({
       validation: {
         isRequired: true,
@@ -72,5 +86,8 @@ export const ProductVariant = list({
       many: true,
     }),
     ...trackingFields,
+  },
+  ui: {
+    labelField: "fullTitle",
   },
 });

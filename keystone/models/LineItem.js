@@ -21,6 +21,11 @@ export const LineItem = list({
       delete: permissions.canManageOrders,
     },
   },
+  ui: {
+    hideCreate: args => !permissions.canManageOrders(args),
+    hideDelete: args => !permissions.canManageOrders(args),
+    isHidden: args => !permissions.canManageOrders(args),
+  },
   fields: {
     title: text({
       validation: {

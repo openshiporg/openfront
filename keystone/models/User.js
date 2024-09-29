@@ -17,8 +17,8 @@ const canManageUsers = ({ session }) => {
   if (permissions.canManageUsers({ session })) {
     return true;
   }
+  return { id: { equals: session?.itemId } };
 };
-
 
 export const User = list({
   access: {
@@ -51,7 +51,8 @@ export const User = list({
       },
       ui: {
         itemView: {
-          fieldMode: args => (permissions.canManageUsers(args) ? 'edit' : 'read'),
+          fieldMode: (args) =>
+            permissions.canManageUsers(args) ? "edit" : "read",
         },
       },
     }),

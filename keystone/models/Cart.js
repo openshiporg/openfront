@@ -28,11 +28,6 @@ export const Cart = list({
       update: permissions.canManageOrders,
       delete: permissions.canManageOrders,
     },
-    // filter: {
-    //   query: canManageCarts,
-    //   update: canManageCarts,
-    //   delete: canManageCarts,
-    // },
   },
   fields: {
     email: text(),
