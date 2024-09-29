@@ -11,13 +11,11 @@ const portalTarget =
 
 const controlStyles = {
   base: "shadow-sm flex align-center wrap justify-between rounded-md border border-input bg-muted/40 p-1.5 ring-offset-background",
-  base: "shadow-sm flex align-center wrap justify-between rounded-md border border-input bg-muted/40 p-1.5 ring-offset-background",
   focus: "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   nonFocus: "disabled:cursor-not-allowed disabled:opacity-50",
 };
 
 const placeholderStyles =
-  "col-start-1 col-end-3 row-start-1 row-end-2 text-muted-foreground pl-1";
   "col-start-1 col-end-3 row-start-1 row-end-2 text-muted-foreground pl-1";
 const selectInputStyles =
   "inline-grid [grid-template-columns:min-content_auto] col-start-1 col-end-3 row-start-1 row-end-2 pl-1 py-0.5";
@@ -32,7 +30,6 @@ const multiValueLabelStyles = "pr-1 leading-6 text-sm";
 const multiValueRemoveStyles =
   "border-l-[1.5px] hover:bg-zinc-50 dark:bg-zinc-500/10 text-zinc-500 dark:text-zinc-600 dark:hover:bg-zinc-500/20";
 const indicatorsContainerStyles =
-  "items-center self-stretch flex flex-shrink-0 box-border";
   "items-center self-stretch flex flex-shrink-0 box-border";
 const clearIndicatorStyles =
   "p-1 hover:bg-background border border-transparent hover:border-muted/90 text-muted-foreground rounded-md hover:text-foreground/50";
@@ -49,12 +46,6 @@ const noOptionsMessageStyles =
 //   selected: "text-white dark:text-blue-600 bg-blue-500 dark:bg-blue-500/10",
 // };
 
-// const optionStyles = {
-//   base: "relative cursor-pointer flex w-full items-center pr-2 py-2 pl-4",
-//   focus: "text-white dark:text-blue-600 bg-blue-600 dark:bg-blue-500/20",
-//   selected: "text-white dark:text-blue-600 bg-blue-500 dark:bg-blue-500/10",
-// };
-
 const optionStyles = {
   base: "text-zinc-900 dark:text-zinc-200 relative rounded-sm cursor-pointer flex w-full items-center pr-2 py-2 pl-4",
   focus: "bg-zinc-50 dark:bg-zinc-700",
@@ -62,7 +53,6 @@ const optionStyles = {
 };
 
 const menuStyles =
-  "border p-1 overflow-hidden z-10 mt-2 top-full absolute w-full box-border rounded-md border bg-popover shadow-md";
   "border p-1 overflow-hidden z-10 mt-2 top-full absolute w-full box-border rounded-md border bg-popover shadow-md";
 
 const ClearIndicator = (props) => {

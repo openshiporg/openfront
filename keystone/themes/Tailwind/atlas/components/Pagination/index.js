@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MoveLeft, MoveRight } from "lucide-react";
 import { PaginationDropdown } from "./PaginationDropdown";

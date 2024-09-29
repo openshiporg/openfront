@@ -322,7 +322,6 @@ function ItemForm({
         <div className="ml-4 w-72">
           <FieldLabel>Item ID</FieldLabel>
           <code className="py-[10px] mt-1 border flex px-4 items-center relative rounded-md shadow-sm bg-muted/40 font-mono text-sm font-medium">
-          <code className="py-[10px] mt-1 border flex px-4 items-center relative rounded-md shadow-sm bg-muted/40 font-mono text-sm font-medium">
             {item.id}
           </code>
         </div>
@@ -517,8 +516,6 @@ export const ItemPageTemplate = ({ listKey, id }) => {
     : loading
     ? undefined
     : (data && data.item && (data.item[list.labelField] || data.item.id)) || id;
-    ? undefined
-    : (data && data.item && (data.item[list.labelField] || data.item.id)) || id;
 
   return (
     <div>
@@ -590,11 +587,6 @@ export const ItemPageTemplate = ({ listKey, id }) => {
                         {list.label} doesn't exist or you don't have access to
                         it.
                       </AlertDescription>
-                      <AlertTitle>System Error</AlertTitle>
-                      <AlertDescription>
-                        {list.label} doesn't exist or you don't have access to
-                        it.
-                      </AlertDescription>
                     </Alert>
                     {!data.keystone.adminMeta.list.hideCreate && (
                       <CreateButtonLink list={list} />
@@ -606,21 +598,10 @@ export const ItemPageTemplate = ({ listKey, id }) => {
                     <AlertDescription>
                       The item with id "{id}" does not exist
                     </AlertDescription>
-                    <AlertTitle>System Error</AlertTitle>
-                    <AlertDescription>
-                      The item with id "{id}" does not exist
-                    </AlertDescription>
                   </Alert>
                 )
               ) : (
                 <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4 stroke-red-900 dark:stroke-red-500" />
-
-                  <AlertTitle>System Error</AlertTitle>
-                  <AlertDescription>
-                    The item with id "{id}" could not be found or you don't have
-                    access to it.
-                  </AlertDescription>
                   <AlertTriangle className="h-4 w-4 stroke-red-900 dark:stroke-red-500" />
 
                   <AlertTitle>System Error</AlertTitle>
@@ -721,9 +702,6 @@ function ResetChangesButton(props) {
 }
 
 const StickySidebar = (props) => {
-  return (
-    <div className="hidden lg:block mt-0.5 mb-20 sticky top-8" {...props} />
-  );
   return (
     <div className="hidden lg:block mt-0.5 mb-20 sticky top-8" {...props} />
   );
