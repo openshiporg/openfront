@@ -1,12 +1,14 @@
 import { GraphQLClient, gql } from "graphql-request";
 import seedData from "./seed-data.json";
+import "dotenv/config";
 
-const endpoint = "http://localhost:3000/api/graphql";
-const apiKey = "clv1cpclz0002wfezcssbx4es";
+const endpoint = process.env.SEED_GRAPHQL_ENDPOINT || "http://localhost:3000/api/graphql";
+const apiKey = process.env.SEED_API_KEY;
 
 const client = new GraphQLClient(endpoint, {
   headers: {
     "x-api-key": apiKey,
+    "Content-Type": "application/json"
   },
 });
 
@@ -321,7 +323,7 @@ async function createProductVariants(productIds) {
 async function createStore() {
   const { store, currencies } = seedData;
   const { createStore } = await client.request(createStoreMutation, {
-    data: { ...store, currencies: { create: currencies } },
+      data: { ...store, currencies: { create: currencies } },
   });
   const storeId = createStore.id;
   console.log(`Store created with ID: ${storeId}`);

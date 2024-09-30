@@ -34,36 +34,27 @@ const canUpdateKeys = ({ session }) => {
 };
 
 export const ApiKey = list({
-  hooks: {
-    beforeOperation: async ({
-      listKey,
-      operation,
-      inputData,
-      item,
-      resolvedData,
-      context,
-    }) => {
-      if (operation === "create") {
-        const aIds = await context.query.apiKey.findMany({
-          where: { user: { id: { equals: context.session.itemId } } },
-        });
-        if (aIds.length > 0)
-          await context.query.apiKey.deleteMany({
-            where: aIds,
-          });
-      }
-    },
-  },
+  // hooks: {
+  //   beforeOperation: async ({
+  //     listKey,
+  //     operation,
+  //     inputData,
+  //     item,
+  //     resolvedData,
+  //     context,
+  //   }) => {
+  //     if (operation === "create") {
+  //       const aIds = await context.query.ApiKey.findMany({
+  //         where: { user: { id: { equals: context.session.itemId } } },
+  //       });
+  //       if (aIds.length > 0)
+  //         await context.query.apiKey.deleteMany({
+  //           where: aIds,
+  //         });
+  //     }
+  //   },
+  // },
   access: {
-    // operation: {
-    //   create: isSignedIn,
-    //   query: isSignedIn,
-    //   delete: isSignedIn,
-    // },
-    // filter: {
-    //   query: canManageKeys,
-    //   update: canManageKeys,
-    // },
     operation: {
       create: isSignedIn,
       query: isSignedIn,
