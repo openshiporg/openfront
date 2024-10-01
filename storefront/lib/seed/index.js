@@ -479,26 +479,26 @@ async function seedDatabase() {
     // // Create store and currencies
     const storeId = await createStore();
 
-    // // Create payment provider
-    const paymentProviderId = await createPaymentProvider();
+    // // // Create payment provider
+    // const paymentProviderId = await createPaymentProvider();
 
-    // // Create fulfillment provider
-    const fulfillmentProviderId = await createFulfillmentProvider();
+    // // // Create fulfillment provider
+    // const fulfillmentProviderId = await createFulfillmentProvider();
 
-    // // Create countries
-    const createdCountriesIds = await createCountries();
+    // // // Create countries
+    // const createdCountriesIds = await createCountries();
 
-    // Create regions
-    const createdRegionIds = await createRegions();
+    // // Create regions
+    // const createdRegionIds = await createRegions();
 
-    // Create shipping options
-    const createdShippingOptionIds = await createShippingOptions();
+    // // Create shipping options
+    // const createdShippingOptionIds = await createShippingOptions();
 
-    // Create categories first
-    const categoryIds = await createCategories();
+    // // Create categories first
+    // const categoryIds = await createCategories();
 
-    // Create products with category IDs
-    const productIds = await createProducts();
+    // // Create products with category IDs
+    // const productIds = await createProducts();
 
     console.log("Database seeding completed successfully!");
   } catch (error) {

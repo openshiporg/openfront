@@ -2,25 +2,13 @@ import Link from "next/link";
 import { LogoIconSVG } from "@svg";
 import { cn } from "./utils/cn";
 import { Circle, CircleDot, Square, Triangle } from "lucide-react";
-import { DM_Sans, Montserrat, Nunito_Sans, Outfit } from "next/font/google";
-const montserrat = Outfit({ subsets: ["latin"] });
+import { Outfit } from "next/font/google";
 
-// export const Logo = () => {
-//   return (
-//     <h3>
-//       <Link href="/">
-//         <div className="flex items-center">
-//           <LogoIconSVG className="w-4 h-4 stroke-zinc-500 mr-2" />
-
-//           <h1 className={`mb-1 text-2xl md:text-3xl font-semibold text-center`}>
-//             open
-//             <span className="font-normal">ship</span>{" "}
-//           </h1>
-//         </div>
-//       </Link>
-//     </h3>
-//   );
-// };
+const outfit = Outfit({
+  subsets: ["latin"],
+  display: "swap",
+  adjustFontFallback: false,
+});
 
 export const Logo = ({ size = "md", className }) => {
   const textClasses = {
@@ -36,12 +24,8 @@ export const Logo = ({ size = "md", className }) => {
   };
 
   return (
-    <h3 className={cn(`${montserrat.className} ${className}`)}>
-      <div
-        className={cn(
-          "flex items-center text-zinc-700 dark:text-white"
-        )}
-      >
+    <h3 className={cn(`${outfit.className} ${className}`)}>
+      <div className={cn("flex items-center text-zinc-700 dark:text-white")}>
         <Triangle
           className={cn(
             "mt-[2px] w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-[1.3rem] md:h-[1.3rem] fill-indigo-200 stroke-indigo-400 dark:stroke-indigo-600 dark:fill-indigo-950",
