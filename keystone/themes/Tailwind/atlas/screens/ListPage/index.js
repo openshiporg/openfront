@@ -140,7 +140,6 @@ export const ListPageTemplate = ({ listKey }) => {
   const sort = useSort(list, orderableFields);
   const filters = useFilters(list, filterableFields);
 
-
   const searchFields = Object.keys(list.fields).filter(
     (key) => list.fields[key].search
   );
@@ -279,7 +278,7 @@ export const ListPageTemplate = ({ listKey }) => {
                 )} */}
             </BreadcrumbList>
           </Breadcrumb>
-          <div className="flex mt-2 mb-4">
+          <div className="flex flex-col sm:flex-row mt-2 mb-4 gap-4 justify-between">
             <div className="flex-col items-center">
               <h1 className="text-lg font-semibold md:text-2xl">
                 {list.label}
@@ -296,9 +295,7 @@ export const ListPageTemplate = ({ listKey }) => {
               </p>
             </div>
             {data.count || query.search || filters.filters.length ? (
-              <div className="ml-auto">
-                {showCreate && <CreateButtonLink list={list} />}
-              </div>
+              <div>{showCreate && <CreateButtonLink list={list} />}</div>
             ) : null}
           </div>
           <div className="no-scrollbar overflow-x-auto border rounded-lg divide-y dark:bg-zinc-950">

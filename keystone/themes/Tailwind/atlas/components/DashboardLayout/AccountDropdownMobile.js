@@ -91,15 +91,7 @@ export const AccountDropdownMobile = () => {
   };
 
   if (loading) {
-    return (
-      <div className="px-2 py-2 flex min-w-0 items-center gap-3">
-        <Skeleton className="h-10 w-10 rounded-lg" />
-        <div className="min-w-0">
-          <Skeleton className="h-5 w-24 mb-1" />
-          <Skeleton className="h-4 w-32" />
-        </div>
-      </div>
-    );
+    return <Skeleton className="h-6 w-6 rounded-lg" />;
   }
 
   const authenticatedItem = data?.authenticatedItem;
