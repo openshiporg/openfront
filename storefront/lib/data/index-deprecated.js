@@ -7,6 +7,14 @@ import transformProductPreview from "@storefront/lib/util/transform-product-prev
 import { openfrontClient } from "@storefront/lib/config"
 import openfrontError from "@storefront/lib/util/openfront-error"
 import { cookies } from "next/headers"
+import Medusa from "@medusajs/medusa-js"
+
+export const medusaClient = new Medusa({
+  baseUrl: MEDUSA_BACKEND_URL,
+  maxRetries: 3,
+})
+
+// medusaClient.products.list()
 
 const emptyResponse = {
   response: { products: [], count: 0 },

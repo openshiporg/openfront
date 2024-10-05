@@ -40,6 +40,7 @@
     "@keystone-ui/tooltip": "^6.0.2",
     "@medusajs/icons": "^1.2.0",
     "@medusajs/ui": "^2.4.1",
+    "@medusajs/ui-preset": "^1.1.4",
     "@meilisearch/instant-meilisearch": "^0.13.0",
     "@next/bundle-analyzer": "^13.4.1",
     "@paypal/react-paypal-js": "^7.8.3",
@@ -95,6 +96,7 @@
     "swr": "^1.3.0",
     "tailwind-merge": "^2.0.0",
     "tailwindcss-animate": "^1.0.7",
+    "tailwindcss-radix": "^3.0.5",
     "tinycolor2": "^1.6.0",
     "urql": "^4.0.6",
     "vaul": "^0.9.0"

@@ -3,9 +3,9 @@
     "name": "Impossible Tees",
     "defaultCurrencyCode": "USD",
     "metadata": {},
-    "swapLinkTemplate": "https://impossibletees.com/swap/{id}",
-    "paymentLinkTemplate": "https://impossibletees.com/pay/{id}",
-    "inviteLinkTemplate": "https://impossibletees.com/invite/{id}"
+    "swapLinkTemplate": "https://example.com/swap/{id}",
+    "paymentLinkTemplate": "https://example.com/pay/{id}",
+    "inviteLinkTemplate": "https://example.com/invite/{id}"
   },
   "currencies": [
     {
@@ -88,19 +88,19 @@
   ],
   "regions": [
     {
-      "id": "eu",
-      "name": "Europe",
+      "id": "test-region-eu",
+      "name": "EU",
       "currency_code": "eur",
-      "tax_rate": 0.21,
+      "tax_rate": 0,
       "payment_providers": ["manual"],
       "fulfillment_providers": ["manual"],
       "countries": ["GB", "DE", "DK", "SE", "FR", "ES", "IT"]
     },
     {
-      "id": "na",
-      "name": "North America",
+      "id": "test-region-na",
+      "name": "NA",
       "currency_code": "usd",
-      "tax_rate": 0.05,
+      "tax_rate": 0,
       "payment_providers": ["manual"],
       "fulfillment_providers": ["manual"],
       "countries": ["US", "CA"]
@@ -108,8 +108,8 @@
   ],
   "shipping_options": [
     {
-      "name": "Standard Shipping",
-      "region_id": "eu",
+      "name": "PostFake Standard",
+      "region_id": "test-region-eu",
       "provider_id": "manual",
       "data": {
         "id": "manual-fulfillment"
@@ -118,8 +118,8 @@
       "amount": 1000
     },
     {
-      "name": "Express Shipping",
-      "region_id": "eu",
+      "name": "PostFake Express",
+      "region_id": "test-region-eu",
       "provider_id": "manual",
       "data": {
         "id": "manual-fulfillment"
@@ -128,8 +128,8 @@
       "amount": 1500
     },
     {
-      "name": "Return Shipping",
-      "region_id": "eu",
+      "name": "PostFake Return",
+      "region_id": "test-region-eu",
       "provider_id": "manual",
       "data": {
         "id": "manual-fulfillment"
@@ -139,8 +139,19 @@
       "amount": 1000
     },
     {
-      "name": "Standard Shipping",
-      "region_id": "na",
+      "name": "I want to return it myself",
+      "region_id": "test-region-eu",
+      "provider_id": "manual",
+      "data": {
+        "id": "manual-fulfillment"
+      },
+      "price_type": "flat_rate",
+      "is_return": true,
+      "amount": 0
+    },
+    {
+      "name": "FakeEx Standard",
+      "region_id": "test-region-na",
       "provider_id": "manual",
       "data": {
         "id": "manual-fulfillment"
@@ -149,8 +160,8 @@
       "amount": 800
     },
     {
-      "name": "Express Shipping",
-      "region_id": "na",
+      "name": "FakeEx Express",
+      "region_id": "test-region-na",
       "provider_id": "manual",
       "data": {
         "id": "manual-fulfillment"
@@ -159,8 +170,8 @@
       "amount": 1200
     },
     {
-      "name": "Return Shipping",
-      "region_id": "na",
+      "name": "FakeEx Return",
+      "region_id": "test-region-na",
       "provider_id": "manual",
       "data": {
         "id": "manual-fulfillment"
@@ -168,679 +179,37 @@
       "price_type": "flat_rate",
       "is_return": true,
       "amount": 800
+    },
+    {
+      "name": "I want to return it myself",
+      "region_id": "test-region-na",
+      "provider_id": "manual",
+      "data": {
+        "id": "manual-fulfillment"
+      },
+      "price_type": "flat_rate",
+      "is_return": true,
+      "amount": 0
     }
   ],
   "products": [
     {
-      "title": "Penrose Triangle T-Shirt",
+      "title": "Medusa T-Shirt",
       "categories": [
         {
           "id": "pcat_shirts"
         }
       ],
-      "collections": ["latest-picks", "new-arrivals"],
       "subtitle": null,
-      "description": "Mind-bending Penrose Triangle design on a premium cotton T-shirt. Challenge reality with every wear.",
-      "handle": "penrose-triangle-tshirt",
-      "is_giftcard": false,
-      "weight": 200,
-      "images": [
-        "https://example.com/images/penrose-triangle-tshirt-front.png",
-        "https://example.com/images/penrose-triangle-tshirt-back.png"
-      ],
-      "options": [
-        {
-          "title": "Size",
-          "values": ["S", "M", "L", "XL"]
-        },
-        {
-          "title": "Color",
-          "values": ["Black", "White"]
-        }
-      ],
-      "variants": [
-        {
-          "title": "S / Black",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 2500
-            },
-            {
-              "currency_code": "usd",
-              "amount": 2800
-            }
-          ],
-          "options": [
-            {
-              "value": "S"
-            },
-            {
-              "value": "Black"
-            }
-          ],
-          "inventory_quantity": 100,
-          "manage_inventory": true
-        },
-        {
-          "title": "M / Black",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 2500
-            },
-            {
-              "currency_code": "usd",
-              "amount": 2800
-            }
-          ],
-          "options": [
-            {
-              "value": "M"
-            },
-            {
-              "value": "Black"
-            }
-          ],
-          "inventory_quantity": 100,
-          "manage_inventory": true
-        },
-        {
-          "title": "S / White",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 2500
-            },
-            {
-              "currency_code": "usd",
-              "amount": 2800
-            }
-          ],
-          "options": [
-            {
-              "value": "S"
-            },
-            {
-              "value": "White"
-            }
-          ],
-          "inventory_quantity": 100,
-          "manage_inventory": true
-        },
-        {
-          "title": "M / White",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 2500
-            },
-            {
-              "currency_code": "usd",
-              "amount": 2800
-            }
-          ],
-          "options": [
-            {
-              "value": "M"
-            },
-            {
-              "value": "White"
-            }
-          ],
-          "inventory_quantity": 100,
-          "manage_inventory": true
-        }
-      ]
-    },
-    {
-      "title": "Escher's Staircase Hoodie",
-      "categories": [
-        {
-          "id": "pcat_hoodies"
-        }
-      ],
-      "collections": ["trending", "new-arrivals"],
-      "subtitle": null,
-      "description": "Wrap yourself in the impossible with our Escher's Staircase hoodie. Cozy and mind-bending.",
-      "handle": "eschers-staircase-hoodie",
-      "is_giftcard": false,
-      "weight": 500,
-      "images": [
-        "https://example.com/images/eschers-staircase-hoodie-front.png",
-        "https://example.com/images/eschers-staircase-hoodie-back.png"
-      ],
-      "options": [
-        {
-          "title": "Size",
-          "values": ["S", "M", "L", "XL"]
-        },
-        {
-          "title": "Color",
-          "values": ["Black", "White"]
-        }
-      ],
-      "variants": [
-        {
-          "title": "S / Black",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 4500
-            },
-            {
-              "currency_code": "usd",
-              "amount": 5000
-            }
-          ],
-          "options": [
-            {
-              "value": "S"
-            },
-            {
-              "value": "Black"
-            }
-          ],
-          "inventory_quantity": 50,
-          "manage_inventory": true
-        },
-        {
-          "title": "M / Black",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 4500
-            },
-            {
-              "currency_code": "usd",
-              "amount": 5000
-            }
-          ],
-          "options": [
-            {
-              "value": "M"
-            },
-            {
-              "value": "Black"
-            }
-          ],
-          "inventory_quantity": 50,
-          "manage_inventory": true
-        },
-        {
-          "title": "S / White",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 4500
-            },
-            {
-              "currency_code": "usd",
-              "amount": 5000
-            }
-          ],
-          "options": [
-            {
-              "value": "S"
-            },
-            {
-              "value": "White"
-            }
-          ],
-          "inventory_quantity": 50,
-          "manage_inventory": true
-        },
-        {
-          "title": "M / White",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 4500
-            },
-            {
-              "currency_code": "usd",
-              "amount": 5000
-            }
-          ],
-          "options": [
-            {
-              "value": "M"
-            },
-            {
-              "value": "White"
-            }
-          ],
-          "inventory_quantity": 50,
-          "manage_inventory": true
-        }
-      ]
-    },
-    {
-      "title": "Möbius Strip Scarf",
-      "categories": [
-        {
-          "id": "pcat_accessories"
-        }
-      ],
-      "collections": ["latest-picks"],
-      "subtitle": null,
-      "description": "One-sided warmth with our Möbius Strip scarf. A fashionable twist on infinity.",
-      "handle": "mobius-strip-scarf",
-      "is_giftcard": false,
-      "weight": 150,
-      "images": [
-        "https://example.com/images/mobius-strip-scarf.png"
-      ],
-      "options": [
-        {
-          "title": "Color",
-          "values": ["Blue", "Red", "Green"]
-        }
-      ],
-      "variants": [
-        {
-          "title": "Blue",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 2000
-            },
-            {
-              "currency_code": "usd",
-              "amount": 2200
-            }
-          ],
-          "options": [
-            {
-              "value": "Blue"
-            }
-          ],
-          "inventory_quantity": 75,
-          "manage_inventory": true
-        },
-        {
-          "title": "Red",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 2000
-            },
-            {
-              "currency_code": "usd",
-              "amount": 2200
-            }
-          ],
-          "options": [
-            {
-              "value": "Red"
-            }
-          ],
-          "inventory_quantity": 75,
-          "manage_inventory": true
-        },
-        {
-          "title": "Green",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 2000
-            },
-            {
-              "currency_code": "usd",
-              "amount": 2200
-            }
-          ],
-          "options": [
-            {
-              "value": "Green"
-            }
-          ],
-          "inventory_quantity": 75,
-          "manage_inventory": true
-        }
-      ]
-    },
-    {
-      "title": "Fibonacci Spiral Crop Top",
-      "categories": [
-        {
-          "id": "pcat_shirts"
-        }
-      ],
-      "collections": ["trending"],
-      "subtitle": null,
-      "description": "Show off your love for mathematical beauty with our Fibonacci Spiral crop top. Perfect for summer days and math enthusiasts.",
-      "handle": "fibonacci-spiral-crop-top",
-      "is_giftcard": false,
-      "weight": 150,
-      "images": [
-        "https://example.com/images/fibonacci-spiral-crop-top-front.png",
-        "https://example.com/images/fibonacci-spiral-crop-top-back.png"
-      ],
-      "options": [
-        {
-          "title": "Size",
-          "values": ["XS", "S", "M", "L"]
-        },
-        {
-          "title": "Color",
-          "values": ["White", "Black"]
-        }
-      ],
-      "variants": [
-        {
-          "title": "XS / White",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 2200
-            },
-            {
-              "currency_code": "usd",
-              "amount": 2500
-            }
-          ],
-          "options": [
-            {
-              "value": "XS"
-            },
-            {
-              "value": "White"
-            }
-          ],
-          "inventory_quantity": 50,
-          "manage_inventory": true
-        },
-        {
-          "title": "S / Black",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 2200
-            },
-            {
-              "currency_code": "usd",
-              "amount": 2500
-            }
-          ],
-          "options": [
-            {
-              "value": "S"
-            },
-            {
-              "value": "Black"
-            }
-          ],
-          "inventory_quantity": 50,
-          "manage_inventory": true
-        }
-      ]
-    },
-    {
-      "title": "Quantum Entanglement Socks",
-      "categories": [
-        {
-          "id": "pcat_accessories"
-        }
-      ],
-      "collections": ["new-arrivals"],
-      "subtitle": null,
-      "description": "Keep your feet connected across any distance with our Quantum Entanglement Socks. The perfect gift for science-loving friends.",
-      "handle": "quantum-entanglement-socks",
-      "is_giftcard": false,
-      "weight": 50,
-      "images": [
-        "https://example.com/images/quantum-entanglement-socks.png"
-      ],
-      "options": [
-        {
-          "title": "Size",
-          "values": ["S", "M", "L"]
-        },
-        {
-          "title": "Color",
-          "values": ["Black", "White"]
-        }
-      ],
-      "variants": [
-        {
-          "title": "S / Black",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 1500
-            },
-            {
-              "currency_code": "usd",
-              "amount": 1700
-            }
-          ],
-          "options": [
-            {
-              "value": "S"
-            },
-            {
-              "value": "Black"
-            }
-          ],
-          "inventory_quantity": 100,
-          "manage_inventory": true
-        },
-        {
-          "title": "M / White",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 1500
-            },
-            {
-              "currency_code": "usd",
-              "amount": 1700
-            }
-          ],
-          "options": [
-            {
-              "value": "M"
-            },
-            {
-              "value": "White"
-            }
-          ],
-          "inventory_quantity": 100,
-          "manage_inventory": true
-        }
-      ]
-    },
-    {
-      "title": "Schrödinger's Cat Tank Top",
-      "categories": [
-        {
-          "id": "pcat_shirts"
-        }
-      ],
-      "collections": ["latest-picks", "new-arrivals"],
-      "subtitle": null,
-      "description": "Is the cat alive or dead? Both! This stylish tank top features Schrödinger's famous thought experiment.",
-      "handle": "schrodingers-cat-tank-top",
-      "is_giftcard": false,
-      "weight": 180,
-      "images": [
-        "https://example.com/images/schrodingers-cat-tank-top-front.png",
-        "https://example.com/images/schrodingers-cat-tank-top-back.png"
-      ],
-      "options": [
-        {
-          "title": "Size",
-          "values": ["XS", "S", "M", "L", "XL"]
-        },
-        {
-          "title": "Color",
-          "values": ["Black", "White"]
-        }
-      ],
-      "variants": [
-        {
-          "title": "S / Black",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 2000
-            },
-            {
-              "currency_code": "usd",
-              "amount": 2200
-            }
-          ],
-          "options": [
-            {
-              "value": "S"
-            },
-            {
-              "value": "Black"
-            }
-          ],
-          "inventory_quantity": 75,
-          "manage_inventory": true
-        },
-        {
-          "title": "M / White",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 2000
-            },
-            {
-              "currency_code": "usd",
-              "amount": 2200
-            }
-          ],
-          "options": [
-            {
-              "value": "M"
-            },
-            {
-              "value": "White"
-            }
-          ],
-          "inventory_quantity": 75,
-          "manage_inventory": true
-        }
-      ]
-    },
-    {
-      "title": "Klein Bottle Beanie",
-      "categories": [
-        {
-          "id": "pcat_accessories"
-        }
-      ],
-      "collections": ["trending", "new-arrivals"],
-      "subtitle": null,
-      "description": "Keep your head warm with our topologically challenging Klein Bottle beanie. It's a conversation starter and a mind-bender.",
-      "handle": "klein-bottle-beanie",
-      "is_giftcard": false,
-      "weight": 100,
-      "images": [
-        "https://example.com/images/klein-bottle-beanie.png"
-      ],
-      "options": [
-        {
-          "title": "Size",
-          "values": ["One Size"]
-        },
-        {
-          "title": "Color",
-          "values": ["Black", "White", "Gray"]
-        }
-      ],
-      "variants": [
-        {
-          "title": "One Size / Black",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 1800
-            },
-            {
-              "currency_code": "usd",
-              "amount": 2000
-            }
-          ],
-          "options": [
-            {
-              "value": "One Size"
-            },
-            {
-              "value": "Black"
-            }
-          ],
-          "inventory_quantity": 50,
-          "manage_inventory": true
-        },
-        {
-          "title": "One Size / White",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 1800
-            },
-            {
-              "currency_code": "usd",
-              "amount": 2000
-            }
-          ],
-          "options": [
-            {
-              "value": "One Size"
-            },
-            {
-              "value": "White"
-            }
-          ],
-          "inventory_quantity": 50,
-          "manage_inventory": true
-        },
-        {
-          "title": "One Size / Gray",
-          "prices": [
-            {
-              "currency_code": "eur",
-              "amount": 1800
-            },
-            {
-              "currency_code": "usd",
-              "amount": 2000
-            }
-          ],
-          "options": [
-            {
-              "value": "One Size"
-            },
-            {
-              "value": "Gray"
-            }
-          ],
-          "inventory_quantity": 50,
-          "manage_inventory": true
-        }
-      ]
-    },
-    {
-      "title": "Paradox Puzzle Sweater",
-      "categories": [
-        {
-          "id": "pcat_hoodies"
-        }
-      ],
-      "collections": ["latest-picks", "trending"],
-      "subtitle": null,
-      "description": "Challenge your mind and stay warm with our Paradox Puzzle Sweater. Can you solve the unsolvable pattern?",
-      "handle": "paradox-puzzle-sweater",
+      "description": "Reimagine the feeling of a classic T-shirt. With our cotton T-shirts, everyday essentials no longer have to be ordinary.",
+      "handle": "t-shirt",
       "is_giftcard": false,
       "weight": 400,
       "images": [
-        "https://example.com/images/paradox-puzzle-sweater-front.png",
-        "https://example.com/images/paradox-puzzle-sweater-back.png"
+        "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png",
+        "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-back.png",
+        "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-white-front.png",
+        "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-white-back.png"
       ],
       "options": [
         {
@@ -858,11 +227,11 @@
           "prices": [
             {
               "currency_code": "eur",
-              "amount": 3500
+              "amount": 1950
             },
             {
               "currency_code": "usd",
-              "amount": 3900
+              "amount": 2200
             }
           ],
           "options": [
@@ -873,7 +242,53 @@
               "value": "Black"
             }
           ],
-          "inventory_quantity": 30,
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "S / White",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 1950
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2200
+            }
+          ],
+          "options": [
+            {
+              "value": "S"
+            },
+            {
+              "value": "White"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "M / Black",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 1950
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2200
+            }
+          ],
+          "options": [
+            {
+              "value": "M"
+            },
+            {
+              "value": "Black"
+            }
+          ],
+          "inventory_quantity": 100,
           "manage_inventory": true
         },
         {
@@ -881,11 +296,11 @@
           "prices": [
             {
               "currency_code": "eur",
-              "amount": 3500
+              "amount": 1950
             },
             {
               "currency_code": "usd",
-              "amount": 3900
+              "amount": 2200
             }
           ],
           "options": [
@@ -896,112 +311,338 @@
               "value": "White"
             }
           ],
-          "inventory_quantity": 30,
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "L / Black",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 1950
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2200
+            }
+          ],
+          "options": [
+            {
+              "value": "L"
+            },
+            {
+              "value": "Black"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "L / White",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 1950
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2200
+            }
+          ],
+          "options": [
+            {
+              "value": "L"
+            },
+            {
+              "value": "White"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "XL / Black",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 1950
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2200
+            }
+          ],
+          "options": [
+            {
+              "value": "XL"
+            },
+            {
+              "value": "Black"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "XL / White",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 1950
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2200
+            }
+          ],
+          "options": [
+            {
+              "value": "XL"
+            },
+            {
+              "value": "White"
+            }
+          ],
+          "inventory_quantity": 100,
           "manage_inventory": true
         }
       ]
     },
     {
-      "title": "Heisenberg's Uncertainty Principle Joggers",
+      "title": "Medusa Sweatshirt",
+      "categories": [
+        {
+          "id": "pcat_shirts"
+        }
+      ],
+      "subtitle": null,
+      "description": "Reimagine the feeling of a classic sweatshirt. With our cotton sweatshirt, everyday essentials no longer have to be ordinary.",
+      "handle": "sweatshirt",
+      "is_giftcard": false,
+      "weight": 400,
+      "images": [
+        "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatshirt-vintage-front.png",
+        "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatshirt-vintage-back.png"
+      ],
+      "options": [
+        {
+          "title": "Size",
+          "values": ["S", "M", "L", "XL"]
+        }
+      ],
+      "variants": [
+        {
+          "title": "S",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2950
+            },
+            {
+              "currency_code": "usd",
+              "amount": 3350
+            }
+          ],
+          "options": [
+            {
+              "value": "S"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "M",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2950
+            },
+            {
+              "currency_code": "usd",
+              "amount": 3350
+            }
+          ],
+          "options": [
+            {
+              "value": "M"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "L",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2950
+            },
+            {
+              "currency_code": "usd",
+              "amount": 3350
+            }
+          ],
+          "options": [
+            {
+              "value": "L"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "XL",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2950
+            },
+            {
+              "currency_code": "usd",
+              "amount": 3350
+            }
+          ],
+          "options": [
+            {
+              "value": "XL"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        }
+      ]
+    },
+    {
+      "title": "Medusa Sweatpants",
       "categories": [
         {
           "id": "pcat_pants"
         }
       ],
-      "collections": ["new-arrivals"],
       "subtitle": null,
-      "description": "You can know how comfortable these joggers are, or where they are, but not both at the same time. Quantum fashion at its finest.",
-      "handle": "heisenberg-uncertainty-joggers",
+      "description": "Reimagine the feeling of classic sweatpants. With our cotton sweatpants, everyday essentials no longer have to be ordinary.",
+      "handle": "sweatpants",
       "is_giftcard": false,
-      "weight": 300,
+      "weight": 400,
       "images": [
-        "https://example.com/images/heisenberg-uncertainty-joggers-front.png",
-        "https://example.com/images/heisenberg-uncertainty-joggers-back.png"
+        "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatpants-gray-front.png",
+        "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatpants-gray-back.png"
       ],
       "options": [
         {
           "title": "Size",
           "values": ["S", "M", "L", "XL"]
-        },
-        {
-          "title": "Color",
-          "values": ["Black", "Gray"]
         }
       ],
       "variants": [
         {
-          "title": "S / Black",
+          "title": "S",
           "prices": [
             {
               "currency_code": "eur",
-              "amount": 3000
+              "amount": 2950
             },
             {
               "currency_code": "usd",
-              "amount": 3300
+              "amount": 3350
             }
           ],
           "options": [
             {
               "value": "S"
-            },
-            {
-              "value": "Black"
             }
           ],
-          "inventory_quantity": 40,
+          "inventory_quantity": 100,
           "manage_inventory": true
         },
         {
-          "title": "M / Gray",
+          "title": "M",
           "prices": [
             {
               "currency_code": "eur",
-              "amount": 3000
+              "amount": 2950
             },
             {
               "currency_code": "usd",
-              "amount": 3300
+              "amount": 3350
             }
           ],
           "options": [
             {
               "value": "M"
-            },
-            {
-              "value": "Gray"
             }
           ],
-          "inventory_quantity": 40,
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "L",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2950
+            },
+            {
+              "currency_code": "usd",
+              "amount": 3350
+            }
+          ],
+          "options": [
+            {
+              "value": "L"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "XL",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2950
+            },
+            {
+              "currency_code": "usd",
+              "amount": 3350
+            }
+          ],
+          "options": [
+            {
+              "value": "XL"
+            }
+          ],
+          "inventory_quantity": 100,
           "manage_inventory": true
         }
       ]
     },
     {
-      "title": "Mandelbrot Set Infinity Scarf",
+      "title": "Medusa Shorts",
       "categories": [
         {
-          "id": "pcat_accessories"
+          "id": "pcat_merch"
         }
       ],
-      "collections": ["trending"],
       "subtitle": null,
-      "description": "Wrap yourself in the beauty of fractals with our Mandelbrot Set Infinity Scarf. Infinitely stylish!",
-      "handle": "mandelbrot-set-infinity-scarf",
+      "description": "Reimagine the feeling of classic shorts. With our cotton shorts, everyday essentials no longer have to be ordinary.",
+      "handle": "shorts",
       "is_giftcard": false,
-      "weight": 120,
+      "weight": 400,
       "images": [
-        "https://example.com/images/mandelbrot-set-infinity-scarf.png"
+        "https://medusa-public-images.s3.eu-west-1.amazonaws.com/shorts-vintage-front.png",
+        "https://medusa-public-images.s3.eu-west-1.amazonaws.com/shorts-vintage-back.png"
       ],
       "options": [
         {
-          "title": "Color",
-          "values": ["Multicolor", "Black and White"]
+          "title": "Size",
+          "values": ["S", "M", "L", "XL"]
         }
       ],
       "variants": [
         {
-          "title": "Multicolor",
+          "title": "S",
           "prices": [
             {
               "currency_code": "eur",
@@ -1009,19 +650,19 @@
             },
             {
               "currency_code": "usd",
-              "amount": 2800
+              "amount": 2850
             }
           ],
           "options": [
             {
-              "value": "Multicolor"
+              "value": "S"
             }
           ],
-          "inventory_quantity": 60,
+          "inventory_quantity": 100,
           "manage_inventory": true
         },
         {
-          "title": "Black and White",
+          "title": "M",
           "prices": [
             {
               "currency_code": "eur",
@@ -1029,21 +670,331 @@
             },
             {
               "currency_code": "usd",
-              "amount": 2800
+              "amount": 2850
             }
           ],
           "options": [
             {
-              "value": "Black and White"
+              "value": "M"
             }
           ],
-          "inventory_quantity": 60,
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "L",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2500
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2850
+            }
+          ],
+          "options": [
+            {
+              "value": "L"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "XL",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2500
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2850
+            }
+          ],
+          "options": [
+            {
+              "value": "XL"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        }
+      ]
+    },
+    {
+      "title": "Medusa Hoodie",
+      "categories": [
+        {
+          "id": "pcat_merch"
+        },
+        {
+          "id": "pcat_hidden_featured"
+        }
+      ],
+      "subtitle": null,
+      "description": "Reimagine the feeling of a classic hoodie. With our cotton hoodie, everyday essentials no longer have to be ordinary.",
+      "handle": "hoodie",
+      "is_giftcard": false,
+      "weight": 400,
+      "images": [
+        "https://medusa-public-images.s3.eu-west-1.amazonaws.com/black_hoodie_front.png",
+        "https://medusa-public-images.s3.eu-west-1.amazonaws.com/black_hoodie_back.png"
+      ],
+      "options": [
+        {
+          "title": "Size",
+          "values": ["S", "M", "L", "XL"]
+        }
+      ],
+      "variants": [
+        {
+          "title": "S",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 3650
+            },
+            {
+              "currency_code": "usd",
+              "amount": 4150
+            }
+          ],
+          "options": [
+            {
+              "value": "S"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "M",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 3650
+            },
+            {
+              "currency_code": "usd",
+              "amount": 4150
+            }
+          ],
+          "options": [
+            {
+              "value": "M"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "L",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 3650
+            },
+            {
+              "currency_code": "usd",
+              "amount": 4150
+            }
+          ],
+          "options": [
+            {
+              "value": "L"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "XL",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 3650
+            },
+            {
+              "currency_code": "usd",
+              "amount": 4150
+            }
+          ],
+          "options": [
+            {
+              "value": "XL"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        }
+      ]
+    },
+    {
+      "title": "Medusa Longsleeve",
+      "categories": [
+        {
+          "id": "pcat_shirts"
+        },
+        {
+          "id": "pcat_hidden_featured"
+        }
+      ],
+      "subtitle": null,
+      "description": "Reimagine the feeling of a classic longsleeve. With our cotton longsleeve, everyday essentials no longer have to be ordinary.",
+      "handle": "longsleeve",
+      "is_giftcard": false,
+      "weight": 400,
+      "images": [
+        "https://medusa-public-images.s3.eu-west-1.amazonaws.com/ls-black-front.png",
+        "https://medusa-public-images.s3.eu-west-1.amazonaws.com/ls-black-back.png"
+      ],
+      "options": [
+        {
+          "title": "Size",
+          "values": ["S", "M", "L", "XL"]
+        }
+      ],
+      "variants": [
+        {
+          "title": "S",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 3650
+            },
+            {
+              "currency_code": "usd",
+              "amount": 4150
+            }
+          ],
+          "options": [
+            {
+              "value": "S"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "M",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 3650
+            },
+            {
+              "currency_code": "usd",
+              "amount": 4150
+            }
+          ],
+          "options": [
+            {
+              "value": "M"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "L",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 3650
+            },
+            {
+              "currency_code": "usd",
+              "amount": 4150
+            }
+          ],
+          "options": [
+            {
+              "value": "L"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "XL",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 3650
+            },
+            {
+              "currency_code": "usd",
+              "amount": 4150
+            }
+          ],
+          "options": [
+            {
+              "value": "XL"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        }
+      ]
+    },
+    {
+      "title": "Medusa Coffee Mug",
+      "categories": [
+        {
+          "id": "pcat_merch"
+        },
+        {
+          "id": "pcat_hidden_featured"
+        }
+      ],
+      "subtitle": null,
+      "description": "Every programmer's best friend.",
+      "handle": "coffee-mug",
+      "is_giftcard": false,
+      "weight": 400,
+      "images": [
+        "https://medusa-public-images.s3.eu-west-1.amazonaws.com/coffee-mug.png"
+      ],
+      "options": [
+        {
+          "title": "Size",
+          "values": ["One Size"]
+        }
+      ],
+      "variants": [
+        {
+          "title": "One Size",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 1000
+            },
+            {
+              "currency_code": "usd",
+              "amount": 1200
+            }
+          ],
+          "options": [
+            {
+              "value": "One Size"
+            }
+          ],
+          "inventory_quantity": 100,
           "manage_inventory": true
         }
       ]
     }
   ],
   "categories": [
+    {
+      "id": "pcat_pants",
+      "name": "Pants",
+      "rank": 0,
+      "category_children": [],
+      "handle": "pants"
+    },
     {
       "id": "pcat_shirts",
       "name": "Shirts",
@@ -1052,42 +1003,25 @@
       "handle": "shirts"
     },
     {
-      "id": "pcat_hoodies",
-      "name": "Hoodies",
-      "rank": 1,
+      "id": "pcat_merch",
+      "name": "Merch",
+      "rank": 0,
       "category_children": [],
-      "handle": "hoodies"
+      "handle": "merch"
     },
     {
-      "id": "pcat_accessories",
-      "name": "Accessories",
-      "rank": 2,
+      "id": "pcat_hidden_carousel",
+      "name": "Hidden homepage carousel",
+      "rank": 0,
       "category_children": [],
-      "handle": "accessories"
+      "handle": "hidden-homepage-carousel"
     },
     {
-      "id": "pcat_pants",
-      "name": "Pants",
-      "rank": 3,
+      "id": "pcat_hidden_featured",
+      "name": "Hidden homepage featured",
+      "rank": 0,
       "category_children": [],
-      "handle": "pants"
-    }
-  ],
-  "collections": [
-    {
-      "id": "pcol_latest",
-      "title": "Latest Picks",
-      "handle": "latest-picks"
-    },
-    {
-      "id": "pcol_new",
-      "title": "New Arrivals",
-      "handle": "new-arrivals"
-    },
-    {
-      "id": "pcol_trending",
-      "title": "Trending",
-      "handle": "trending"
+      "handle": "hidden-homepage-featured-items"
     }
   ]
 }

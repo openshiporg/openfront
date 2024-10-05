@@ -71,8 +71,9 @@ export const Product = list({
       },
     }),
     externalId: text(),
-    productCollection: relationship({
+    productCollections: relationship({
       ref: "ProductCollection.products",
+      many: true,
     }),
     productCategories: relationship({
       ref: "ProductCategory.products",

@@ -1,39 +1,31 @@
 "use server";
 import { cache } from "react";
+import { gql } from "urql";
+import { openfrontClient } from "@storefront/lib/config";
 
 import sortProducts from "@storefront/lib/util/sort-products";
 import transformProductPreview from "@storefront/lib/util/transform-product-preview";
 
-import { openfrontClient } from "@storefront/lib/config";
 import openfrontError from "@storefront/lib/util/openfront-error";
 import { cookies } from "next/headers";
-import { gql } from "urql";
 
 const emptyResponse = {
   response: { products: [], count: 0 },
   nextPage: null,
 };
 
-/**
- * Function for getting custom headers for Openfront API requests, including the JWT token and cache revalidation tags.
- *
- * @param tags
- * @returns custom headers for Openfront API requests
- */
-const getOpenfrontHeaders = (tags = []) => {
-  const headers = {
-    next: {
-      tags,
-    },
-  };
+// Helper function to execute GraphQL queries
+const executeQuery = async (query, variables = {}) => {
+  const result = await openfrontClient.query(query, variables);
+  if (result.error) throw new Error(result.error.message);
+  return result.data;
+};
 
-  const token = cookies().get("_openfront_jwt")?.value;
-
-  if (token) {
-    headers.authorization = `Bearer ${token}`;
-  }
-
-  return headers;
+// Helper function to execute GraphQL mutations
+const executeMutation = async (mutation, variables = {}) => {
+  const result = await openfrontClient.mutation(mutation, variables);
+  if (result.error) throw new Error(result.error.message);
+  return result.data;
 };
 
 // Cart actions
@@ -56,26 +48,13 @@ export async function createCart(data = {}) {
     }
   `;
 
-  return openfrontClient
-    .mutation(CREATE_CART_MUTATION, { data })
-    .toPromise()
-    .then((response) => {
-      if (response.error) {
-        console.error("GraphQL Error:", response.error.message);
-        return null;
-      }
-      return response.data.createCart;
-    })
-    .catch((error) => {
-      console.error("Error creating cart:", error);
-      return null; // Returning null in case of an error, adjust based on your error handling policies
-    });
+  return executeMutation(CREATE_CART_MUTATION, { data });
 }
 
 export async function updateCart(cartId, data) {
-  const UPDATE_CART_MUTATION = `
+  const UPDATE_CART_MUTATION = gql`
     mutation UpdateCart($id: ID!, $data: CartUpdateInput!) {
-      updateCart(id: $id, data: $data) {
+      updateCart(where: { id: $id }, data: $data) {
         id
         email
         type
@@ -91,26 +70,7 @@ export async function updateCart(cartId, data) {
     }
   `;
 
-  const variables = {
-    id: cartId,
-    data: data,
-  };
-
-  return openfrontClient
-    .mutation(UPDATE_CART_MUTATION, variables)
-    .toPromise()
-    .then((response) => {
-      if (response.error) {
-        throw new Error("GraphQL Error: " + response.error.message);
-      }
-      return response.data.updateCart;
-    })
-    .catch((error) => {
-      console.error("Error updating cart:", error);
-      // Optionally handle specific errors or perform side effects
-      openfrontError(error); // Assuming `openfrontError` is a function to handle errors
-      return null;
-    });
+  return executeMutation(UPDATE_CART_MUTATION, { id: cartId, data });
 }
 
 export const getCart = cache(async function (cartId) {
@@ -132,331 +92,555 @@ export const getCart = cache(async function (cartId) {
     }
   `;
 
-  return openfrontClient
-    .query(GET_CART_QUERY, { id: cartId })
-    .toPromise()
-    .then((response) => {
-      if (response.error) {
-        console.error("GraphQL Error:", response.error.message);
-        return null;
-      }
-      return response.data.cart;
-    })
-    .catch((error) => {
-      console.error("Error retrieving cart:", error);
-      return null; // Returning null in case of an error, adjust based on your error handling policies
-    });
+  return executeQuery(GET_CART_QUERY, { id: cartId });
 });
 
 export async function addItem({ cartId, variantId, quantity }) {
-  const headers = getOpenfrontHeaders(["cart"]);
+  const ADD_ITEM_MUTATION = gql`
+    mutation AddItem($cartId: ID!, $variantId: ID!, $quantity: Int!) {
+      updateCart(
+        where: { id: $cartId }
+        data: {
+          lineItems: {
+            create: [
+              {
+                productVariant: { connect: { id: $variantId } }
+                quantity: $quantity
+              }
+            ]
+          }
+        }
+      ) {
+        id
+        lineItems {
+          id
+          quantity
+          product {
+            name
+            price
+          }
+        }
+      }
+    }
+  `;
 
-  return openfrontClient.carts.lineItems
-    .create(cartId, { variant_id: variantId, quantity }, headers)
-    .then(({ cart }) => cart)
-    .catch((err) => {
-      console.log(err);
-      return null;
-    });
+  return executeMutation(ADD_ITEM_MUTATION, { cartId, variantId, quantity });
 }
 
 export async function updateItem({ cartId, lineId, quantity }) {
-  const headers = getOpenfrontHeaders(["cart"]);
+  const UPDATE_ITEM_MUTATION = gql`
+    mutation UpdateItem($cartId: ID!, $lineId: ID!, $quantity: Int!) {
+      updateCart(
+        where: { id: $cartId }
+        data: {
+          lineItems: {
+            update: [{ where: { id: $lineId }, data: { quantity: $quantity } }]
+          }
+        }
+      ) {
+        id
+        lineItems {
+          id
+          quantity
+          product {
+            name
+            price
+          }
+        }
+      }
+    }
+  `;
 
-  return openfrontClient.carts.lineItems
-    .update(cartId, lineId, { quantity }, headers)
-    .then(({ cart }) => cart)
-    .catch((err) => openfrontError(err));
+  return executeMutation(UPDATE_ITEM_MUTATION, { cartId, lineId, quantity });
 }
 
 export async function removeItem({ cartId, lineId }) {
-  const headers = getOpenfrontHeaders(["cart"]);
+  const REMOVE_ITEM_MUTATION = gql`
+    mutation RemoveItem($cartId: ID!, $lineId: ID!) {
+      updateCart(
+        where: { id: $cartId }
+        data: { lineItems: { delete: [{ id: $lineId }] } }
+      ) {
+        id
+        lineItems {
+          id
+          quantity
+          product {
+            name
+            price
+          }
+        }
+      }
+    }
+  `;
 
-  return openfrontClient.carts.lineItems
-    .delete(cartId, lineId, headers)
-    .then(({ cart }) => cart)
-    .catch((err) => {
-      console.log(err);
-      return null;
-    });
+  return executeMutation(REMOVE_ITEM_MUTATION, { cartId, lineId });
+}
+
+export async function updateCartItems(cartId, lineItems) {
+  const UPDATE_CART_ITEMS_MUTATION = gql`
+    mutation UpdateCartItems($id: ID!, $data: CartUpdateInput!) {
+      updateCart(where: { id: $id }, data: { lineItems: $data }) {
+        id
+        lineItems {
+          id
+          quantity
+          product {
+            name
+            price
+          }
+        }
+      }
+    }
+  `;
+
+  return executeMutation(UPDATE_CART_ITEMS_MUTATION, {
+    id: cartId,
+    data: { lineItems },
+  });
 }
 
 export async function deleteDiscount(cartId, code) {
-  const headers = getOpenfrontHeaders(["cart"]);
+  const DELETE_DISCOUNT_MUTATION = gql`
+    mutation DeleteDiscount($cartId: ID!, $code: String!) {
+      removeCartDiscount(where: { id: $cartId, code: $code }) {
+        id
+        discounts {
+          id
+          code
+        }
+      }
+    }
+  `;
 
-  return openfrontClient.carts
-    .deleteDiscount(cartId, code, headers)
-    .then(({ cart }) => cart)
-    .catch((err) => {
-      console.log(err);
-      return null;
-    });
+  return executeMutation(DELETE_DISCOUNT_MUTATION, { cartId, code });
 }
 
 export async function createPaymentSessions(cartId) {
-  const headers = getOpenfrontHeaders(["cart"]);
+  const CREATE_PAYMENT_SESSIONS_MUTATION = gql`
+    mutation CreatePaymentSessions($cartId: ID!) {
+      createCartPaymentSessions(where: { id: $cartId }) {
+        id
+        paymentSessions {
+          id
+          status
+        }
+      }
+    }
+  `;
 
-  return openfrontClient.carts
-    .createPaymentSessions(cartId, headers)
-    .then(({ cart }) => cart)
-    .catch((err) => {
-      console.log(err);
-      return null;
-    });
+  return executeMutation(CREATE_PAYMENT_SESSIONS_MUTATION, { cartId });
 }
 
 export async function setPaymentSession({ cartId, providerId }) {
-  const headers = getOpenfrontHeaders(["cart"]);
+  const SET_PAYMENT_SESSION_MUTATION = gql`
+    mutation SetPaymentSession($cartId: ID!, $providerId: ID!) {
+      setCartPaymentSession(where: { id: $cartId }, providerId: $providerId) {
+        id
+        paymentSessions {
+          id
+          status
+        }
+      }
+    }
+  `;
 
-  return openfrontClient.carts
-    .setPaymentSession(cartId, { provider_id: providerId }, headers)
-    .then(({ cart }) => cart)
-    .catch((err) => openfrontError(err));
+  return executeMutation(SET_PAYMENT_SESSION_MUTATION, { cartId, providerId });
 }
 
 export async function completeCart(cartId) {
-  const headers = getOpenfrontHeaders(["cart"]);
+  const COMPLETE_CART_MUTATION = gql`
+    mutation CompleteCart($cartId: ID!) {
+      completeCart(where: { id: $cartId }) {
+        id
+        status
+      }
+    }
+  `;
 
-  return openfrontClient.carts
-    .complete(cartId, headers)
-    .then((res) => res)
-    .catch((err) => openfrontError(err));
+  return executeMutation(COMPLETE_CART_MUTATION, { cartId });
 }
 
 // Order actions
 export const retrieveOrder = cache(async function (id) {
-  const headers = getOpenfrontHeaders(["order"]);
+  const RETRIEVE_ORDER_QUERY = gql`
+    query RetrieveOrder($id: ID!) {
+      order(where: { id: $id }) {
+        id
+        status
+        total
+        items {
+          id
+          title
+          quantity
+        }
+      }
+    }
+  `;
 
-  return openfrontClient.orders
-    .retrieve(id, headers)
-    .then(({ order }) => order)
-    .catch((err) => openfrontError(err));
+  return executeQuery(RETRIEVE_ORDER_QUERY, { id });
 });
 
 // Shipping actions
 export const listShippingMethods = cache(
   async function listShippingMethods(regionId, productIds) {
-    const headers = getOpenfrontHeaders(["shipping"]);
+    const LIST_SHIPPING_METHODS_QUERY = gql`
+      query ListShippingMethods($regionId: ID!, $productIds: [ID!]) {
+        shippingOptions(
+          where: {
+            region: { id: { equals: $regionId } }
+            products: { some: { id: { in: $productIds } } }
+          }
+        ) {
+          id
+          name
+          price
+        }
+      }
+    `;
 
-    const product_ids = productIds?.join(",");
-
-    return openfrontClient.shippingOptions
-      .list(
-        {
-          region_id: regionId,
-          product_ids,
-        },
-        headers
-      )
-      .then(({ shipping_options }) => shipping_options)
-      .catch((err) => {
-        console.log(err);
-        return null;
-      });
+    return executeQuery(LIST_SHIPPING_METHODS_QUERY, { regionId, productIds });
   }
 );
 
 export async function addShippingMethod({ cartId, shippingMethodId }) {
-  const headers = getOpenfrontHeaders(["cart"]);
+  const ADD_SHIPPING_METHOD_MUTATION = gql`
+    mutation AddShippingMethod($cartId: ID!, $shippingMethodId: ID!) {
+      addCartShippingMethod(
+        where: { id: $cartId }
+        shippingMethodId: $shippingMethodId
+      ) {
+        id
+        shippingMethods {
+          id
+          name
+        }
+      }
+    }
+  `;
 
-  return openfrontClient.carts
-    .addShippingMethod(cartId, { option_id: shippingMethodId }, headers)
-    .then(({ cart }) => cart)
-    .catch((err) => openfrontError(err));
+  return executeMutation(ADD_SHIPPING_METHOD_MUTATION, {
+    cartId,
+    shippingMethodId,
+  });
 }
 
 // Authentication actions
 export async function getToken(credentials) {
-  return openfrontClient.auth
-    .getToken(credentials, {
-      next: {
-        tags: ["auth"],
-      },
-    })
-    .then(({ access_token }) => {
-      access_token && cookies().set("_openfront_jwt", access_token);
-      return access_token;
-    })
-    .catch((err) => {
-      throw new Error("Wrong email or password.");
-    });
+  const GET_TOKEN_MUTATION = gql`
+    mutation GetToken($email: String!, $password: String!) {
+      authenticateUserWithPassword(email: $email, password: $password) {
+        ... on UserAuthenticationWithPasswordSuccess {
+          sessionToken
+          item {
+            id
+            email
+          }
+        }
+        ... on UserAuthenticationWithPasswordFailure {
+          message
+        }
+      }
+    }
+  `;
+
+  const result = await executeMutation(GET_TOKEN_MUTATION, credentials);
+  if (
+    result.authenticateUserWithPassword.__typename ===
+    "UserAuthenticationWithPasswordFailure"
+  ) {
+    throw new Error(result.authenticateUserWithPassword.message);
+  }
+  const token = result.authenticateUserWithPassword.sessionToken;
+  token && cookies().set("_openfront_jwt", token);
+  return token;
 }
 
 export async function authenticate(credentials) {
-  const headers = getOpenfrontHeaders(["auth"]);
-
-  return openfrontClient.auth
-    .authenticate(credentials, headers)
-    .then(({ customer }) => customer)
-    .catch((err) => openfrontError(err));
+  // This might be the same as getToken, depending on your authentication flow
+  return getToken(credentials);
 }
 
 export const getSession = cache(async function getSession() {
-  const headers = getOpenfrontHeaders(["auth"]);
+  const GET_SESSION_QUERY = gql`
+    query GetSession {
+      authenticatedItem {
+        ... on User {
+          id
+          email
+        }
+      }
+    }
+  `;
 
-  return openfrontClient.auth
-    .getSession(headers)
-    .then(({ customer }) => customer)
-    .catch((err) => openfrontError(err));
+  return executeQuery(GET_SESSION_QUERY);
 });
 
 // Customer actions
 export async function getCustomer() {
-  const headers = getOpenfrontHeaders(["customer"]);
+  const GET_CUSTOMER_QUERY = gql`
+    query GetCustomer {
+      authenticatedItem {
+        ... on Customer {
+          id
+          email
+          firstName
+          lastName
+        }
+      }
+    }
+  `;
 
-  return openfrontClient.customers
-    .retrieve(headers)
-    .then(({ customer }) => customer)
-    .catch((err) => null);
+  return executeQuery(GET_CUSTOMER_QUERY);
 }
 
 export async function createCustomer(data) {
-  const headers = getOpenfrontHeaders(["customer"]);
+  const CREATE_CUSTOMER_MUTATION = gql`
+    mutation CreateCustomer($data: CustomerCreateInput!) {
+      createCustomer(data: $data) {
+        id
+        email
+        firstName
+        lastName
+      }
+    }
+  `;
 
-  return openfrontClient.customers
-    .create(data, headers)
-    .then(({ customer }) => customer)
-    .catch((err) => openfrontError(err));
+  return executeMutation(CREATE_CUSTOMER_MUTATION, { data });
 }
 
 export async function updateCustomer(data) {
-  const headers = getOpenfrontHeaders(["customer"]);
+  const UPDATE_CUSTOMER_MUTATION = gql`
+    mutation UpdateCustomer($data: CustomerUpdateInput!) {
+      updateCustomer(data: $data) {
+        id
+        email
+        firstName
+        lastName
+      }
+    }
+  `;
 
-  return openfrontClient.customers
-    .update(data, headers)
-    .then(({ customer }) => customer)
-    .catch((err) => openfrontError(err));
+  return executeMutation(UPDATE_CUSTOMER_MUTATION, { data });
 }
 
 export async function addShippingAddress(data) {
-  const headers = getOpenfrontHeaders(["customer"]);
+  const ADD_SHIPPING_ADDRESS_MUTATION = gql`
+    mutation AddShippingAddress($data: AddressCreateInput!) {
+      createAddress(data: $data) {
+        id
+        address1
+        city
+        country {
+          name
+        }
+      }
+    }
+  `;
 
-  return openfrontClient.customers.addresses
-    .addAddress(data, headers)
-    .then(({ customer }) => customer)
-    .catch((err) => openfrontError(err));
+  return executeMutation(ADD_SHIPPING_ADDRESS_MUTATION, { data });
 }
 
 export async function deleteShippingAddress(addressId) {
-  const headers = getOpenfrontHeaders(["customer"]);
+  const DELETE_SHIPPING_ADDRESS_MUTATION = gql`
+    mutation DeleteShippingAddress($id: ID!) {
+      deleteAddress(id: $id) {
+        id
+      }
+    }
+  `;
 
-  return openfrontClient.customers.addresses
-    .deleteAddress(addressId, headers)
-    .then(({ customer }) => customer)
-    .catch((err) => openfrontError(err));
+  return executeMutation(DELETE_SHIPPING_ADDRESS_MUTATION, { id: addressId });
 }
 
 export async function updateShippingAddress(addressId, data) {
-  const headers = getOpenfrontHeaders(["customer"]);
+  const UPDATE_SHIPPING_ADDRESS_MUTATION = gql`
+    mutation UpdateShippingAddress($id: ID!, $data: AddressUpdateInput!) {
+      updateAddress(id: $id, data: $data) {
+        id
+        address1
+        city
+        country {
+          name
+        }
+      }
+    }
+  `;
 
-  return openfrontClient.customers.addresses
-    .updateAddress(addressId, data, headers)
-    .then(({ customer }) => customer)
-    .catch((err) => openfrontError(err));
+  return executeMutation(UPDATE_SHIPPING_ADDRESS_MUTATION, {
+    id: addressId,
+    data,
+  });
 }
 
 export const listCustomerOrders = cache(async function (
   limit = 10,
   offset = 0
 ) {
-  const headers = getOpenfrontHeaders(["customer"]);
+  const LIST_CUSTOMER_ORDERS_QUERY = gql`
+    query ListCustomerOrders($limit: Int!, $offset: Int!) {
+      orders(
+        where: { customer: { id: { equals: "currentCustomerId" } } }
+        take: $limit
+        skip: $offset
+        orderBy: { createdAt: desc }
+      ) {
+        id
+        total
+        status
+        createdAt
+      }
+    }
+  `;
 
-  return openfrontClient.customers
-    .listOrders({ limit, offset }, headers)
-    .then(({ orders }) => orders)
-    .catch((err) => openfrontError(err));
+  return executeQuery(LIST_CUSTOMER_ORDERS_QUERY, { limit, offset });
 });
 
 // Region actions
 export const listRegions = cache(async function () {
-  return openfrontClient.regions
-    .list()
-    .then(({ regions }) => regions)
-    .catch((err) => {
-      console.log(err);
-      return null;
-    });
+  const LIST_REGIONS_QUERY = gql`
+    query ListRegions {
+      regions {
+        id
+        name
+        currency {
+          code
+        }
+        countries {
+          id
+          name
+          iso2
+        }
+      }
+    }
+  `;
+
+  return executeQuery(LIST_REGIONS_QUERY);
 });
 
 export const retrieveRegion = cache(async function (id) {
-  const headers = getOpenfrontHeaders(["regions"]);
+  const RETRIEVE_REGION_QUERY = gql`
+    query RetrieveRegion($id: ID!) {
+      region(where: { id: $id }) {
+        id
+        name
+        currency {
+          code
+        }
+        countries {
+          id
+          name
+          iso2
+        }
+      }
+    }
+  `;
 
-  return openfrontClient.regions
-    .retrieve(id, headers)
-    .then(({ region }) => region)
-    .catch((err) => openfrontError(err));
+  return executeQuery(RETRIEVE_REGION_QUERY, { id });
 });
 
-const regionMap = new Map();
-
 export const getRegion = cache(async function (countryCode) {
-  try {
-    if (regionMap.has(countryCode)) {
-      return regionMap.get(countryCode);
+  const GET_REGION_QUERY = gql`
+    query GetRegion($code: String!) {
+      regions(where: { countries: { some: { iso2: { equals: $code } } } }) {
+        id
+        name
+        currency {
+          code
+        }
+        countries {
+          id
+          name
+          iso2
+        }
+      }
     }
+  `;
 
-    const regions = await listRegions();
-
-    if (!regions) {
-      return null;
-    }
-
-    regions.forEach((region) => {
-      region.countries.forEach((c) => {
-        regionMap.set(c.iso_2, region);
-      });
-    });
-
-    const region = countryCode
-      ? regionMap.get(countryCode)
-      : regionMap.get("us");
-
-    return region;
-  } catch (e) {
-    console.log(e.toString());
-    return null;
-  }
+  const data = await executeQuery(GET_REGION_QUERY, { code: countryCode });
+  return data.regions[0];
 });
 
 // Product actions
 export const getProductsById = cache(async function ({ ids, regionId }) {
-  const headers = getOpenfrontHeaders(["products"]);
+  const GET_PRODUCTS_BY_ID_QUERY = gql`
+    query GetProductsById($ids: [ID!]!, $regionId: ID!) {
+      products(
+        where: { id: { in: $ids }, region: { id: { equals: $regionId } } }
+      ) {
+        id
+        title
+        handle
+        thumbnail
+        variants {
+          id
+          title
+          prices {
+            amount
+            currency {
+              code
+            }
+          }
+        }
+      }
+    }
+  `;
 
-  return openfrontClient.products
-    .list({ id: ids, region_id: regionId }, headers)
-    .then(({ products }) => products)
-    .catch((err) => {
-      console.log(err);
-      return null;
-    });
+  return executeQuery(GET_PRODUCTS_BY_ID_QUERY, { ids, regionId });
 });
 
 export const retrievePricedProductById = cache(async function ({
   id,
   regionId,
 }) {
-  const headers = getOpenfrontHeaders(["products"]);
+  const RETRIEVE_PRICED_PRODUCT_BY_ID_QUERY = gql`
+    query RetrievePricedProductById($id: ID!, $regionId: ID!) {
+      product(where: { id: $id }) {
+        id
+        title
+        handle
+        thumbnail
+        variants {
+          id
+          title
+          prices(where: { region: { id: { equals: $regionId } } }) {
+            amount
+            currency {
+              code
+            }
+          }
+        }
+      }
+    }
+  `;
 
-  return openfrontClient.products
-    .retrieve(`${id}?region_id=${regionId}`, headers)
-    .then(({ product }) => product)
-    .catch((err) => {
-      console.log(err);
-      return null;
-    });
+  return executeQuery(RETRIEVE_PRICED_PRODUCT_BY_ID_QUERY, { id, regionId });
 });
 
 export const getProductByHandle = cache(async function (handle) {
-  const headers = getOpenfrontHeaders(["products"]);
+  const GET_PRODUCT_BY_HANDLE_QUERY = gql`
+    query GetProductByHandle($handle: String!) {
+      product(where: { handle: $handle }) {
+        id
+        title
+        handle
+        thumbnail
+        variants {
+          id
+          title
+          prices {
+            amount
+            currency {
+              code
+            }
+          }
+        }
+      }
+    }
+  `;
 
-  const product = await openfrontClient.products
-    .list({ handle }, headers)
-    .then(({ products }) => products[0])
-    .catch((err) => {
-      throw err;
-    });
-
-  return { product };
+  const data = await executeQuery(GET_PRODUCT_BY_HANDLE_QUERY, { handle });
+  return { product: data.product };
 });
 
 export const getProductsList = cache(async function ({
@@ -465,36 +649,54 @@ export const getProductsList = cache(async function ({
   countryCode,
 }) {
   const limit = queryParams?.limit || 12;
-
   const region = await getRegion(countryCode);
 
   if (!region) {
     return emptyResponse;
   }
 
-  const { products, count } = await openfrontClient.products
-    .list(
-      {
-        limit,
-        offset: pageParam,
-        region_id: region.id,
-        ...queryParams,
-      },
-      { next: { tags: ["products"] } }
-    )
-    .then((res) => res)
-    .catch((err) => {
-      throw err;
-    });
+  const GET_PRODUCTS_QUERY = gql`
+    query GetProducts($skip: Int!, $take: Int!, $regionId: ID!) {
+      products(
+        where: { region: { id: { equals: $regionId } } }
+        skip: $skip
+        take: $take
+        orderBy: { createdAt: desc }
+      ) {
+        id
+        title
+        handle
+        thumbnail
+        variants {
+          id
+          title
+          prices {
+            amount
+            currency {
+              code
+            }
+          }
+        }
+      }
+      productsCount(where: { region: { id: { equals: $regionId } } })
+    }
+  `;
 
-  const transformedProducts = products.map((product) => {
-    return transformProductPreview(product, region);
+  const data = await executeQuery(GET_PRODUCTS_QUERY, {
+    skip: pageParam,
+    take: limit,
+    regionId: region.id,
   });
 
-  const nextPage = count > pageParam + 1 ? pageParam + 1 : null;
+  const products = data.products.map((product) =>
+    transformProductPreview(product, region)
+  );
+  const count = data.productsCount;
+
+  const nextPage = count > pageParam + limit ? pageParam + limit : null;
 
   return {
-    response: { products: transformedProducts, count },
+    response: { products, count },
     nextPage,
     queryParams,
   };
@@ -570,46 +772,100 @@ export const getHomepageProducts = cache(async function getHomepageProducts({
 
 // Collection actions
 export const retrieveCollection = cache(async function (id) {
-  return openfrontClient.collections
-    .retrieve(id, {
-      next: {
-        tags: ["collections"],
-      },
-    })
-    .then(({ collection }) => collection)
-    .catch((err) => {
-      throw err;
-    });
+  const RETRIEVE_COLLECTION_QUERY = gql`
+    query RetrieveCollection($id: ID!) {
+      collection(where: { id: $id }) {
+        id
+        title
+        handle
+      }
+    }
+  `;
+
+  return executeQuery(RETRIEVE_COLLECTION_QUERY, { id });
 });
 
 export const getCollectionsList = cache(async function (
   offset = 0,
-  limit = 100
+  limit = 3,
+  countryCode
 ) {
-  const collections = await openfrontClient.collections
-    .list({ limit, offset }, { next: { tags: ["collections"] } })
-    .then(({ collections }) => collections)
-    .catch((err) => {
-      throw err;
-    });
+  const GET_COLLECTIONS_LIST_QUERY = gql`
+    query GetCollectionsList(
+      $offset: Int!
+      $limit: Int!
+      $countryCode: String!
+    ) {
+      productCollections(skip: $offset, take: $limit) {
+        id
+        title
+        handle
+        products(
+          take: 3
+          where: {
+            productVariants: {
+              some: {
+                prices: {
+                  some: {
+                    region: {
+                      countries: { some: { iso2: { equals: $countryCode } } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ) {
+          id
+          title
+          handle
+          thumbnail
+          productVariants {
+            id
+            title
+            prices {
+              amount
+              currency {
+                code
+                regions {
+                  code
+                  countries {
+                    iso2
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      productCollectionsCount
+    }
+  `;
 
-  const count = collections.length;
+  const data = await executeQuery(GET_COLLECTIONS_LIST_QUERY, {
+    offset,
+    limit,
+    countryCode,
+  });
 
   return {
-    collections,
-    count,
+    collections: data.productCollections,
+    count: data.productCollectionsCount,
   };
 });
 
 export const getCollectionByHandle = cache(async function (handle) {
-  const collection = await openfrontClient.collections
-    .list({ handle: [handle] }, { next: { tags: ["collections"] } })
-    .then(({ collections }) => collections[0])
-    .catch((err) => {
-      throw err;
-    });
+  const GET_COLLECTION_BY_HANDLE_QUERY = gql`
+    query GetCollectionByHandle($handle: String!) {
+      collection(where: { handle: $handle }) {
+        id
+        title
+        handle
+      }
+    }
+  `;
 
-  return collection;
+  return executeQuery(GET_COLLECTION_BY_HANDLE_QUERY, { handle });
 });
 
 export const getProductsByCollectionHandle = cache(
@@ -619,22 +875,68 @@ export const getProductsByCollectionHandle = cache(
     handle,
     countryCode,
   }) {
-    const { id } = await getCollectionByHandle(handle).then(
-      (collection) => collection
-    );
+    const { id } = await getCollectionByHandle(handle);
+    const region = await getRegion(countryCode);
 
-    const { response, nextPage } = await getProductsList({
-      pageParam,
-      queryParams: { collection_id: [id], limit },
-      countryCode,
-    })
-      .then((res) => res)
-      .catch((err) => {
-        throw err;
-      });
+    if (!id || !region) {
+      return emptyResponse;
+    }
+
+    const GET_PRODUCTS_BY_COLLECTION_QUERY = gql`
+      query GetProductsByCollection(
+        $collectionId: ID!
+        $regionId: ID!
+        $skip: Int!
+        $take: Int!
+      ) {
+        products(
+          where: {
+            productCollection: { id: { equals: $collectionId } }
+            region: { id: { equals: $regionId } }
+          }
+          skip: $skip
+          take: $take
+        ) {
+          id
+          title
+          handle
+          thumbnail
+          variants {
+            id
+            title
+            prices {
+              amount
+              currency {
+                code
+              }
+            }
+          }
+        }
+        productsCount(
+          where: {
+            productCollection: { id: { equals: $collectionId } }
+            region: { id: { equals: $regionId } }
+          }
+        )
+      }
+    `;
+
+    const data = await executeQuery(GET_PRODUCTS_BY_COLLECTION_QUERY, {
+      collectionId: id,
+      regionId: region.id,
+      skip: pageParam,
+      take: limit,
+    });
+
+    const products = data.products.map((product) =>
+      transformProductPreview(product, region)
+    );
+    const count = data.productsCount;
+
+    const nextPage = count > pageParam + limit ? pageParam + limit : null;
 
     return {
-      response,
+      response: { products, count },
       nextPage,
     };
   }
@@ -642,65 +944,64 @@ export const getProductsByCollectionHandle = cache(
 
 // Category actions
 export const listCategories = cache(async function () {
-  const headers = {
-    next: {
-      tags: ["collections"],
-    },
-  };
+  const LIST_CATEGORIES_QUERY = gql`
+    query ListCategories {
+      productCategories {
+        id
+        title
+        handle
+        isInternal
+        isActive
+      }
+    }
+  `;
 
-  return openfrontClient.productCategories
-    .list({ expand: "category_children" }, headers)
-    .then(({ product_categories }) => product_categories)
-    .catch((err) => {
-      throw err;
-    });
+  return executeQuery(LIST_CATEGORIES_QUERY);
 });
 
 export const getCategoriesList = cache(async function (
   offset = 0,
   limit = 100
 ) {
-  const { product_categories, count } = await openfrontClient.productCategories
-    .list({ limit, offset }, { next: { tags: ["categories"] } })
-    .catch((err) => {
-      throw err;
-    });
+  const GET_CATEGORIES_LIST_QUERY = gql`
+    query GetCategoriesList($offset: Int!, $limit: Int!) {
+      productCategories(skip: $offset, take: $limit) {
+        id
+        title
+        handle
+        isInternal
+        isActive
+      }
+      productCategoriesCount
+    }
+  `;
+
+  const data = await executeQuery(GET_CATEGORIES_LIST_QUERY, { offset, limit });
 
   return {
-    product_categories,
-    count,
+    product_categories: data.productCategories,
+    count: data.productCategoriesCount,
   };
 });
 
 export const getCategoryByHandle = cache(async function (categoryHandle) {
-  const handles = categoryHandle.map((handle, index) =>
-    categoryHandle.slice(0, index + 1).join("/")
-  );
+  const GET_CATEGORY_BY_HANDLE_QUERY = gql`
+    query GetCategoryByHandle($handle: String!) {
+      productCategory(where: { handle: $handle }) {
+        id
+        title
+        handle
+        isInternal
+        isActive
+      }
+    }
+  `;
 
-  const product_categories = [];
-
-  for (const handle of handles) {
-    const category = await openfrontClient.productCategories
-      .list(
-        {
-          handle: handle,
-        },
-        {
-          next: {
-            tags: ["categories"],
-          },
-        }
-      )
-      .then(({ product_categories: { [0]: category } }) => category)
-      .catch((err) => {
-        return {};
-      });
-
-    product_categories.push(category);
-  }
-
+  const data = await executeQuery(GET_CATEGORY_BY_HANDLE_QUERY, {
+    handle: categoryHandle,
+  });
   return {
-    product_categories,
+    product_categories: [data.productCategory],
   };
 });
 
@@ -709,22 +1010,69 @@ export const getProductsByCategoryHandle = cache(async function ({
   handle,
   countryCode,
 }) {
-  const { id } = await getCategoryByHandle([handle]).then(
-    (res) => res.product_categories[0]
-  );
+  const { product_categories } = await getCategoryByHandle(handle);
+  const category = product_categories[0];
+  const region = await getRegion(countryCode);
 
-  const { response, nextPage } = await getProductsList({
-    pageParam,
-    queryParams: { category_id: [id] },
-    countryCode,
-  })
-    .then((res) => res)
-    .catch((err) => {
-      throw err;
-    });
+  if (!category || !region) {
+    return emptyResponse;
+  }
+
+  const GET_PRODUCTS_BY_CATEGORY_QUERY = gql`
+    query GetProductsByCategory(
+      $categoryId: ID!
+      $regionId: ID!
+      $skip: Int!
+      $take: Int!
+    ) {
+      products(
+        where: {
+          productCategories: { some: { id: { equals: $categoryId } } }
+          region: { id: { equals: $regionId } }
+        }
+        skip: $skip
+        take: $take
+      ) {
+        id
+        title
+        handle
+        thumbnail
+        variants {
+          id
+          title
+          prices {
+            amount
+            currency {
+              code
+            }
+          }
+        }
+      }
+      productsCount(
+        where: {
+          productCategories: { some: { id: { equals: $categoryId } } }
+          region: { id: { equals: $regionId } }
+        }
+      )
+    }
+  `;
+
+  const data = await executeQuery(GET_PRODUCTS_BY_CATEGORY_QUERY, {
+    categoryId: category.id,
+    regionId: region.id,
+    skip: pageParam,
+    take: 12,
+  });
+
+  const products = data.products.map((product) =>
+    transformProductPreview(product, region)
+  );
+  const count = data.productsCount;
+
+  const nextPage = count > pageParam + 12 ? pageParam + 12 : null;
 
   return {
-    response,
+    response: { products, count },
     nextPage,
   };
 });

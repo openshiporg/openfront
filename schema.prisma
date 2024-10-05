@@ -152,43 +152,41 @@ model LineItem {
 }
 
 model Product {
-  id                  String              @id @default(cuid())
-  title               String              @default("")
-  description         String              @default("")
-  handle              String              @default("")
-  subtitle            String              @default("")
-  isGiftcard          Boolean             @default(false)
-  thumbnail           String              @default("")
-  weight              Int?
-  length              Int?
-  height              Int?
-  width               Int?
-  hsCode              String              @default("")
-  originCountry       String              @default("")
-  midCode             String              @default("")
-  material            String              @default("")
-  metadata            Json?
-  discountable        Boolean             @default(true)
-  status              ProductStatusType   @default(draft)
-  externalId          String              @default("")
-  productCollection   ProductCollection?  @relation("Product_productCollection", fields: [productCollectionId], references: [id])
-  productCollectionId String?             @map("productCollection")
-  productCategories   ProductCategory[]   @relation("Product_productCategories")
-  shippingProfile     ShippingProfile?    @relation("Product_shippingProfile", fields: [shippingProfileId], references: [id])
-  shippingProfileId   String?             @map("shippingProfile")
-  productType         ProductType?        @relation("Product_productType", fields: [productTypeId], references: [id])
-  productTypeId       String?             @map("productType")
-  discountConditions  DiscountCondition[] @relation("DiscountCondition_products")
-  discountRules       DiscountRule[]      @relation("DiscountRule_products")
-  productImages       ProductImage[]      @relation("Product_productImages")
-  productOptions      ProductOption[]     @relation("ProductOption_product")
-  productTags         ProductTag[]        @relation("Product_productTags")
-  taxRates            TaxRate[]           @relation("Product_taxRates")
-  productVariants     ProductVariant[]    @relation("ProductVariant_product")
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @default(now()) @updatedAt
+  id                 String              @id @default(cuid())
+  title              String              @default("")
+  description        String              @default("")
+  handle             String              @default("")
+  subtitle           String              @default("")
+  isGiftcard         Boolean             @default(false)
+  thumbnail          String              @default("")
+  weight             Int?
+  length             Int?
+  height             Int?
+  width              Int?
+  hsCode             String              @default("")
+  originCountry      String              @default("")
+  midCode            String              @default("")
+  material           String              @default("")
+  metadata           Json?
+  discountable       Boolean             @default(true)
+  status             ProductStatusType   @default(draft)
+  externalId         String              @default("")
+  productCollections ProductCollection[] @relation("Product_productCollections")
+  productCategories  ProductCategory[]   @relation("Product_productCategories")
+  shippingProfile    ShippingProfile?    @relation("Product_shippingProfile", fields: [shippingProfileId], references: [id])
+  shippingProfileId  String?             @map("shippingProfile")
+  productType        ProductType?        @relation("Product_productType", fields: [productTypeId], references: [id])
+  productTypeId      String?             @map("productType")
+  discountConditions DiscountCondition[] @relation("DiscountCondition_products")
+  discountRules      DiscountRule[]      @relation("DiscountRule_products")
+  productImages      ProductImage[]      @relation("Product_productImages")
+  productOptions     ProductOption[]     @relation("ProductOption_product")
+  productTags        ProductTag[]        @relation("Product_productTags")
+  taxRates           TaxRate[]           @relation("Product_taxRates")
+  productVariants    ProductVariant[]    @relation("ProductVariant_product")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @default(now()) @updatedAt
 
-  @@index([productCollectionId])
   @@index([shippingProfileId])
   @@index([productTypeId])
 }
@@ -199,7 +197,7 @@ model ProductCollection {
   handle             String              @default("")
   metadata           Json?
   discountConditions DiscountCondition[] @relation("DiscountCondition_productCollections")
-  products           Product[]           @relation("Product_productCollection")
+  products           Product[]           @relation("Product_productCollections")
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @default(now()) @updatedAt
 }

@@ -1232,7 +1232,8 @@ type Product {
   discountable: Boolean
   status: ProductStatusType
   externalId: String
-  productCollection: ProductCollection
+  productCollections(where: ProductCollectionWhereInput! = {}, orderBy: [ProductCollectionOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ProductCollectionWhereUniqueInput): [ProductCollection!]
+  productCollectionsCount(where: ProductCollectionWhereInput! = {}): Int
   productCategories(where: ProductCategoryWhereInput! = {}, orderBy: [ProductCategoryOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ProductCategoryWhereUniqueInput): [ProductCategory!]
   productCategoriesCount(where: ProductCategoryWhereInput! = {}): Int
   shippingProfile: ShippingProfile
@@ -1288,7 +1289,7 @@ input ProductWhereInput {
   discountable: BooleanFilter
   status: ProductStatusTypeNullableFilter
   externalId: StringFilter
-  productCollection: ProductCollectionWhereInput
+  productCollections: ProductCollectionManyRelationFilter
   productCategories: ProductCategoryManyRelationFilter
   shippingProfile: ShippingProfileWhereInput
   productType: ProductTypeWhereInput
@@ -1308,6 +1309,12 @@ input ProductStatusTypeNullableFilter {
   in: [ProductStatusType!]
   notIn: [ProductStatusType!]
   not: ProductStatusTypeNullableFilter
+}
+
+input ProductCollectionManyRelationFilter {
+  every: ProductCollectionWhereInput
+  some: ProductCollectionWhereInput
+  none: ProductCollectionWhereInput
 }
 
 input ProductCategoryManyRelationFilter {
@@ -1400,7 +1407,7 @@ input ProductUpdateInput {
   discountable: Boolean
   status: ProductStatusType
   externalId: String
-  productCollection: ProductCollectionRelateToOneForUpdateInput
+  productCollections: ProductCollectionRelateToManyForUpdateInput
   productCategories: ProductCategoryRelateToManyForUpdateInput
   shippingProfile: ShippingProfileRelateToOneForUpdateInput
   productType: ProductTypeRelateToOneForUpdateInput
@@ -1415,10 +1422,11 @@ input ProductUpdateInput {
   updatedAt: DateTime
 }
 
-input ProductCollectionRelateToOneForUpdateInput {
-  create: ProductCollectionCreateInput
-  connect: ProductCollectionWhereUniqueInput
-  disconnect: Boolean
+input ProductCollectionRelateToManyForUpdateInput {
+  disconnect: [ProductCollectionWhereUniqueInput!]
+  set: [ProductCollectionWhereUniqueInput!]
+  create: [ProductCollectionCreateInput!]
+  connect: [ProductCollectionWhereUniqueInput!]
 }
 
 input ProductCategoryRelateToManyForUpdateInput {
@@ -1513,7 +1521,7 @@ input ProductCreateInput {
   discountable: Boolean
   status: ProductStatusType
   externalId: String
-  productCollection: ProductCollectionRelateToOneForCreateInput
+  productCollections: ProductCollectionRelateToManyForCreateInput
   productCategories: ProductCategoryRelateToManyForCreateInput
   shippingProfile: ShippingProfileRelateToOneForCreateInput
   productType: ProductTypeRelateToOneForCreateInput
@@ -1528,9 +1536,9 @@ input ProductCreateInput {
   updatedAt: DateTime
 }
 
-input ProductCollectionRelateToOneForCreateInput {
-  create: ProductCollectionCreateInput
-  connect: ProductCollectionWhereUniqueInput
+input ProductCollectionRelateToManyForCreateInput {
+  create: [ProductCollectionCreateInput!]
+  connect: [ProductCollectionWhereUniqueInput!]
 }
 
 input ProductCategoryRelateToManyForCreateInput {
@@ -3910,12 +3918,6 @@ input DiscountConditionOperatorTypeNullableFilter {
   not: DiscountConditionOperatorTypeNullableFilter
 }
 
-input ProductCollectionManyRelationFilter {
-  every: ProductCollectionWhereInput
-  some: ProductCollectionWhereInput
-  none: ProductCollectionWhereInput
-}
-
 input ProductTypeManyRelationFilter {
   every: ProductTypeWhereInput
   some: ProductTypeWhereInput
@@ -3945,13 +3947,6 @@ input DiscountConditionUpdateInput {
   updatedAt: DateTime
 }
 
-input ProductCollectionRelateToManyForUpdateInput {
-  disconnect: [ProductCollectionWhereUniqueInput!]
-  set: [ProductCollectionWhereUniqueInput!]
-  create: [ProductCollectionCreateInput!]
-  connect: [ProductCollectionWhereUniqueInput!]
-}
-
 input ProductTypeRelateToManyForUpdateInput {
   disconnect: [ProductTypeWhereUniqueInput!]
   set: [ProductTypeWhereUniqueInput!]
@@ -3977,11 +3972,6 @@ input DiscountConditionCreateInput {
   productTypes: ProductTypeRelateToManyForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
-}
-
-input ProductCollectionRelateToManyForCreateInput {
-  create: [ProductCollectionCreateInput!]
-  connect: [ProductCollectionWhereUniqueInput!]
 }
 
 input ProductTypeRelateToManyForCreateInput {

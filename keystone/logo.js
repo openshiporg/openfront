@@ -18,9 +18,9 @@ export const Logo = ({ size = "md", className }) => {
   };
 
   const iconClasses = {
-    sm: "mr-2 w-3.5 h-3.5 sm:w-3.5 sm:h-3.5 md:w-[1.3rem] md:h-[1.3rem]",
-    md: "mt-[3.5px] mr-2 w-3.5 h-3.5 sm:w-3.5 sm:h-3.5 md:w-[1.2rem] md:h-[1.2rem]",
-    lg: "mr-2 w-3.5 h-3.5 sm:w-3.5 sm:h-3.5 md:w-[1.3rem] md:h-[1.3rem]",
+    sm: "mr-2 w-3.5 h-3.5 sm:w-3.5 sm:h-3.5 md:w-[1.25rem] md:h-[1.25rem]",
+    md: "mt-[3.5px] mr-2 w-3.5 h-3.5 sm:w-3.5 sm:h-3.5 md:w-[1.15rem] md:h-[1.15rem]",
+    lg: "mr-2 w-3.5 h-3.5 sm:w-3.5 sm:h-3.5 md:w-[1.25rem] md:h-[1.25rem]",
   };
 
   return (

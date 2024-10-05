@@ -7,9 +7,10 @@ import { trackingFields } from "./trackingFields";
 export const ProductCollection = list({
   access: {
     operation: {
-      query: ({ session }) =>
-        permissions.canReadProducts({ session }) ||
-        permissions.canManageProducts({ session }),
+      // query: ({ session }) =>
+      //   permissions.canReadProducts({ session }) ||
+      //   permissions.canManageProducts({ session }),
+      query: () => true,
       create: permissions.canManageProducts,
       update: permissions.canManageProducts,
       delete: permissions.canManageProducts,
@@ -28,7 +29,7 @@ export const ProductCollection = list({
       many: true,
     }),
     products: relationship({
-      ref: "Product.productCollection",
+      ref: "Product.productCollections",
       many: true,
     }),
     ...trackingFields,

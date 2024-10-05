@@ -107,6 +107,14 @@ const createPaymentProviderMutation = gql`
   }
 `;
 
+const createCollectionMutation = gql`
+  mutation CreateCollection($data: ProductCollectionCreateInput!) {
+    createProductCollection(data: $data) {
+      id
+    }
+  }
+`;
+
 const createProductInput = (productData) => {
   const {
     productCollection,
@@ -185,7 +193,7 @@ async function createCategories() {
   return categoryIds;
 }
 
-async function createProducts() {
+async function createProducts(categoryIds, collectionIds) {
   const { products, regions } = seedData;
   const productIds = {};
 
@@ -222,6 +230,9 @@ async function createProducts() {
         })),
       },
       productCategories: { connect: categoriesInput },
+      productCollections: {
+        connect: productData.collections ? productData.collections.map(collection => ({ id: collectionIds[collection] })) : []
+      },
     };
 
     const { createProduct } = await client.request(createProductMutation, {
@@ -474,31 +485,50 @@ const createShippingOptions = async () => {
   return createdShippingOptions;
 };
 
+async function createCollections() {
+  const { collections } = seedData;
+  const collectionIds = {};
+
+  for (const collectionData of collections) {
+    const { createProductCollection } = await client.request(
+      createCollectionMutation,
+      { data: { title: collectionData.title, handle: collectionData.handle } }
+    );
+    console.log("Product Collection created with ID:", createProductCollection.id);
+    collectionIds[collectionData.handle] = createProductCollection.id;
+  }
+
+  return collectionIds;
+}
+
 async function seedDatabase() {
   try {
     // // Create store and currencies
     const storeId = await createStore();
 
-    // // // Create payment provider
-    // const paymentProviderId = await createPaymentProvider();
+    // // Create payment provider
+    const paymentProviderId = await createPaymentProvider();
 
-    // // // Create fulfillment provider
-    // const fulfillmentProviderId = await createFulfillmentProvider();
+    // // Create fulfillment provider
+    const fulfillmentProviderId = await createFulfillmentProvider();
 
-    // // // Create countries
-    // const createdCountriesIds = await createCountries();
+    // // Create countries
+    const createdCountriesIds = await createCountries();
 
-    // // Create regions
-    // const createdRegionIds = await createRegions();
+    // Create regions
+    const createdRegionIds = await createRegions();
 
-    // // Create shipping options
-    // const createdShippingOptionIds = await createShippingOptions();
+    // Create shipping options
+    const createdShippingOptionIds = await createShippingOptions();
 
-    // // Create categories first
-    // const categoryIds = await createCategories();
+    // Create collections
+    const collectionIds = await createCollections();
 
-    // // Create products with category IDs
-    // const productIds = await createProducts();
+    // Create categories first
+    const categoryIds = await createCategories();
+
+    // Create products with category IDs and collection IDs
+    const productIds = await createProducts(categoryIds, collectionIds);
 
     console.log("Database seeding completed successfully!");
   } catch (error) {

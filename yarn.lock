@@ -2015,6 +2015,14 @@
     retry-axios "^2.6.0"
     uuid "^9.0.0"
 
+"@medusajs/ui-preset@^1.1.4":
+  version "1.1.4"
+  resolved "https://registry.yarnpkg.com/@medusajs/ui-preset/-/ui-preset-1.1.4.tgz#ab3592f64184c18284e92e0e0170d5f21ae856a6"
+  integrity sha512-/09W6jLyWu24K7kvVpMwhp0K7iQ+Y8j5D2+ZL7vdX1d1/leDBQ3jQP2mZLWmcJIPlqBxvUVkiqWPUz8w05aZ9g==
+  dependencies:
+    "@tailwindcss/forms" "^0.5.3"
+    tailwindcss-animate "^1.0.6"
+
 "@medusajs/ui@^2.4.1":
   version "2.4.3"
   resolved "https://registry.yarnpkg.com/@medusajs/ui/-/ui-2.4.3.tgz#dcf74889b722ea977f6bec608566a81ebfbaa462"
@@ -3718,6 +3726,13 @@
   integrity sha512-UoKGxQ3r5kYI9dALKJapMmuK+1zWM/H17Z1+iwnNmzcJRnfFuevZs375TA5rW31pu4BS4NoSy1fRsexDXfWn5w==
   dependencies:
     tslib "^2.4.0"
+
+"@tailwindcss/forms@^0.5.3":
+  version "0.5.9"
+  resolved "https://registry.yarnpkg.com/@tailwindcss/forms/-/forms-0.5.9.tgz#b495c12575d6eae5865b2cbd9876b26d89f16f61"
+  integrity sha512-tM4XVr2+UVTxXJzey9Twx48c1gcxFStqn1pQz0tRsX8o3DvxhN5oY5pvyAbUx7VTaZxpej4Zzvc6h+1RJBzpIg==
+  dependencies:
+    mini-svg-data-uri "^1.2.3"
 
 "@tanstack/query-core@4.36.1":
   version "4.36.1"
@@ -7151,6 +7166,11 @@ min-indent@^1.0.0:
   resolved "https://registry.yarnpkg.com/min-indent/-/min-indent-1.0.1.tgz#a63f681673b30571fbe8bc25686ae746eefa9869"
   integrity sha512-I9jwMn07Sy/IwOj3zVkVik2JTvgpaykDZEigL6Rx6N9LbMywwUSMtxET+7lVoDLLd3O3IXwJwvuuns8UB/HeAg==
 
+mini-svg-data-uri@^1.2.3:
+  version "1.4.4"
+  resolved "https://registry.yarnpkg.com/mini-svg-data-uri/-/mini-svg-data-uri-1.4.4.tgz#8ab0aabcdf8c29ad5693ca595af19dd2ead09939"
+  integrity sha512-r9deDe9p5FJUPZAk3A59wGH7Ii9YrjjWw0jmw/liSbHl2CHiyXj6FcDXDu2K3TjVAXqiJdaw3xxwlZZr9E6nHg==
+
 minimatch@^3.0.4, minimatch@^3.1.1, minimatch@^3.1.2:
   version "3.1.2"
   resolved "https://registry.yarnpkg.com/minimatch/-/minimatch-3.1.2.tgz#19cd194bfd3e428f049a70817c038d89ab4be35b"
@@ -8561,6 +8581,7 @@ streamsearch@^1.1.0:
   integrity sha512-Mcc5wHehp9aXz1ax6bZUyY5afg9u2rv5cqQI3mRrYkGC8rW2hM02jWuwjtL++LS5qinSyhj2QfLyNsuc+VsExg==
 
 "string-width-cjs@npm:string-width@^4.2.0", string-width@^4.1.0:
+  name string-width-cjs
   version "4.2.3"
   resolved "https://registry.yarnpkg.com/string-width/-/string-width-4.2.3.tgz#269c7117d27b05ad2e536830a8ec895ef9c6d010"
   integrity sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==
@@ -8780,10 +8801,15 @@ tailwind-merge@^2.0.0, tailwind-merge@^2.2.1:
   resolved "https://registry.yarnpkg.com/tailwind-merge/-/tailwind-merge-2.5.2.tgz#000f05a703058f9f9f3829c644235f81d4c08a1f"
   integrity sha512-kjEBm+pvD+6eAwzJL2Bi+02/9LFLal1Gs61+QB7HvTfQQ0aXwC5LGT8PEt1gS0CWKktKe6ysPTAy3cBC5MeiIg==
 
-tailwindcss-animate@^1.0.7:
+tailwindcss-animate@^1.0.6, tailwindcss-animate@^1.0.7:
   version "1.0.7"
   resolved "https://registry.yarnpkg.com/tailwindcss-animate/-/tailwindcss-animate-1.0.7.tgz#318b692c4c42676cc9e67b19b78775742388bef4"
   integrity sha512-bl6mpH3T7I3UFxuvDEXLxy/VuFxBk5bbzplh7tXI68mwMokNYd1t9qPBHlnyTwfa4JGC4zP516I1hYYtQ/vspA==
+
+tailwindcss-radix@^3.0.5:
+  version "3.0.5"
+  resolved "https://registry.yarnpkg.com/tailwindcss-radix/-/tailwindcss-radix-3.0.5.tgz#327f6a314b7935cd7a4b9ec58cf5c52c11a88cd9"
+  integrity sha512-dy5bIHixuvrmMzljDoteKD1mcLAm76Z1IPkCr7IWUN89zoxfokVepPlxMQkmWEQokYs3N9BOLsXXvn8fLZWoBg==
 
 tailwindcss@^3.3.0:
   version "3.4.13"
