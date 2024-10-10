@@ -44,6 +44,8 @@ import { OAuth } from "./OAuth";
 import { PaymentProvider } from "./PaymentProvider";
 import { PaymentSession } from "./PaymentSession";
 import { PriceList } from "./PriceList";
+import { PriceRule } from './PriceRule';
+import { PriceSet } from './PriceSet';
 import { Refund } from "./Refund";
 import { Region } from "./Region";
 import { Return } from "./Return";
@@ -108,6 +110,8 @@ export const models = {
   PaymentProvider,
   PaymentSession,
   PriceList,
+  PriceRule,
+  PriceSet,
   Refund,
   Region,
   Return,

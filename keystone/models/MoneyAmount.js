@@ -3,11 +3,11 @@ import { denyAll } from "@keystone-6/core/access";
 import { integer, relationship, virtual } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
+import { calculatePrices } from "../../storefront/lib/data/pricing/calculatePrices";
 
 export const MoneyAmount = list({
   access: {
     operation: {
-      // Allow public read access
       query: () => true,
       create: permissions.canManageProducts,
       update: permissions.canManageProducts,
@@ -18,13 +18,12 @@ export const MoneyAmount = list({
     displayPrice: virtual({
       field: graphql.field({
         type: graphql.String,
-        // resolve: (item) => `${item.title}`,
         resolve: async (item, args, context) => {
-          const { currency } = await context.query.MoneyAmount.findOne({
-            where: { id: item.id.toString() },
-            query: "currency { symbol }",
+          const { currency, amount } = await context.query.MoneyAmount.findOne({
+            where: { id: item.id },
+            query: 'currency { symbol } amount',
           });
-          return `${currency.symbol}${(item.amount / 100).toFixed(2)}`;
+          return `${currency.symbol}${(amount / 100).toFixed(2)}`;
         },
       }),
     }),
@@ -47,64 +46,36 @@ export const MoneyAmount = list({
     priceList: relationship({
       ref: "PriceList.moneyAmounts",
     }),
+    priceSet: relationship({
+      ref: 'PriceSet.prices',
+    }),
+    priceRules: relationship({
+      ref: 'PriceRule.moneyAmounts',
+      many: true,
+    }),
     calculatedPrice: virtual({
       field: graphql.field({
         type: graphql.JSON,
-        resolve: async (item, args, context) => {
-          const now = new Date();
-
-          const { priceList, currency } = await context.query.MoneyAmount.findOne({
+        async resolve(item, args, context) {
+          const moneyAmount = await context.query.MoneyAmount.findOne({
             where: { id: item.id },
             query: `
-              priceList {
-                id
-                type
-                status
-                startsAt
-                endsAt
-              }
-              currency {
-                code
-              }
+              id
+              currency { code }
+              priceSet { id }
             `,
           });
 
-          const isPriceListValid =
-            !priceList ||
-            (priceList.status === "active" &&
-              (!priceList.startsAt || new Date(priceList.startsAt) <= now) &&
-              (!priceList.endsAt || new Date(priceList.endsAt) >= now));
+          if (!moneyAmount || !moneyAmount.priceSet) return null;
 
-          if (!isPriceListValid) {
-            return null;
-          }
+          const calculatedPrices = await calculatePrices(
+            [moneyAmount.priceSet.id], 
+            moneyAmount.currency.code, 
+            1, 
+            context.sudo()
+          );
 
-          return {
-            id: item.id,
-            isCalculatedPricePriceList: !!priceList,
-            isCalculatedPriceTaxInclusive: false, // Assuming tax is not included, adjust if needed
-            calculatedAmount: item.amount,
-            rawCalculatedAmount: item,
-            isOriginalPricePriceList: false,
-            isOriginalPriceTaxInclusive: false, // Assuming tax is not included, adjust if needed
-            originalAmount: item.amount,
-            rawOriginalAmount: item,
-            currencyCode: currency.code,
-            calculatedPrice: {
-              id: item.id,
-              priceListId: priceList?.id || null,
-              priceListType: priceList?.type || null,
-              minQuantity: item.minQuantity || null,
-              maxQuantity: item.maxQuantity || null,
-            },
-            originalPrice: {
-              id: item.id,
-              priceListId: null,
-              priceListType: null,
-              minQuantity: item.minQuantity || null,
-              maxQuantity: item.maxQuantity || null,
-            },
-          };
+          return calculatedPrices.find(price => price.id === moneyAmount.id)?.calculatedPrice || null;
         },
       }),
     }),

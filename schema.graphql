@@ -4836,6 +4836,9 @@ type MoneyAmount {
   region: Region
   currency: Currency
   priceList: PriceList
+  priceSet: PriceSet
+  priceRules(where: PriceRuleWhereInput! = {}, orderBy: [PriceRuleOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PriceRuleWhereUniqueInput): [PriceRule!]
+  priceRulesCount(where: PriceRuleWhereInput! = {}): Int
   calculatedPrice: JSON
   createdAt: DateTime
   updatedAt: DateTime
@@ -4857,8 +4860,16 @@ input MoneyAmountWhereInput {
   region: RegionWhereInput
   currency: CurrencyWhereInput
   priceList: PriceListWhereInput
+  priceSet: PriceSetWhereInput
+  priceRules: PriceRuleManyRelationFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
+}
+
+input PriceRuleManyRelationFilter {
+  every: PriceRuleWhereInput
+  some: PriceRuleWhereInput
+  none: PriceRuleWhereInput
 }
 
 input MoneyAmountOrderByInput {
@@ -4878,6 +4889,8 @@ input MoneyAmountUpdateInput {
   region: RegionRelateToOneForUpdateInput
   currency: CurrencyRelateToOneForUpdateInput
   priceList: PriceListRelateToOneForUpdateInput
+  priceSet: PriceSetRelateToOneForUpdateInput
+  priceRules: PriceRuleRelateToManyForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -4886,6 +4899,19 @@ input PriceListRelateToOneForUpdateInput {
   create: PriceListCreateInput
   connect: PriceListWhereUniqueInput
   disconnect: Boolean
+}
+
+input PriceSetRelateToOneForUpdateInput {
+  create: PriceSetCreateInput
+  connect: PriceSetWhereUniqueInput
+  disconnect: Boolean
+}
+
+input PriceRuleRelateToManyForUpdateInput {
+  disconnect: [PriceRuleWhereUniqueInput!]
+  set: [PriceRuleWhereUniqueInput!]
+  create: [PriceRuleCreateInput!]
+  connect: [PriceRuleWhereUniqueInput!]
 }
 
 input MoneyAmountUpdateArgs {
@@ -4901,6 +4927,8 @@ input MoneyAmountCreateInput {
   region: RegionRelateToOneForCreateInput
   currency: CurrencyRelateToOneForCreateInput
   priceList: PriceListRelateToOneForCreateInput
+  priceSet: PriceSetRelateToOneForCreateInput
+  priceRules: PriceRuleRelateToManyForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -4908,6 +4936,16 @@ input MoneyAmountCreateInput {
 input PriceListRelateToOneForCreateInput {
   create: PriceListCreateInput
   connect: PriceListWhereUniqueInput
+}
+
+input PriceSetRelateToOneForCreateInput {
+  create: PriceSetCreateInput
+  connect: PriceSetWhereUniqueInput
+}
+
+input PriceRuleRelateToManyForCreateInput {
+  create: [PriceRuleCreateInput!]
+  connect: [PriceRuleWhereUniqueInput!]
 }
 
 type Note {
@@ -5432,6 +5470,134 @@ input PriceListCreateInput {
   endsAt: DateTime
   moneyAmounts: MoneyAmountRelateToManyForCreateInput
   customerGroups: CustomerGroupRelateToManyForCreateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+type PriceRule {
+  id: ID!
+  attribute: String
+  value: String
+  moneyAmounts(where: MoneyAmountWhereInput! = {}, orderBy: [MoneyAmountOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: MoneyAmountWhereUniqueInput): [MoneyAmount!]
+  moneyAmountsCount(where: MoneyAmountWhereInput! = {}): Int
+  priceSets(where: PriceSetWhereInput! = {}, orderBy: [PriceSetOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PriceSetWhereUniqueInput): [PriceSet!]
+  priceSetsCount(where: PriceSetWhereInput! = {}): Int
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input PriceRuleWhereUniqueInput {
+  id: ID
+}
+
+input PriceRuleWhereInput {
+  AND: [PriceRuleWhereInput!]
+  OR: [PriceRuleWhereInput!]
+  NOT: [PriceRuleWhereInput!]
+  id: IDFilter
+  attribute: StringFilter
+  value: StringFilter
+  moneyAmounts: MoneyAmountManyRelationFilter
+  priceSets: PriceSetManyRelationFilter
+  createdAt: DateTimeFilter
+  updatedAt: DateTimeFilter
+}
+
+input PriceSetManyRelationFilter {
+  every: PriceSetWhereInput
+  some: PriceSetWhereInput
+  none: PriceSetWhereInput
+}
+
+input PriceRuleOrderByInput {
+  id: OrderDirection
+  attribute: OrderDirection
+  value: OrderDirection
+  createdAt: OrderDirection
+  updatedAt: OrderDirection
+}
+
+input PriceRuleUpdateInput {
+  attribute: String
+  value: String
+  moneyAmounts: MoneyAmountRelateToManyForUpdateInput
+  priceSets: PriceSetRelateToManyForUpdateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input PriceSetRelateToManyForUpdateInput {
+  disconnect: [PriceSetWhereUniqueInput!]
+  set: [PriceSetWhereUniqueInput!]
+  create: [PriceSetCreateInput!]
+  connect: [PriceSetWhereUniqueInput!]
+}
+
+input PriceRuleUpdateArgs {
+  where: PriceRuleWhereUniqueInput!
+  data: PriceRuleUpdateInput!
+}
+
+input PriceRuleCreateInput {
+  attribute: String
+  value: String
+  moneyAmounts: MoneyAmountRelateToManyForCreateInput
+  priceSets: PriceSetRelateToManyForCreateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input PriceSetRelateToManyForCreateInput {
+  create: [PriceSetCreateInput!]
+  connect: [PriceSetWhereUniqueInput!]
+}
+
+type PriceSet {
+  id: ID!
+  prices(where: MoneyAmountWhereInput! = {}, orderBy: [MoneyAmountOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: MoneyAmountWhereUniqueInput): [MoneyAmount!]
+  pricesCount(where: MoneyAmountWhereInput! = {}): Int
+  priceRules(where: PriceRuleWhereInput! = {}, orderBy: [PriceRuleOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PriceRuleWhereUniqueInput): [PriceRule!]
+  priceRulesCount(where: PriceRuleWhereInput! = {}): Int
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input PriceSetWhereUniqueInput {
+  id: ID
+}
+
+input PriceSetWhereInput {
+  AND: [PriceSetWhereInput!]
+  OR: [PriceSetWhereInput!]
+  NOT: [PriceSetWhereInput!]
+  id: IDFilter
+  prices: MoneyAmountManyRelationFilter
+  priceRules: PriceRuleManyRelationFilter
+  createdAt: DateTimeFilter
+  updatedAt: DateTimeFilter
+}
+
+input PriceSetOrderByInput {
+  id: OrderDirection
+  createdAt: OrderDirection
+  updatedAt: OrderDirection
+}
+
+input PriceSetUpdateInput {
+  prices: MoneyAmountRelateToManyForUpdateInput
+  priceRules: PriceRuleRelateToManyForUpdateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input PriceSetUpdateArgs {
+  where: PriceSetWhereUniqueInput!
+  data: PriceSetUpdateInput!
+}
+
+input PriceSetCreateInput {
+  prices: MoneyAmountRelateToManyForCreateInput
+  priceRules: PriceRuleRelateToManyForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -7184,6 +7350,18 @@ type Mutation {
   updatePriceLists(data: [PriceListUpdateArgs!]!): [PriceList]
   deletePriceList(where: PriceListWhereUniqueInput!): PriceList
   deletePriceLists(where: [PriceListWhereUniqueInput!]!): [PriceList]
+  createPriceRule(data: PriceRuleCreateInput!): PriceRule
+  createPriceRules(data: [PriceRuleCreateInput!]!): [PriceRule]
+  updatePriceRule(where: PriceRuleWhereUniqueInput!, data: PriceRuleUpdateInput!): PriceRule
+  updatePriceRules(data: [PriceRuleUpdateArgs!]!): [PriceRule]
+  deletePriceRule(where: PriceRuleWhereUniqueInput!): PriceRule
+  deletePriceRules(where: [PriceRuleWhereUniqueInput!]!): [PriceRule]
+  createPriceSet(data: PriceSetCreateInput!): PriceSet
+  createPriceSets(data: [PriceSetCreateInput!]!): [PriceSet]
+  updatePriceSet(where: PriceSetWhereUniqueInput!, data: PriceSetUpdateInput!): PriceSet
+  updatePriceSets(data: [PriceSetUpdateArgs!]!): [PriceSet]
+  deletePriceSet(where: PriceSetWhereUniqueInput!): PriceSet
+  deletePriceSets(where: [PriceSetWhereUniqueInput!]!): [PriceSet]
   createRefund(data: RefundCreateInput!): Refund
   createRefunds(data: [RefundCreateInput!]!): [Refund]
   updateRefund(where: RefundWhereUniqueInput!, data: RefundUpdateInput!): Refund
@@ -7454,6 +7632,12 @@ type Query {
   priceLists(where: PriceListWhereInput! = {}, orderBy: [PriceListOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PriceListWhereUniqueInput): [PriceList!]
   priceList(where: PriceListWhereUniqueInput!): PriceList
   priceListsCount(where: PriceListWhereInput! = {}): Int
+  priceRules(where: PriceRuleWhereInput! = {}, orderBy: [PriceRuleOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PriceRuleWhereUniqueInput): [PriceRule!]
+  priceRule(where: PriceRuleWhereUniqueInput!): PriceRule
+  priceRulesCount(where: PriceRuleWhereInput! = {}): Int
+  priceSets(where: PriceSetWhereInput! = {}, orderBy: [PriceSetOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PriceSetWhereUniqueInput): [PriceSet!]
+  priceSet(where: PriceSetWhereUniqueInput!): PriceSet
+  priceSetsCount(where: PriceSetWhereInput! = {}): Int
   refunds(where: RefundWhereInput! = {}, orderBy: [RefundOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: RefundWhereUniqueInput): [Refund!]
   refund(where: RefundWhereUniqueInput!): Refund
   refundsCount(where: RefundWhereInput! = {}): Int

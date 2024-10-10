@@ -781,6 +781,9 @@ model MoneyAmount {
   currencyId       String?         @map("currency")
   priceList        PriceList?      @relation("MoneyAmount_priceList", fields: [priceListId], references: [id])
   priceListId      String?         @map("priceList")
+  priceSet         PriceSet?       @relation("MoneyAmount_priceSet", fields: [priceSetId], references: [id])
+  priceSetId       String?         @map("priceSet")
+  priceRules       PriceRule[]     @relation("MoneyAmount_priceRules")
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @default(now()) @updatedAt
 
@@ -788,6 +791,7 @@ model MoneyAmount {
   @@index([regionId])
   @@index([currencyId])
   @@index([priceListId])
+  @@index([priceSetId])
 }
 
 model Note {
@@ -880,6 +884,24 @@ model PriceList {
   customerGroups CustomerGroup[]     @relation("CustomerGroup_priceLists")
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @default(now()) @updatedAt
+}
+
+model PriceRule {
+  id           String        @id @default(cuid())
+  attribute    String        @default("")
+  value        String        @default("")
+  moneyAmounts MoneyAmount[] @relation("MoneyAmount_priceRules")
+  priceSets    PriceSet[]    @relation("PriceRule_priceSets")
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @default(now()) @updatedAt
+}
+
+model PriceSet {
+  id         String        @id @default(cuid())
+  prices     MoneyAmount[] @relation("MoneyAmount_priceSet")
+  priceRules PriceRule[]   @relation("PriceRule_priceSets")
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @default(now()) @updatedAt
 }
 
 model Refund {
