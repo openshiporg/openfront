@@ -169,8 +169,8 @@ export const Order = list({
     cart: relationship({
       ref: "Cart.order",
     }),
-    customer: relationship({
-      ref: "Customer.orders",
+    user: relationship({
+      ref: "User.orders",
     }),
     region: relationship({
       ref: "Region.orders",

@@ -14,9 +14,7 @@ import { trackingFields } from "./trackingFields";
 export const ProductVariant = list({
   access: {
     operation: {
-      query: ({ session }) =>
-        permissions.canReadProducts({ session }) ||
-        permissions.canManageProducts({ session }),
+      query: () => true,
       create: permissions.canManageProducts,
       update: permissions.canManageProducts,
       delete: permissions.canManageProducts,
@@ -26,7 +24,6 @@ export const ProductVariant = list({
     fullTitle: virtual({
       field: graphql.field({
         type: graphql.String,
-        // resolve: (item) => `${item.title}`,
         resolve: async (item, args, context) => {
           const { product } = await context.query.ProductVariant.findOne({
             where: { id: item.id.toString() },
@@ -86,6 +83,7 @@ export const ProductVariant = list({
       many: true,
     }),
     ...trackingFields,
+
   },
   ui: {
     labelField: "fullTitle",

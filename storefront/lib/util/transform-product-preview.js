@@ -2,7 +2,7 @@ import { getPercentageDiff } from "@storefront/lib/util/get-precentage-diff"
 import { formatAmount } from "@storefront/lib/util/prices"
 
 const transformProductPreview = (product, region) => {
-  const variants = product.variants
+  const variants = product.productVariants
 
   let cheapestVariant = undefined
 

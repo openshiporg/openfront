@@ -10,13 +10,6 @@ import {
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
 
-const canManageCarts = ({ session }) => {
-  if (!session) {
-    // No session? No Carts.
-    return false;
-  }
-  return { user: { id: session.itemId } };
-};
 
 export const Cart = list({
   access: {
@@ -24,9 +17,22 @@ export const Cart = list({
       query: ({ session }) =>
         permissions.canReadOrders({ session }) ||
         permissions.canManageOrders({ session }),
-      create: permissions.canManageOrders,
+      create: () => true,
       update: permissions.canManageOrders,
       delete: permissions.canManageOrders,
+    },
+
+    filter: {
+      query: ({ session }) => {
+        if (!session) return false;
+        if (permissions.canManageOrders({ session })) return true;
+        return { user: { id: { equals: session.itemId } } };
+      },
+      update: ({ session }) => {
+        if (!session) return false;
+        if (permissions.canManageOrders({ session })) return true;
+        return { user: { id: { equals: session.itemId } } };
+      },
     },
   },
   fields: {
@@ -64,8 +70,8 @@ export const Cart = list({
     idempotencyKey: text(),
     context: json(),
     paymentAuthorizedAt: timestamp(),
-    customer: relationship({
-      ref: "Customer.carts",
+    user: relationship({
+      ref: "User.carts",
       many: false,
     }),
     region: relationship({

@@ -9,6 +9,11 @@ import { sendPasswordResetEmail } from "./utils/mail";
 import Iron from "@hapi/iron";
 import * as cookie from "cookie";
 import { permissions } from "./access";
+// Add these new imports
+import { ApolloArmor } from '@escape.tech/graphql-armor';
+import { applyMiddleware } from 'graphql-middleware';
+import { RateLimiterMemory } from "rate-limiter-flexible";
+import { applyRateLimiting } from './applyRateLimiting';
 
 const databaseURL = process.env.DATABASE_URL || "file:./keystone.db";
 
@@ -173,6 +178,9 @@ const { withAuth } = createAuth({
   sessionData: `id name email role { ${permissionsList.join(" ")} }`,
 });
 
+const armor = new ApolloArmor();
+
+// Modify the export statement
 export default withAuth(
   config({
     db: {
@@ -198,7 +206,15 @@ export default withAuth(
       },
     },
     graphql: {
-      extendGraphqlSchema,
+      apolloConfig: {
+        ...armor.protect()
+      },
+      extendGraphqlSchema: (schema) => {
+        const extendedSchema = extendGraphqlSchema(schema);
+        return applyMiddleware(extendedSchema, 
+          applyRateLimiting
+        );
+      }
     },
     ui: {
       // Show the UI only for users who have canReadOrders permission

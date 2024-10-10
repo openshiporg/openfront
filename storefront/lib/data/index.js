@@ -480,7 +480,7 @@ export const listCustomerOrders = cache(async function (
   const LIST_CUSTOMER_ORDERS_QUERY = gql`
     query ListCustomerOrders($limit: Int!, $offset: Int!) {
       orders(
-        where: { customer: { id: { equals: "currentCustomerId" } } }
+        where: { user: { id: { equals: "currentCustomerId" } } }
         take: $limit
         skip: $offset
         orderBy: { createdAt: desc }
@@ -572,7 +572,7 @@ export const getProductsById = cache(async function ({ ids, regionId }) {
         title
         handle
         thumbnail
-        variants {
+        productVariants {
           id
           title
           prices {
@@ -600,7 +600,7 @@ export const retrievePricedProductById = cache(async function ({
         title
         handle
         thumbnail
-        variants {
+        productVariants {
           id
           title
           prices(where: { region: { id: { equals: $regionId } } }) {
@@ -625,7 +625,7 @@ export const getProductByHandle = cache(async function (handle) {
         title
         handle
         thumbnail
-        variants {
+        productVariants {
           id
           title
           prices {
@@ -667,7 +667,7 @@ export const getProductsList = cache(async function ({
         title
         handle
         thumbnail
-        variants {
+        productVariants {
           id
           title
           prices {
@@ -788,13 +788,11 @@ export const retrieveCollection = cache(async function (id) {
 export const getCollectionsList = cache(async function (
   offset = 0,
   limit = 3,
-  countryCode
 ) {
   const GET_COLLECTIONS_LIST_QUERY = gql`
     query GetCollectionsList(
       $offset: Int!
       $limit: Int!
-      $countryCode: String!
     ) {
       productCollections(skip: $offset, take: $limit) {
         id
@@ -802,19 +800,6 @@ export const getCollectionsList = cache(async function (
         handle
         products(
           take: 3
-          where: {
-            productVariants: {
-              some: {
-                prices: {
-                  some: {
-                    region: {
-                      countries: { some: { iso2: { equals: $countryCode } } }
-                    }
-                  }
-                }
-              }
-            }
-          }
         ) {
           id
           title
@@ -845,7 +830,67 @@ export const getCollectionsList = cache(async function (
   const data = await executeQuery(GET_COLLECTIONS_LIST_QUERY, {
     offset,
     limit,
-    countryCode,
+  });
+
+  return {
+    collections: data.productCollections,
+    count: data.productCollectionsCount,
+  };
+});
+
+export const getCollectionsListByRegion = cache(async function (
+  offset = 0,
+  limit = 3,
+  regionId
+) {
+  const GET_COLLECTIONS_LIST_QUERY = gql`
+    query GetCollectionsList(
+      $offset: Int!
+      $limit: Int!
+      $regionId: ID!
+    ) {
+      productCollections(skip: $offset, take: $limit) {
+        id
+        title
+        handle
+        products(
+          take: 3
+          where: {
+            productVariants: {
+              some: {
+                prices: {
+                  some: {
+                    region: { id: { equals: $regionId } }
+                  }
+                }
+              }
+            }
+          }
+        ) {
+          id
+          title
+          handle
+          thumbnail
+          productVariants {
+            id
+            title
+            prices {
+              amount
+              currency {
+                code
+              }
+            }
+          }
+        }
+      }
+      productCollectionsCount
+    }
+  `;
+
+  const data = await executeQuery(GET_COLLECTIONS_LIST_QUERY, {
+    offset,
+    limit,
+    regionId,
   });
 
   return {
@@ -901,7 +946,7 @@ export const getProductsByCollectionHandle = cache(
           title
           handle
           thumbnail
-          variants {
+          productVariants {
             id
             title
             prices {
@@ -1037,7 +1082,7 @@ export const getProductsByCategoryHandle = cache(async function ({
         title
         handle
         thumbnail
-        variants {
+        productVariants {
           id
           title
           prices {

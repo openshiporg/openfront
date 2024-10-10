@@ -7,9 +7,8 @@ import { trackingFields } from "./trackingFields";
 export const PriceList = list({
   access: {
     operation: {
-      query: ({ session }) =>
-        permissions.canReadUsers({ session }) ||
-        permissions.canManageUsers({ session }),
+      // Allow public read access
+      query: () => true,
       create: permissions.canManageUsers,
       update: permissions.canManageUsers,
       delete: permissions.canManageUsers,

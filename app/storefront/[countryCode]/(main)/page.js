@@ -1,8 +1,5 @@
-import {
-  getCollectionsList,
-  getProductsList,
-  getRegion,
-} from "@storefront/lib/data";
+import { getCollectionsListByRegion, getRegion } from "@storefront/lib/data";
+import transformProductPreview from "@storefront/lib/util/transform-product-preview";
 import FeaturedProducts from "@storefront/modules/home/components/featured-products";
 import Hero from "@storefront/modules/home/components/hero";
 import { cache } from "react";
@@ -14,27 +11,37 @@ export const metadata = {
 };
 
 const getCollectionsWithProducts = cache(async (countryCode) => {
-  const { collections } = await getCollectionsList(0, 3, countryCode);
+  const region = await getRegion(countryCode);
+
+  if (!region) {
+    return null;
+  }
+
+  const { collections } = await getCollectionsListByRegion(0, 3, region.id);
 
   if (!collections) {
     return null;
   }
 
-  const region = await getRegion(countryCode);
-
-  return collections.map(collection => ({
+  const collectionsWithTransformedProducts = collections.map(collection => ({
     ...collection,
     products: collection.products.map(product => transformProductPreview(product, region))
   }));
+
+  return {
+    collections: collectionsWithTransformedProducts,
+    region,
+  };
 });
 
 export default async function Home({ params: { countryCode } }) {
-  const collections = await getCollectionsWithProducts(countryCode);
-  const region = await getRegion(countryCode);
+  const result = await getCollectionsWithProducts(countryCode.toUpperCase());
 
-  if (!collections || !region) {
+  if (!result) {
     return null;
   }
+
+  const { collections, region } = result;
 
   return (
     <>

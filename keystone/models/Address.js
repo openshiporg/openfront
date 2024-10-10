@@ -30,8 +30,8 @@ export const Address = list({
       ref: "Country.addresses",
       many: false,
     }),
-    customer: relationship({
-      ref: "Customer.addresses",
+    user: relationship({
+      ref: "User.addresses",
       many: false,
     }),
     cart: relationship({

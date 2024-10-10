@@ -12,16 +12,26 @@ generator client {
 }
 
 model User {
-  id                      String    @id @default(cuid())
-  name                    String    @default("")
-  email                   String    @unique @default("")
+  id                      String          @id @default(cuid())
+  name                    String          @default("")
+  email                   String          @unique @default("")
   password                String?
-  role                    Role?     @relation("User_role", fields: [roleId], references: [id])
-  roleId                  String?   @map("role")
-  apiKeys                 ApiKey[]  @relation("ApiKey_user")
+  role                    Role?           @relation("User_role", fields: [roleId], references: [id])
+  roleId                  String?         @map("role")
+  apiKeys                 ApiKey[]        @relation("ApiKey_user")
   metadata                Json?
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @default(now()) @updatedAt
+  firstName               String          @default("")
+  lastName                String          @default("")
+  billingAddress          String          @default("")
+  phone                   String          @default("")
+  hasAccount              Boolean         @default(false)
+  addresses               Address[]       @relation("Address_user")
+  orders                  Order[]         @relation("Order_user")
+  carts                   Cart[]          @relation("Cart_user")
+  customerGroups          CustomerGroup[] @relation("CustomerGroup_users")
+  notifications           Notification[]  @relation("Notification_user")
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @default(now()) @updatedAt
   passwordResetToken      String?
   passwordResetIssuedAt   DateTime?
   passwordResetRedeemedAt DateTime?
@@ -85,8 +95,8 @@ model Order {
   currencyId           String?                    @map("currency")
   draftOrder           DraftOrder?                @relation("DraftOrder_order")
   cart                 Cart?                      @relation("Cart_order")
-  customer             Customer?                  @relation("Order_customer", fields: [customerId], references: [id])
-  customerId           String?                    @map("customer")
+  user                 User?                      @relation("Order_user", fields: [userId], references: [id])
+  userId               String?                    @map("user")
   region               Region?                    @relation("Order_region", fields: [regionId], references: [id])
   regionId             String?                    @map("region")
   claimOrders          ClaimOrder[]               @relation("ClaimOrder_order")
@@ -106,7 +116,7 @@ model Order {
   @@index([shippingAddressId])
   @@index([billingAddressId])
   @@index([currencyId])
-  @@index([customerId])
+  @@index([userId])
   @@index([regionId])
 }
 
@@ -348,8 +358,8 @@ model Address {
   metadata                     Json?
   country                      Country?     @relation("Address_country", fields: [countryId], references: [id])
   countryId                    String?      @map("country")
-  customer                     Customer?    @relation("Address_customer", fields: [customerId], references: [id])
-  customerId                   String?      @map("customer")
+  user                         User?        @relation("Address_user", fields: [userId], references: [id])
+  userId                       String?      @map("user")
   cart                         Cart?        @relation("Address_cart", fields: [cartId], references: [id])
   cartId                       String?      @map("cart")
   claimOrders                  ClaimOrder[] @relation("ClaimOrder_address")
@@ -360,7 +370,7 @@ model Address {
   updatedAt                    DateTime     @default(now()) @updatedAt
 
   @@index([countryId])
-  @@index([customerId])
+  @@index([userId])
   @@index([cartId])
 }
 
@@ -372,8 +382,8 @@ model Cart {
   idempotencyKey        String                 @default("")
   context               Json?
   paymentAuthorizedAt   DateTime?
-  customer              Customer?              @relation("Cart_customer", fields: [customerId], references: [id])
-  customerId            String?                @map("customer")
+  user                  User?                  @relation("Cart_user", fields: [userId], references: [id])
+  userId                String?                @map("user")
   region                Region?                @relation("Cart_region", fields: [regionId], references: [id])
   regionId              String?                @map("region")
   addresses             Address[]              @relation("Address_cart")
@@ -394,7 +404,7 @@ model Cart {
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @default(now()) @updatedAt
 
-  @@index([customerId])
+  @@index([userId])
   @@index([regionId])
 }
 
@@ -514,30 +524,11 @@ model Currency {
   updatedAt    DateTime      @default(now()) @updatedAt
 }
 
-model Customer {
-  id             String          @id @default(cuid())
-  email          String          @unique @default("")
-  firstName      String          @default("")
-  lastName       String          @default("")
-  billingAddress String          @unique @default("")
-  password       String          @default("")
-  phone          String          @default("")
-  hasAccount     Boolean         @default(false)
-  metadata       Json?
-  addresses      Address[]       @relation("Address_customer")
-  orders         Order[]         @relation("Order_customer")
-  carts          Cart[]          @relation("Cart_customer")
-  customerGroups CustomerGroup[] @relation("Customer_customerGroups")
-  notifications  Notification[]  @relation("Notification_customer")
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @default(now()) @updatedAt
-}
-
 model CustomerGroup {
   id                 String              @id @default(cuid())
   name               String              @default("")
   metadata           Json?
-  customers          Customer[]          @relation("Customer_customerGroups")
+  users              User[]              @relation("CustomerGroup_users")
   discountConditions DiscountCondition[] @relation("CustomerGroup_discountConditions")
   priceLists         PriceList[]         @relation("CustomerGroup_priceLists")
   createdAt          DateTime            @default(now())
@@ -820,15 +811,15 @@ model Notification {
   parentId                             String                @default("")
   notificationProvider                 NotificationProvider? @relation("Notification_notificationProvider", fields: [notificationProviderId], references: [id])
   notificationProviderId               String?               @map("notificationProvider")
-  customer                             Customer?             @relation("Notification_customer", fields: [customerId], references: [id])
-  customerId                           String?               @map("customer")
+  user                                 User?                 @relation("Notification_user", fields: [userId], references: [id])
+  userId                               String?               @map("user")
   otherNotifications                   Notification[]        @relation("Notification_otherNotifications")
   createdAt                            DateTime              @default(now())
   updatedAt                            DateTime              @default(now()) @updatedAt
   from_Notification_otherNotifications Notification[]        @relation("Notification_otherNotifications")
 
   @@index([notificationProviderId])
-  @@index([customerId])
+  @@index([userId])
 }
 
 model NotificationProvider {
@@ -995,6 +986,15 @@ model ReturnReason {
   from_ReturnReason_parentReturnReason ReturnReason[] @relation("ReturnReason_parentReturnReason")
 
   @@index([parentReturnReasonId])
+}
+
+model SalesChannel {
+  id          String   @id @default(cuid())
+  name        String   @default("")
+  description String   @default("")
+  isDisabled  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 }
 
 model ShippingMethod {

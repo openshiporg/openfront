@@ -7,9 +7,7 @@ import { trackingFields } from "./trackingFields";
 export const ProductCategory = list({
   access: {
     operation: {
-      query: ({ session }) =>
-        permissions.canReadProducts({ session }) ||
-        permissions.canManageProducts({ session }),
+      query: () => true,
       create: permissions.canManageProducts,
       update: permissions.canManageProducts,
       delete: permissions.canManageProducts,

@@ -7,9 +7,7 @@ import { trackingFields } from "./trackingFields";
 export const ProductCollection = list({
   access: {
     operation: {
-      // query: ({ session }) =>
-      //   permissions.canReadProducts({ session }) ||
-      //   permissions.canManageProducts({ session }),
+      // Allow public read access
       query: () => true,
       create: permissions.canManageProducts,
       update: permissions.canManageProducts,

@@ -14,9 +14,8 @@ import { trackingFields } from "./trackingFields";
 export const ShippingOption = list({
   access: {
     operation: {
-      query: ({ session }) =>
-        permissions.canReadOrders({ session }) ||
-        permissions.canManageOrders({ session }),
+      // Allow public read access
+      query: () => true,
       create: permissions.canManageOrders,
       update: permissions.canManageOrders,
       delete: permissions.canManageOrders,

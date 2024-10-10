@@ -22,8 +22,8 @@ export const CustomerGroup = list({
       },
     }),
     metadata: json(),
-    customers: relationship({
-      ref: "Customer.customerGroups",
+    users: relationship({
+      ref: "User.customerGroups",
       many: true,
     }),
     discountConditions: relationship({

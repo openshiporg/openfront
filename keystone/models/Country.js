@@ -7,9 +7,10 @@ import { trackingFields } from "./trackingFields";
 export const Country = list({
   access: {
     operation: {
-      query: ({ session }) =>
-        permissions.canReadUsers({ session }) ||
-        permissions.canManageUsers({ session }),
+      query: () => true,
+      // query: ({ session }) =>
+      //   permissions.canReadUsers({ session }) ||
+      //   permissions.canManageUsers({ session }),
       create: permissions.canManageUsers,
       update: permissions.canManageUsers,
       delete: permissions.canManageUsers,

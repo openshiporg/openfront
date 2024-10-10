@@ -21,7 +21,6 @@ import { ClaimImage } from "./ClaimImage";
 import { ClaimTag } from "./ClaimTag";
 import { Country } from "./Country";
 import { Currency } from "./Currency";
-import { Customer } from "./Customer";
 import { CustomerGroup } from "./CustomerGroup";
 import { CustomShippingOption } from "./CustomShippingOption";
 import { Discount } from "./Discount";
@@ -50,6 +49,7 @@ import { Region } from "./Region";
 import { Return } from "./Return";
 import { ReturnItem } from "./ReturnItem";
 import { ReturnReason } from "./ReturnReason";
+import { SalesChannel } from "./SalesChannel";
 import { ShippingMethod } from "./ShippingMethod";
 import { ShippingMethodTaxLine } from "./ShippingMethodTaxLine";
 import { ShippingOption } from "./ShippingOption";
@@ -85,7 +85,6 @@ export const models = {
   ClaimTag,
   Country,
   Currency,
-  Customer,
   CustomerGroup,
   CustomShippingOption,
   Discount,
@@ -114,6 +113,7 @@ export const models = {
   Return,
   ReturnItem,
   ReturnReason,
+  SalesChannel,
   ShippingMethod,
   ShippingMethodTaxLine,
   ShippingOption,

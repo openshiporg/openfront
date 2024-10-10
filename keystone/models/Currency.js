@@ -7,9 +7,8 @@ import { trackingFields } from "./trackingFields";
 export const Currency = list({
   access: {
     operation: {
-      query: ({ session }) =>
-        permissions.canReadOrders({ session }) ||
-        permissions.canManageOrders({ session }),
+      // Allow public read access
+      query: () => true,
       create: permissions.canManageOrders,
       update: permissions.canManageOrders,
       delete: permissions.canManageOrders,
@@ -58,9 +57,5 @@ export const Currency = list({
       many: true,
     }),
     ...trackingFields,
-    // stores: relationship({
-    //   ref: "Store.currencies",
-    //   many: true,
-    // }),
   },
 });

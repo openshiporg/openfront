@@ -7,9 +7,8 @@ import { trackingFields } from "./trackingFields";
 export const MoneyAmount = list({
   access: {
     operation: {
-      query: ({ session }) =>
-        permissions.canReadProducts({ session }) ||
-        permissions.canManageProducts({ session }),
+      // Allow public read access
+      query: () => true,
       create: permissions.canManageProducts,
       update: permissions.canManageProducts,
       delete: permissions.canManageProducts,
@@ -47,6 +46,67 @@ export const MoneyAmount = list({
     }),
     priceList: relationship({
       ref: "PriceList.moneyAmounts",
+    }),
+    calculatedPrice: virtual({
+      field: graphql.field({
+        type: graphql.JSON,
+        resolve: async (item, args, context) => {
+          const now = new Date();
+
+          const { priceList, currency } = await context.query.MoneyAmount.findOne({
+            where: { id: item.id },
+            query: `
+              priceList {
+                id
+                type
+                status
+                startsAt
+                endsAt
+              }
+              currency {
+                code
+              }
+            `,
+          });
+
+          const isPriceListValid =
+            !priceList ||
+            (priceList.status === "active" &&
+              (!priceList.startsAt || new Date(priceList.startsAt) <= now) &&
+              (!priceList.endsAt || new Date(priceList.endsAt) >= now));
+
+          if (!isPriceListValid) {
+            return null;
+          }
+
+          return {
+            id: item.id,
+            isCalculatedPricePriceList: !!priceList,
+            isCalculatedPriceTaxInclusive: false, // Assuming tax is not included, adjust if needed
+            calculatedAmount: item.amount,
+            rawCalculatedAmount: item,
+            isOriginalPricePriceList: false,
+            isOriginalPriceTaxInclusive: false, // Assuming tax is not included, adjust if needed
+            originalAmount: item.amount,
+            rawOriginalAmount: item,
+            currencyCode: currency.code,
+            calculatedPrice: {
+              id: item.id,
+              priceListId: priceList?.id || null,
+              priceListType: priceList?.type || null,
+              minQuantity: item.minQuantity || null,
+              maxQuantity: item.maxQuantity || null,
+            },
+            originalPrice: {
+              id: item.id,
+              priceListId: null,
+              priceListType: null,
+              minQuantity: item.minQuantity || null,
+              maxQuantity: item.maxQuantity || null,
+            },
+          };
+        },
+      }),
     }),
     ...trackingFields,
   },

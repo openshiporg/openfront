@@ -6,6 +6,7 @@ import {
   select,
   text,
   relationship,
+  checkbox
 } from "@keystone-6/core/fields";
 import { isSignedIn, permissions, rules } from "../access";
 import { trackingFields } from "./trackingFields";
@@ -24,7 +25,7 @@ export const User = list({
   access: {
     operation: {
       create: () => true,
-      query:  () => true,
+      query: permissions.canManageUsers,
       // only people with the permission can delete themselves!
       // You can't delete yourself
       delete: permissions.canManageUsers,
@@ -58,29 +59,31 @@ export const User = list({
     }),
     apiKeys: relationship({ ref: "ApiKey.user", many: true }),
     metadata: json(),
-    // role: select({
-    //   type: "enum",
-    //   options: [
-    //     {
-    //       label: "Admin",
-    //       value: "admin",
-    //     },
-    //     {
-    //       label: "Member",
-    //       value: "member",
-    //     },
-    //     {
-    //       label: "Developer",
-    //       value: "developer",
-    //     },
-    //   ],
-    //   defaultValue: "member",
-    // }),
-
+    firstName: text(),
+    lastName: text(),
+    billingAddress: text(),
+    phone: text(),
+    hasAccount: checkbox(),
+    addresses: relationship({
+      ref: "Address.user",
+      many: true,
+    }),
+    orders: relationship({
+      ref: "Order.user",
+      many: true,
+    }),
+    carts: relationship({
+      ref: "Cart.user",
+      many: true,
+    }),
+    customerGroups: relationship({
+      ref: "CustomerGroup.users",
+      many: true,
+    }),
+    notifications: relationship({
+      ref: "Notification.user",
+      many: true,
+    }),
     ...trackingFields,
-    // products: relationship({
-    //   ref: 'Product.user',
-    //   many: true,
-    // }),
   },
 });

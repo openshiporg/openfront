@@ -16,18 +16,23 @@ export default async function ProductPreview({
     regionId: region.id,
   }).then((product) => product)
 
-  if (!pricedProduct) {
-    return null
-  }
+  // if (!pricedProduct) {
+  //   return null
+  // }
+
+  console.log({ pricedProduct })
+  console.log({ region })
 
   const { cheapestPrice } = getProductPrice({
-    product: pricedProduct,
+    product: pricedProduct.product,
     region,
   })
 
+  console.log({ cheapestPrice })
+
   return (
     <LocalizedClientLink href={`/products/${productPreview.handle}`} className="group">
-      <div>
+      {/* <div>
         <Thumbnail thumbnail={productPreview.thumbnail} size="full" isFeatured={isFeatured} />
         <div className="flex txt-compact-medium mt-4 justify-between">
           <Text className="text-ui-fg-subtle">{productPreview.title}</Text>
@@ -35,7 +40,8 @@ export default async function ProductPreview({
             {cheapestPrice && <PreviewPrice price={cheapestPrice} />}
           </div>
         </div>
-      </div>
+      </div> */}
+      hello
     </LocalizedClientLink>
   );
 }

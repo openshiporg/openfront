@@ -17,11 +17,13 @@ export function getProductPrice({
   }
 
   const cheapestPrice = () => {
-    if (!product || !product.variants?.length || !region) {
+    if (!product || !product.productVariants?.length || !region) {
       return null
     }
 
-    const variants = product.variants
+    const variants = product.productVariants
+
+    console.log(variants[0].prices)
 
     const cheapestVariant = variants.reduce((prev, curr) => {
       return prev.calculated_price < curr.calculated_price ? prev : curr

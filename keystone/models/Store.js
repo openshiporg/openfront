@@ -7,9 +7,8 @@ import { trackingFields } from "./trackingFields";
 export const Store = list({
   access: {
     operation: {
-      query: ({ session }) =>
-        permissions.canReadSalesChannels({ session }) ||
-        permissions.canManageSalesChannels({ session }),
+      // Allow public read access
+      query: () => true,
       create: permissions.canManageSalesChannels,
       update: permissions.canManageSalesChannels,
       delete: permissions.canManageSalesChannels,

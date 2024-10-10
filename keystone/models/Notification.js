@@ -37,8 +37,8 @@ export const Notification = list({
     notificationProvider: relationship({
       ref: "NotificationProvider.notifications",
     }),
-    customer: relationship({
-      ref: "Customer.notifications",
+    user: relationship({
+      ref: "User.notifications",
     }),
     otherNotifications: relationship({
       ref: "Notification",
