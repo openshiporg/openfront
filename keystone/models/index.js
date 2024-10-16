@@ -62,6 +62,7 @@ import { Swap } from "./Swap";
 import { TaxProvider } from "./TaxProvider";
 import { TaxRate } from "./TaxRate";
 import { TrackingLink } from "./TrackingLink";
+import { RuleType } from "./RuleType";
 
 export const models = {
   User,
@@ -111,6 +112,7 @@ export const models = {
   PaymentSession,
   PriceList,
   PriceRule,
+  RuleType,
   PriceSet,
   Refund,
   Region,

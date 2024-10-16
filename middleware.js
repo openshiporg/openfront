@@ -1,43 +1,72 @@
-import { checkAuth } from "@keystone/utils/checkAuth";
 import { NextResponse } from "next/server";
+import { checkAuth } from "@keystone/utils/checkAuth";
 
-export async function middleware(req) {
-  const { authenticatedItem: isAuth, redirectToInit } = await checkAuth(req);
-  const isInitPage = req.nextUrl.pathname.startsWith('/dashboard/init');
-  const isSignInPage = req.nextUrl.pathname.startsWith('/dashboard/signin');
+const basePath = "/dashboard";
 
-  if (redirectToInit && !isInitPage) {
-    return NextResponse.redirect(new URL('/dashboard/init', req.url));
+export async function middleware(request) {
+  // Only apply middleware logic to /dashboard routes
+  if (!request.nextUrl.pathname.startsWith(basePath)) {
+    return NextResponse.next();
   }
 
-  if (!redirectToInit && isInitPage) {
-    return NextResponse.redirect(new URL('/dashboard', req.url));
+  const { authenticatedItem: isAuth, redirectToInit } =
+    await checkAuth(request);
+
+  // Paths that don't require authentication
+  const publicPaths = [
+    `${basePath}/signin`,
+    `${basePath}/signup`,
+    `${basePath}/reset`,
+    `${basePath}/init`,
+  ];
+  const isPublicPath = publicPaths.some((path) =>
+    request.nextUrl.pathname.startsWith(path)
+  );
+
+  // Check if sign-ups are allowed
+  const allowSignUp = true;
+
+  if (
+    redirectToInit &&
+    !request.nextUrl.pathname.startsWith(`${basePath}/init`)
+  ) {
+    return NextResponse.redirect(new URL(`${basePath}/init`, request.url));
   }
 
-  if (isSignInPage) {
-    if (isAuth) {
-      return NextResponse.redirect(new URL('/dashboard', req.url));
+  if (
+    !redirectToInit &&
+    request.nextUrl.pathname.startsWith(`${basePath}/init`)
+  ) {
+    return NextResponse.redirect(new URL(basePath, request.url));
+  }
+
+  if (isPublicPath) {
+    if (isAuth && !request.nextUrl.pathname.startsWith(`${basePath}/reset`)) {
+      return NextResponse.redirect(new URL(basePath, request.url));
     }
-    return null;
+    // Redirect to sign-in if sign-ups are not allowed and the user is trying to access the signup page
+    if (
+      request.nextUrl.pathname.startsWith(`${basePath}/signup`) &&
+      !allowSignUp
+    ) {
+      return NextResponse.redirect(new URL(`${basePath}/signin`, request.url));
+    }
+    return NextResponse.next();
   }
 
-  if (!isAuth && !isInitPage) {
-    let from = req.nextUrl.pathname;
-    if (req.nextUrl.search) {
-      from += req.nextUrl.search;
-    }
-
+  if (!isAuth) {
+    const from = request.nextUrl.pathname + request.nextUrl.search;
     return NextResponse.redirect(
-      new URL(`/dashboard/signin?from=${encodeURIComponent(from)}`, req.url)
+      new URL(
+        `${basePath}/signin?from=${encodeURIComponent(from)}`,
+        request.url
+      )
     );
   }
+
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    "/dashboard",
-    "/dashboard/:path*",
-    "/dashboard/signin",
-    "/dashboard/init",
-  ],
+  matcher: `${basePath}/:path*`,
 };

@@ -56,6 +56,7 @@ import {
 } from "../../components/Pagination";
 import { Input } from "../../primitives/default/ui/input";
 import { Badge } from "../../primitives/default/ui/badge";
+import { AdminLink } from "../../components/AdminLink";
 
 let listMetaGraphqlQuery = gql`
   query ($listKey: String!) {
@@ -258,7 +259,7 @@ export const ListPageTemplate = ({ listKey }) => {
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink>
-                  <Link href="/dashboard">Dashboard</Link>
+                  <AdminLink href="/">Dashboard</AdminLink>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
@@ -266,13 +267,13 @@ export const ListPageTemplate = ({ listKey }) => {
               {/* {list.isSingleton ? (
                   <BreadcrumbItem>
                     <BreadcrumbLink asChild>
-                      <Link href={`/dashboard/${list.path}`}>{list.label}</Link>
+                      <AdminLink href={`/${list.path}`}>{list.label}</AdminLink>
                     </BreadcrumbLink>
                   </BreadcrumbItem>
                 ) : (
                   <BreadcrumbItem>
                     <BreadcrumbLink asChild>
-                      <Link href={`/dashboard/${list.path}`}>{list.label}</Link>
+                      <AdminLink href={`/${list.path}`}>{list.label}</AdminLink>
                     </BreadcrumbLink>
                   </BreadcrumbItem>
                 )} */}
@@ -377,7 +378,7 @@ export const ListPageTemplate = ({ listKey }) => {
                   dropdownTrigger={
                     <button
                       type="button"
-                      className="flex gap-1.5 pr-2 pl-2 tracking-wider items-center text-xs shadow-sm border p-[.15rem] font-medium text-gray-600 bg-white dark:bg-slate-800 rounded-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:border-gray-600 dark:text-slate-300 dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white"
+                      className="flex gap-1.5 pr-2 pl-2 tracking-wider items-center text-xs shadow-sm border p-[.15rem] font-medium text-zinc-600 bg-white dark:bg-zinc-800 rounded-md hover:bg-zinc-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:border-zinc-600 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-600 dark:focus:ring-blue-500 dark:focus:text-white"
                     >
                       <Columns3 size={12} className="stroke-muted-foreground" />
                       COLUMNS

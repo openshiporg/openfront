@@ -16,27 +16,9 @@ import {
   SidebarSection,
   SidebarSpacer,
 } from "../../primitives/default/ui/sidebar";
-import {
-  Dropdown,
-  DropdownButton,
-  DropdownMenu,
-  DropdownItem,
-  DropdownDivider,
-  DropdownLabel,
-} from "../../primitives/default/ui/dropdown-menu";
-import { Avatar } from "../../primitives/default/ui/avatar";
+
 import { Logo } from "../Logo";
-import { Link } from "next-view-transitions";
-import {
-  ArrowRightStartOnRectangleIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  Cog8ToothIcon,
-  LightBulbIcon,
-  PlusIcon,
-  ShieldCheckIcon,
-  UserIcon,
-} from "@heroicons/react/16/solid";
+
 import {
   Cog6ToothIcon,
   HomeIcon,
@@ -55,8 +37,8 @@ import { SidebarLayout } from "../../primitives/default/ui/sidebar-layout";
 import { Badge } from "../../primitives/default/ui/badge";
 import { ArrowTopRightIcon } from "@radix-ui/react-icons";
 import { AccountDropdown } from "./AccountDropdown";
-import { ThemeToggle } from "./ThemeToggle";
 import { AccountDropdownMobile } from "./AccountDropdownMobile";
+import { AdminLink } from "../AdminLink";
 
 export function NavigationSidebar({
   authenticatedItem,
@@ -85,12 +67,10 @@ export function NavigationSidebar({
           </SidebarHeader>
           <SidebarBody className="flex flex-col">
             <SidebarSection>
-              <SidebarItem key="dashboard" href="/dashboard">
+              <SidebarItem key="dashboard" href="/" as={AdminLink}>
                 <HomeIcon className="w-6 h-6" />
                 <SidebarLabel>Home</SidebarLabel>
               </SidebarItem>
-           
-         
             </SidebarSection>
             <SidebarHeading
               className="mb-4 mt-2 flex items-center justify-between cursor-pointer pt-2"
@@ -104,7 +84,12 @@ export function NavigationSidebar({
             {!isDashboardCollapsed && (
               <SidebarSection className="flex-1 overflow-y-auto no-scrollbar min-h-0 mb-1 gap-0">
                 {sidebarLinks.map(({ title, href }) => (
-                  <SidebarItem className="ml-4" key={href} href={`/dashboard${href}`}>
+                  <SidebarItem
+                    className="ml-4"
+                    key={href}
+                    href={href}
+                    as={AdminLink}
+                  >
                     {title}
                   </SidebarItem>
                 ))}

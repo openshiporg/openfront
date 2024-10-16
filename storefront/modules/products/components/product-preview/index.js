@@ -20,7 +20,7 @@ export default async function ProductPreview({
   //   return null
   // }
 
-  console.log({ pricedProduct })
+  console.log(pricedProduct.product.productVariants[0].prices)
   console.log({ region })
 
   const { cheapestPrice } = getProductPrice({

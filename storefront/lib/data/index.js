@@ -875,6 +875,7 @@ export const getCollectionsListByRegion = cache(async function (
             id
             title
             prices {
+              calculatedPrice
               amount
               currency {
                 code

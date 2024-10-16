@@ -1,9 +1,9 @@
 import { list } from "@keystone-6/core";
-import { relationship } from "@keystone-6/core/fields";
+import { text, relationship } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
 
-export const PriceSet = list({
+export const RuleType = list({
   access: {
     operation: {
       query: () => true,
@@ -13,9 +13,9 @@ export const PriceSet = list({
     },
   },
   fields: {
-    prices: relationship({ ref: 'MoneyAmount.priceSet', many: true }),
-    priceRules: relationship({ ref: 'PriceRule.priceSet', many: true }),
-    ruleTypes: relationship({ ref: 'RuleType.priceSets', many: true }),
+    name: text({ validation: { isRequired: true } }),
+    ruleAttribute: text({ validation: { isRequired: true }, isIndexed: 'unique' }),
+    priceSets: relationship({ ref: 'PriceSet.ruleTypes', many: true }),
     ...trackingFields,
   },
 });

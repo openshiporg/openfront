@@ -887,19 +887,35 @@ model PriceList {
 }
 
 model PriceRule {
-  id           String        @id @default(cuid())
-  attribute    String        @default("")
-  value        String        @default("")
-  moneyAmounts MoneyAmount[] @relation("MoneyAmount_priceRules")
-  priceSets    PriceSet[]    @relation("PriceRule_priceSets")
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @default(now()) @updatedAt
+  id            String            @id @default(cuid())
+  type          PriceRuleTypeType
+  value         Float
+  priority      Int?              @default(0)
+  ruleAttribute String            @default("")
+  ruleValue     String            @default("")
+  moneyAmounts  MoneyAmount[]     @relation("MoneyAmount_priceRules")
+  priceSet      PriceSet?         @relation("PriceRule_priceSet", fields: [priceSetId], references: [id])
+  priceSetId    String?           @map("priceSet")
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @default(now()) @updatedAt
+
+  @@index([priceSetId])
+}
+
+model RuleType {
+  id            String     @id @default(cuid())
+  name          String     @default("")
+  ruleAttribute String     @unique @default("")
+  priceSets     PriceSet[] @relation("PriceSet_ruleTypes")
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @default(now()) @updatedAt
 }
 
 model PriceSet {
   id         String        @id @default(cuid())
   prices     MoneyAmount[] @relation("MoneyAmount_priceSet")
-  priceRules PriceRule[]   @relation("PriceRule_priceSets")
+  priceRules PriceRule[]   @relation("PriceRule_priceSet")
+  ruleTypes  RuleType[]    @relation("PriceSet_ruleTypes")
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @default(now()) @updatedAt
 }
@@ -1313,6 +1329,11 @@ enum PriceListTypeType {
 enum PriceListStatusType {
   active
   draft
+}
+
+enum PriceRuleTypeType {
+  fixed
+  percentage
 }
 
 enum RefundReasonType {

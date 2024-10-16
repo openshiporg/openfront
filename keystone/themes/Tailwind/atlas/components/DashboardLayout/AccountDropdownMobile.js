@@ -19,10 +19,8 @@ import {
   SunIcon,
   ComputerDesktopIcon,
 } from "@heroicons/react/16/solid";
-import { Sun, Moon, Monitor } from "lucide-react";
 import { SidebarItem } from "../../primitives/default/ui/sidebar";
-import { ThemeToggle } from "./ThemeToggle";
-import { Link } from "next-view-transitions";
+import { AdminLink } from "../AdminLink";
 
 const AUTHENTICATED_ITEM_QUERY = gql`
   query AuthenticatedItem {
@@ -99,18 +97,18 @@ export const AccountDropdownMobile = () => {
   return (
     <Dropdown>
       <DropdownButton as={SidebarItem}>
-        <Avatar
-          className="bg-zinc-900 text-white dark:bg-white dark:text-black"
-          square
-          initials={Array.from(authenticatedItem.name)[0]}
-          alt=""
-        />
+          <Avatar
+            className="bg-zinc-900 text-white dark:bg-white dark:text-black"
+            square
+            initials={Array.from(authenticatedItem.name)[0]}
+            alt=""
+          />
       </DropdownButton>
 
       <DropdownMenu className="min-w-56" anchor="top">
         <DropdownItem
-          as={Link}
-          href={`/dashboard/users/${authenticatedItem.id}`}
+          as={AdminLink}
+          href={`/users/${authenticatedItem.id}`}
         >
           <UserIcon />
           <DropdownLabel>My profile</DropdownLabel>

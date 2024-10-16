@@ -1,5 +1,5 @@
 import { list } from "@keystone-6/core";
-import { text, relationship } from "@keystone-6/core/fields";
+import { text, select, float, integer, relationship } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
 
@@ -13,10 +13,20 @@ export const PriceRule = list({
     },
   },
   fields: {
-    attribute: text({ validation: { isRequired: true } }),
-    value: text({ validation: { isRequired: true } }),
+    type: select({
+      type: 'enum',
+      options: [
+        { label: 'Fixed', value: 'fixed' },
+        { label: 'Percentage', value: 'percentage' },
+      ],
+      validation: { isRequired: true },
+    }),
+    value: float({ validation: { isRequired: true } }),
+    priority: integer({ defaultValue: 0 }),
+    ruleAttribute: text({ validation: { isRequired: true } }),
+    ruleValue: text({ validation: { isRequired: true } }),
     moneyAmounts: relationship({ ref: 'MoneyAmount.priceRules', many: true }),
-    priceSets: relationship({ ref: 'PriceSet.priceRules', many: true }),
+    priceSet: relationship({ ref: 'PriceSet.priceRules' }),
     ...trackingFields,
   },
 });
