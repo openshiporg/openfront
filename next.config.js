@@ -14,7 +14,7 @@ function configureWebpack(config, { isServer }) {
 }
 
 const nextConfig = {
-  webpack: configureWebpack,
+  // webpack: configureWebpack,
   experimental: {
     serverComponentsExternalPackages: ["graphql"],
   },
