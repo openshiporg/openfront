@@ -220,8 +220,13 @@ model ProductCategory {
   isActive           Boolean             @default(false)
   discountConditions DiscountCondition[] @relation("DiscountCondition_productCategories")
   products           Product[]           @relation("Product_productCategories")
+  parentCategory     ProductCategory?    @relation("ProductCategory_parentCategory", fields: [parentCategoryId], references: [id])
+  parentCategoryId   String?             @map("parentCategory")
+  categoryChildren   ProductCategory[]   @relation("ProductCategory_parentCategory")
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @default(now()) @updatedAt
+
+  @@index([parentCategoryId])
 }
 
 model ProductImage {

@@ -1,7 +1,7 @@
 import { RateLimiterMemory } from "rate-limiter-flexible";
 
 const defaultRateLimitConfig = {
-  points: 20, // Maximum number of failed attempts
+  points: 50, // Maximum number of failed attempts
   duration: 900, // Per 15 minutes
   blockDuration: 900 // Block for 15 minutes after exceeding points
 };

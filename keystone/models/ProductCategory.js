@@ -31,6 +31,14 @@ export const ProductCategory = list({
       ref: "Product.productCategories",
       many: true,
     }),
+    parentCategory: relationship({
+      ref: "ProductCategory.categoryChildren",
+      many: false,
+    }),
+    categoryChildren: relationship({
+      ref: "ProductCategory.parentCategory",
+      many: true,
+    }),
     ...trackingFields,
   },
 });

@@ -1,6 +1,5 @@
-import { Client, cacheExchange, fetchExchange } from "urql";
+import { GraphQLClient } from 'graphql-request';
 
-export const openfrontClient = new Client({
-  url: `${process.env.FRONTEND_URL}/api/graphql`,
-  exchanges: [cacheExchange, fetchExchange],
+export const openfrontClient = new GraphQLClient(`${process.env.FRONTEND_URL}/api/graphql`, {
+  credentials: 'include',
 });

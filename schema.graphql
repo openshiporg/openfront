@@ -1819,6 +1819,9 @@ type ProductCategory {
   discountConditionsCount(where: DiscountConditionWhereInput! = {}): Int
   products(where: ProductWhereInput! = {}, orderBy: [ProductOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ProductWhereUniqueInput): [Product!]
   productsCount(where: ProductWhereInput! = {}): Int
+  parentCategory: ProductCategory
+  categoryChildren(where: ProductCategoryWhereInput! = {}, orderBy: [ProductCategoryOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ProductCategoryWhereUniqueInput): [ProductCategory!]
+  categoryChildrenCount(where: ProductCategoryWhereInput! = {}): Int
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -1839,6 +1842,8 @@ input ProductCategoryWhereInput {
   isActive: BooleanFilter
   discountConditions: DiscountConditionManyRelationFilter
   products: ProductManyRelationFilter
+  parentCategory: ProductCategoryWhereInput
+  categoryChildren: ProductCategoryManyRelationFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
@@ -1861,8 +1866,16 @@ input ProductCategoryUpdateInput {
   isActive: Boolean
   discountConditions: DiscountConditionRelateToManyForUpdateInput
   products: ProductRelateToManyForUpdateInput
+  parentCategory: ProductCategoryRelateToOneForUpdateInput
+  categoryChildren: ProductCategoryRelateToManyForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
+}
+
+input ProductCategoryRelateToOneForUpdateInput {
+  create: ProductCategoryCreateInput
+  connect: ProductCategoryWhereUniqueInput
+  disconnect: Boolean
 }
 
 input ProductCategoryUpdateArgs {
@@ -1878,8 +1891,15 @@ input ProductCategoryCreateInput {
   isActive: Boolean
   discountConditions: DiscountConditionRelateToManyForCreateInput
   products: ProductRelateToManyForCreateInput
+  parentCategory: ProductCategoryRelateToOneForCreateInput
+  categoryChildren: ProductCategoryRelateToManyForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
+}
+
+input ProductCategoryRelateToOneForCreateInput {
+  create: ProductCategoryCreateInput
+  connect: ProductCategoryWhereUniqueInput
 }
 
 type ProductImage {

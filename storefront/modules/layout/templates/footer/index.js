@@ -7,7 +7,7 @@ import OpenfrontCTA from "@storefront/modules/layout/components/openfront-cta"
 
 export default async function Footer() {
   const { collections } = await getCollectionsList(0, 6)
-  const { product_categories } = await getCategoriesList(0, 6)
+  const { productCategories } = await getCategoriesList(0, 6)
 
   return (
     <footer className="border-t border-ui-border-base w-full">
@@ -23,30 +23,30 @@ export default async function Footer() {
           </div>
           <div
             className="text-small-regular gap-10 md:gap-x-16 grid grid-cols-2 sm:grid-cols-3">
-            {product_categories && product_categories?.length > 0 && (
+            {productCategories && productCategories?.length > 0 && (
               <div className="flex flex-col gap-y-2">
                 <span className="txt-small-plus txt-ui-fg-base">
                   Categories
                 </span>
                 <ul className="grid grid-cols-1 gap-2">
-                  {product_categories?.slice(0, 6).map((c) => {
-                    if (c.parent_category) {
+                  {productCategories?.slice(0, 6).map((c) => {
+                    if (c.parentCategory) {
                       return
                     }
 
                     const children =
-                      c.category_children?.map((child) => ({
-                        name: child.name,
+                      c.categoryChildren?.map((child) => ({
+                        title: child.title,
                         handle: child.handle,
                         id: child.id,
                       })) || null
 
                     return (
-                      <li className="flex flex-col gap-2 text-ui-fg-subtle txt-small" key={c.id}>
+                      <li className="flex flex-col text-ui-fg-subtle txt-small" key={c.id}>
                         <LocalizedClientLink
-                          className={clx("hover:text-ui-fg-base", children && "txt-small-plus")}
+                          className={clx("hover:text-ui-fg-base")}
                           href={`/categories/${c.handle}`}>
-                          {c.name}
+                          {c.title}
                         </LocalizedClientLink>
                         {children && (
                           <ul className="grid grid-cols-1 ml-3 gap-2">
@@ -54,7 +54,7 @@ export default async function Footer() {
                               children.map((child) => (
                                 <li key={child.id}>
                                   <LocalizedClientLink className="hover:text-ui-fg-base" href={`/categories/${child.handle}`}>
-                                    {child.name}
+                                    {child.title}
                                   </LocalizedClientLink>
                                 </li>
                               ))}

@@ -1,7 +1,5 @@
-"use server"
 import { gql } from 'graphql-request';
 import { openfrontClient } from "@storefront/lib/config";
-import { cache } from "react";
 
 import sortProducts from "@storefront/lib/util/sort-products";
 import transformProductPreview from "@storefront/lib/util/transform-product-preview";
@@ -59,7 +57,7 @@ export async function updateCart(cartId, data) {
   return openfrontClient.request(UPDATE_CART_MUTATION, { id: cartId, data });
 }
 
-export const getCart = cache(async function (cartId) {
+export async function getCart(cartId) {
   const GET_CART_QUERY = gql`
     query GetCart($id: ID!) {
       cart(where: { id: $id }) {
@@ -79,7 +77,7 @@ export const getCart = cache(async function (cartId) {
   `;
 
   return openfrontClient.request(GET_CART_QUERY, { id: cartId });
-});
+}
 
 export async function addItem({ cartId, variantId, quantity }) {
   const ADD_ITEM_MUTATION = gql`
@@ -248,7 +246,7 @@ export async function completeCart(cartId) {
 }
 
 // Order actions
-export const retrieveOrder = cache(async function (id) {
+export async function retrieveOrder(id) {
   const RETRIEVE_ORDER_QUERY = gql`
     query RetrieveOrder($id: ID!) {
       order(where: { id: $id }) {
@@ -265,10 +263,10 @@ export const retrieveOrder = cache(async function (id) {
   `;
 
   return openfrontClient.request(RETRIEVE_ORDER_QUERY, { id });
-});
+}
 
 // Shipping actions
-export const listShippingMethods = cache(async function (regionId, productIds) {
+export async function listShippingMethods(regionId, productIds) {
   const LIST_SHIPPING_METHODS_QUERY = gql`
     query ListShippingMethods($regionId: ID!, $productIds: [ID!]) {
       shippingOptions(
@@ -285,7 +283,7 @@ export const listShippingMethods = cache(async function (regionId, productIds) {
   `;
 
   return openfrontClient.request(LIST_SHIPPING_METHODS_QUERY, { regionId, productIds });
-});
+}
 
 export async function addShippingMethod({ cartId, shippingMethodId }) {
   const ADD_SHIPPING_METHOD_MUTATION = gql`
@@ -345,7 +343,7 @@ export async function authenticate(credentials) {
   return getToken(credentials);
 }
 
-export const getSession = cache(async function () {
+export async function getSession() {
   const GET_SESSION_QUERY = gql`
     query GetSession {
       authenticatedItem {
@@ -358,7 +356,7 @@ export const getSession = cache(async function () {
   `;
 
   return openfrontClient.request(GET_SESSION_QUERY);
-});
+}
 
 // Customer actions
 export async function getCustomer() {
@@ -457,10 +455,7 @@ export async function updateShippingAddress(addressId, data) {
   });
 }
 
-export const listCustomerOrders = cache(async function (
-  limit = 10,
-  offset = 0
-) {
+export async function listCustomerOrders(limit = 10, offset = 0) {
   const LIST_CUSTOMER_ORDERS_QUERY = gql`
     query ListCustomerOrders($limit: Int!, $offset: Int!) {
       orders(
@@ -478,10 +473,10 @@ export const listCustomerOrders = cache(async function (
   `;
 
   return openfrontClient.request(LIST_CUSTOMER_ORDERS_QUERY, { limit, offset });
-});
+}
 
 // Region actions
-export const listRegions = cache(async function () {
+export async function listRegions() {
   const LIST_REGIONS_QUERY = gql`
     query ListRegions {
       regions {
@@ -500,9 +495,9 @@ export const listRegions = cache(async function () {
   `;
 
   return openfrontClient.request(LIST_REGIONS_QUERY);
-});
+}
 
-export const retrieveRegion = cache(async function (id) {
+export async function retrieveRegion(id) {
   const RETRIEVE_REGION_QUERY = gql`
     query RetrieveRegion($id: ID!) {
       region(where: { id: $id }) {
@@ -521,9 +516,9 @@ export const retrieveRegion = cache(async function (id) {
   `;
 
   return openfrontClient.request(RETRIEVE_REGION_QUERY, { id });
-});
+}
 
-export const getRegion = cache(async function (countryCode) {
+export async function getRegion(countryCode) {
   const GET_REGION_QUERY = gql`
     query GetRegion($code: String!) {
       regions(where: { countries: { some: { iso2: { equals: $code } } } }) {
@@ -543,10 +538,10 @@ export const getRegion = cache(async function (countryCode) {
 
   const data = await openfrontClient.request(GET_REGION_QUERY, { code: countryCode });
   return data.regions[0];
-});
+}
 
 // Product actions
-export const getProductsById = cache(async function ({ ids, regionId }) {
+export async function getProductsById({ ids, regionId }) {
   const GET_PRODUCTS_BY_ID_QUERY = gql`
     query GetProductsById($ids: [ID!]!, $regionId: ID!) {
       products(
@@ -571,12 +566,9 @@ export const getProductsById = cache(async function ({ ids, regionId }) {
   `;
 
   return openfrontClient.request(GET_PRODUCTS_BY_ID_QUERY, { ids, regionId });
-});
+}
 
-export const retrievePricedProductById = cache(async function ({
-  id,
-  regionId,
-}) {
+export async function retrievePricedProductById({ id, regionId }) {
   const RETRIEVE_PRICED_PRODUCT_BY_ID_QUERY = gql`
     query RetrievePricedProductById($id: ID!, $regionId: ID!) {
       product(where: { id: $id }) {
@@ -609,9 +601,9 @@ export const retrievePricedProductById = cache(async function ({
   `;
 
   return openfrontClient.request(RETRIEVE_PRICED_PRODUCT_BY_ID_QUERY, { id, regionId });
-});
+}
 
-export const getProductByHandle = cache(async function (handle) {
+export async function getProductByHandle(handle) {
   const GET_PRODUCT_BY_HANDLE_QUERY = gql`
     query GetProductByHandle($handle: String!) {
       product(where: { handle: $handle }) {
@@ -635,13 +627,9 @@ export const getProductByHandle = cache(async function (handle) {
 
   const data = await openfrontClient.request(GET_PRODUCT_BY_HANDLE_QUERY, { handle });
   return { product: data.product };
-});
+}
 
-export const getProductsList = cache(async function ({
-  pageParam = 0,
-  queryParams,
-  countryCode,
-}) {
+export async function getProductsList({ pageParam = 0, queryParams, countryCode }) {
   const limit = queryParams?.limit || 12;
   const region = await getRegion(countryCode);
 
@@ -694,51 +682,49 @@ export const getProductsList = cache(async function ({
     nextPage,
     queryParams,
   };
-});
+}
 
-export const getProductsListWithSort = cache(
-  async function getProductsListWithSort({
-    page = 0,
-    queryParams,
-    sortBy = "created_at",
+export async function getProductsListWithSort({
+  page = 0,
+  queryParams,
+  sortBy = "created_at",
+  countryCode,
+}) {
+  const limit = queryParams?.limit || 12;
+
+  const {
+    response: { products, count },
+  } = await getProductsList({
+    pageParam: 0,
+    queryParams: {
+      ...queryParams,
+      limit: 100,
+    },
     countryCode,
-  }) {
-    const limit = queryParams?.limit || 12;
+  });
 
-    const {
-      response: { products, count },
-    } = await getProductsList({
-      pageParam: 0,
-      queryParams: {
-        ...queryParams,
-        limit: 100,
-      },
-      countryCode,
-    });
+  const sortedProducts = sortProducts(products, sortBy);
 
-    const sortedProducts = sortProducts(products, sortBy);
+  const pageParam = (page - 1) * limit;
 
-    const pageParam = (page - 1) * limit;
+  const nextPage = count > pageParam + limit ? pageParam + limit : null;
 
-    const nextPage = count > pageParam + limit ? pageParam + limit : null;
+  const paginatedProducts = sortedProducts.slice(
+    pageParam,
+    pageParam + limit
+  );
 
-    const paginatedProducts = sortedProducts.slice(
-      pageParam,
-      pageParam + limit
-    );
+  return {
+    response: {
+      products: paginatedProducts,
+      count,
+    },
+    nextPage,
+    queryParams,
+  };
+}
 
-    return {
-      response: {
-        products: paginatedProducts,
-        count,
-      },
-      nextPage,
-      queryParams,
-    };
-  }
-);
-
-export const getHomepageProducts = cache(async function getHomepageProducts({
+export async function getHomepageProducts({
   collectionHandles,
   currencyCode,
   countryCode,
@@ -762,10 +748,10 @@ export const getHomepageProducts = cache(async function getHomepageProducts({
   }
 
   return collectionProductsMap;
-});
+}
 
 // Collection actions
-export const retrieveCollection = cache(async function (id) {
+export async function retrieveCollection(id) {
   const RETRIEVE_COLLECTION_QUERY = gql`
     query RetrieveCollection($id: ID!) {
       collection(where: { id: $id }) {
@@ -777,12 +763,9 @@ export const retrieveCollection = cache(async function (id) {
   `;
 
   return openfrontClient.request(RETRIEVE_COLLECTION_QUERY, { id });
-});
+}
 
-export const getCollectionsList = cache(async function (
-  offset = 0,
-  limit = 3
-) {
+export async function getCollectionsList(offset = 0, limit = 3) {
   const GET_COLLECTIONS_LIST_QUERY = gql`
     query GetCollectionsList(
       $offset: Int!
@@ -832,13 +815,9 @@ export const getCollectionsList = cache(async function (
     collections: data.productCollections,
     count: data.productCollectionsCount,
   };
-});
+}
 
-export const getCollectionsListByRegion = cache(async function (
-  offset = 0,
-  limit = 3,
-  regionId
-) {
+export async function getCollectionsListByRegion(offset = 0, limit = 3, regionId) {
   const GET_COLLECTIONS_LIST_QUERY = gql`
     query GetCollectionsList(
       $offset: Int!
@@ -902,9 +881,9 @@ export const getCollectionsListByRegion = cache(async function (
     collections: data.productCollections,
     count: data.productCollectionsCount,
   };
-});
+}
 
-export const getCollectionByHandle = cache(async function (handle) {
+export async function getCollectionByHandle(handle) {
   const GET_COLLECTION_BY_HANDLE_QUERY = gql`
     query GetCollectionByHandle($handle: String!) {
       collection(where: { handle: $handle }) {
@@ -916,84 +895,82 @@ export const getCollectionByHandle = cache(async function (handle) {
   `;
 
   return openfrontClient.request(GET_COLLECTION_BY_HANDLE_QUERY, { handle });
-});
+}
 
-export const getProductsByCollectionHandle = cache(
-  async function getProductsByCollectionHandle({
-    pageParam = 0,
-    limit = 100,
-    handle,
-    countryCode,
-  }) {
-    const { id } = await getCollectionByHandle(handle);
-    const region = await getRegion(countryCode);
+export async function getProductsByCollectionHandle({
+  pageParam = 0,
+  limit = 100,
+  handle,
+  countryCode,
+}) {
+  const { id } = await getCollectionByHandle(handle);
+  const region = await getRegion(countryCode);
 
-    if (!id || !region) {
-      return emptyResponse;
-    }
+  if (!id || !region) {
+    return emptyResponse;
+  }
 
-    const GET_PRODUCTS_BY_COLLECTION_QUERY = gql`
-      query GetProductsByCollection(
-        $collectionId: ID!
-        $regionId: ID!
-        $skip: Int!
-        $take: Int!
+  const GET_PRODUCTS_BY_COLLECTION_QUERY = gql`
+    query GetProductsByCollection(
+      $collectionId: ID!
+      $regionId: ID!
+      $skip: Int!
+      $take: Int!
+    ) {
+      products(
+        where: {
+          productCollection: { id: { equals: $collectionId } }
+          region: { id: { equals: $regionId } }
+        }
+        skip: $skip
+        take: $take
       ) {
-        products(
-          where: {
-            productCollection: { id: { equals: $collectionId } }
-            region: { id: { equals: $regionId } }
-          }
-          skip: $skip
-          take: $take
-        ) {
+        id
+        title
+        handle
+        thumbnail
+        productVariants {
           id
           title
-          handle
-          thumbnail
-          productVariants {
-            id
-            title
-            prices {
-              amount
-              currency {
-                code
-              }
+          prices {
+            amount
+            currency {
+              code
             }
           }
         }
-        productsCount(
-          where: {
-            productCollection: { id: { equals: $collectionId } }
-            region: { id: { equals: $regionId } }
-          }
-        )
       }
-    `;
+      productsCount(
+        where: {
+          productCollection: { id: { equals: $collectionId } }
+          region: { id: { equals: $regionId } }
+        }
+      )
+    }
+  `;
 
-    const data = await openfrontClient.request(GET_PRODUCTS_BY_COLLECTION_QUERY, {
-      collectionId: id,
-      regionId: region.id,
-      skip: pageParam,
-      take: limit,
-    });
+  const data = await openfrontClient.request(GET_PRODUCTS_BY_COLLECTION_QUERY, {
+    collectionId: id,
+    regionId: region.id,
+    skip: pageParam,
+    take: limit,
+  });
 
-    const products = data.products.map((product) =>
-      transformProductPreview(product, region)
-    );
-    const count = data.productsCount;
+  const products = data.products.map((product) =>
+    transformProductPreview(product, region)
+  );
+  const count = data.productsCount;
 
-    const nextPage = count > pageParam + limit ? pageParam + limit : null;
+  const nextPage = count > pageParam + limit ? pageParam + limit : null;
 
-    return {
-      response: { products, count },
-      nextPage,
-    };
-  }
-);
+  return {
+    response: { products, count },
+    nextPage,
+  };
+}
 
 // Category actions
-export const listCategories = cache(async function () {
+export async function listCategories() {
   const LIST_CATEGORIES_QUERY = gql`
     query ListCategories {
       productCategories {
@@ -1007,12 +984,9 @@ export const listCategories = cache(async function () {
   `;
 
   return openfrontClient.request(LIST_CATEGORIES_QUERY);
-});
+}
 
-export const getCategoriesList = cache(async function (
-  offset = 0,
-  limit = 100
-) {
+export async function getCategoriesList(offset = 0, limit = 100) {
   const GET_CATEGORIES_LIST_QUERY = gql`
     query GetCategoriesList($offset: Int!, $limit: Int!) {
       productCategories(skip: $offset, take: $limit) {
@@ -1021,16 +995,6 @@ export const getCategoriesList = cache(async function (
         handle
         isInternal
         isActive
-        parentCategory {
-          id
-          title
-          handle
-        }
-        categoryChildren {
-          id
-          title
-          handle
-        }
       }
       productCategoriesCount
     }
@@ -1039,12 +1003,12 @@ export const getCategoriesList = cache(async function (
   const data = await openfrontClient.request(GET_CATEGORIES_LIST_QUERY, { offset, limit });
 
   return {
-    productCategories: data.productCategories,
+    product_categories: data.productCategories,
     count: data.productCategoriesCount,
   };
-});
+}
 
-export const getCategoryByHandle = cache(async function (categoryHandle) {
+export async function getCategoryByHandle(categoryHandle) {
   const GET_CATEGORY_BY_HANDLE_QUERY = gql`
     query GetCategoryByHandle($handle: String!) {
       productCategory(where: { handle: $handle }) {
@@ -1053,16 +1017,6 @@ export const getCategoryByHandle = cache(async function (categoryHandle) {
         handle
         isInternal
         isActive
-        parentCategory {
-          id
-          title
-          handle
-        }
-        categoryChildren {
-          id
-          title
-          handle
-        }
       }
     }
   `;
@@ -1073,9 +1027,9 @@ export const getCategoryByHandle = cache(async function (categoryHandle) {
   return {
     product_categories: [data.productCategory],
   };
-});
+}
 
-export const getProductsByCategoryHandle = cache(async function ({
+export async function getProductsByCategoryHandle({
   pageParam = 0,
   handle,
   countryCode,
@@ -1145,5 +1099,5 @@ export const getProductsByCategoryHandle = cache(async function ({
     response: { products, count },
     nextPage,
   };
-});
+}
 
