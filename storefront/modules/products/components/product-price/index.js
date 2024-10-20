@@ -19,23 +19,35 @@ export default function ProductPrice({
     return <div className="block w-32 h-9 bg-gray-100 animate-pulse" />;
   }
 
+  const formattedPrice = new Intl.NumberFormat(region.locale, {
+    style: 'currency',
+    currency: selectedPrice.currencyCode,
+  }).format(selectedPrice.calculatedAmount / 100);
+
+  const isOnSale = selectedPrice.calculatedAmount < selectedPrice.originalAmount;
+
   return (
     <div className="flex flex-col text-ui-fg-base">
       <span
         className={clx("text-xl-semi", {
-          "text-ui-fg-interactive": selectedPrice.price_type === "sale",
+          "text-ui-fg-interactive": isOnSale,
         })}>
         {!variant && "From "}
-        {selectedPrice.calculated_price}
+        {formattedPrice}
       </span>
-      {selectedPrice.price_type === "sale" && (
+      {isOnSale && (
         <>
           <p>
             <span className="text-ui-fg-subtle">Original: </span>
-            <span className="line-through">{selectedPrice.original_price}</span>
+            <span className="line-through">
+              {new Intl.NumberFormat(region.locale, {
+                style: 'currency',
+                currency: selectedPrice.currencyCode,
+              }).format(selectedPrice.originalAmount / 100)}
+            </span>
           </p>
           <span className="text-ui-fg-interactive">
-            -{selectedPrice.percentage_diff}%
+            -{Math.round((1 - selectedPrice.calculatedAmount / selectedPrice.originalAmount) * 100)}%
           </span>
         </>
       )}

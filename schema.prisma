@@ -168,7 +168,6 @@ model Product {
   handle             String              @default("")
   subtitle           String              @default("")
   isGiftcard         Boolean             @default(false)
-  thumbnail          String              @default("")
   weight             Int?
   length             Int?
   height             Int?

@@ -3,7 +3,6 @@ import { denyAll } from "@keystone-6/core/access";
 import { integer, relationship, virtual } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
-import { calculatePrices } from "../../storefront/lib/data/pricing/calculatePrices";
 
 export const MoneyAmount = list({
   access: {
@@ -21,7 +20,7 @@ export const MoneyAmount = list({
         resolve: async (item, args, context) => {
           const { currency, amount } = await context.query.MoneyAmount.findOne({
             where: { id: item.id },
-            query: 'currency { symbol } amount',
+            query: "currency { symbol } amount",
           });
           return `${currency.symbol}${(amount / 100).toFixed(2)}`;
         },
@@ -47,16 +46,27 @@ export const MoneyAmount = list({
       ref: "PriceList.moneyAmounts",
     }),
     priceSet: relationship({
-      ref: 'PriceSet.prices',
+      ref: "PriceSet.prices",
     }),
     priceRules: relationship({
-      ref: 'PriceRule.moneyAmounts',
+      ref: "PriceRule.moneyAmounts",
       many: true,
     }),
     calculatedPrice: virtual({
       field: graphql.field({
-        type: graphql.JSON,
-        async resolve(item, args, context) {
+        type: graphql.object()({
+          name: 'CalculatedPrice',
+          fields: {
+            calculatedAmount: graphql.field({ type: graphql.Int }),
+            originalAmount: graphql.field({ type: graphql.Int }),
+            currencyCode: graphql.field({ type: graphql.String }),
+            moneyAmountId: graphql.field({ type: graphql.ID }),
+            variantId: graphql.field({ type: graphql.ID }),
+            priceListId: graphql.field({ type: graphql.ID }),
+            priceListType: graphql.field({ type: graphql.String }),
+          },
+        }),
+        resolve: async (item, args, context) => {
           const moneyAmount = await context.query.MoneyAmount.findOne({
             where: { id: item.id },
             query: `
@@ -95,49 +105,54 @@ export const MoneyAmount = list({
                   ruleAttribute
                   ruleValue
                 }
-                ruleTypes {
-                  id
-                  ruleAttribute
-                }
               }
             `,
           });
 
-          if (!moneyAmount || !moneyAmount.priceSet) return null;
+          if (!moneyAmount) return null;
 
           const now = new Date();
-          const quantity = 1; // Default quantity, adjust as needed
           const currencyCode = moneyAmount.currency.code;
+          let calculatedAmount = moneyAmount.amount;
+          let originalAmount = moneyAmount.amount;
+          let appliedPriceList = null;
 
-          // Filter and sort valid prices
-          const validPrices = moneyAmount.priceSet.prices.filter(price => {
-            if (price.currency.code !== currencyCode) return false;
-            if (price.minQuantity && quantity < price.minQuantity) return false;
-            if (price.maxQuantity && quantity > price.maxQuantity) return false;
-            if (!price.priceList) return true;
-            if (price.priceList.status !== 'active') return false;
-            const startDate = new Date(price.priceList.startsAt);
-            const endDate = new Date(price.priceList.endsAt);
-            return (!startDate || startDate <= now) && (!endDate || endDate >= now);
-          });
+          // Check if there's a valid price list
+          if (moneyAmount.priceList) {
+            const startDate = new Date(moneyAmount.priceList.startsAt);
+            const endDate = new Date(moneyAmount.priceList.endsAt);
+            if (moneyAmount.priceList.status === 'active' && 
+                (!startDate || startDate <= now) && 
+                (!endDate || endDate >= now)) {
+              appliedPriceList = moneyAmount.priceList;
+            }
+          }
 
-          // Sort prices (keep existing sorting logic)
+          // Apply price set logic if it exists
+          if (moneyAmount.priceSet) {
+            const validPrices = moneyAmount.priceSet.prices.filter(price => {
+              if (price.currency.code !== currencyCode) return false;
+              if (price.priceList) {
+                const startDate = new Date(price.priceList.startsAt);
+                const endDate = new Date(price.priceList.endsAt);
+                return price.priceList.status === 'active' && 
+                       (!startDate || startDate <= now) && 
+                       (!endDate || endDate >= now);
+              }
+              return true;
+            });
 
-          const calculatedPrice = validPrices[0] || moneyAmount;
-          const originalPrice = validPrices.find(p => !p.priceList) || moneyAmount;
+            if (validPrices.length > 0) {
+              // Sort prices by amount (ascending)
+              validPrices.sort((a, b) => a.amount - b.amount);
+              calculatedAmount = validPrices[0].amount;
+              appliedPriceList = validPrices[0].priceList || null;
+            }
 
-          // Apply price rules
-          let calculatedAmount = calculatedPrice.amount;
-          if (moneyAmount.priceSet.priceRules && moneyAmount.priceSet.priceRules.length > 0) {
-            // Sort rules by priority (highest first)
-            const sortedRules = moneyAmount.priceSet.priceRules.sort((a, b) => b.priority - a.priority);
-
-            for (const rule of sortedRules) {
-              // Check if the rule is applicable based on rule_attribute and rule_value
-              // This is a simplified check and may need to be adjusted based on your specific requirements
-              const isApplicable = true; // Replace with actual logic to check rule applicability
-
-              if (isApplicable) {
+            // Apply price rules
+            if (moneyAmount.priceSet.priceRules && moneyAmount.priceSet.priceRules.length > 0) {
+              const sortedRules = moneyAmount.priceSet.priceRules.sort((a, b) => b.priority - a.priority);
+              for (const rule of sortedRules) {
                 if (rule.type === 'fixed') {
                   calculatedAmount = Math.min(calculatedAmount, rule.value);
                 } else if (rule.type === 'percentage') {
@@ -149,24 +164,19 @@ export const MoneyAmount = list({
           }
 
           return {
-            calculatedAmount: calculatedAmount,
-            originalAmount: originalPrice.amount,
-            currencyCode: currencyCode,
-            calculatedPrice: {
-              moneyAmountId: calculatedPrice.id,
-              variantId: moneyAmount.productVariant?.id || null,
-              priceListId: calculatedPrice.priceList?.id || null,
-              priceListType: calculatedPrice.priceList?.type || null,
-            },
-            originalPrice: {
-              moneyAmountId: originalPrice.id,
-              variantId: moneyAmount.productVariant?.id || null,
-              priceListId: originalPrice.priceList?.id || null,
-              priceListType: originalPrice.priceList?.type || null,
-            },
+            calculatedAmount,
+            originalAmount,
+            currencyCode,
+            moneyAmountId: moneyAmount.id,
+            variantId: moneyAmount.productVariant?.id || null,
+            priceListId: appliedPriceList?.id || null,
+            priceListType: appliedPriceList?.type || null,
           };
         },
       }),
+      ui: {
+        query: "{ calculatedAmount originalAmount currencyCode moneyAmountId variantId priceListId priceListType }",
+      },
     }),
     ...trackingFields,
   },

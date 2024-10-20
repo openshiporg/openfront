@@ -1417,7 +1417,6 @@ input ProductWhereInput {
   handle: StringFilter
   subtitle: StringFilter
   isGiftcard: BooleanFilter
-  thumbnail: StringFilter
   weight: IntNullableFilter
   length: IntNullableFilter
   height: IntNullableFilter
@@ -1512,7 +1511,6 @@ input ProductOrderByInput {
   handle: OrderDirection
   subtitle: OrderDirection
   isGiftcard: OrderDirection
-  thumbnail: OrderDirection
   weight: OrderDirection
   length: OrderDirection
   height: OrderDirection
@@ -1534,7 +1532,6 @@ input ProductUpdateInput {
   handle: String
   subtitle: String
   isGiftcard: Boolean
-  thumbnail: String
   weight: Int
   length: Int
   height: Int
@@ -1648,7 +1645,6 @@ input ProductCreateInput {
   handle: String
   subtitle: String
   isGiftcard: Boolean
-  thumbnail: String
   weight: Int
   length: Int
   height: Int
@@ -4839,9 +4835,19 @@ type MoneyAmount {
   priceSet: PriceSet
   priceRules(where: PriceRuleWhereInput! = {}, orderBy: [PriceRuleOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PriceRuleWhereUniqueInput): [PriceRule!]
   priceRulesCount(where: PriceRuleWhereInput! = {}): Int
-  calculatedPrice: JSON
+  calculatedPrice: CalculatedPrice
   createdAt: DateTime
   updatedAt: DateTime
+}
+
+type CalculatedPrice {
+  calculatedAmount: Int
+  originalAmount: Int
+  currencyCode: String
+  moneyAmountId: ID
+  variantId: ID
+  priceListId: ID
+  priceListType: String
 }
 
 input MoneyAmountWhereUniqueInput {

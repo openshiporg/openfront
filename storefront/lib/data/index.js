@@ -604,9 +604,19 @@ export const retrievePricedProductById = cache(async function ({
           id
           title
           prices(where: { region: { id: { equals: $regionId } } }) {
+            id
             amount
             currency {
               code
+            }
+            calculatedPrice {
+              calculatedAmount
+              originalAmount
+              currencyCode
+              moneyAmountId
+              variantId
+              priceListId
+              priceListType
             }
           }
         }
@@ -875,7 +885,15 @@ export const getCollectionsListByRegion = cache(async function (
             id
             title
             prices {
-              calculatedPrice
+              calculatedPrice {
+                calculatedAmount
+                originalAmount
+                currencyCode
+                moneyAmountId
+                variantId
+                priceListId
+                priceListType
+              }
               amount
               currency {
                 code

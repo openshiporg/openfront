@@ -1,80 +1,42 @@
-import { formatAmount } from "@storefront/lib/util/prices"
+import { formatAmount } from "@storefront/lib/util/prices";
 
-export function getProductPrice({
-  product,
-  variantId,
-  region
-}) {
+export function getProductPrice({ product, variantId, region }) {
   if (!product || !product.id) {
-    throw new Error("No product provided")
+    throw new Error("No product provided");
   }
 
   const getPercentageDiff = (original, calculated) => {
-    const diff = original - calculated
-    const decrease = (diff / original) * 100
-
+    const diff = original - calculated;
+    const decrease = (diff / original) * 100;
     return decrease.toFixed();
-  }
+  };
 
-  const cheapestPrice = () => {
-    if (!product || !product.productVariants?.length || !region) {
-      return null
+  const variants = product.productVariants;
+
+  const getCalculatedPrice = (variant) => {
+    const price = variant.prices.find(
+      (p) => p.currency.code === region.currency.code
+    );
+    return price ? price.calculatedPrice : null;
+  };
+
+  const variantPrice = variantId
+    ? getCalculatedPrice(variants.find((v) => v.id === variantId))
+    : null;
+
+  const cheapestPrice = variants.reduce((cheapest, variant) => {
+    const price = getCalculatedPrice(variant);
+    if (
+      !cheapest ||
+      (price && price.calculatedAmount < cheapest.calculatedAmount)
+    ) {
+      return price;
     }
-
-    const variants = product.productVariants
-
-    console.log(variants[0].prices)
-
-    const cheapestVariant = variants.reduce((prev, curr) => {
-      return prev.calculated_price < curr.calculated_price ? prev : curr
-    })
-
-    return {
-      calculated_price: formatAmount({
-        amount: cheapestVariant.calculated_price,
-        region,
-        includeTaxes: false,
-      }),
-      original_price: formatAmount({
-        amount: cheapestVariant.original_price,
-        region,
-        includeTaxes: false,
-      }),
-      price_type: cheapestVariant.calculated_price_type,
-      percentage_diff: getPercentageDiff(cheapestVariant.original_price, cheapestVariant.calculated_price),
-    };
-  }
-
-  const variantPrice = () => {
-    if (!product || !variantId || !region) {
-      return null
-    }
-
-    const variant = product.variants.find((v) => v.id === variantId || v.sku === variantId)
-
-    if (!variant) {
-      return null
-    }
-
-    return {
-      calculated_price: formatAmount({
-        amount: variant.calculated_price,
-        region,
-        includeTaxes: false,
-      }),
-      original_price: formatAmount({
-        amount: variant.original_price,
-        region,
-        includeTaxes: false,
-      }),
-      price_type: variant.calculated_price_type,
-      percentage_diff: getPercentageDiff(variant.original_price, variant.calculated_price),
-    };
-  }
+    return cheapest;
+  }, null);
 
   return {
-    product,
-    cheapestPrice: cheapestPrice(),
-    variantPrice: variantPrice(),
+    variantPrice,
+    cheapestPrice,
   };
 }

@@ -1,4 +1,4 @@
-import { list } from "@keystone-6/core";
+import { graphql, list } from "@keystone-6/core";
 import { denyAll } from "@keystone-6/core/access";
 import {
   checkbox,
@@ -7,6 +7,7 @@ import {
   select,
   text,
   relationship,
+  virtual,
 } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
@@ -14,7 +15,6 @@ import { trackingFields } from "./trackingFields";
 export const Product = list({
   access: {
     operation: {
-      // Allow public read access
       query: () => true,
       create: permissions.canManageProducts,
       update: permissions.canManageProducts,
@@ -31,7 +31,18 @@ export const Product = list({
     handle: text(),
     subtitle: text(),
     isGiftcard: checkbox(),
-    thumbnail: text(),
+    thumbnail: virtual({
+      field: graphql.field({
+        type: graphql.String,
+        resolve: async (item, args, context) => {
+          const product = await context.query.Product.findOne({
+            where: { id: item.id },
+            query: 'productImages(take: 1) { image { url } }',
+          });
+          return product.productImages[0]?.image?.url || null;
+        },
+      }),
+    }),
     weight: integer(),
     length: integer(),
     height: integer(),
@@ -113,5 +124,8 @@ export const Product = list({
       many: true,
     }),
     ...trackingFields,
+  },
+  ui: {
+    labelField: "title",
   },
 });

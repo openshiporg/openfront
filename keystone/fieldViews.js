@@ -12,8 +12,8 @@ import * as view6 from "@keystone/views/Timestamp";
 import * as view7 from "@keystone/views/Select";
 import * as view8 from "@keystone/views/Integer";
 import * as view9 from "@keystone/views/Float";
-import * as view10 from "@keystone/views/Image";
-import * as view11 from "@keystone/views/Virtual";
+import * as view10 from "@keystone/views/Virtual";
+import * as view11 from "@keystone/views/Image";
 
 export const fieldViews = [
   view0,

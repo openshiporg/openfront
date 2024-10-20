@@ -19,13 +19,16 @@ const getCollectionsWithProducts = cache(async (countryCode) => {
 
   const { collections } = await getCollectionsListByRegion(0, 3, region.id);
 
+
   if (!collections) {
     return null;
   }
 
-  const collectionsWithTransformedProducts = collections.map(collection => ({
+  const collectionsWithTransformedProducts = collections.map((collection) => ({
     ...collection,
-    products: collection.products.map(product => transformProductPreview(product, region))
+    products: collection.products.map((product) =>
+      transformProductPreview(product, region)
+    ),
   }));
 
   return {

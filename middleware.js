@@ -68,5 +68,5 @@ export async function middleware(request) {
 }
 
 export const config = {
-  matcher: `${basePath}/:path*`,
+  matcher: [`/dashboard/:path*`],
 };
