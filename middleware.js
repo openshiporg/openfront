@@ -5,13 +5,6 @@ import { GraphQLClient, gql } from "graphql-request";
 const basePath = "/dashboard";
 const DEFAULT_REGION = process.env.NEXT_PUBLIC_DEFAULT_REGION || "us";
 
-function gqlClient(req) {
-  return new GraphQLClient(`${process.env.FRONTEND_URL}/api/graphql`, {
-    headers: req ? { cookie: req.cookies } : undefined,
-    credentials: "include",
-    fetch,
-  });
-}
 
 const regionMapCache = {
   regionMap: new Map(),
@@ -22,8 +15,7 @@ async function getRegionMap(request) {
   const { regionMap, regionMapUpdated } = regionMapCache;
 
   if (!regionMap.keys().next().value || regionMapUpdated < Date.now() - 3600 * 1000) {
-    const client = gqlClient(request);
-    const { regions } = await client.request(gql`
+    const { regions } = await openfrontClient.request(gql`
       query {
         regions {
           countries {
