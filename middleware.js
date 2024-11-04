@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { checkAuth } from "@keystone/utils/checkAuth";
 import { GraphQLClient, gql } from "graphql-request";
+import { openfrontClient } from "@storefront/lib/config";
 
 const basePath = "/dashboard";
 const DEFAULT_REGION = process.env.NEXT_PUBLIC_DEFAULT_REGION || "us";
