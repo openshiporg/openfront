@@ -4,14 +4,11 @@ import EmptyCartMessage from "../components/empty-cart-message"
 import SignInPrompt from "../components/sign-in-prompt"
 import Divider from "@storefront/modules/common/components/divider"
 
-const CartTemplate = ({
-  cart,
-  customer
-}) => {
+const CartTemplate = ({ cart, customer }) => {
   return (
     <div className="py-12">
-      <div className="content-container">
-        {cart?.items.length ? (
+      {cart?.lineItems.length ? (
+        <>
           <div className="grid grid-cols-1 small:grid-cols-[1fr_360px] gap-x-40">
             <div className="flex flex-col bg-white py-6 gap-y-6">
               {!customer && (
@@ -20,7 +17,7 @@ const CartTemplate = ({
                   <Divider />
                 </>
               )}
-              <ItemsTemplate region={cart?.region} items={cart?.items} />
+              <ItemsTemplate region={cart?.region} items={cart?.lineItems} />
             </div>
             <div className="relative">
               <div className="flex flex-col gap-y-8 sticky top-12">
@@ -34,14 +31,13 @@ const CartTemplate = ({
               </div>
             </div>
           </div>
-        ) : (
-          <div>
-            <EmptyCartMessage />
-          </div>
-        )}
-      </div>
+        </>
+      ) : (
+        <EmptyCartMessage />
+      )}
     </div>
-  );
+  )
 }
 
 export default CartTemplate
+

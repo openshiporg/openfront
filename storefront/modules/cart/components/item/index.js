@@ -21,7 +21,14 @@ const Item = ({
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState(null)
 
-  const { handle } = item.variant.product
+  const { handle } = item.productVariant.product
+
+  const maxQuantity = Math.min(
+    item.productVariant.inventoryQuantity > 0 
+      ? item.productVariant.inventoryQuantity 
+      : 10,
+    10
+  )
 
   const changeQuantity = async (quantity) => {
     setError(null)
@@ -50,13 +57,13 @@ const Item = ({
             "w-16": type === "preview",
             "small:w-24 w-12": type === "full",
           })}>
-          <Thumbnail thumbnail={item.thumbnail} size="square" />
+          <Thumbnail thumbnail={item.productVariant.product.thumbnail} size="square" />
         </LocalizedClientLink>
       </Table.Cell>
 
       <Table.Cell className="text-left">
         <Text className="txt-medium-plus text-ui-fg-base">{item.title}</Text>
-        <LineItemOptions variant={item.variant} />
+        <LineItemOptions variant={item.productVariant} />
       </Table.Cell>
 
       {type === "full" && (
@@ -68,9 +75,7 @@ const Item = ({
               onChange={(value) => changeQuantity(parseInt(value.target.value))}
               className="w-14 h-10 p-4">
               {Array.from({
-                length: Math.min(item.variant.inventory_quantity > 0
-                  ? item.variant.inventory_quantity
-                  : 10, 10),
+                length: maxQuantity,
               }, (_, i) => (
                 <option value={i + 1} key={i}>
                   {i + 1}

@@ -10,16 +10,17 @@ import Spinner from "@storefront/modules/common/icons/spinner"
 const PaymentButton = ({ cart }) => {
   const notReady =
     !cart ||
-    !cart.shipping_address ||
-    !cart.billing_address ||
+    !cart.shippingAddress ||
+    !cart.billingAddress ||
     !cart.email ||
-    cart.shipping_methods.length < 1
+    cart.shippingMethods.length < 1
       ? true
       : false
 
-  const paymentSession = cart.payment_session
+  const paymentSession = cart.paymentSession
 
-  switch (paymentSession.provider_id) {
+
+  switch (paymentSession.providerId) {
     case "stripe":
       return <StripePaymentButton notReady={notReady} cart={cart} />;
     case "manual":
@@ -49,7 +50,7 @@ const StripePaymentButton = ({
   const elements = useElements()
   const card = elements?.getElement("card")
 
-  const session = cart.payment_session
+  const session = cart.paymentSession
 
   const disabled = !stripe || !elements ? true : false
 
@@ -62,33 +63,33 @@ const StripePaymentButton = ({
     }
 
     await stripe
-      .confirmCardPayment(session.data.client_secret, {
-        payment_method: {
+      .confirmCardPayment(session.data.clientSecret, {
+        paymentMethod: {
           card: card,
-          billing_details: {
+          billingDetails: {
             name:
-              cart.billing_address.first_name +
+              cart.billingAddress.firstName +
               " " +
-              cart.billing_address.last_name,
+              cart.billingAddress.lastName,
             address: {
-              city: cart.billing_address.city ?? undefined,
-              country: cart.billing_address.country_code ?? undefined,
-              line1: cart.billing_address.address_1 ?? undefined,
-              line2: cart.billing_address.address_2 ?? undefined,
-              postal_code: cart.billing_address.postal_code ?? undefined,
-              state: cart.billing_address.province ?? undefined,
+              city: cart.billingAddress.city ?? undefined,
+              country: cart.billingAddress.countryCode ?? undefined,
+              line1: cart.billingAddress.address1 ?? undefined,
+              line2: cart.billingAddress.address2 ?? undefined,
+              postalCode: cart.billingAddress.postalCode ?? undefined,
+              state: cart.billingAddress.province ?? undefined,
             },
             email: cart.email,
-            phone: cart.billing_address.phone ?? undefined,
+            phone: cart.billingAddress.phone ?? undefined,
           },
         },
       })
       .then(({ error, paymentIntent }) => {
         if (error) {
-          const pi = error.payment_intent
+          const pi = error.paymentIntent
 
           if (
-            (pi && pi.status === "requires_capture") ||
+            (pi && pi.status === "requiresCapture") ||
             (pi && pi.status === "succeeded")
           ) {
             onPaymentCompleted()
@@ -99,7 +100,7 @@ const StripePaymentButton = ({
         }
 
         if (
-          (paymentIntent && paymentIntent.status === "requires_capture") ||
+          (paymentIntent && paymentIntent.status === "requiresCapture") ||
           paymentIntent.status === "succeeded"
         ) {
           return onPaymentCompleted();
@@ -135,7 +136,7 @@ const PayPalPaymentButton = ({
     })
   }
 
-  const session = cart.payment_session
+  const session = cart.paymentSession
 
   const handlePayment = async (
     _data,

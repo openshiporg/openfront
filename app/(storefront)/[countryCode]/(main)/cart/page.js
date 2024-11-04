@@ -24,12 +24,8 @@ const fetchCart = async () => {
     return null
   }
 
-  if (cart?.items.length) {
-    const enrichedItems = await enrichLineItems(cart?.items, cart?.region_id)
-    cart.items = enrichedItems
-  }
 
-  cart.checkout_step = cart && getCheckoutStep(cart)
+  // cart.checkoutStep = cart && getCheckoutStep(cart)
 
   return cart
 }

@@ -18,24 +18,24 @@ const PaymentContainer = ({
   return <>
     <RadioGroup.Option
       key={paymentSession.id}
-      value={paymentSession.provider_id}
+      value={paymentSession.providerId}
       disabled={disabled}
       className={clx(
         "flex flex-col gap-y-2 text-small-regular cursor-pointer py-4 border rounded-rounded px-8 mb-2 hover:shadow-borders-interactive-with-active",
         {
           "border-ui-border-interactive":
-            selectedPaymentOptionId === paymentSession.provider_id,
+            selectedPaymentOptionId === paymentSession.providerId,
         }
       )}>
       <div className="flex items-center justify-between ">
         <div className="flex items-center gap-x-4">
-          <Radio checked={selectedPaymentOptionId === paymentSession.provider_id} />
+          <Radio checked={selectedPaymentOptionId === paymentSession.providerId} />
           <Text className="text-base-regular">
-            {paymentInfoMap[paymentSession.provider_id]?.title ||
-              paymentSession.provider_id}
+            {paymentInfoMap[paymentSession.providerId]?.title ||
+              paymentSession.providerId}
           </Text>
           {process.env.NODE_ENV === "development" &&
-            !Object.hasOwn(paymentInfoMap, paymentSession.provider_id) && (
+            !Object.hasOwn(paymentInfoMap, paymentSession.providerId) && (
               <Tooltip
                 content="You can add a user-friendly name and icon for this payment provider in 'src/modules/checkout/components/payment/index.tsx'"
                 className="min-w-fit">
@@ -43,15 +43,15 @@ const PaymentContainer = ({
               </Tooltip>
             )}
 
-          {paymentSession.provider_id === "manual" && isDevelopment && (
+          {paymentSession.providerId === "manual" && isDevelopment && (
             <PaymentTest className="hidden small:block" />
           )}
         </div>
         <span className="justify-self-end text-ui-fg-base">
-          {paymentInfoMap[paymentSession.provider_id]?.icon}
+          {paymentInfoMap[paymentSession.providerId]?.icon}
         </span>
       </div>
-      {paymentSession.provider_id === "manual" && isDevelopment && (
+      {paymentSession.providerId === "manual" && isDevelopment && (
         <PaymentTest className="small:hidden text-[10px]" />
       )}
     </RadioGroup.Option>

@@ -21,12 +21,9 @@ const regionMapCache = {
 async function getRegionMap(request) {
   const { regionMap, regionMapUpdated } = regionMapCache;
 
-  if (
-    !regionMap.keys().next().value ||
-    regionMapUpdated < Date.now() - 3600 * 1000
-  ) {
+  if (!regionMap.keys().next().value || regionMapUpdated < Date.now() - 3600 * 1000) {
     const client = gqlClient(request);
-    const query = gql`
+    const { regions } = await client.request(gql`
       query {
         regions {
           countries {
@@ -36,13 +33,7 @@ async function getRegionMap(request) {
           }
         }
       }
-    `;
-
-    const { regions } = await client.request(query);
-
-    if (!regions) {
-      throw new Error("Regions not found");
-    }
+    `);
 
     regions.forEach((region) => {
       region.countries.forEach((country) => {
@@ -59,11 +50,7 @@ async function getRegionMap(request) {
 async function getCountryCode(request, regionMap) {
   try {
     let countryCode;
-
-    const vercelCountryCode = request.headers
-      .get("x-vercel-ip-country")
-      ?.toLowerCase();
-
+    const vercelCountryCode = request.headers.get("x-vercel-ip-country")?.toLowerCase();
     const urlCountryCode = request.nextUrl.pathname.split("/")[1]?.toLowerCase();
 
     if (urlCountryCode && regionMap.has(urlCountryCode)) {
@@ -83,83 +70,72 @@ async function getCountryCode(request, regionMap) {
 }
 
 export async function middleware(request) {
-  // Handle country redirect for non-dashboard routes
-  if (!request.nextUrl.pathname.startsWith(basePath)) {
-    const regionMap = await getRegionMap(request);
-    const countryCode = await getCountryCode(request, regionMap);
+  const { authenticatedItem: user, redirectToInit } = await checkAuth(request);
+  const searchParams = request.nextUrl.searchParams;
+  const cartId = searchParams.get("cart_id");
+  const checkoutStep = searchParams.get("step");
+  const cartIdCookie = request.cookies.get("_openfront_cart_id");
 
-    const urlHasCountryCode =
-      countryCode && request.nextUrl.pathname.split("/")[1].includes(countryCode);
-
-    if (!urlHasCountryCode && countryCode) {
-      const redirectPath =
-        request.nextUrl.pathname === "/" ? "" : request.nextUrl.pathname;
-      const queryString = request.nextUrl.search ? request.nextUrl.search : "";
-      const redirectUrl = `${request.nextUrl.origin}/${countryCode}${redirectPath}${queryString}`;
-      return NextResponse.redirect(redirectUrl, 307);
-    }
-
-    return NextResponse.next();
-  }
-
-  // Only apply middleware logic to /dashboard routes
-  if (!request.nextUrl.pathname.startsWith(basePath)) {
-    return NextResponse.next();
-  }
-
-  const { authenticatedItem: isAuth, redirectToInit } =
-    await checkAuth(request);
-
-  // Paths that don't require authentication
-  const publicPaths = [
-    `${basePath}/signin`,
-    `${basePath}/signup`,
-    `${basePath}/reset`,
-    `${basePath}/init`,
-  ];
-  const isPublicPath = publicPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
-  );
-
-  // Check if sign-ups are allowed
-  const allowSignUp = true;
-
-  if (
-    redirectToInit &&
-    !request.nextUrl.pathname.startsWith(`${basePath}/init`)
-  ) {
+  // Handle redirectToInit first
+  if (redirectToInit && !request.nextUrl.pathname.startsWith(`${basePath}/init`)) {
     return NextResponse.redirect(new URL(`${basePath}/init`, request.url));
   }
 
-  if (
-    !redirectToInit &&
-    request.nextUrl.pathname.startsWith(`${basePath}/init`)
-  ) {
+  // Prevent accessing init page if redirectToInit is false
+  if (!redirectToInit && request.nextUrl.pathname.startsWith(`${basePath}/init`)) {
     return NextResponse.redirect(new URL(basePath, request.url));
   }
 
-  if (isPublicPath) {
-    if (isAuth && !request.nextUrl.pathname.startsWith(`${basePath}/reset`)) {
-      return NextResponse.redirect(new URL(basePath, request.url));
+  // Only handle country code and cart_id param for non-dashboard routes
+  if (!request.nextUrl.pathname.startsWith(basePath)) {
+    const regionMap = await getRegionMap(request);
+    const countryCode = await getCountryCode(request, regionMap);
+    
+    let response;
+
+    // Handle country code redirect
+    const urlHasCountryCode = countryCode && request.nextUrl.pathname.split("/")[1]?.includes(countryCode);
+    if (!urlHasCountryCode && countryCode) {
+      const redirectPath = request.nextUrl.pathname === "/" ? "" : request.nextUrl.pathname;
+      const queryString = request.nextUrl.search ? request.nextUrl.search : "";
+      const redirectUrl = `${request.nextUrl.origin}/${countryCode}${redirectPath}${queryString}`;
+      response = NextResponse.redirect(redirectUrl);
+    } else {
+      response = NextResponse.next();
     }
-    // Redirect to sign-in if sign-ups are not allowed and the user is trying to access the signup page
-    if (
-      request.nextUrl.pathname.startsWith(`${basePath}/signup`) &&
-      !allowSignUp
-    ) {
-      return NextResponse.redirect(new URL(`${basePath}/signin`, request.url));
+
+    // If cart_id in URL params and no existing cookie, set it and redirect to address step
+    if (cartId && !cartIdCookie) {
+      const redirectUrl = `${request.nextUrl.href}&step=address`;
+      response = NextResponse.redirect(redirectUrl);
+      response.cookies.set("_openfront_cart_id", cartId, { 
+        maxAge: 60 * 60 * 24 * 7,
+      });
     }
-    return NextResponse.next();
+
+    return response;
   }
 
-  if (!isAuth) {
-    const from = request.nextUrl.pathname + request.nextUrl.search;
-    return NextResponse.redirect(
-      new URL(
-        `${basePath}/signin?from=${encodeURIComponent(from)}`,
-        request.url
-      )
-    );
+  // Handle dashboard routes
+  if (request.nextUrl.pathname.startsWith(basePath)) {
+    // Redirect to login if not authenticated
+    if (!user && !request.nextUrl.pathname.startsWith(`${basePath}/signin`)) {
+      const signinUrl = new URL(`${basePath}/signin`, request.url);
+      signinUrl.searchParams.set("from", request.nextUrl.pathname);
+      return NextResponse.redirect(signinUrl);
+    }
+
+    // Redirect to dashboard if already authenticated and trying to access signin
+    if (user && request.nextUrl.pathname.startsWith(`${basePath}/signin`)) {
+      return NextResponse.redirect(new URL(basePath, request.url));
+    }
+
+    // Check permissions for specific routes
+    if (user && !user.isAdmin) {
+      if (request.nextUrl.pathname.startsWith(`${basePath}/admin`)) {
+        return NextResponse.redirect(new URL(basePath, request.url));
+      }
+    }
   }
 
   return NextResponse.next();

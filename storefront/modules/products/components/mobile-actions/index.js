@@ -137,9 +137,9 @@ const MobileActions = ({
                   </button>
                 </div>
                 <div className="bg-white px-6 py-12">
-                  {product.variants.length > 1 && (
+                  {product.productVariants.length > 1 && (
                     <div className="flex flex-col gap-y-6">
-                      {(product.options || []).map((option) => {
+                      {(product.productOptions || []).map((option) => {
                         return (
                           <div key={option.id}>
                             <OptionSelect

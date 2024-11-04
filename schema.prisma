@@ -122,20 +122,16 @@ model Order {
 
 model LineItem {
   id                  String               @id @default(cuid())
-  title               String               @default("")
-  description         String               @default("")
-  thumbnail           String               @default("")
-  isGiftcard          Boolean              @default(false)
-  shouldMerge         Boolean              @default(true)
-  allowDiscounts      Boolean              @default(true)
-  hasShipping         Boolean              @default(false)
-  unitPrice           Int
   quantity            Int
   fulfilledQuantity   Int?
   returnedQuantity    Int?
   shippedQuantity     Int?
   metadata            Json?
   isReturn            Boolean              @default(false)
+  isGiftcard          Boolean              @default(false)
+  shouldMerge         Boolean              @default(true)
+  allowDiscounts      Boolean              @default(true)
+  hasShipping         Boolean              @default(false)
   claimOrder          ClaimOrder?          @relation("LineItem_claimOrder", fields: [claimOrderId], references: [id])
   claimOrderId        String?              @map("claimOrder")
   cart                Cart?                @relation("LineItem_cart", fields: [cartId], references: [id])
@@ -165,7 +161,7 @@ model Product {
   id                 String              @id @default(cuid())
   title              String              @default("")
   description        String              @default("")
-  handle             String              @default("")
+  handle             String              @unique @default("")
   subtitle           String              @default("")
   isGiftcard         Boolean             @default(false)
   weight             Int?
@@ -386,6 +382,7 @@ model Cart {
   idempotencyKey        String                 @default("")
   context               Json?
   paymentAuthorizedAt   DateTime?
+  abandonedEmailSent    Boolean                @default(false)
   user                  User?                  @relation("Cart_user", fields: [userId], references: [id])
   userId                String?                @map("user")
   region                Region?                @relation("Cart_region", fields: [regionId], references: [id])

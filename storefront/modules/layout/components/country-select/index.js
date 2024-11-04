@@ -1,46 +1,44 @@
 "use client";
-import { Listbox, Transition } from "@headlessui/react"
-import { Fragment, useEffect, useMemo, useState } from "react"
-import ReactCountryFlag from "react-country-flag"
+import { Listbox, Transition } from "@headlessui/react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import ReactCountryFlag from "react-country-flag";
+import { useParams, usePathname } from "next/navigation";
+import { updateRegion } from "app/(storefront)/actions";
+import { getRegion } from "@storefront/lib/data";
+import { redirect } from "next/navigation";
 
-// import { updateRegion } from "app/actions"
-import { useParams, usePathname } from "next/navigation"
+const CountrySelect = ({ toggleState, regions }) => {
+  const [current, setCurrent] = useState(undefined);
 
-const CountrySelect = ({
-  toggleState,
-  regions
-}) => {
-  const [current, setCurrent] = useState(undefined)
+  const { countryCode } = useParams();
+  const currentPath = usePathname().split(`/${countryCode}`)[1];
 
-  const { countryCode } = useParams()
-  const currentPath = usePathname().split(`/${countryCode}`)[1]
-
-  const { state, close } = toggleState
+  const { state, close } = toggleState;
 
   const options = useMemo(() => {
     return regions
       ?.map((r) => {
         return r.countries.map((c) => ({
-          country: c.iso_2,
+          country: c.iso2,
           region: r.id,
-          label: c.display_name,
+          label: c.name,
         }));
       })
       .flat()
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [regions])
+  }, [regions]);
 
   useEffect(() => {
     if (countryCode) {
-      const option = options?.find((o) => o.country === countryCode)
-      setCurrent(option)
+      const option = options?.find((o) => o.country === countryCode);
+      setCurrent(option);
     }
-  }, [options, countryCode])
+  }, [options, countryCode]);
 
-  const handleChange = (option) => {
-    // updateRegion(option.country, currentPath)
-    close()
-  }
+  const handleChange = async (option) => {
+    updateRegion(option.country, currentPath);
+    close();
+  };
 
   return (
     <div>
@@ -51,7 +49,8 @@ const CountrySelect = ({
           countryCode
             ? options?.find((o) => o.country === countryCode)
             : undefined
-        }>
+        }
+      >
         <Listbox.Button className="py-1 w-full">
           <div className="txt-compact-small flex items-start gap-x-2">
             <span>Shipping to:</span>
@@ -63,7 +62,8 @@ const CountrySelect = ({
                     width: "16px",
                     height: "16px",
                   }}
-                  countryCode={current.country} />
+                  countryCode={current.country}
+                />
                 {current.label}
               </span>
             )}
@@ -75,23 +75,27 @@ const CountrySelect = ({
             as={Fragment}
             leave="transition ease-in duration-150"
             leaveFrom="opacity-100"
-            leaveTo="opacity-0">
+            leaveTo="opacity-0"
+          >
             <Listbox.Options
               className="absolute -bottom-[calc(100%-36px)] left-0 xsmall:left-auto xsmall:right-0 max-h-[442px] overflow-y-scroll z-[900] bg-white drop-shadow-md text-small-regular uppercase text-black no-scrollbar rounded-rounded w-full"
-              static>
+              static
+            >
               {options?.map((o, index) => {
                 return (
                   <Listbox.Option
                     key={index}
                     value={o}
-                    className="py-2 hover:bg-gray-200 px-3 cursor-pointer flex items-center gap-x-2">
+                    className="py-2 hover:bg-gray-200 px-3 cursor-pointer flex items-center gap-x-2"
+                  >
                     <ReactCountryFlag
                       svg
                       style={{
                         width: "16px",
                         height: "16px",
                       }}
-                      countryCode={o.country} />{" "}
+                      countryCode={o.country}
+                    />{" "}
                     {o.label}
                   </Listbox.Option>
                 );
@@ -102,6 +106,6 @@ const CountrySelect = ({
       </Listbox>
     </div>
   );
-}
+};
 
-export default CountrySelect
+export default CountrySelect;

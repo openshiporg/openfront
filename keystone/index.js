@@ -10,17 +10,16 @@ import Iron from "@hapi/iron";
 import * as cookie from "cookie";
 import { permissions } from "./access";
 // Add these new imports
-import { ApolloArmor } from '@escape.tech/graphql-armor';
-import { applyMiddleware } from 'graphql-middleware';
+import { ApolloArmor } from "@escape.tech/graphql-armor";
+import { applyMiddleware } from "graphql-middleware";
 import { RateLimiterMemory } from "rate-limiter-flexible";
-import { applyRateLimiting } from './applyRateLimiting';
+import { applyRateLimiting } from "./applyRateLimiting";
 
 const databaseURL = process.env.DATABASE_URL || "file:./keystone.db";
 
 const listKey = "User";
 
-export const basePath = "/dashboard"
-
+export const basePath = "/dashboard";
 
 const sessionConfig = {
   maxAge: 60 * 60 * 24 * 360, // How long they stay signed in?
@@ -206,15 +205,16 @@ export default withAuth(
       },
     },
     graphql: {
-      apolloConfig: {
-        ...armor.protect()
-      },
-      extendGraphqlSchema: (schema) => {
-        const extendedSchema = extendGraphqlSchema(schema);
-        return applyMiddleware(extendedSchema, 
-          applyRateLimiting
-        );
-      }
+      // apolloConfig: {
+      //   ...armor.protect()
+      // },
+      // extendGraphqlSchema: (schema) => {
+      //   const extendedSchema = extendGraphqlSchema(schema);
+      //   return applyMiddleware(extendedSchema,
+      //     applyRateLimiting
+      //   );
+      // }
+      extendGraphqlSchema,
     },
     ui: {
       // Show the UI only for users who have canReadOrders permission

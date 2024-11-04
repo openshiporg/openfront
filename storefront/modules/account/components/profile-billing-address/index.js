@@ -16,8 +16,8 @@ const ProfileBillingAddress = ({
     return regions
       ?.map((region) => {
         return region.countries.map((country) => ({
-          value: country.iso_2,
-          label: country.display_name,
+          value: country.iso2,
+          label: country.name,
         }));
       })
       .flat() || [];
@@ -39,29 +39,29 @@ const ProfileBillingAddress = ({
   }, [state])
 
   const currentInfo = useMemo(() => {
-    if (!customer.billing_address) {
+    if (!customer.billingAddress) {
       return "No billing address"
     }
 
     const country =
-      regionOptions?.find((country) => country.value === customer.billing_address.country_code)?.label || customer.billing_address.country_code?.toUpperCase()
+      regionOptions?.find((country) => country.value === customer.billingAddress.countryCode)?.label || customer.billingAddress.countryCode?.toUpperCase()
 
     return (
       <div className="flex flex-col font-semibold">
         <span>
-          {customer.billing_address.first_name}{" "}
-          {customer.billing_address.last_name}
+          {customer.billingAddress.firstName}{" "}
+          {customer.billingAddress.lastName}
         </span>
-        <span>{customer.billing_address.company}</span>
+        <span>{customer.billingAddress.company}</span>
         <span>
-          {customer.billing_address.address_1}
-          {customer.billing_address.address_2
-            ? `, ${customer.billing_address.address_2}`
+          {customer.billingAddress.address1}
+          {customer.billingAddress.address2
+            ? `, ${customer.billingAddress.address2}`
             : ""}
         </span>
         <span>
-          {customer.billing_address.postal_code},{" "}
-          {customer.billing_address.city}
+          {customer.billingAddress.postalCode},{" "}
+          {customer.billingAddress.city}
         </span>
         <span>{country}</span>
       </div>
@@ -80,47 +80,47 @@ const ProfileBillingAddress = ({
           <div className="grid grid-cols-2 gap-x-2">
             <Input
               label="First name"
-              name="billing_address.first_name"
-              defaultValue={customer.billing_address?.first_name || undefined}
+              name="billingAddress.firstName"
+              defaultValue={customer.billingAddress?.firstName || undefined}
               required />
             <Input
               label="Last name"
-              name="billing_address.last_name"
-              defaultValue={customer.billing_address?.last_name || undefined}
+              name="billingAddress.lastName"
+              defaultValue={customer.billingAddress?.lastName || undefined}
               required />
           </div>
           <Input
             label="Company"
-            name="billing_address.company"
-            defaultValue={customer.billing_address?.company || undefined} />
+            name="billingAddress.company"
+            defaultValue={customer.billingAddress?.company || undefined} />
           <Input
             label="Address"
-            name="billing_address.address_1"
-            defaultValue={customer.billing_address?.address_1 || undefined}
+            name="billingAddress.address1"
+            defaultValue={customer.billingAddress?.address1 || undefined}
             required />
           <Input
             label="Apartment, suite, etc."
-            name="billing_address.address_2"
-            defaultValue={customer.billing_address?.address_2 || undefined} />
+            name="billingAddress.address2"
+            defaultValue={customer.billingAddress?.address2 || undefined} />
           <div className="grid grid-cols-[144px_1fr] gap-x-2">
             <Input
               label="Postal code"
-              name="billing_address.postal_code"
-              defaultValue={customer.billing_address?.postal_code || undefined}
+              name="billingAddress.postalCode"
+              defaultValue={customer.billingAddress?.postalCode || undefined}
               required />
             <Input
               label="City"
-              name="billing_address.city"
-              defaultValue={customer.billing_address?.city || undefined}
+              name="billingAddress.city"
+              defaultValue={customer.billingAddress?.city || undefined}
               required />
           </div>
           <Input
             label="Province"
-            name="billing_address.province"
-            defaultValue={customer.billing_address?.province || undefined} />
+            name="billingAddress.province"
+            defaultValue={customer.billingAddress?.province || undefined} />
           <NativeSelect
-            name="billing_address.country_code"
-            defaultValue={customer.billing_address?.country_code || undefined}
+            name="billingAddress.countryCode"
+            defaultValue={customer.billingAddress?.countryCode || undefined}
             required>
             <option value="">-</option>
             {regionOptions.map((option, i) => {
@@ -141,16 +141,16 @@ const mapBillingAddressToFormData = ({
   customer
 }) => {
   return {
-    billing_address: {
-      first_name: customer.billing_address?.first_name || undefined,
-      last_name: customer.billing_address?.last_name || undefined,
-      company: customer.billing_address?.company || undefined,
-      address_1: customer.billing_address?.address_1 || undefined,
-      address_2: customer.billing_address?.address_2 || undefined,
-      city: customer.billing_address?.city || undefined,
-      province: customer.billing_address?.province || undefined,
-      postal_code: customer.billing_address?.postal_code || undefined,
-      country_code: customer.billing_address?.country_code || undefined,
+    billingAddress: {
+      firstName: customer.billingAddress?.firstName || undefined,
+      lastName: customer.billingAddress?.lastName || undefined,
+      company: customer.billingAddress?.company || undefined,
+      address1: customer.billingAddress?.address1 || undefined,
+      address2: customer.billingAddress?.address2 || undefined,
+      city: customer.billingAddress?.city || undefined,
+      province: customer.billingAddress?.province || undefined,
+      postalCode: customer.billingAddress?.postalCode || undefined,
+      countryCode: customer.billingAddress?.countryCode || undefined,
     },
   }
 }

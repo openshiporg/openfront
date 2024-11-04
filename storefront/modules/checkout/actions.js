@@ -44,7 +44,7 @@ export async function applyGiftCard(code) {
   if (!cartId) return "No cartId cookie found"
 
   try {
-    await updateCart(cartId, { gift_cards: [{ code }] }).then(() => {
+    await updateCart(cartId, { giftCards: [{ code }] }).then(() => {
       revalidateTag("cart")
     })
   } catch (error) {
@@ -65,17 +65,14 @@ export async function removeDiscount(code) {
   }
 }
 
-export async function removeGiftCard(
-  codeToRemove,
-  giftCards
-) {
+export async function removeGiftCard(codeToRemove, giftCards) {
   const cartId = cookies().get("_openfront_cart_id")?.value
 
   if (!cartId) return "No cartId cookie found"
 
   try {
     await updateCart(cartId, {
-      gift_cards: [...giftCards]
+      giftCards: [...giftCards]
         .filter((gc) => gc.code !== codeToRemove)
         .map((gc) => ({ code: gc.code })),
     }).then(() => {
@@ -86,10 +83,7 @@ export async function removeGiftCard(
   }
 }
 
-export async function submitDiscountForm(
-  currentState,
-  formData
-) {
+export async function submitDiscountForm(currentState, formData) {
   const code = formData.get("code")
 
   try {
@@ -110,38 +104,37 @@ export async function setAddresses(currentState, formData) {
   if (!cartId) return { message: "No cartId cookie found" }
 
   const data = {
-    shipping_address: {
-      first_name: formData.get("shipping_address.first_name"),
-      last_name: formData.get("shipping_address.last_name"),
-      address_1: formData.get("shipping_address.address_1"),
-      address_2: "",
-      company: formData.get("shipping_address.company"),
-      postal_code: formData.get("shipping_address.postal_code"),
-      city: formData.get("shipping_address.city"),
-      country_code: formData.get("shipping_address.country_code"),
-      province: formData.get("shipping_address.province"),
-      phone: formData.get("shipping_address.phone"),
+    shippingAddress: {
+      firstName: formData.get("shippingAddress.firstName"),
+      lastName: formData.get("shippingAddress.lastName"),
+      address1: formData.get("shippingAddress.address1"),
+      address2: "",
+      company: formData.get("shippingAddress.company"),
+      postalCode: formData.get("shippingAddress.postalCode"),
+      city: formData.get("shippingAddress.city"),
+      countryCode: formData.get("shippingAddress.countryCode"),
+      province: formData.get("shippingAddress.province"),
+      phone: formData.get("shippingAddress.phone"),
     },
-
     email: formData.get("email")
   }
 
   const sameAsBilling = formData.get("same_as_billing")
 
-  if (sameAsBilling === "on") data.billing_address = data.shipping_address
+  if (sameAsBilling === "on") data.billingAddress = data.shippingAddress
 
   if (sameAsBilling !== "on")
-    data.billing_address = {
-      first_name: formData.get("billing_address.first_name"),
-      last_name: formData.get("billing_address.last_name"),
-      address_1: formData.get("billing_address.address_1"),
-      address_2: "",
-      company: formData.get("billing_address.company"),
-      postal_code: formData.get("billing_address.postal_code"),
-      city: formData.get("billing_address.city"),
-      country_code: formData.get("billing_address.country_code"),
-      province: formData.get("billing_address.province"),
-      phone: formData.get("billing_address.phone")
+    data.billingAddress = {
+      firstName: formData.get("billingAddress.firstName"),
+      lastName: formData.get("billingAddress.lastName"),
+      address1: formData.get("billingAddress.address1"),
+      address2: "",
+      company: formData.get("billingAddress.company"),
+      postalCode: formData.get("billingAddress.postalCode"),
+      city: formData.get("billingAddress.city"),
+      countryCode: formData.get("billingAddress.countryCode"),
+      province: formData.get("billingAddress.province"),
+      phone: formData.get("billingAddress.phone")
     }
 
   try {
@@ -151,7 +144,7 @@ export async function setAddresses(currentState, formData) {
     return error.toString();
   }
 
-  redirect(`/${formData.get("shipping_address.country_code")}/checkout?step=delivery`)
+  redirect(`/${formData.get("shippingAddress.countryCode")}/checkout?step=delivery`)
 }
 
 export async function setShippingMethod(shippingMethodId) {
@@ -196,7 +189,7 @@ export async function placeOrder() {
   }
 
   if (cart?.type === "order") {
-    const countryCode = cart.data.shipping_address?.country_code?.toLowerCase()
+    const countryCode = cart.data.shippingAddress?.countryCode?.toLowerCase()
     cookies().set("_openfront_cart_id", "", { maxAge: -1 })
     redirect(`/${countryCode}/order/confirmed/${cart?.data.id}`)
   }

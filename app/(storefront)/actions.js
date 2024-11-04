@@ -1,10 +1,10 @@
-"use server"
+"use server";
 
-import { revalidateTag } from "next/cache"
-import { cookies } from "next/headers"
-import { redirect } from "next/navigation"
-
-import { getRegion, updateCart } from "@storefront/lib/data"
+import { revalidateTag } from "next/cache";
+import { redirect } from "next/navigation";
+import { getCartId } from "@lib/cookies";
+import { getRegion } from "@storefront/lib/data";
+import { updateCart } from "@storefront/modules/cart/actions";
 
 /**
  * Updates the countrycode param and revalidates the regions cache
@@ -12,29 +12,24 @@ import { getRegion, updateCart } from "@storefront/lib/data"
  * @param countryCode
  */
 export async function updateRegion(countryCode, currentPath) {
-  const cartId = cookies().get("_openfront_cart_id")?.value
-  const region = await getRegion(countryCode)
+  const cartId = getCartId();
+  const region = await getRegion(countryCode);
 
   if (!region) {
-    return null
+    throw new Error(`Region not found for country code: ${countryCode}`);
   }
 
-  try {
-    if (cartId) {
-      await updateCart(cartId, { region_id: region.id })
-      revalidateTag("cart")
-    }
-
-    revalidateTag("regions")
-    revalidateTag("products")
-  } catch (e) {
-    return "Error updating region"
+  if (cartId) {
+    await updateCart({ region: { connect: { id: region.id } } });
   }
 
-  redirect(`/${countryCode}${currentPath}`)
+  revalidateTag("regions");
+  revalidateTag("products");
+
+  redirect(`/${countryCode}${currentPath}`);
 }
 
 export async function resetOnboardingState(orderId) {
-  cookies().set("_openfront_onboarding", "false", { maxAge: -1 })
-  redirect(`http://localhost:7001/a/orders/${orderId}`)
+  cookies().set("_openfront_onboarding", "false", { maxAge: -1 });
+  redirect(`http://localhost:7001/a/orders/${orderId}`);
 }

@@ -23,64 +23,64 @@
   ],
   "countries": [
     {
-      "iso2": "US",
-      "iso3": "USA",
+      "iso2": "us",
+      "iso3": "usa",
       "numCode": 840,
       "name": "United States",
       "displayName": "United States"
     },
     {
-      "iso2": "CA",
-      "iso3": "CAN",
+      "iso2": "ca",
+      "iso3": "can",
       "numCode": 124,
       "name": "Canada",
       "displayName": "Canada"
     },
     {
-      "iso2": "GB",
-      "iso3": "GBR",
+      "iso2": "gb",
+      "iso3": "gbr",
       "numCode": 826,
       "name": "United Kingdom",
       "displayName": "United Kingdom"
     },
     {
-      "iso2": "DE",
-      "iso3": "DEU",
+      "iso2": "de",
+      "iso3": "deu",
       "numCode": 276,
       "name": "Germany",
       "displayName": "Germany"
     },
     {
-      "iso2": "DK",
-      "iso3": "DNK",
+      "iso2": "dk",
+      "iso3": "dnk",
       "numCode": 208,
       "name": "Denmark",
       "displayName": "Denmark"
     },
     {
-      "iso2": "SE",
-      "iso3": "SWE",
+      "iso2": "se",
+      "iso3": "swe",
       "numCode": 752,
       "name": "Sweden",
       "displayName": "Sweden"
     },
     {
-      "iso2": "FR",
-      "iso3": "FRA",
+      "iso2": "fr",
+      "iso3": "fra",
       "numCode": 250,
       "name": "France",
       "displayName": "France"
     },
     {
-      "iso2": "ES",
-      "iso3": "ESP",
+      "iso2": "es",
+      "iso3": "esp",
       "numCode": 724,
       "name": "Spain",
       "displayName": "Spain"
     },
     {
-      "iso2": "IT",
-      "iso3": "ITA",
+      "iso2": "it",
+      "iso3": "ita",
       "numCode": 380,
       "name": "Italy",
       "displayName": "Italy"
@@ -94,7 +94,7 @@
       "tax_rate": 0.21,
       "payment_providers": ["manual"],
       "fulfillment_providers": ["manual"],
-      "countries": ["GB", "DE", "DK", "SE", "FR", "ES", "IT"]
+      "countries": ["gb", "de", "dk", "se", "fr", "es", "it"]
     },
     {
       "id": "na",
@@ -103,7 +103,7 @@
       "tax_rate": 0.05,
       "payment_providers": ["manual"],
       "fulfillment_providers": ["manual"],
-      "countries": ["US", "CA"]
+      "countries": ["us", "ca"]
     }
   ],
   "shipping_options": [
@@ -246,6 +246,52 @@
           "manage_inventory": true
         },
         {
+          "title": "L / Black",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2700
+            },
+            {
+              "currency_code": "usd",
+              "amount": 3000
+            }
+          ],
+          "options": [
+            {
+              "value": "L"
+            },
+            {
+              "value": "Black"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "XL / Black",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2900
+            },
+            {
+              "currency_code": "usd",
+              "amount": 3200
+            }
+          ],
+          "options": [
+            {
+              "value": "XL"
+            },
+            {
+              "value": "Black"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
           "title": "S / White",
           "prices": [
             {
@@ -283,6 +329,52 @@
           "options": [
             {
               "value": "M"
+            },
+            {
+              "value": "White"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "L / White",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2700
+            },
+            {
+              "currency_code": "usd",
+              "amount": 3000
+            }
+          ],
+          "options": [
+            {
+              "value": "L"
+            },
+            {
+              "value": "White"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "XL / White",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2900
+            },
+            {
+              "currency_code": "usd",
+              "amount": 3200
+            }
+          ],
+          "options": [
+            {
+              "value": "XL"
             },
             {
               "value": "White"
@@ -334,12 +426,8 @@
             }
           ],
           "options": [
-            {
-              "value": "S"
-            },
-            {
-              "value": "Black"
-            }
+            { "value": "S" },
+            { "value": "Black" }
           ],
           "inventory_quantity": 50,
           "manage_inventory": true
@@ -357,12 +445,46 @@
             }
           ],
           "options": [
+            { "value": "M" },
+            { "value": "Black" }
+          ],
+          "inventory_quantity": 50,
+          "manage_inventory": true
+        },
+        {
+          "title": "L / Black",
+          "prices": [
             {
-              "value": "M"
+              "currency_code": "eur",
+              "amount": 4700
             },
             {
-              "value": "Black"
+              "currency_code": "usd",
+              "amount": 5200
             }
+          ],
+          "options": [
+            { "value": "L" },
+            { "value": "Black" }
+          ],
+          "inventory_quantity": 50,
+          "manage_inventory": true
+        },
+        {
+          "title": "XL / Black",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 4900
+            },
+            {
+              "currency_code": "usd",
+              "amount": 5400
+            }
+          ],
+          "options": [
+            { "value": "XL" },
+            { "value": "Black" }
           ],
           "inventory_quantity": 50,
           "manage_inventory": true
@@ -380,12 +502,8 @@
             }
           ],
           "options": [
-            {
-              "value": "S"
-            },
-            {
-              "value": "White"
-            }
+            { "value": "S" },
+            { "value": "White" }
           ],
           "inventory_quantity": 50,
           "manage_inventory": true
@@ -403,12 +521,46 @@
             }
           ],
           "options": [
+            { "value": "M" },
+            { "value": "White" }
+          ],
+          "inventory_quantity": 50,
+          "manage_inventory": true
+        },
+        {
+          "title": "L / White",
+          "prices": [
             {
-              "value": "M"
+              "currency_code": "eur",
+              "amount": 4700
             },
             {
-              "value": "White"
+              "currency_code": "usd",
+              "amount": 5200
             }
+          ],
+          "options": [
+            { "value": "L" },
+            { "value": "White" }
+          ],
+          "inventory_quantity": 50,
+          "manage_inventory": true
+        },
+        {
+          "title": "XL / White",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 4900
+            },
+            {
+              "currency_code": "usd",
+              "amount": 5400
+            }
+          ],
+          "options": [
+            { "value": "XL" },
+            { "value": "White" }
           ],
           "inventory_quantity": 50,
           "manage_inventory": true
@@ -978,7 +1130,7 @@
       ]
     },
     {
-      "title": "Mandelbrot Set Infinity Scarf",
+      "title": "Mandelbrot Set Infinity Shawl",
       "categories": [
         {
           "id": "pcat_accessories"
@@ -986,8 +1138,8 @@
       ],
       "collections": ["trending"],
       "subtitle": null,
-      "description": "Wrap yourself in the beauty of fractals with our Mandelbrot Set Infinity Scarf. Infinitely stylish!",
-      "handle": "mandelbrot-set-infinity-scarf",
+      "description": "Wrap yourself in the beauty of fractals with our Mandelbrot Set Infinity Shawl. Infinitely stylish!",
+      "handle": "mandelbrot-set-infinity-shawl",
       "is_giftcard": false,
       "weight": 120,
       "images": [

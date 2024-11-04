@@ -1,14 +1,19 @@
 import { GraphQLClient, gql } from "graphql-request";
 import seedData from "./seed-data.json";
 import "dotenv/config";
+import fs from "fs";
+import path from "path";
+import FormData from "form-data";
+import fetch from "node-fetch";
 
-const endpoint = process.env.SEED_GRAPHQL_ENDPOINT || "http://localhost:3000/api/graphql";
+const endpoint =
+  process.env.SEED_GRAPHQL_ENDPOINT || "http://localhost:3000/api/graphql";
 const apiKey = process.env.SEED_API_KEY;
 
 const client = new GraphQLClient(endpoint, {
   headers: {
     "x-api-key": apiKey,
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
   },
 });
 
@@ -231,7 +236,11 @@ async function createProducts(categoryIds, collectionIds) {
       },
       productCategories: { connect: categoriesInput },
       productCollections: {
-        connect: productData.collections ? productData.collections.map(collection => ({ id: collectionIds[collection] })) : []
+        connect: productData.collections
+          ? productData.collections.map((collection) => ({
+              id: collectionIds[collection],
+            }))
+          : [],
       },
     };
 
@@ -311,6 +320,9 @@ async function createProducts(categoryIds, collectionIds) {
     );
 
     productIds[handle] = createProduct.id;
+
+    // Add image creation after product is created
+    await createProductImages(createProduct.id, productData.handle);
   }
 
   return productIds;
@@ -334,7 +346,7 @@ async function createProductVariants(productIds) {
 async function createStore() {
   const { store, currencies } = seedData;
   const { createStore } = await client.request(createStoreMutation, {
-      data: { ...store, currencies: { create: currencies } },
+    data: { ...store, currencies: { create: currencies } },
   });
   const storeId = createStore.id;
   console.log(`Store created with ID: ${storeId}`);
@@ -494,11 +506,75 @@ async function createCollections() {
       createCollectionMutation,
       { data: { title: collectionData.title, handle: collectionData.handle } }
     );
-    console.log("Product Collection created with ID:", createProductCollection.id);
+    console.log(
+      "Product Collection created with ID:",
+      createProductCollection.id
+    );
     collectionIds[collectionData.handle] = createProductCollection.id;
   }
 
   return collectionIds;
+}
+
+async function createProductImages(productId, handle) {
+  try {
+    const filename = `${handle}.jpeg`;
+    const imagesDir = path.join(__dirname, "images");
+
+    if (!fs.existsSync(path.join(imagesDir, filename))) {
+      console.log(`File not found: ${path.join(imagesDir, filename)}`);
+      return;
+    }
+
+    const formData = new FormData();
+
+    const operations = {
+      variables: {
+        data: {
+          image: {
+            upload: null,
+          },
+
+          products: {
+            connect: [
+              {
+                id: productId,
+              },
+            ],
+          },
+        },
+      },
+      query: `mutation ($data: ProductImageCreateInput!) {
+        item: createProductImage(data: $data) {
+          id
+          label: id
+          __typename
+        }
+      }`,
+    };
+
+    const map = {
+      1: ["variables.data.image.upload"],
+    };
+
+    formData.append("operations", JSON.stringify(operations));
+    formData.append("map", JSON.stringify(map));
+    formData.append("1", fs.createReadStream(path.join(imagesDir, filename)));
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        ...formData.getHeaders(),
+      },
+      body: formData,
+    });
+
+    const json = await response.json();
+    console.log("Upload response:", json);
+  } catch (error) {
+    console.error("Error creating product images:", error);
+  }
 }
 
 async function seedDatabase() {

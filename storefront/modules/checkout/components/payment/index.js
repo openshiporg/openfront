@@ -14,9 +14,7 @@ import { setPaymentMethod } from "@storefront/modules/checkout/actions"
 import { paymentInfoMap } from "@storefront/lib/constants"
 import { StripeContext } from "@storefront/modules/checkout/components/payment-wrapper"
 
-const Payment = ({
-  cart
-}) => {
+const Payment = ({ cart }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const [cardBrand, setCardBrand] = useState(null)
@@ -28,11 +26,11 @@ const Payment = ({
 
   const isOpen = searchParams.get("step") === "payment"
 
-  const isStripe = cart?.payment_session?.provider_id === "stripe"
+  const isStripe = cart?.paymentSession?.providerId === "stripe"
   const stripeReady = useContext(StripeContext)
 
   const paymentReady =
-    cart?.payment_session && cart?.shipping_methods.length !== 0
+    cart?.paymentSession && cart?.shippingMethods.length !== 0
 
   const useOptions = useMemo(() => {
     return {
@@ -114,14 +112,14 @@ const Payment = ({
         )}
       </div>
       <div>
-        {cart?.payment_sessions?.length ? (
+        {cart?.paymentSessions?.length ? (
           <div className={isOpen ? "block" : "hidden"}>
             <RadioGroup
-              value={cart.payment_session?.provider_id || ""}
+              value={cart.paymentSession?.providerId || ""}
               onChange={(value) => handleChange(value)}>
-              {cart.payment_sessions
+              {cart.paymentSessions
                 .sort((a, b) => {
-                  return a.provider_id > b.provider_id ? 1 : -1
+                  return a.providerId > b.providerId ? 1 : -1
                 })
                 .map((paymentSession) => {
                   return (
@@ -130,7 +128,7 @@ const Payment = ({
                       paymentSession={paymentSession}
                       key={paymentSession.id}
                       selectedPaymentOptionId={
-                        cart.payment_session?.provider_id || null
+                        cart.paymentSession?.providerId || null
                       } />
                   );
                 })}
@@ -160,7 +158,7 @@ const Payment = ({
               className="mt-6"
               onClick={handleSubmit}
               isLoading={isLoading}
-              disabled={(isStripe && !cardComplete) || !cart.payment_session}>
+              disabled={(isStripe && !cardComplete) || !cart.paymentSession}>
               Continue to review
             </Button>
           </div>
@@ -172,18 +170,18 @@ const Payment = ({
         )}
 
         <div className={isOpen ? "hidden" : "block"}>
-          {cart && paymentReady && cart.payment_session && (
+          {cart && paymentReady && cart.paymentSession && (
             <div className="flex items-start gap-x-1 w-full">
               <div className="flex flex-col w-1/3">
                 <Text className="txt-medium-plus text-ui-fg-base mb-1">
                   Payment method
                 </Text>
                 <Text className="txt-medium text-ui-fg-subtle">
-                  {paymentInfoMap[cart.payment_session.provider_id]?.title ||
-                    cart.payment_session.provider_id}
+                  {paymentInfoMap[cart.paymentSession.providerId]?.title ||
+                    cart.paymentSession.providerId}
                 </Text>
                 {process.env.NODE_ENV === "development" &&
-                  !Object.hasOwn(paymentInfoMap, cart.payment_session.provider_id) && (
+                  !Object.hasOwn(paymentInfoMap, cart.paymentSession.providerId) && (
                     <Tooltip
                       content="You can add a user-friendly name and icon for this payment provider in 'src/modules/checkout/components/payment/index.tsx'" />
                   )}
@@ -194,12 +192,12 @@ const Payment = ({
                 </Text>
                 <div className="flex gap-2 txt-medium text-ui-fg-subtle items-center">
                   <Container className="flex items-center h-7 w-fit p-2 bg-ui-button-neutral-hover">
-                    {paymentInfoMap[cart.payment_session.provider_id]?.icon || (
+                    {paymentInfoMap[cart.paymentSession.providerId]?.icon || (
                       <CreditCard />
                     )}
                   </Container>
                   <Text>
-                    {cart.payment_session.provider_id === "stripe" && cardBrand
+                    {cart.paymentSession.providerId === "stripe" && cardBrand
                       ? cardBrand
                       : "Another step will appear"}
                   </Text>

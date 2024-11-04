@@ -32,9 +32,11 @@ const Addresses = ({
 
   const isOpen = searchParams.get("step") === "address"
 
-  const { state: sameAsSBilling, toggle: toggleSameAsBilling } = useToggleState(cart?.shipping_address && cart?.billing_address
-    ? compareAddresses(cart?.shipping_address, cart?.billing_address)
-    : true)
+  const { state: sameAsSBilling, toggle: toggleSameAsBilling } = useToggleState(
+    cart?.shippingAddress && cart?.billingAddress
+      ? compareAddresses(cart?.shippingAddress, cart?.billingAddress)
+      : true
+  )
 
   const handleEdit = () => {
     router.push(pathname + "?step=address")
@@ -51,7 +53,7 @@ const Addresses = ({
           Shipping Address
           {!isOpen && <CheckCircleSolid />}
         </Heading>
-        {!isOpen && cart?.shipping_address && (
+        {!isOpen && cart?.shippingAddress && (
           <Text>
             <button
               onClick={handleEdit}
@@ -87,7 +89,7 @@ const Addresses = ({
       ) : (
         <div>
           <div className="text-small-regular">
-            {cart && cart.shipping_address ? (
+            {cart && cart.shippingAddress ? (
               <div className="flex items-start gap-x-8">
                 <div className="flex items-start gap-x-1 w-full">
                   <div className="flex flex-col w-1/3">
@@ -95,19 +97,19 @@ const Addresses = ({
                       Shipping Address
                     </Text>
                     <Text className="txt-medium text-ui-fg-subtle">
-                      {cart.shipping_address.first_name}{" "}
-                      {cart.shipping_address.last_name}
+                      {cart.shippingAddress.firstName}{" "}
+                      {cart.shippingAddress.lastName}
                     </Text>
                     <Text className="txt-medium text-ui-fg-subtle">
-                      {cart.shipping_address.address_1}{" "}
-                      {cart.shipping_address.address_2}
+                      {cart.shippingAddress.address1}{" "}
+                      {cart.shippingAddress.address2}
                     </Text>
                     <Text className="txt-medium text-ui-fg-subtle">
-                      {cart.shipping_address.postal_code},{" "}
-                      {cart.shipping_address.city}
+                      {cart.shippingAddress.postalCode},{" "}
+                      {cart.shippingAddress.city}
                     </Text>
                     <Text className="txt-medium text-ui-fg-subtle">
-                      {cart.shipping_address.country_code?.toUpperCase()}
+                      {cart.shippingAddress.countryCode?.toUpperCase()}
                     </Text>
                   </div>
 
@@ -116,7 +118,7 @@ const Addresses = ({
                       Contact
                     </Text>
                     <Text className="txt-medium text-ui-fg-subtle">
-                      {cart.shipping_address.phone}
+                      {cart.shippingAddress.phone}
                     </Text>
                     <Text className="txt-medium text-ui-fg-subtle">
                       {cart.email}
@@ -135,19 +137,19 @@ const Addresses = ({
                     ) : (
                       <>
                         <Text className="txt-medium text-ui-fg-subtle">
-                          {cart.billing_address.first_name}{" "}
-                          {cart.billing_address.last_name}
+                          {cart.billingAddress.firstName}{" "}
+                          {cart.billingAddress.lastName}
                         </Text>
                         <Text className="txt-medium text-ui-fg-subtle">
-                          {cart.billing_address.address_1}{" "}
-                          {cart.billing_address.address_2}
+                          {cart.billingAddress.address1}{" "}
+                          {cart.billingAddress.address2}
                         </Text>
                         <Text className="txt-medium text-ui-fg-subtle">
-                          {cart.billing_address.postal_code},{" "}
-                          {cart.billing_address.city}
+                          {cart.billingAddress.postalCode},{" "}
+                          {cart.billingAddress.city}
                         </Text>
                         <Text className="txt-medium text-ui-fg-subtle">
-                          {cart.billing_address.country_code?.toUpperCase()}
+                          {cart.billingAddress.countryCode?.toUpperCase()}
                         </Text>
                       </>
                     )}

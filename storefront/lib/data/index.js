@@ -1,10 +1,9 @@
-"use server"
-import { gql } from 'graphql-request';
+"use server";
+import { gql } from "graphql-request";
 import { openfrontClient } from "@storefront/lib/config";
 import { cache } from "react";
 
 import sortProducts from "@storefront/lib/util/sort-products";
-import transformProductPreview from "@storefront/lib/util/transform-product-preview";
 
 import openfrontError from "@storefront/lib/util/openfront-error";
 import { cookies } from "next/headers";
@@ -25,9 +24,24 @@ export async function createCart(data = {}) {
         lineItems {
           id
           quantity
-          product {
-            name
-            price
+          productVariant {
+            id
+            title
+            product {
+              thumbnail
+              title
+            }
+            prices {
+              amount
+              currency {
+                code
+              }
+              calculatedPrice {
+                calculatedAmount
+                originalAmount
+                currencyCode
+              }
+            }
           }
         }
       }
@@ -39,24 +53,79 @@ export async function createCart(data = {}) {
 
 export async function updateCart(cartId, data) {
   const UPDATE_CART_MUTATION = gql`
-    mutation UpdateCart($id: ID!, $data: CartUpdateInput!) {
-      updateCart(where: { id: $id }, data: $data) {
+    mutation UpdateActiveCart($cartId: ID!, $data: CartUpdateInput!) {
+      updateActiveCart(cartId: $cartId, data: $data) {
         id
         email
         type
+        user { id }
+        region { 
+          id 
+          currency { code }
+        }
         lineItems {
           id
           quantity
-          product {
+          productVariant {
+            id
+            title
+            product {
+              id
+              title
+              thumbnail
+              handle
+            }
+            prices {
+              id
+              amount
+              currency {
+                code
+              }
+              calculatedPrice {
+                calculatedAmount
+                originalAmount
+                currencyCode
+              }
+            }
+          }
+        }
+        addresses {
+          id
+          firstName
+          lastName
+          address1
+          address2
+          company
+          city
+          province
+          postalCode
+          countryCode
+          phone
+        }
+        paymentSessions {
+          id
+          status
+          data
+          idempotencyKey
+          paymentProvider {
+            id
+            code
+            isInstalled
+          }
+        }
+        shippingMethods {
+          id
+          price
+          shippingOption {
+            id
             name
-            price
           }
         }
       }
     }
   `;
 
-  return openfrontClient.request(UPDATE_CART_MUTATION, { id: cartId, data });
+  return openfrontClient.request(UPDATE_CART_MUTATION, { cartId, data });
 }
 
 export const getCart = cache(async function (cartId) {
@@ -66,12 +135,71 @@ export const getCart = cache(async function (cartId) {
         id
         email
         type
+        user {
+          id
+        }
+        region {
+          id
+          currency {
+            code
+          }
+        }
         lineItems {
           id
           quantity
-          product {
+          productVariant {
+            id
+            title
+            product {
+              id
+              title
+              thumbnail
+              handle
+            }
+            prices {
+              id
+              amount
+              currency {
+                code
+              }
+              calculatedPrice {
+                calculatedAmount
+                originalAmount
+                currencyCode
+              }
+            }
+          }
+        }
+        addresses {
+          id
+          firstName
+          lastName
+          address1
+          address2
+          company
+          city
+          province
+          postalCode
+          countryCode
+          phone
+        }
+        paymentSessions {
+          id
+          status
+          data
+          idempotencyKey
+          paymentProvider {
+            id
+            code
+            isInstalled
+          }
+        }
+        shippingMethods {
+          id
+          price
+          shippingOption {
+            id
             name
-            price
           }
         }
       }
@@ -83,7 +211,7 @@ export const getCart = cache(async function (cartId) {
 
 export async function addItem({ cartId, variantId, quantity }) {
   const ADD_ITEM_MUTATION = gql`
-    mutation AddItem($cartId: ID!, $variantId: ID!, $quantity: Int!) {
+    mutation AddItem($cartId: ID!, $data: CartUpdateInput!) {
       updateCart(
         where: { id: $cartId }
         data: {
@@ -101,21 +229,39 @@ export async function addItem({ cartId, variantId, quantity }) {
         lineItems {
           id
           quantity
-          product {
-            name
-            price
+          productVariant {
+            id
+            title
+            prices {
+              amount
+              currency {
+                code
+              }
+            }
           }
         }
       }
     }
   `;
 
-  return openfrontClient.request(ADD_ITEM_MUTATION, { cartId, variantId, quantity });
+  return openfrontClient.request(ADD_ITEM_MUTATION, {
+    cartId,
+    data: {
+      lineItems: {
+        create: [
+          {
+            productVariant: { connect: { id: variantId } },
+            quantity,
+          },
+        ],
+      },
+    },
+  });
 }
 
 export async function updateItem({ cartId, lineId, quantity }) {
   const UPDATE_ITEM_MUTATION = gql`
-    mutation UpdateItem($cartId: ID!, $lineId: ID!, $quantity: Int!) {
+    mutation UpdateItem($cartId: ID!, $data: CartUpdateInput!) {
       updateCart(
         where: { id: $cartId }
         data: {
@@ -128,21 +274,34 @@ export async function updateItem({ cartId, lineId, quantity }) {
         lineItems {
           id
           quantity
-          product {
-            name
-            price
+          productVariant {
+            id
+            title
+            prices {
+              amount
+              currency {
+                code
+              }
+            }
           }
         }
       }
     }
   `;
 
-  return openfrontClient.request(UPDATE_ITEM_MUTATION, { cartId, lineId, quantity });
+  return openfrontClient.request(UPDATE_ITEM_MUTATION, {
+    cartId,
+    data: {
+      lineItems: {
+        update: [{ where: { id: lineId }, data: { quantity } }],
+      },
+    },
+  });
 }
 
 export async function removeItem({ cartId, lineId }) {
   const REMOVE_ITEM_MUTATION = gql`
-    mutation RemoveItem($cartId: ID!, $lineId: ID!) {
+    mutation RemoveItem($cartId: ID!, $data: CartUpdateInput!) {
       updateCart(
         where: { id: $cartId }
         data: { lineItems: { delete: [{ id: $lineId }] } }
@@ -151,16 +310,25 @@ export async function removeItem({ cartId, lineId }) {
         lineItems {
           id
           quantity
-          product {
-            name
-            price
+          productVariant {
+            id
+            title
+            prices {
+              amount
+              currency {
+                code
+              }
+            }
           }
         }
       }
     }
   `;
 
-  return openfrontClient.request(REMOVE_ITEM_MUTATION, { cartId, lineId });
+  return openfrontClient.request(REMOVE_ITEM_MUTATION, {
+    cartId,
+    data: { lineItems: { delete: [{ id: lineId }] } },
+  });
 }
 
 export async function updateCartItems(cartId, lineItems) {
@@ -171,9 +339,15 @@ export async function updateCartItems(cartId, lineItems) {
         lineItems {
           id
           quantity
-          product {
-            name
-            price
+          productVariant {
+            id
+            title
+            prices {
+              amount
+              currency {
+                code
+              }
+            }
           }
         }
       }
@@ -231,7 +405,10 @@ export async function setPaymentSession({ cartId, providerId }) {
     }
   `;
 
-  return openfrontClient.request(SET_PAYMENT_SESSION_MUTATION, { cartId, providerId });
+  return openfrontClient.request(SET_PAYMENT_SESSION_MUTATION, {
+    cartId,
+    providerId,
+  });
 }
 
 export async function completeCart(cartId) {
@@ -284,7 +461,10 @@ export const listShippingMethods = cache(async function (regionId, productIds) {
     }
   `;
 
-  return openfrontClient.request(LIST_SHIPPING_METHODS_QUERY, { regionId, productIds });
+  return openfrontClient.request(LIST_SHIPPING_METHODS_QUERY, {
+    regionId,
+    productIds,
+  });
 });
 
 export async function addShippingMethod({ cartId, shippingMethodId }) {
@@ -434,7 +614,9 @@ export async function deleteShippingAddress(addressId) {
     }
   `;
 
-  return openfrontClient.request(DELETE_SHIPPING_ADDRESS_MUTATION, { id: addressId });
+  return openfrontClient.request(DELETE_SHIPPING_ADDRESS_MUTATION, {
+    id: addressId,
+  });
 }
 
 export async function updateShippingAddress(addressId, data) {
@@ -541,7 +723,9 @@ export const getRegion = cache(async function (countryCode) {
     }
   `;
 
-  const data = await openfrontClient.request(GET_REGION_QUERY, { code: countryCode });
+  const data = await openfrontClient.request(GET_REGION_QUERY, {
+    code: countryCode
+  });
   return data.regions[0];
 });
 
@@ -587,6 +771,7 @@ export const retrievePricedProductById = cache(async function ({
         productVariants {
           id
           title
+          allowBackorder
           prices(where: { region: { id: { equals: $regionId } } }) {
             id
             amount
@@ -608,7 +793,81 @@ export const retrievePricedProductById = cache(async function ({
     }
   `;
 
-  return openfrontClient.request(RETRIEVE_PRICED_PRODUCT_BY_ID_QUERY, { id, regionId });
+  return openfrontClient.request(RETRIEVE_PRICED_PRODUCT_BY_ID_QUERY, {
+    id,
+    regionId,
+  });
+});
+
+export const retrievePricedProductByHandle = cache(async function ({
+  handle,
+  regionId,
+}) {
+  const RETRIEVE_PRICED_PRODUCT_BY_HANDLE_QUERY = gql`
+    query RetrievePricedProductByHandle($handle: String!, $regionId: ID!) {
+      product(where: { handle: $handle }) {
+        id
+        title
+        description
+        handle
+        thumbnail
+        productCollections {
+          id
+          title
+          handle
+        }
+        productImages {
+          id
+          image {
+            url
+          }
+        }
+        productOptions {
+          id
+          title
+          metadata
+          productOptionValues {
+            id
+            value
+          }
+        }
+        productVariants {
+          id
+          title
+          sku
+          inventoryQuantity
+          allowBackorder
+          metadata
+          productOptionValues {
+            id
+            value
+            productOption {
+              id
+            }
+          }
+          prices(where: { region: { id: { equals: $regionId } } }) {
+            id
+            amount
+            currency {
+              code
+            }
+            calculatedPrice {
+              calculatedAmount
+              originalAmount
+              currencyCode
+            }
+          }
+        }
+        status
+        metadata
+      }
+    }
+  `;
+
+  return openfrontClient.request(RETRIEVE_PRICED_PRODUCT_BY_HANDLE_QUERY, {
+    handle,
+    regionId,
+  });
 });
 
 export const getProductByHandle = cache(async function (handle) {
@@ -633,7 +892,9 @@ export const getProductByHandle = cache(async function (handle) {
     }
   `;
 
-  const data = await openfrontClient.request(GET_PRODUCT_BY_HANDLE_QUERY, { handle });
+  const data = await openfrontClient.request(GET_PRODUCT_BY_HANDLE_QUERY, {
+    handle,
+  });
   return { product: data.product };
 });
 
@@ -643,18 +904,34 @@ export const getProductsList = cache(async function ({
   countryCode,
 }) {
   const limit = queryParams?.limit || 12;
-  const region = await getRegion(countryCode);
-
-  if (!region) {
-    return emptyResponse;
-  }
+  const offset = pageParam * limit;
 
   const GET_PRODUCTS_QUERY = gql`
-    query GetProducts($skip: Int!, $take: Int!, $regionId: ID!) {
+    query GetProducts(
+      $limit: Int!
+      $offset: Int!
+      $collectionId: ID
+      $isGiftcard: Boolean
+      $countryCode: String!
+    ) {
       products(
-        where: { region: { id: { equals: $regionId } } }
-        skip: $skip
-        take: $take
+        where: {
+          productCollections: { some: { id: { equals: $collectionId } } }
+          isGiftcard: { equals: $isGiftcard }
+          productVariants: {
+            some: {
+              prices: {
+                some: {
+                  region: {
+                    countries: { some: { iso2: { equals: $countryCode } } }
+                  }
+                }
+              }
+            }
+          }
+        }
+        take: $limit
+        skip: $offset
         orderBy: { createdAt: desc }
       ) {
         id
@@ -664,36 +941,73 @@ export const getProductsList = cache(async function ({
         productVariants {
           id
           title
-          prices {
+          prices(
+            where: {
+              region: {
+                countries: { some: { iso2: { equals: $countryCode } } }
+              }
+            }
+          ) {
+            id
             amount
             currency {
               code
             }
+            calculatedPrice {
+              calculatedAmount
+              originalAmount
+              currencyCode
+              moneyAmountId
+              variantId
+              priceListId
+              priceListType
+            }
           }
         }
       }
-      productsCount(where: { region: { id: { equals: $regionId } } })
+      productsCount(
+        where: {
+          productCollections: { some: { id: { equals: $collectionId } } }
+          isGiftcard: { equals: $isGiftcard }
+          productVariants: {
+            some: {
+              prices: {
+                some: {
+                  region: {
+                    countries: { some: { iso2: { equals: $countryCode } } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      )
     }
   `;
 
-  const data = await openfrontClient.request(GET_PRODUCTS_QUERY, {
-    skip: pageParam,
-    take: limit,
-    regionId: region.id,
-  });
+  try {
+    const data = await openfrontClient.request(GET_PRODUCTS_QUERY, {
+      limit,
+      offset,
+      collectionId: queryParams?.collectionId,
+      isGiftcard: queryParams?.isGiftcard,
+      countryCode: countryCode
+    });
 
-  const products = data.products.map((product) =>
-    transformProductPreview(product, region)
-  );
-  const count = data.productsCount;
+    const products = data.products;
+    const count = data.productsCount;
 
-  const nextPage = count > pageParam + limit ? pageParam + limit : null;
+    const nextPage = count > pageParam + 1 ? pageParam + 1 : null;
 
-  return {
-    response: { products, count },
-    nextPage,
-    queryParams,
-  };
+    return {
+      response: { products, count },
+      nextPage,
+      queryParams,
+    };
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    return emptyResponse;
+  }
 });
 
 export const getProductsListWithSort = cache(
@@ -779,22 +1093,14 @@ export const retrieveCollection = cache(async function (id) {
   return openfrontClient.request(RETRIEVE_COLLECTION_QUERY, { id });
 });
 
-export const getCollectionsList = cache(async function (
-  offset = 0,
-  limit = 3
-) {
+export const getCollectionsList = cache(async function (offset = 0, limit = 3) {
   const GET_COLLECTIONS_LIST_QUERY = gql`
-    query GetCollectionsList(
-      $offset: Int!
-      $limit: Int!
-    ) {
+    query GetCollectionsList($offset: Int!, $limit: Int!) {
       productCollections(skip: $offset, take: $limit) {
         id
         title
         handle
-        products(
-          take: 3
-        ) {
+        products(take: 3) {
           id
           title
           handle
@@ -806,12 +1112,11 @@ export const getCollectionsList = cache(async function (
               amount
               currency {
                 code
-                regions {
-                  code
-                  countries {
-                    iso2
-                  }
-                }
+              }
+              calculatedPrice {
+                calculatedAmount
+                originalAmount
+                currencyCode
               }
             }
           }
@@ -826,8 +1131,6 @@ export const getCollectionsList = cache(async function (
     limit,
   });
 
-  console.log(data);
-
   return {
     collections: data.productCollections,
     count: data.productCollectionsCount,
@@ -840,11 +1143,7 @@ export const getCollectionsListByRegion = cache(async function (
   regionId
 ) {
   const GET_COLLECTIONS_LIST_QUERY = gql`
-    query GetCollectionsList(
-      $offset: Int!
-      $limit: Int!
-      $regionId: ID!
-    ) {
+    query GetCollectionsList($offset: Int!, $limit: Int!, $regionId: ID!) {
       productCollections(skip: $offset, take: $limit) {
         id
         title
@@ -854,11 +1153,7 @@ export const getCollectionsListByRegion = cache(async function (
           where: {
             productVariants: {
               some: {
-                prices: {
-                  some: {
-                    region: { id: { equals: $regionId } }
-                  }
-                }
+                prices: { some: { region: { id: { equals: $regionId } } } }
               }
             }
           }
@@ -971,16 +1266,17 @@ export const getProductsByCollectionHandle = cache(
       }
     `;
 
-    const data = await openfrontClient.request(GET_PRODUCTS_BY_COLLECTION_QUERY, {
-      collectionId: id,
-      regionId: region.id,
-      skip: pageParam,
-      take: limit,
-    });
-
-    const products = data.products.map((product) =>
-      transformProductPreview(product, region)
+    const data = await openfrontClient.request(
+      GET_PRODUCTS_BY_COLLECTION_QUERY,
+      {
+        collectionId: id,
+        regionId: region.id,
+        skip: pageParam,
+        take: limit,
+      }
     );
+
+    const products = data.products;
     const count = data.productsCount;
 
     const nextPage = count > pageParam + limit ? pageParam + limit : null;
@@ -1036,7 +1332,10 @@ export const getCategoriesList = cache(async function (
     }
   `;
 
-  const data = await openfrontClient.request(GET_CATEGORIES_LIST_QUERY, { offset, limit });
+  const data = await openfrontClient.request(GET_CATEGORIES_LIST_QUERY, {
+    offset,
+    limit,
+  });
 
   return {
     productCategories: data.productCategories,
@@ -1134,9 +1433,7 @@ export const getProductsByCategoryHandle = cache(async function ({
     take: 12,
   });
 
-  const products = data.products.map((product) =>
-    transformProductPreview(product, region)
-  );
+  const products = data.products;
   const count = data.productsCount;
 
   const nextPage = count > pageParam + 12 ? pageParam + 12 : null;
@@ -1146,4 +1443,3 @@ export const getProductsByCategoryHandle = cache(async function ({
     nextPage,
   };
 });
-

@@ -1057,19 +1057,22 @@ input SwapRelateToManyForCreateInput {
 type LineItem {
   id: ID!
   title: String
-  description: String
   thumbnail: String
-  isGiftcard: Boolean
-  shouldMerge: Boolean
-  allowDiscounts: Boolean
-  hasShipping: Boolean
-  unitPrice: Int
+  description: String
+  originalPrice: String
+  unitPrice: String
+  total: String
+  availableInRegion: String
   quantity: Int
   fulfilledQuantity: Int
   returnedQuantity: Int
   shippedQuantity: Int
   metadata: JSON
   isReturn: Boolean
+  isGiftcard: Boolean
+  shouldMerge: Boolean
+  allowDiscounts: Boolean
+  hasShipping: Boolean
   claimOrder: ClaimOrder
   cart: Cart
   swap: Swap
@@ -1085,6 +1088,7 @@ type LineItem {
   lineItemTaxLinesCount(where: LineItemTaxLineWhereInput! = {}): Int
   returnItems(where: ReturnItemWhereInput! = {}, orderBy: [ReturnItemOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ReturnItemWhereUniqueInput): [ReturnItem!]
   returnItemsCount(where: ReturnItemWhereInput! = {}): Int
+  percentageOff: Int
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -1098,19 +1102,15 @@ input LineItemWhereInput {
   OR: [LineItemWhereInput!]
   NOT: [LineItemWhereInput!]
   id: IDFilter
-  title: StringFilter
-  description: StringFilter
-  thumbnail: StringFilter
-  isGiftcard: BooleanFilter
-  shouldMerge: BooleanFilter
-  allowDiscounts: BooleanFilter
-  hasShipping: BooleanFilter
-  unitPrice: IntFilter
   quantity: IntFilter
   fulfilledQuantity: IntNullableFilter
   returnedQuantity: IntNullableFilter
   shippedQuantity: IntNullableFilter
   isReturn: BooleanFilter
+  isGiftcard: BooleanFilter
+  shouldMerge: BooleanFilter
+  allowDiscounts: BooleanFilter
+  hasShipping: BooleanFilter
   claimOrder: ClaimOrderWhereInput
   cart: CartWhereInput
   swap: SwapWhereInput
@@ -1168,38 +1168,30 @@ input ReturnItemManyRelationFilter {
 
 input LineItemOrderByInput {
   id: OrderDirection
-  title: OrderDirection
-  description: OrderDirection
-  thumbnail: OrderDirection
-  isGiftcard: OrderDirection
-  shouldMerge: OrderDirection
-  allowDiscounts: OrderDirection
-  hasShipping: OrderDirection
-  unitPrice: OrderDirection
   quantity: OrderDirection
   fulfilledQuantity: OrderDirection
   returnedQuantity: OrderDirection
   shippedQuantity: OrderDirection
   isReturn: OrderDirection
+  isGiftcard: OrderDirection
+  shouldMerge: OrderDirection
+  allowDiscounts: OrderDirection
+  hasShipping: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
 }
 
 input LineItemUpdateInput {
-  title: String
-  description: String
-  thumbnail: String
-  isGiftcard: Boolean
-  shouldMerge: Boolean
-  allowDiscounts: Boolean
-  hasShipping: Boolean
-  unitPrice: Int
   quantity: Int
   fulfilledQuantity: Int
   returnedQuantity: Int
   shippedQuantity: Int
   metadata: JSON
   isReturn: Boolean
+  isGiftcard: Boolean
+  shouldMerge: Boolean
+  allowDiscounts: Boolean
+  hasShipping: Boolean
   claimOrder: ClaimOrderRelateToOneForUpdateInput
   cart: CartRelateToOneForUpdateInput
   swap: SwapRelateToOneForUpdateInput
@@ -1279,20 +1271,16 @@ input LineItemUpdateArgs {
 }
 
 input LineItemCreateInput {
-  title: String
-  description: String
-  thumbnail: String
-  isGiftcard: Boolean
-  shouldMerge: Boolean
-  allowDiscounts: Boolean
-  hasShipping: Boolean
-  unitPrice: Int
   quantity: Int
   fulfilledQuantity: Int
   returnedQuantity: Int
   shippedQuantity: Int
   metadata: JSON
   isReturn: Boolean
+  isGiftcard: Boolean
+  shouldMerge: Boolean
+  allowDiscounts: Boolean
+  hasShipping: Boolean
   claimOrder: ClaimOrderRelateToOneForCreateInput
   cart: CartRelateToOneForCreateInput
   swap: SwapRelateToOneForCreateInput
@@ -1405,6 +1393,7 @@ enum ProductStatusType {
 
 input ProductWhereUniqueInput {
   id: ID
+  handle: String
 }
 
 input ProductWhereInput {
@@ -2668,7 +2657,11 @@ type Cart {
   idempotencyKey: String
   context: JSON
   paymentAuthorizedAt: DateTime
+  abandonedEmailSent: Boolean
+  abandonedFor: Int
   user: User
+  status: CartStatus
+  isActive: Boolean
   region: Region
   addresses(where: AddressWhereInput! = {}, orderBy: [AddressOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: AddressWhereUniqueInput): [Address!]
   addressesCount(where: AddressWhereInput! = {}): Int
@@ -2688,6 +2681,12 @@ type Cart {
   payment: Payment
   paymentSessions(where: PaymentSessionWhereInput! = {}, orderBy: [PaymentSessionOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PaymentSessionWhereUniqueInput): [PaymentSession!]
   paymentSessionsCount(where: PaymentSessionWhereInput! = {}): Int
+  subtotal: String
+  total: String
+  discount: String
+  giftCardTotal: String
+  tax: String
+  shipping: String
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -2698,6 +2697,11 @@ enum CartTypeType {
   draft_order
   payment_link
   claim
+}
+
+enum CartStatus {
+  ACTIVE
+  COMPLETED
 }
 
 input CartWhereUniqueInput {
@@ -2713,6 +2717,7 @@ input CartWhereInput {
   type: CartTypeTypeNullableFilter
   idempotencyKey: StringFilter
   paymentAuthorizedAt: DateTimeNullableFilter
+  abandonedEmailSent: BooleanFilter
   user: UserWhereInput
   region: RegionWhereInput
   addresses: AddressManyRelationFilter
@@ -2755,6 +2760,7 @@ input CartOrderByInput {
   type: OrderDirection
   idempotencyKey: OrderDirection
   paymentAuthorizedAt: OrderDirection
+  abandonedEmailSent: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
 }
@@ -2766,6 +2772,7 @@ input CartUpdateInput {
   idempotencyKey: String
   context: JSON
   paymentAuthorizedAt: DateTime
+  abandonedEmailSent: Boolean
   user: UserRelateToOneForUpdateInput
   region: RegionRelateToOneForUpdateInput
   addresses: AddressRelateToManyForUpdateInput
@@ -2815,6 +2822,7 @@ input CartCreateInput {
   idempotencyKey: String
   context: JSON
   paymentAuthorizedAt: DateTime
+  abandonedEmailSent: Boolean
   user: UserRelateToOneForCreateInput
   region: RegionRelateToOneForCreateInput
   addresses: AddressRelateToManyForCreateInput
@@ -3397,6 +3405,7 @@ type Currency {
   symbol: String
   symbolNative: String
   name: String
+  noDivisionCurrency: Boolean
   moneyAmounts(where: MoneyAmountWhereInput! = {}, orderBy: [MoneyAmountOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: MoneyAmountWhereUniqueInput): [MoneyAmount!]
   moneyAmountsCount(where: MoneyAmountWhereInput! = {}): Int
   orders(where: OrderWhereInput! = {}, orderBy: [OrderOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: OrderWhereUniqueInput): [Order!]
@@ -7600,6 +7609,7 @@ type Mutation {
   createInitialUser(data: CreateInitialUserInput!): UserAuthenticationWithPasswordSuccess!
   sendUserPasswordResetLink(email: String!): Boolean!
   redeemUserPasswordResetToken(email: String!, token: String!, password: String!): RedeemUserPasswordResetTokenResult
+  updateActiveCart(cartId: ID!, data: CartUpdateInput!): Cart
 }
 
 union UserAuthenticationWithPasswordResult = UserAuthenticationWithPasswordSuccess | UserAuthenticationWithPasswordFailure
@@ -7830,6 +7840,7 @@ type Query {
   authenticatedItem: AuthenticatedItem
   validateUserPasswordResetToken(email: String!, token: String!): ValidateUserPasswordResetTokenResult
   redirectToInit: Boolean
+  activeCart(cartId: ID!): CartResponse
 }
 
 union AuthenticatedItem = User
@@ -7939,4 +7950,9 @@ type KeystoneAdminUISort {
 enum KeystoneAdminUISortDirection {
   ASC
   DESC
+}
+
+type CartResponse {
+  cart: Cart
+  lineItems: [LineItem!]!
 }

@@ -8,7 +8,7 @@ const LineItemUnitPrice = ({
   region,
   style = "default"
 }) => {
-  const originalPrice = (item.variant).original_price
+  const originalPrice = (item.productVariant).originalPrice
   const hasReducedPrice = (originalPrice * item.quantity || 0) > item.total
   const reducedPrice = (item.total || 0) / item.quantity
 
@@ -40,7 +40,7 @@ const LineItemUnitPrice = ({
           "text-ui-fg-interactive": hasReducedPrice,
         })}>
         {formatAmount({
-          amount: reducedPrice || item.unit_price || 0,
+          amount: reducedPrice || item.unitPrice || 0,
           region: region,
           includeTaxes: false,
         })}

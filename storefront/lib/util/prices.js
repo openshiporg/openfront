@@ -43,7 +43,7 @@ export const findCheapestCurrencyPrice = (
       return acc
     }
 
-    const price = v.prices.find((p) => p.currency_code === currencyCode)
+    const price = v.prices.find((p) => p.currencyCode === currencyCode)
     if (price) {
       acc.push(price)
     }
@@ -68,12 +68,12 @@ export const findCheapestCurrencyPrice = (
 }
 
 export const findCheapestPrice = (variants, region) => {
-  const { id, currency_code } = region
+  const { id, currencyCode } = region
 
   let cheapestPrice = findCheapestRegionPrice(variants, id)
 
   if (!cheapestPrice) {
-    cheapestPrice = findCheapestCurrencyPrice(variants, currency_code)
+    cheapestPrice = findCheapestCurrencyPrice(variants, currencyCode)
   }
 
   if (cheapestPrice) {
@@ -102,7 +102,7 @@ export const formatVariantPrice = ({
 
   return convertToLocale({
     amount,
-    currency_code: region?.currency_code,
+    currencyCode: region?.currencyCode,
     ...rest,
   });
 }
@@ -138,7 +138,7 @@ export const getVariantPrice = (
   region
 ) => {
   const price = variant?.prices?.find((p) =>
-    p.currency_code.toLowerCase() === region?.currency_code?.toLowerCase())
+    p.currencyCode.toLowerCase() === region?.currencyCode?.toLowerCase())
 
   return price?.amount || 0
 }
@@ -177,13 +177,13 @@ export const formatAmount = ({
 
   return convertToLocale({
     amount: taxAwareAmount,
-    currency_code: region.currency_code,
+    currencyCode: region.currency.code,
     ...rest,
   });
 }
 
 const convertToDecimal = (amount, region) => {
-  const divisor = noDivisionCurrencies.includes(region?.currency_code?.toLowerCase())
+  const divisor = noDivisionCurrencies.includes(region?.currencyCode?.toLowerCase())
     ? 1
     : 100
 
@@ -196,15 +196,15 @@ const getTaxRate = (region) => {
 
 const convertToLocale = ({
   amount,
-  currency_code,
+  currencyCode,
   minimumFractionDigits,
   maximumFractionDigits,
   locale = "en-US"
 }) => {
-  return currency_code && !isEmpty(currency_code)
+  return currencyCode && !isEmpty(currencyCode)
     ? new Intl.NumberFormat(locale, {
         style: "currency",
-        currency: currency_code,
+        currency: currencyCode,
         minimumFractionDigits,
         maximumFractionDigits,
       }).format(amount)

@@ -1,18 +1,17 @@
-import { Container } from "@medusajs/ui"
-import Image from "next/image"
+import { Container } from "@medusajs/ui";
+import Image from "next/image";
 
-const ImageGallery = ({
-  images
-}) => {
+const ImageGallery = ({ images }) => {
   return (
     <div className="flex items-start relative">
       <div className="flex flex-col flex-1 small:mx-16 gap-y-4">
-        {images.map((image, index) => {
+        {images.map(({ id, image }, index) => {
           return (
             <Container
-              key={image.id}
+              key={id}
               className="relative aspect-[29/34] w-full overflow-hidden bg-ui-bg-subtle"
-              id={image.id}>
+              id={id}
+            >
               <Image
                 src={image.url}
                 priority={index <= 2 ? true : false}
@@ -22,13 +21,14 @@ const ImageGallery = ({
                 sizes="(max-width: 576px) 280px, (max-width: 768px) 360px, (max-width: 992px) 480px, 800px"
                 style={{
                   objectFit: "cover",
-                }} />
+                }}
+              />
             </Container>
           );
         })}
       </div>
     </div>
   );
-}
+};
 
-export default ImageGallery
+export default ImageGallery;

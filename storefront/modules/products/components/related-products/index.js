@@ -1,52 +1,46 @@
-import { getProductsList, getRegion } from "@storefront/lib/data"
+import { getProductsList, getRegion } from "@storefront/lib/data";
 
-import ProductPreview from "../product-preview"
+import ProductPreview from "../product-preview";
 
-export default async function RelatedProducts({
-  product,
-  countryCode
-}) {
-  const region = await getRegion(countryCode)
+export default async function RelatedProducts({ product, countryCode }) {
+  const region = await getRegion(countryCode);
 
   if (!region) {
-    return null
+    return null;
   }
 
-  // edit this function to define your related products logic
+  // Updated to use camelCase parameters
   const setQueryParams = () => {
-    const params = {}
+    const params = {};
 
-    if (region?.id) {
-      params.region_id = region.id
-    }
-
-    if (region?.currency_code) {
-      params.currency_code = region.currency_code
-    }
-
-    if (product.collection_id) {
-      params.collection_id = [product.collection_id]
+    if (product.productCollections[0].id) {
+      params.collectionId = product.productCollections[0].id;
     }
 
     if (product.tags) {
-      params.tags = product.tags.map((t) => t.value)
+      params.tags = product.tags.map((t) => t.value);
     }
 
-    params.is_giftcard = false
+    params.isGiftcard = false;
+    params.limit = 4; // Set a reasonable limit for related products
 
-    return params
-  }
+    return params;
+  };
 
-  const queryParams = setQueryParams()
+  const queryParams = setQueryParams();
 
   const productPreviews = await getProductsList({
     queryParams,
     countryCode,
-  }).then(({ response }) =>
-    response.products.filter((productPreview) => productPreview.id !== product.id))
+  }).then(({ response }) => {
+    return response.products.filter(
+      (responseProduct) => responseProduct.id !== product.id
+    );
+  });
+
 
   if (!productPreviews.length) {
-    return null
+    return null;
   }
 
   return (
@@ -60,8 +54,7 @@ export default async function RelatedProducts({
         </p>
       </div>
 
-      <ul
-        className="grid grid-cols-2 small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8">
+      <ul className="grid grid-cols-2 small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8">
         {productPreviews.map((productPreview) => (
           <li key={productPreview.id}>
             <ProductPreview region={region} productPreview={productPreview} />

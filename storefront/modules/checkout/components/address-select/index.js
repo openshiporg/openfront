@@ -16,22 +16,22 @@ const AddressSelect = ({
     const savedAddress = addresses.find((a) => a.id === id)
     if (savedAddress) {
       cartUpdate({
-        shipping_address: omit(savedAddress, [
+        shippingAddress: omit(savedAddress, [
           "id",
-          "created_at",
-          "updated_at",
+          "createdAt",
+          "updatedAt",
           "country",
-          "deleted_at",
+          "deletedAt",
           "metadata",
-          "customer_id",
+          "customerId",
         ]),
       })
     }
   }
 
   const selectedAddress = useMemo(() => {
-    return addresses.find((a) => compareAddresses(a, cart?.shipping_address));
-  }, [addresses, cart?.shipping_address])
+    return addresses.find((a) => compareAddresses(a, cart?.shippingAddress));
+  }, [addresses, cart?.shippingAddress])
 
   return (
     <Listbox onChange={handleSelect} value={selectedAddress?.id}>
@@ -42,7 +42,7 @@ const AddressSelect = ({
             <>
               <span className="block truncate">
                 {selectedAddress
-                  ? selectedAddress.address_1
+                  ? selectedAddress.address1
                   : "Choose an address"}
               </span>
               <ChevronUpDown
@@ -69,7 +69,7 @@ const AddressSelect = ({
                     <Radio checked={selectedAddress?.id === address.id} />
                     <div className="flex flex-col">
                       <span className="text-left text-base-semi">
-                        {address.first_name} {address.last_name}
+                        {address.firstName} {address.lastName}
                       </span>
                       {address.company && (
                         <span className="text-small-regular text-ui-fg-base">
@@ -78,17 +78,17 @@ const AddressSelect = ({
                       )}
                       <div className="flex flex-col text-left text-base-regular mt-2">
                         <span>
-                          {address.address_1}
-                          {address.address_2 && (
-                            <span>, {address.address_2}</span>
+                          {address.address1}
+                          {address.address2 && (
+                            <span>, {address.address2}</span>
                           )}
                         </span>
                         <span>
-                          {address.postal_code}, {address.city}
+                          {address.postalCode}, {address.city}
                         </span>
                         <span>
                           {address.province && `${address.province}, `}
-                          {address.country_code?.toUpperCase()}
+                          {address.countryCode?.toUpperCase()}
                         </span>
                       </div>
                     </div>

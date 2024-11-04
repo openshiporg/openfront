@@ -13,9 +13,9 @@ const stripePromise = stripeKey ? loadStripe(stripeKey) : null
 const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID
 
 const Wrapper = ({ cart, children }) => {
-  const paymentSession = cart.payment_session
+  const paymentSession = cart.paymentSession
 
-  const isStripe = paymentSession?.provider_id?.includes("stripe")
+  const isStripe = paymentSession?.providerId?.includes("stripe")
 
   if (isStripe && paymentSession && stripePromise) {
     return (
@@ -27,11 +27,11 @@ const Wrapper = ({ cart, children }) => {
           {children}
         </StripeWrapper>
       </StripeContext.Provider>
-    );
+    )
   }
 
   if (
-    paymentSession?.provider_id === "paypal" &&
+    paymentSession?.providerId === "paypal" &&
     paypalClientId !== undefined &&
     cart
   ) {
@@ -39,16 +39,16 @@ const Wrapper = ({ cart, children }) => {
       <PayPalScriptProvider
         options={{
           "client-id": "test",
-          currency: cart?.region.currency_code.toUpperCase(),
+          currency: cart?.region.currency.code.toUpperCase(),
           intent: "authorize",
           components: "buttons",
         }}>
         {children}
       </PayPalScriptProvider>
-    );
+    )
   }
 
-  return <div>{children}</div>;
+  return <div>{children}</div>
 }
 
 export default Wrapper

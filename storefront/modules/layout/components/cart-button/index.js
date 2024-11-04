@@ -1,20 +1,18 @@
-import { enrichLineItems, retrieveCart } from "@storefront/modules/cart/actions"
-
-import CartDropdown from "../cart-dropdown"
+import CartDropdown from "../cart-dropdown";
+import { retrieveCart } from "@storefront/modules/cart/actions";
 
 const fetchCart = async () => {
-  const cart = await retrieveCart()
+  const cart = await retrieveCart();
 
-  if (cart?.items.length) {
-    const enrichedItems = await enrichLineItems(cart?.items, cart?.region_id)
-    cart.items = enrichedItems
+  if (!cart) {
+    return null;
   }
 
-  return cart
-}
+  return cart;
+};
 
 export default async function CartButton() {
-  const cart = await fetchCart()
+  const cart = await fetchCart();
 
   return <CartDropdown cart={cart} />;
 }

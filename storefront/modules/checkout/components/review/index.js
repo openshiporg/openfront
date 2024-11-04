@@ -4,17 +4,17 @@ import { Heading, Text, clx } from "@medusajs/ui"
 import PaymentButton from "../payment-button"
 import { useSearchParams } from "next/navigation"
 
-const Review = ({
-  cart
-}) => {
+const Review = ({ cart }) => {
   const searchParams = useSearchParams()
 
   const isOpen = searchParams.get("step") === "review"
 
   const previousStepsCompleted =
-    cart.shipping_address &&
-    cart.shipping_methods.length > 0 &&
-    cart.payment_session
+    cart.shippingAddress &&
+    cart.billingAddress &&
+    cart.email &&
+    cart.shippingMethods.length > 0 &&
+    cart.paymentSession
 
   return (
     <div className="bg-white">
@@ -43,7 +43,7 @@ const Review = ({
         </>
       )}
     </div>
-  );
+  )
 }
 
 export default Review

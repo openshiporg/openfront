@@ -11,6 +11,7 @@ import {
 } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
+import slugify from 'slugify';
 
 export const Product = list({
   access: {
@@ -28,7 +29,9 @@ export const Product = list({
       },
     }),
     description: text(),
-    handle: text(),
+    handle: text({
+      isIndexed: "unique",
+    }),
     subtitle: text(),
     isGiftcard: checkbox(),
     thumbnail: virtual({
@@ -124,6 +127,21 @@ export const Product = list({
       many: true,
     }),
     ...trackingFields,
+  },
+  hooks: {
+    resolveInput: async ({ resolvedData, existingItem, context, operation }) => {
+      if (!resolvedData.handle && resolvedData.title) {
+        let baseHandle = slugify(resolvedData.title, { lower: true });
+        let handle = baseHandle;
+        let counter = 1;
+        while (await context.query.Product.findOne({ where: { handle } })) {
+          handle = `${baseHandle}-${counter}`;
+          counter++;
+        }
+        resolvedData.handle = handle;
+      }
+      return resolvedData;
+    },
   },
   ui: {
     labelField: "title",

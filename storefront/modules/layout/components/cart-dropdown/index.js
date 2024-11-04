@@ -4,7 +4,6 @@ import { Button } from "@medusajs/ui"
 import { useParams, usePathname } from "next/navigation"
 import { Fragment, useEffect, useRef, useState } from "react"
 
-import { formatAmount } from "@storefront/lib/util/prices"
 import DeleteButton from "@storefront/modules/common/components/delete-button"
 import LineItemOptions from "@storefront/modules/common/components/line-item-options"
 import LineItemPrice from "@storefront/modules/common/components/line-item-price"
@@ -17,13 +16,11 @@ const CartDropdown = ({
   const [activeTimer, setActiveTimer] = useState(undefined)
   const [cartDropdownOpen, setCartDropdownOpen] = useState(false)
 
-  const { countryCode } = useParams()
-
   const open = () => setCartDropdownOpen(true)
   const close = () => setCartDropdownOpen(false)
 
   const totalItems =
-    cartState?.items?.reduce((acc, item) => {
+    cartState?.lineItems?.reduce((acc, item) => {
       return acc + item.quantity
     }, 0) || 0
 
@@ -31,9 +28,7 @@ const CartDropdown = ({
 
   const timedOpen = () => {
     open()
-
     const timer = setTimeout(close, 5000)
-
     setActiveTimer(timer)
   }
 
@@ -41,28 +36,24 @@ const CartDropdown = ({
     if (activeTimer) {
       clearTimeout(activeTimer)
     }
-
     open()
   }
 
-  // Clean up the timer when the component unmounts
   useEffect(() => {
     return () => {
       if (activeTimer) {
         clearTimeout(activeTimer)
       }
-    };
+    }
   }, [activeTimer])
 
   const pathname = usePathname()
 
-  // open cart dropdown when modifying the cart items, but only if we're not on the cart page
   useEffect(() => {
     if (itemRef.current !== totalItems && !pathname.includes("/cart")) {
       timedOpen()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totalItems, itemRef.current])
+  }, [totalItems, pathname])
 
   return (
     <div className="h-full z-50" onMouseEnter={openAndCancel} onMouseLeave={close}>
@@ -85,34 +76,32 @@ const CartDropdown = ({
             <div className="p-4 flex items-center justify-center">
               <h3 className="text-large-semi">Cart</h3>
             </div>
-            {cartState && cartState.items?.length ? (
+            {cartState && cartState.lineItems?.length ? (
               <>
-                <div
-                  className="overflow-y-scroll max-h-[402px] px-4 grid grid-cols-1 gap-y-8 no-scrollbar p-px">
-                  {cartState.items
+                <div className="overflow-y-scroll max-h-[402px] px-4 grid grid-cols-1 gap-y-8 no-scrollbar p-px">
+                  {cartState.lineItems
                     .sort((a, b) => {
                       return a.created_at > b.created_at ? -1 : 1
                     })
                     .map((item) => (
                       <div className="grid grid-cols-[122px_1fr] gap-x-4" key={item.id}>
-                        <LocalizedClientLink href={`/products/${item.variant.product.handle}`} className="w-24">
+                        <LocalizedClientLink href={`/products/${item.productVariant.product.handle}`} className="w-24">
                           <Thumbnail thumbnail={item.thumbnail} size="square" />
                         </LocalizedClientLink>
                         <div className="flex flex-col justify-between flex-1">
                           <div className="flex flex-col flex-1">
                             <div className="flex items-start justify-between">
-                              <div
-                                className="flex flex-col overflow-ellipsis whitespace-nowrap mr-4 w-[180px]">
+                              <div className="flex flex-col overflow-ellipsis whitespace-nowrap mr-4 w-[180px]">
                                 <h3 className="text-base-regular overflow-hidden text-ellipsis">
-                                  <LocalizedClientLink href={`/products/${item.variant.product.handle}`}>
+                                  <LocalizedClientLink href={`/products/${item.productVariant.product.handle}`}>
                                     {item.title}
                                   </LocalizedClientLink>
                                 </h3>
-                                <LineItemOptions variant={item.variant} />
+                                <LineItemOptions variant={item.productVariant} />
                                 <span>Quantity: {item.quantity}</span>
                               </div>
                               <div className="flex justify-end">
-                                <LineItemPrice region={cartState.region} item={item} style="tight" />
+                                <LineItemPrice item={item} />
                               </div>
                             </div>
                           </div>
@@ -130,11 +119,7 @@ const CartDropdown = ({
                       <span className="font-normal">(excl. taxes)</span>
                     </span>
                     <span className="text-large-semi">
-                      {formatAmount({
-                        amount: cartState.subtotal || 0,
-                        region: cartState.region,
-                        includeTaxes: false,
-                      })}
+                      {cartState.subtotal}
                     </span>
                   </div>
                   <LocalizedClientLink href="/cart" passHref>
@@ -147,8 +132,7 @@ const CartDropdown = ({
             ) : (
               <div>
                 <div className="flex py-16 flex-col gap-y-4 items-center justify-center">
-                  <div
-                    className="bg-gray-900 text-small-regular flex items-center justify-center w-6 h-6 rounded-full text-white">
+                  <div className="bg-gray-900 text-small-regular flex items-center justify-center w-6 h-6 rounded-full text-white">
                     <span>0</span>
                   </div>
                   <span>Your shopping bag is empty.</span>
