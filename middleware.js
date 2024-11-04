@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { checkAuth } from "@keystone/utils/checkAuth";
 import { GraphQLClient, gql } from "graphql-request";
-import { openfrontClient } from "@storefront/lib/config";
 
 const basePath = "/dashboard";
 const DEFAULT_REGION = process.env.NEXT_PUBLIC_DEFAULT_REGION || "us";
 
+function gqlClient(req) {
+  return new GraphQLClient(`${process.env.FRONTEND_URL}/api/graphql`, {
+    headers: req ? { cookie: req.cookies } : undefined,
+    credentials: "include",
+    fetch,
+  });
+}
 
 const regionMapCache = {
   regionMap: new Map(),
@@ -16,7 +22,8 @@ async function getRegionMap(request) {
   const { regionMap, regionMapUpdated } = regionMapCache;
 
   if (!regionMap.keys().next().value || regionMapUpdated < Date.now() - 3600 * 1000) {
-    const { regions } = await openfrontClient.request(gql`
+    const client = gqlClient(request);
+    const { regions } = await client.request(gql`
       query {
         regions {
           countries {
