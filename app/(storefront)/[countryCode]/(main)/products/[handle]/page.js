@@ -10,55 +10,54 @@ import {
 } from "@storefront/lib/data";
 import ProductTemplate from "@storefront/modules/products/templates";
 
-export async function generateStaticParams() {
-  // const countryCodes = await listRegions().then(({ regions }) =>
-  //   regions?.map((r) => r.countries.map((c) => c.iso2)).flat()
-  // );
+// export async function generateStaticParams() {
+//   const countryCodes = await listRegions().then(({ regions }) =>
+//     regions?.map((r) => r.countries.map((c) => c.iso2)).flat()
+//   );
 
-  // if (!countryCodes) {
-  //   return null;
-  // }
+//   if (!countryCodes) {
+//     return null;
+//   }
 
-  // const products = await Promise.all(
-  //   countryCodes.map((countryCode) => {
-  //     return getProductsList({ countryCode });
-  //   })
-  // ).then((responses) =>
-  //   responses.map(({ response }) => response.products).flat()
-  // );
+//   const products = await Promise.all(
+//     countryCodes.map((countryCode) => {
+//       return getProductsList({ countryCode });
+//     })
+//   ).then((responses) =>
+//     responses.map(({ response }) => response.products).flat()
+//   );
 
-  // const staticParams = countryCodes
-  //   ?.map((countryCode) =>
-  //     products.map((product) => ({
-  //       countryCode,
-  //       handle: product.handle,
-  //     }))
-  //   )
-  //   .flat();
+//   const staticParams = countryCodes
+//     ?.map((countryCode) =>
+//       products.map((product) => ({
+//         countryCode,
+//         handle: product.handle,
+//       }))
+//     )
+//     .flat();
 
-  // return staticParams;
-  return [];
-}
+//   return staticParams;
+// }
 
-export async function generateMetadata({ params }) {
-  const { handle } = params;
+// export async function generateMetadata({ params }) {
+//   const { handle } = params;
 
-  const { product } = await getProductByHandle(handle);
+//   const { product } = await getProductByHandle(handle);
 
-  if (!product) {
-    notFound();
-  }
+//   if (!product) {
+//     notFound();
+//   }
 
-  return {
-    title: `${product.title} | Medusa Store`,
-    description: `${product.title}`,
-    openGraph: {
-      title: `${product.title} | Medusa Store`,
-      description: `${product.title}`,
-      images: product.thumbnail ? [product.thumbnail] : [],
-    },
-  };
-}
+//   return {
+//     title: `${product.title} | Medusa Store`,
+//     description: `${product.title}`,
+//     openGraph: {
+//       title: `${product.title} | Medusa Store`,
+//       description: `${product.title}`,
+//       images: product.thumbnail ? [product.thumbnail] : [],
+//     },
+//   };
+// }
 
 const getPricedProductByHandle = async (handle, region) => {
   const { product: pricedProduct } = await retrievePricedProductByHandle({

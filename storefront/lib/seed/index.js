@@ -6,16 +6,45 @@ import path from "path";
 import FormData from "form-data";
 import fetch from "node-fetch";
 
-const endpoint =
-  process.env.SEED_GRAPHQL_ENDPOINT || "http://localhost:3000/api/graphql";
-const apiKey = process.env.SEED_API_KEY;
+// const endpoint =
+//   process.env.SEED_GRAPHQL_ENDPOINT || "http://localhost:3000/api/graphql";
+// const apiKey = process.env.SEED_API_KEY;
 
-const client = new GraphQLClient(endpoint, {
-  headers: {
-    "x-api-key": apiKey,
-    "Content-Type": "application/json",
+// const client = new GraphQLClient(endpoint, {
+//   headers: {
+//     "x-api-key": apiKey,
+//     "Content-Type": "application/json",
+//   },
+// });
+
+import { keystoneContext } from "../../../keystone/keystoneContext";
+
+const client = {
+  request: async (query, variables) => {
+    // Remove undefined values from variables
+    const cleanVariables = Object.fromEntries(
+      Object.entries(variables || {}).filter(([_, value]) => value !== undefined)
+    );
+
+    // Only include variables if there are any
+    const options = {
+      query,
+      ...(Object.keys(cleanVariables).length > 0 && { variables: cleanVariables })
+    };
+
+    const { data, errors } = await keystoneContext.sudo().graphql.raw(options);
+
+    // Convert the data to a plain object before returning
+    const plainData = JSON.parse(JSON.stringify(data));
+
+    if (errors) {
+      throw errors[0];
+    }
+
+    return plainData;
   },
-});
+};
+
 
 const createRegionMutation = gql`
   mutation CreateRegion($data: RegionCreateInput!) {

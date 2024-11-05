@@ -3,22 +3,22 @@ import { notFound } from "next/navigation"
 import { retrieveOrder } from "@storefront/lib/data"
 import OrderDetailsTemplate from "@storefront/modules/order/templates/order-details-template"
 
-export async function generateMetadata(
-  {
-    params
-  }
-) {
-  const order = await retrieveOrder(params.id).catch(() => null)
+// export async function generateMetadata(
+//   {
+//     params
+//   }
+// ) {
+//   const order = await retrieveOrder(params.id).catch(() => null)
 
-  if (!order) {
-    notFound()
-  }
+//   if (!order) {
+//     notFound()
+//   }
 
-  return {
-    title: `Order #${order.display_id}`,
-    description: `View your order`,
-  }
-}
+//   return {
+//     title: `Order #${order.display_id}`,
+//     description: `View your order`,
+//   }
+// }
 
 export default async function OrderDetailPage({
   params
