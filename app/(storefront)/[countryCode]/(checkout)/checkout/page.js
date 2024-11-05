@@ -1,7 +1,6 @@
 import { cookies } from "next/headers"
 import { notFound } from "next/navigation"
 
-import { enrichLineItems } from "@storefront/modules/cart/actions"
 import Wrapper from "@storefront/modules/checkout/components/payment-wrapper"
 import CheckoutForm from "@storefront/modules/checkout/templates/checkout-form"
 import CheckoutSummary from "@storefront/modules/checkout/templates/checkout-summary"
@@ -19,11 +18,6 @@ const fetchCart = async () => {
   }
 
   const cart = await getCart(cartId).then((cart) => cart)
-
-  if (cart?.items.length) {
-    const enrichedItems = await enrichLineItems(cart?.items, cart?.region_id)
-    cart.items = enrichedItems
-  }
 
   return cart
 }

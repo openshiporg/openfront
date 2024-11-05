@@ -2,7 +2,6 @@ import { cookies } from "next/headers"
 
 import CartTemplate from "@storefront/modules/cart/templates"
 
-import { enrichLineItems } from "@storefront/modules/cart/actions"
 import { getCheckoutStep } from "@storefront/lib/util/get-checkout-step"
 import { getCart, getCustomer } from "@storefront/lib/data"
 

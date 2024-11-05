@@ -11,32 +11,33 @@ import {
 import ProductTemplate from "@storefront/modules/products/templates";
 
 export async function generateStaticParams() {
-  const countryCodes = await listRegions().then(({ regions }) =>
-    regions?.map((r) => r.countries.map((c) => c.iso2)).flat()
-  );
+  // const countryCodes = await listRegions().then(({ regions }) =>
+  //   regions?.map((r) => r.countries.map((c) => c.iso2)).flat()
+  // );
 
-  if (!countryCodes) {
-    return null;
-  }
+  // if (!countryCodes) {
+  //   return null;
+  // }
 
-  const products = await Promise.all(
-    countryCodes.map((countryCode) => {
-      return getProductsList({ countryCode });
-    })
-  ).then((responses) =>
-    responses.map(({ response }) => response.products).flat()
-  );
+  // const products = await Promise.all(
+  //   countryCodes.map((countryCode) => {
+  //     return getProductsList({ countryCode });
+  //   })
+  // ).then((responses) =>
+  //   responses.map(({ response }) => response.products).flat()
+  // );
 
-  const staticParams = countryCodes
-    ?.map((countryCode) =>
-      products.map((product) => ({
-        countryCode,
-        handle: product.handle,
-      }))
-    )
-    .flat();
+  // const staticParams = countryCodes
+  //   ?.map((countryCode) =>
+  //     products.map((product) => ({
+  //       countryCode,
+  //       handle: product.handle,
+  //     }))
+  //   )
+  //   .flat();
 
-  return staticParams;
+  // return staticParams;
+  return [];
 }
 
 export async function generateMetadata({ params }) {
