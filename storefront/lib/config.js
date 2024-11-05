@@ -1,39 +1,34 @@
-// import { GraphQLClient } from 'graphql-request';
+import { GraphQLClient } from "graphql-request";
 
-// function gqlClient(req) {
-//   return new GraphQLClient(`${process.env.FRONTEND_URL}/api/graphql`, {
-//     headers: req ? { cookie: req.cookies } : undefined,
-//     credentials: "include",
-//     fetch,
-//   });
-// }
+class RetryingGraphQLClient extends GraphQLClient {
+  async request(query, variables = {}) {
+    while (true) {
+      try {
+        const response = await super.request(query, variables);
+        return response;
+      } catch (error) {
+        console.log(`GraphQL error: ${error.message}`);
+        
+        // Check for connection pool, timeout, or gateway errors
+        if (
+          error.message?.includes("connection pool") ||
+          error.message?.includes("Timed out") ||
+          error.code === "P2024" ||
+          error.message?.includes("Code: 502") ||  // Gateway error
+          error.response?.status === 502 ||        // Alternative way gateway errors appear
+          (error.response?.errors || []).some(e => e.message?.includes("502"))  // GraphQL errors array
+        ) {
+          console.log(`Retrying in 1s: ${error.message}`);
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          continue;
+        }
 
-// export const openfrontClient = gqlClient();
-
-import { keystoneContext } from "@keystone/keystoneContext";
-
-export const openfrontClient = {
-  request: async (query, variables) => {
-    // Remove undefined values from variables
-    const cleanVariables = Object.fromEntries(
-      Object.entries(variables || {}).filter(([_, value]) => value !== undefined)
-    );
-
-    // Only include variables if there are any
-    const options = {
-      query,
-      ...(Object.keys(cleanVariables).length > 0 && { variables: cleanVariables })
-    };
-
-    const { data, errors } = await keystoneContext.graphql.raw(options);
-
-    // Convert the data to a plain object before returning
-    const plainData = JSON.parse(JSON.stringify(data));
-
-    if (errors) {
-      throw errors[0];
+        throw error;
+      }
     }
+  }
+}
 
-    return plainData;
-  },
-};
+export const openfrontClient = new RetryingGraphQLClient(
+  `${process.env.FRONTEND_URL}/api/graphql`
+);

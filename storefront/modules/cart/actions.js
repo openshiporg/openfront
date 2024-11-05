@@ -99,7 +99,7 @@ export async function getOrSetCart(countryCode) {
     const { createCart: newCart } = await openfrontClient.request(
       gql`
         mutation CreateCart($regionId: ID!) {
-          createCart(data: { region: { connect: { id: $regionId } } } }) {
+          createCart(data: { region: { connect: { id: $regionId } } }) {
             id
           }
         }
