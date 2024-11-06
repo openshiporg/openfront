@@ -1,6 +1,40 @@
 import { keystoneContext } from "@keystone/keystoneContext";
 import { GraphQLClient } from "graphql-request";
-import { Client, cacheExchange, fetchExchange } from "urql";
+import { parse } from 'graphql';
+
+const shouldRetry = (error) => 
+  error.message?.includes("connection pool") ||
+  error.message?.includes("Timed out") ||
+  error.code === "P2024" ||
+  error.message?.includes("Code: 502") ||
+  error.response?.status === 502 ||
+  (error.response?.errors || []).some((e) => e.message?.includes("502"));
+
+const isEndpointUnreachable = (error) =>
+  error.code === "ECONNREFUSED" || 
+  error.type === "system" ||
+  error.message?.includes("request to") ||
+  error.message?.includes("failed, reason");
+
+const getEmptyResponseForQuery = (query) => {
+  const document = typeof query === 'string' ? parse(query) : query;
+  const emptyResponse = {};
+  
+  document.definitions.forEach(def => {
+    if (def.kind === 'OperationDefinition') {
+      def.selectionSet.selections.forEach(selection => {
+        if (selection.kind === 'Field') {
+          // Check if field type suggests an array
+          const name = selection.name.value;
+          const isPlural = name.endsWith('s');
+          emptyResponse[name] = isPlural ? [] : null;
+        }
+      });
+    }
+  });
+  
+  return emptyResponse;
+};
 
 class RetryingGraphQLClient extends GraphQLClient {
   async request(query, variables = {}) {
@@ -11,15 +45,12 @@ class RetryingGraphQLClient extends GraphQLClient {
       } catch (error) {
         console.log(`GraphQL error: ${error.message}`);
 
-        // Check for connection pool, timeout, or gateway errors
-        if (
-          error.message?.includes("connection pool") ||
-          error.message?.includes("Timed out") ||
-          error.code === "P2024" ||
-          error.message?.includes("Code: 502") || // Gateway error
-          error.response?.status === 502 || // Alternative way gateway errors appear
-          (error.response?.errors || []).some((e) => e.message?.includes("502")) // GraphQL errors array
-        ) {
+        if (isEndpointUnreachable(error)) {
+          console.log("Endpoint unreachable, returning empty data");
+          return getEmptyResponseForQuery(query);
+        }
+
+        if (shouldRetry(error)) {
           console.log(`Retrying in 1s: ${error.message}`);
           await new Promise((resolve) => setTimeout(resolve, 1000));
           continue;
@@ -31,83 +62,48 @@ class RetryingGraphQLClient extends GraphQLClient {
   }
 }
 
-
-
-const urqlClient = new Client({
-  // url: `https://openfront.up.railway.app/api/graphql`,
-  url: `${process.env.FRONTEND_URL}/api/graphql`,
-  exchanges: [cacheExchange, fetchExchange], 
-});
-
-// openfront client using urql and api route
-export const openfrontClientURQL = {
-  request: async (query, variables = {}) => {
-    const result = await urqlClient.query(query, variables).toPromise();
-
-    if (result.error) {
-      throw result.error;
-    }
-
-    return result.data;
-  },
-};
-
-// openfront client using graphql-request and api route
 export const openfrontClient = new RetryingGraphQLClient(
   `${process.env.FRONTEND_URL}/api/graphql`
 );
 
-// openfront client using keystoneContext
 export const openfrontClientKeystone = {
-  request: async (query, variables) => {
-    // Remove undefined values from variables
-    const cleanVariables = Object.fromEntries(
-      Object.entries(variables || {}).filter(
-        ([_, value]) => value !== undefined
-      )
-    );
-
-    // Only include variables if there are any
-    const options = {
-      query,
-      ...(Object.keys(cleanVariables).length > 0 && {
-        variables: cleanVariables,
-      }),
-    };
-
+  request: async (query, variables = {}) => {
     while (true) {
       try {
-        const { data, errors } = await keystoneContext.graphql.raw(options);
+        const cleanVariables = Object.fromEntries(
+          Object.entries(variables).filter(([_, value]) => value !== undefined)
+        );
+
+        const { data, errors } = await keystoneContext.graphql.raw({
+          query,
+          ...(Object.keys(cleanVariables).length > 0 && {
+            variables: cleanVariables,
+          }),
+        });
 
         if (errors) {
-          console.log(errors);
-          const prismaError = errors.find(
-            (e) =>
-              e.message?.includes("Prisma") ||
-              e.message?.includes("connection pool") ||
-              e.message?.includes("P2024")
-          );
-
-          if (prismaError) {
-            console.log(`Prisma error, retrying in 1s: ${prismaError.message}`);
+          const error = new Error(errors[0].message);
+          error.response = { errors };
+          
+          if (shouldRetry(error)) {
+            console.log(`Retrying in 1s due to GraphQL error: ${error.message}`);
             await new Promise((resolve) => setTimeout(resolve, 1000));
             continue;
           }
-
-          throw errors[0];
+          
+          throw error;
         }
 
         return JSON.parse(JSON.stringify(data));
       } catch (error) {
-        if (
-          error.message?.includes("Prisma") ||
-          error.message?.includes("connection pool") ||
-          error.code === "P2024"
-        ) {
+        console.log(`Caught error: ${error.message}`);
+
+        if (shouldRetry(error)) {
           console.log(`Retrying in 1s: ${error.message}`);
           await new Promise((resolve) => setTimeout(resolve, 1000));
           continue;
         }
+
         throw error;
       }
     }
