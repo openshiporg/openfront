@@ -2,8 +2,6 @@ import { keystoneContext } from "@keystone/keystoneContext";
 import { GraphQLClient } from "graphql-request";
 import { Client, cacheExchange, fetchExchange } from "urql";
 
-
-
 class RetryingGraphQLClient extends GraphQLClient {
   async request(query, variables = {}) {
     while (true) {
@@ -38,8 +36,7 @@ class RetryingGraphQLClient extends GraphQLClient {
 const urqlClient = new Client({
   // url: `https://openfront.up.railway.app/api/graphql`,
   url: `${process.env.FRONTEND_URL}/api/graphql`,
-  exchanges: [cacheExchange, fetchExchange],
-  suspense 
+  exchanges: [cacheExchange, fetchExchange], 
 });
 
 // openfront client using urql and api route
