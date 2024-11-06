@@ -185,19 +185,6 @@ export default withAuth(
     db: {
       provider: "postgresql",
       url: databaseURL,
-      // extendPrismaSchema: (schema) => {
-      //   return schema
-      //     // Modify the datasource block to add pooling config
-      //     .replace(
-      //       /(datasource\s+postgresql\s*{[^}]+)}/g,
-      //       '$1\n  connection_limit = 100\n  pool_timeout = 20\n}'
-      //     )
-      //     // Modify the generator block to add needed features
-      //     .replace(
-      //       /(generator\s+client\s*{[^}]+)}/g,
-      //       '$1\n  previewFeatures = ["metrics"]\n}'
-      //     );
-      // },
     },
     experimental: {
       generateNextGraphqlAPI: true,
