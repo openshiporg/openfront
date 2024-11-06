@@ -53,12 +53,12 @@ export const openfrontClientURQL = {
 };
 
 // openfront client using graphql-request and api route
-export const openfrontClientGQL = new RetryingGraphQLClient(
+export const openfrontClient = new RetryingGraphQLClient(
   `${process.env.FRONTEND_URL}/api/graphql`
 );
 
 // openfront client using keystoneContext
-export const openfrontClient = {
+export const openfrontClientKeystone = {
   request: async (query, variables) => {
     // Remove undefined values from variables
     const cleanVariables = Object.fromEntries(
