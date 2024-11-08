@@ -14,7 +14,10 @@ const isEndpointUnreachable = (error) =>
   error.code === "ECONNREFUSED" || 
   error.type === "system" ||
   error.message?.includes("request to") ||
-  error.message?.includes("failed, reason");
+  error.message?.includes("failed, reason") ||
+  error.message?.includes("DEPLOYMENT_NOT_FOUND") ||
+  (error.response?.error?.includes("DEPLOYMENT_NOT_FOUND")) ||
+  error.message?.includes("Code: 404");
 
 const getEmptyResponseForQuery = (query) => {
   const document = typeof query === 'string' ? parse(query) : query;
