@@ -1,4 +1,4 @@
-import { getCustomer, listCustomerOrders } from "@storefront/lib/data"
+import { getUser, listCustomerOrders } from "@storefront/lib/data"
 import Overview from "@storefront/modules/account/components/overview"
 import { notFound } from "next/navigation"
 
@@ -8,12 +8,12 @@ export const metadata = {
 }
 
 export default async function OverviewTemplate() {
-  const customer = await getCustomer().catch(() => null)
-  const orders = (await listCustomerOrders().catch(() => null)) || null
+  const { authenticatedItem: user } = await getUser()
+  const { orders } = await listCustomerOrders().catch(() => ({ orders: [] }))
 
-  if (!customer) {
+  if (!user) {
     notFound()
   }
 
-  return <Overview customer={customer} orders={orders} />;
+  return <Overview user={user} orders={orders} />
 }

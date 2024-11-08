@@ -1,9 +1,6 @@
 import { notFound } from "next/navigation"
-
 import AddressBook from "@storefront/modules/account/components/address-book"
-
-import { getCustomer, getRegion } from "@storefront/lib/data"
-
+import { getUser, getRegion } from "@storefront/lib/data"
 import { headers } from "next/headers"
 
 export const metadata = {
@@ -14,10 +11,10 @@ export const metadata = {
 export default async function Addresses() {
   const nextHeaders = headers()
   const countryCode = nextHeaders.get("next-url")?.split("/")[1] || ""
-  const customer = await getCustomer()
+  const { authenticatedItem: user } = await getUser()
   const region = await getRegion(countryCode)
 
-  if (!customer || !region) {
+  if (!user || !region) {
     notFound()
   }
 
@@ -26,11 +23,11 @@ export default async function Addresses() {
       <div className="mb-8 flex flex-col gap-y-4">
         <h1 className="text-2xl-semi">Shipping Addresses</h1>
         <p className="text-base-regular">
-          View and update your shipping addresses, you can add as many as you
-          like. Saving your addresses will make them available during checkout.
+          View and update your shipping addresses, you can add as many as you like. 
+          Saving your addresses will make them available during checkout.
         </p>
       </div>
-      <AddressBook customer={customer} region={region} />
+      <AddressBook user={user} region={region} />
     </div>
-  );
+  )
 }

@@ -1,9 +1,6 @@
 import { cookies } from "next/headers"
-
 import CartTemplate from "@storefront/modules/cart/templates"
-
-import { getCheckoutStep } from "@storefront/lib/util/get-checkout-step"
-import { getCart, getCustomer } from "@storefront/lib/data"
+import { getCart, getUser } from "@storefront/lib/data"
 
 export const metadata = {
   title: "Cart",
@@ -17,21 +14,18 @@ const fetchCart = async () => {
     return null
   }
 
-  const cart = await getCart(cartId).then((cart) => cart)
+  const cart = await getCart(cartId)
 
   if (!cart) {
     return null
   }
-
-
-  // cart.checkoutStep = cart && getCheckoutStep(cart)
 
   return cart
 }
 
 export default async function Cart() {
   const cart = await fetchCart()
-  const customer = await getCustomer()
+  const { authenticatedItem: user } = await getUser()
 
-  return <CartTemplate cart={cart} customer={customer} />;
+  return <CartTemplate cart={cart} user={user} />
 }

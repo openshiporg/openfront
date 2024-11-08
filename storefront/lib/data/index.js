@@ -541,27 +541,47 @@ export const getSession = cache(async function () {
 });
 
 // Customer actions
-export async function getCustomer() {
-  const GET_CUSTOMER_QUERY = gql`
-    query GetCustomer {
+export const getUser = () => {
+  const GET_USER_QUERY = gql`
+    query GetUser {
       authenticatedItem {
-        ... on Customer {
+        ... on User {
           id
           email
-          firstName
-          lastName
         }
       }
     }
   `;
 
-  return openfrontClient.request(GET_CUSTOMER_QUERY);
-}
+  return openfrontClient.request(GET_USER_QUERY);
+};
 
-export async function createCustomer(data) {
-  const CREATE_CUSTOMER_MUTATION = gql`
-    mutation CreateCustomer($data: CustomerCreateInput!) {
-      createCustomer(data: $data) {
+export const getUserAddresses = () => {
+  const GET_USER_ADDRESSES_QUERY = gql`
+    query GetUserAddresses {
+      authenticatedItem {
+        ... on User {
+          id
+          addresses {
+            id
+            address1
+            city
+            country {
+              name
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  return openfrontClient.request(GET_USER_ADDRESSES_QUERY);
+};
+
+export const createUser = (userData) => {
+  const CREATE_USER_MUTATION = gql`
+    mutation CreateUser($data: UserCreateInput!) {
+      createUser(data: $data) {
         id
         email
         firstName
@@ -570,13 +590,13 @@ export async function createCustomer(data) {
     }
   `;
 
-  return openfrontClient.request(CREATE_CUSTOMER_MUTATION, { data });
-}
+  return openfrontClient.request(CREATE_USER_MUTATION, { data: userData });
+};
 
-export async function updateCustomer(data) {
-  const UPDATE_CUSTOMER_MUTATION = gql`
-    mutation UpdateCustomer($data: CustomerUpdateInput!) {
-      updateCustomer(data: $data) {
+export const updateUser = (userId, updatedData) => {
+  const UPDATE_USER_MUTATION = gql`
+    mutation UpdateUser($userId: ID!, $data: UserUpdateInput!) {
+      updateUser(userId: $userId, data: $data) {
         id
         email
         firstName
@@ -585,8 +605,8 @@ export async function updateCustomer(data) {
     }
   `;
 
-  return openfrontClient.request(UPDATE_CUSTOMER_MUTATION, { data });
-}
+  return openfrontClient.request(UPDATE_USER_MUTATION, { userId, data: updatedData });
+};
 
 export async function addShippingAddress(data) {
   const ADD_SHIPPING_ADDRESS_MUTATION = gql`

@@ -1,8 +1,8 @@
 import { keystoneContext } from "@keystone/keystoneContext";
 import { GraphQLClient } from "graphql-request";
-import { parse } from 'graphql';
+import { parse } from "graphql";
 
-const shouldRetry = (error) => 
+const shouldRetry = (error) =>
   error.message?.includes("connection pool") ||
   error.message?.includes("Timed out") ||
   error.code === "P2024" ||
@@ -11,31 +11,31 @@ const shouldRetry = (error) =>
   (error.response?.errors || []).some((e) => e.message?.includes("502"));
 
 const isEndpointUnreachable = (error) =>
-  error.code === "ECONNREFUSED" || 
+  error.code === "ECONNREFUSED" ||
   error.type === "system" ||
   error.message?.includes("request to") ||
   error.message?.includes("failed, reason") ||
   error.message?.includes("DEPLOYMENT_NOT_FOUND") ||
-  (error.response?.error?.includes("DEPLOYMENT_NOT_FOUND")) ||
+  error.response?.error?.includes("DEPLOYMENT_NOT_FOUND") ||
   error.message?.includes("Code: 404");
 
 const getEmptyResponseForQuery = (query) => {
-  const document = typeof query === 'string' ? parse(query) : query;
+  const document = typeof query === "string" ? parse(query) : query;
   const emptyResponse = {};
-  
-  document.definitions.forEach(def => {
-    if (def.kind === 'OperationDefinition') {
-      def.selectionSet.selections.forEach(selection => {
-        if (selection.kind === 'Field') {
+
+  document.definitions.forEach((def) => {
+    if (def.kind === "OperationDefinition") {
+      def.selectionSet.selections.forEach((selection) => {
+        if (selection.kind === "Field") {
           // Check if field type suggests an array
           const name = selection.name.value;
-          const isPlural = name.endsWith('s');
+          const isPlural = name.endsWith("s");
           emptyResponse[name] = isPlural ? [] : null;
         }
       });
     }
   });
-  
+
   return emptyResponse;
 };
 
@@ -66,7 +66,8 @@ class RetryingGraphQLClient extends GraphQLClient {
 }
 
 export const openfrontClient = new RetryingGraphQLClient(
-  `${process.env.FRONTEND_URL}/api/graphql`
+  `${process.env.FRONTEND_URL}/api/graphql`,
+  { fetch }
 );
 
 export const openfrontClientKeystone = {
@@ -87,13 +88,15 @@ export const openfrontClientKeystone = {
         if (errors) {
           const error = new Error(errors[0].message);
           error.response = { errors };
-          
+
           if (shouldRetry(error)) {
-            console.log(`Retrying in 1s due to GraphQL error: ${error.message}`);
+            console.log(
+              `Retrying in 1s due to GraphQL error: ${error.message}`
+            );
             await new Promise((resolve) => setTimeout(resolve, 1000));
             continue;
           }
-          
+
           throw error;
         }
 
