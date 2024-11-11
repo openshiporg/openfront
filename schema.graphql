@@ -3675,6 +3675,7 @@ type Discount {
   code: String
   isDynamic: Boolean
   isDisabled: Boolean
+  stackable: Boolean
   startsAt: DateTime
   endsAt: DateTime
   metadata: JSON
@@ -3696,6 +3697,7 @@ type Discount {
 
 input DiscountWhereUniqueInput {
   id: ID
+  code: String
 }
 
 input DiscountWhereInput {
@@ -3706,6 +3708,7 @@ input DiscountWhereInput {
   code: StringFilter
   isDynamic: BooleanFilter
   isDisabled: BooleanFilter
+  stackable: BooleanFilter
   startsAt: DateTimeFilter
   endsAt: DateTimeNullableFilter
   usageLimit: IntNullableFilter
@@ -3725,6 +3728,7 @@ input DiscountOrderByInput {
   code: OrderDirection
   isDynamic: OrderDirection
   isDisabled: OrderDirection
+  stackable: OrderDirection
   startsAt: OrderDirection
   endsAt: OrderDirection
   usageLimit: OrderDirection
@@ -3738,6 +3742,7 @@ input DiscountUpdateInput {
   code: String
   isDynamic: Boolean
   isDisabled: Boolean
+  stackable: Boolean
   startsAt: DateTime
   endsAt: DateTime
   metadata: JSON
@@ -3768,6 +3773,7 @@ input DiscountCreateInput {
   code: String
   isDynamic: Boolean
   isDisabled: Boolean
+  stackable: Boolean
   startsAt: DateTime
   endsAt: DateTime
   metadata: JSON
@@ -4408,6 +4414,7 @@ type GiftCard {
 
 input GiftCardWhereUniqueInput {
   id: ID
+  code: String
 }
 
 input GiftCardWhereInput {
@@ -7609,7 +7616,8 @@ type Mutation {
   createInitialUser(data: CreateInitialUserInput!): UserAuthenticationWithPasswordSuccess!
   sendUserPasswordResetLink(email: String!): Boolean!
   redeemUserPasswordResetToken(email: String!, token: String!, password: String!): RedeemUserPasswordResetTokenResult
-  updateActiveCart(cartId: ID!, data: CartUpdateInput!): Cart
+  updateActiveCart(cartId: ID!, data: CartUpdateInput, code: String): Cart
+  updateActiveCartLineItem(cartId: ID!, lineId: ID!, quantity: Int!): Cart
 }
 
 union UserAuthenticationWithPasswordResult = UserAuthenticationWithPasswordSuccess | UserAuthenticationWithPasswordFailure
@@ -7955,4 +7963,10 @@ enum KeystoneAdminUISortDirection {
 type CartResponse {
   cart: Cart
   lineItems: [LineItem!]!
+  giftCards: [GiftCard!]!
+  discounts: [Discount!]!
+}
+
+input CartCodeInput {
+  code: String!
 }

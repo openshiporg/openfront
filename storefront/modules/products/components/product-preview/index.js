@@ -11,22 +11,19 @@ export default async function ProductPreview({
   isFeatured,
   region
 }) {
-
-  const pricedProduct = await retrievePricedProductById({
+  const product = await retrievePricedProductById({
     id: productPreview.id,
     regionId: region.id,
-  }).then((product) => product)
+  }).then((response) => response.product)
 
-
-  if (!pricedProduct) {
+  if (!product) {
     return null
   }
 
   const { cheapestPrice } = getProductPrice({
-    product: pricedProduct.product,
+    product,
     region,
   })
-
 
   return (
     <LocalizedClientLink href={`/products/${productPreview.handle}`} className="group">

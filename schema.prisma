@@ -553,9 +553,10 @@ model CustomShippingOption {
 
 model Discount {
   id                  String               @id @default(cuid())
-  code                String               @default("")
+  code                String               @unique @default("")
   isDynamic           Boolean              @default(false)
   isDisabled          Boolean              @default(false)
+  stackable           Boolean              @default(false)
   startsAt            DateTime             @default(now())
   endsAt              DateTime?
   metadata            Json?
@@ -678,7 +679,7 @@ model FulfillmentProvider {
 
 model GiftCard {
   id                   String                @id @default(cuid())
-  code                 String                @default("")
+  code                 String                @unique @default("")
   value                Int
   balance              Int
   isDisabled           Boolean               @default(false)

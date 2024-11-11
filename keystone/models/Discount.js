@@ -24,12 +24,14 @@ export const Discount = list({
   },
   fields: {
     code: text({
-      validation: {
-        isRequired: true,
-      },
+      validation: { isRequired: true },
+      isIndexed: 'unique',
     }),
     isDynamic: checkbox(),
     isDisabled: checkbox(),
+    stackable: checkbox({
+      defaultValue: false,
+    }),
     startsAt: timestamp({
       defaultValue: { kind: "now" },
       validation: {

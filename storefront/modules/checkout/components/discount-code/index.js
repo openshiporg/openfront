@@ -18,29 +18,31 @@ import { formatAmount } from "@storefront/lib/util/prices"
 const DiscountCode = ({ cart }) => {
   const [isOpen, setIsOpen] = React.useState(false)
 
-  const { discounts, giftCards, region } = cart
+  const { discounts, giftCards, region } = cart || {}
 
   const appliedDiscount = useMemo(() => {
     if (!discounts || !discounts.length) {
       return undefined
     }
 
-    switch (discounts[0].rule.type) {
+    const discount = discounts[0];
+    if (!discount.discountRule) return undefined;
+
+    switch (discount.discountRule.type) {
       case "percentage":
-        return `${discounts[0].rule.value}%`
+        return `${discount.discountRule.value}%`
       case "fixed":
         return `- ${formatAmount({
-          amount: discounts[0].rule.value,
+          amount: discount.discountRule.value,
           region: region,
         })}`;
-
       default:
         return "Free shipping"
     }
   }, [discounts, region])
 
   const removeGiftCardCode = async (code) => {
-    await removeGiftCard(code, giftCards)
+    await removeGiftCard(code)
   }
 
   const removeDiscountCode = async () => {
@@ -52,10 +54,10 @@ const DiscountCode = ({ cart }) => {
   return (
     <div className="w-full bg-white flex flex-col">
       <div className="txt-medium">
-        {giftCards.length > 0 && (
+        {giftCards?.length > 0 && (
           <div className="flex flex-col mb-4">
             <Heading className="txt-medium">Gift card(s) applied:</Heading>
-            {giftCards?.map((gc) => (
+            {giftCards.map((gc) => (
               <div className="flex items-center justify-between txt-small-plus" key={gc.id}>
                 <Text className="flex gap-x-1 items-baseline">
                   <span>Code: </span>

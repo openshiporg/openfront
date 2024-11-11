@@ -22,7 +22,7 @@ export default function CollectionTemplate({
         </div>
         <Suspense fallback={<SkeletonProductGrid />}>
           <PaginatedProducts
-            sortBy={sortBy || "created_at"}
+            sortBy={sortBy || "createdAt"}
             page={pageNumber}
             collectionId={collection.id}
             countryCode={countryCode} />

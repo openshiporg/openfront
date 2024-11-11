@@ -11,18 +11,45 @@ async function activeCart(root, { cartId }, context) {
   });
 
   if (!cart) {
-    return { cart: null, lineItems: [] };
+    return { 
+      cart: null, 
+      lineItems: [],
+      giftCards: [],
+      discounts: []
+    };
   }
 
-  // Get line items separately with sudo
-  const lineItems = await sudoContext.db.LineItem.findMany({
-    where: { cart: { id: { equals: cartId } } },
-  });
+  // Get all related data with sudo context
+  const [lineItems, giftCards, discounts] = await Promise.all([
+    sudoContext.db.LineItem.findMany({
+      where: { cart: { id: { equals: cartId } } },
+    }),
+    sudoContext.db.GiftCard.findMany({
+      where: { carts: { some: { id: { equals: cartId } } } },
+    }),
+    sudoContext.db.Discount.findMany({
+      where: { carts: { some: { id: { equals: cartId } } } },
+      query: `
+        id
+        code
+        isDynamic
+        isDisabled
+        discountRule {
+          id
+          type
+          value
+          allocation
+        }
+      `
+    })
+  ]);
 
-  // Return cart and lineItems separately
+  // Return all data separately
   return {
     cart,
-    lineItems
+    lineItems,
+    giftCards,
+    discounts
   };
 }
 

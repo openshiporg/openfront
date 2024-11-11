@@ -1,10 +1,10 @@
 import { list } from "@keystone-6/core";
 import { denyAll } from "@keystone-6/core/access";
 import {
-  checkbox,
   integer,
-  json,
   text,
+  checkbox,
+  json,
   timestamp,
   relationship,
 } from "@keystone-6/core/fields";
@@ -27,6 +27,7 @@ export const GiftCard = list({
       validation: {
         isRequired: true,
       },
+      isIndexed: 'unique',
     }),
     value: integer({
       validation: {

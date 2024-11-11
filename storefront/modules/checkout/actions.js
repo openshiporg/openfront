@@ -10,6 +10,9 @@ import {
 } from "@storefront/lib/data"
 import { revalidateTag } from "next/cache"
 import { redirect } from "next/navigation"
+import { gql } from "graphql-request";
+import { openfrontClient } from "@storefront/lib/config";
+import { getCartId } from "@lib/cookies";
 
 export async function cartUpdate(data) {
   const cartId = cookies().get("_openfront_cart_id")?.value
@@ -83,14 +86,78 @@ export async function removeGiftCard(codeToRemove, giftCards) {
   }
 }
 
-export async function submitDiscountForm(currentState, formData) {
-  const code = formData.get("code")
+export async function submitDiscountForm(prevState, formData) {
+  const cartId = getCartId();
+  if (!cartId) return "No cartId cookie found";
+
+  const code = formData.get("code");
+  if (!code) {
+    return "Code is required";
+  }
 
   try {
-    await applyDiscount(code).catch(async (err) => {
-      await applyGiftCard(code)
-    })
-    return null
+    await openfrontClient.request(
+      gql`
+        mutation UpdateActiveCart($cartId: ID!, $code: String!) {
+          updateActiveCart(cartId: $cartId, code: $code) {
+            id
+            discounts {
+              id
+              code
+              discountRule {
+                type
+                value
+              }
+            }
+            giftCards {
+              id
+              code
+              balance
+            }
+          }
+        }
+      `,
+      {
+        cartId,
+        code
+      }
+    );
+
+    revalidateTag("cart");
+  } catch (error) {
+    return error.toString();
+  }
+}
+
+export async function submitGiftCard(code) {
+  const cartId = getCartId();
+  if (!cartId) return "No cartId cookie found";
+
+  try {
+    await openfrontClient.request(
+      gql`
+        mutation UpdateActiveCart($cartId: ID!, $data: CartUpdateInput!) {
+          updateActiveCart(cartId: $cartId, data: $data) {
+            id
+            giftCards {
+              id
+              code
+              balance
+            }
+          }
+        }
+      `,
+      {
+        cartId,
+        data: {
+          giftCards: {
+            connect: [{ code }]
+          }
+        }
+      }
+    );
+
+    revalidateTag("cart");
   } catch (error) {
     return error.toString();
   }

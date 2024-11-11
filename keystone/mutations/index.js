@@ -2,8 +2,10 @@ import { mergeSchemas } from "@graphql-tools/schema";
 import redirectToInit from "./redirectToInit";
 import activeCart from "./activeCart";
 import updateActiveCart from "./updateActiveCart";
+import updateActiveCartLineItem from "./updateActiveCartLineItem";
 
 const graphql = String.raw;
+
 export const extendGraphqlSchema = (schema) =>
   mergeSchemas({
     schemas: [schema],
@@ -11,6 +13,12 @@ export const extendGraphqlSchema = (schema) =>
       type CartResponse {
         cart: Cart
         lineItems: [LineItem!]!
+        giftCards: [GiftCard!]!
+        discounts: [Discount!]!
+      }
+
+      input CartCodeInput {
+        code: String!
       }
 
       type Query {
@@ -21,8 +29,10 @@ export const extendGraphqlSchema = (schema) =>
       type Mutation {
         updateActiveCart(
           cartId: ID!
-          data: CartUpdateInput!
+          data: CartUpdateInput
+          code: String
         ): Cart
+        updateActiveCartLineItem(cartId: ID!, lineId: ID!, quantity: Int!): Cart
       }
     `,
     resolvers: {
@@ -32,6 +42,7 @@ export const extendGraphqlSchema = (schema) =>
       },
       Mutation: {
         updateActiveCart,
+        updateActiveCartLineItem
       }
     },
   });

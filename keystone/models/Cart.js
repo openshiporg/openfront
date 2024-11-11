@@ -43,6 +43,131 @@ export const Cart = list({
       },
     },
   },
+  hooks: {
+    async afterOperation({ operation, item, context }) {
+      // Run for both create and update operations
+      if (operation === 'create' || operation === 'update') {
+        const sudoContext = context.sudo();
+        
+        // Get cart with all needed data
+        const cart = await sudoContext.query.Cart.findOne({
+          where: { id: item.id },
+          query: `
+            subtotal
+            region {
+              id
+              shippingOptions {
+                id
+                name
+                priceType
+                amount
+                isReturn
+                adminOnly
+                shippingOptionRequirements {
+                  id
+                  type
+                  amount
+                }
+                shippingProfile {
+                  id
+                  type
+                }
+                fulfillmentProvider {
+                  id
+                }
+                taxRates {
+                  id
+                  rate
+                }
+              }
+            }
+            shippingMethods {
+              id
+              price
+              shippingOption {
+                id
+                shippingOptionRequirements {
+                  type
+                  amount
+                }
+              }
+            }
+          `
+        });
+
+        // Get valid shipping options based on current cart state
+        const validShippingOptions = cart.region.shippingOptions.filter(option => {
+          // Skip admin-only and return shipping options
+          if (option.adminOnly || option.isReturn) return false;
+
+          // Check shipping profile type
+          if (option.shippingProfile?.type === 'gift_card') return false;
+
+          // Check requirements against current cart state
+          if (option.shippingOptionRequirements?.length) {
+            for (const req of option.shippingOptionRequirements) {
+              // Convert amounts to same currency unit
+              const cartSubtotal = cart.subtotal / 100; // Assuming stored in cents
+              const reqAmount = req.amount / 100;
+
+              if (req.type === 'min_subtotal' && cartSubtotal < reqAmount) return false;
+              if (req.type === 'max_subtotal' && cartSubtotal > reqAmount) return false;
+            }
+          }
+
+          return true;
+        });
+
+        // Get cheapest valid option
+        const cheapestOption = validShippingOptions.reduce((min, curr) => {
+          const currAmount = curr.priceType === 'flat_rate' ? curr.amount : 0;
+          const minAmount = min?.priceType === 'flat_rate' ? min.amount : 0;
+          return (!min || currAmount < minAmount) ? curr : min;
+        }, null);
+
+        // Check if current shipping method is still valid
+        const currentMethod = cart.shippingMethods?.[0];
+        const needsNewMethod = !currentMethod || 
+          !validShippingOptions.some(opt => opt.id === currentMethod.shippingOption.id);
+
+        // Update shipping method if needed
+        if (cheapestOption && needsNewMethod) {
+          // Remove existing shipping method if any
+          if (currentMethod) {
+            await sudoContext.db.ShippingMethod.deleteOne({
+              where: { id: currentMethod.id }
+            });
+          }
+
+          // Create new shipping method with tax lines
+          const shippingMethod = await sudoContext.db.ShippingMethod.createOne({
+            data: {
+              cart: { connect: { id: item.id } },
+              shippingOption: { connect: { id: cheapestOption.id } },
+              price: cheapestOption.amount,
+              data: {
+                name: cheapestOption.name
+              }
+            }
+          });
+
+          // Create tax lines if needed
+          if (cheapestOption.taxRates?.length) {
+            await Promise.all(cheapestOption.taxRates.map(tax => 
+              sudoContext.db.ShippingMethodTaxLine.createOne({
+                data: {
+                  shippingMethod: { connect: { id: shippingMethod.id } },
+                  rate: tax.rate,
+                  name: `Shipping Tax ${tax.rate * 100}%`,
+                  code: `shipping_tax_${tax.rate}`
+                }
+              })
+            ));
+          }
+        }
+      }
+    }
+  },
   fields: {
     email: text(),
     type: select({
@@ -156,7 +281,7 @@ export const Cart = list({
         async resolve(item, args, context) {
           const sudoContext = context.sudo();
           
-          const cart = await sudoContext.query.Cart.findOne({
+          const cartWithItems = await sudoContext.query.Cart.findOne({
             where: { id: item.id },
             query: `
               lineItems { 
@@ -173,19 +298,17 @@ export const Cart = list({
             `
           });
 
-          if (!cart?.lineItems?.length) {
-            return formatCurrency(0, cart?.region?.currency?.code || 'USD');
+          if (!cartWithItems?.lineItems?.length) {
+            return null; // Return null instead of "0" if no items
           }
 
-          // Calculate subtotal from line items
           let subtotal = 0;
-          for (const lineItem of cart.lineItems) {
+          for (const lineItem of cartWithItems.lineItems) {
             const prices = await sudoContext.query.MoneyAmount.findMany({
               where: { 
                 productVariant: { 
                   lineItems: { some: { id: { equals: lineItem.id } } }
-                },
-                region: { id: { equals: cart.region.id } }  // Add region filter
+                }
               },
               query: 'calculatedPrice { calculatedAmount }'
             });
@@ -194,8 +317,8 @@ export const Cart = list({
             subtotal += price * lineItem.quantity;
           }
 
-          const currencyCode = cart.region?.currency?.code || 'USD';
-          const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
+          const currencyCode = cartWithItems.region?.currency?.code || 'USD';
+          const divisor = cartWithItems.region?.currency?.noDivisionCurrency ? 1 : 100;
 
           return formatCurrency(subtotal / divisor, currencyCode);
         }
@@ -207,104 +330,40 @@ export const Cart = list({
         async resolve(item, args, context) {
           const sudoContext = context.sudo();
           
-          // Get cart with related data
           const cart = await sudoContext.query.Cart.findOne({
             where: { id: item.id },
             query: `
-              lineItems { id quantity }
-              region { id }
-              discounts { id }
-              giftCards { id }
-            `
-          });
-
-          if (!cart?.lineItems?.length) return formatCurrency(0, 'USD');
-
-          // Get region details
-          const region = await sudoContext.query.Region.findOne({
-            where: { id: cart.region.id },
-            query: 'taxRate currency { code noDivisionCurrency }'
-          });
-
-          // Calculate base total
-          let total = 0;
-          for (const lineItem of cart.lineItems) {
-            const prices = await sudoContext.query.MoneyAmount.findMany({
-              where: { 
-                productVariant: { 
-                  lineItems: { some: { id: { equals: lineItem.id } } }
+              region {
+                taxRate
+                currency {
+                  code
+                  noDivisionCurrency
                 }
-              },
-              query: 'calculatedPrice { calculatedAmount }'
-            });
-            
-            const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
-            total += price * lineItem.quantity;
-          }
-
-          // Apply discounts
-          if (cart.discounts?.length) {
-            for (const discountRef of cart.discounts) {
-              const discount = await sudoContext.query.Discount.findOne({
-                where: { id: discountRef.id },
-                query: 'value type'
-              });
-
-              if (discount.type === 'percentage') {
-                total *= (1 - discount.value / 100);
-              } else if (discount.type === 'fixed') {
-                total = Math.max(0, total - discount.value);
               }
-            }
-          }
-
-          // Apply gift cards
-          if (cart.giftCards?.length) {
-            for (const giftCardRef of cart.giftCards) {
-              const giftCard = await sudoContext.query.GiftCard.findOne({
-                where: { id: giftCardRef.id },
-                query: 'balance'
-              });
-              total = Math.max(0, total - giftCard.balance);
-            }
-          }
-
-          // Apply tax
-          const taxRate = region?.taxRate || 0;
-          total *= (1 + taxRate);
-
-          const currencyCode = region?.currency?.code || 'USD';
-          const divisor = region?.currency?.noDivisionCurrency ? 1 : 100;
-
-          return formatCurrency(total / divisor, currencyCode);
-        }
-      })
-    }),
-    discount: virtual({
-      field: graphql.field({
-        type: graphql.String,
-        async resolve(item, args, context) {
-          const sudoContext = context.sudo();
-          
-          // Get cart with lineItems and discounts
-          const cart = await sudoContext.query.Cart.findOne({
-            where: { id: item.id },
-            query: `
-              lineItems { id quantity }
-              region { id }
-              discounts { id }
+              lineItems {
+                id
+                quantity
+              }
+              discounts {
+                id
+                discountRule {
+                  type
+                  value
+                }
+              }
+              giftCards {
+                id
+                balance
+              }
+              shippingMethods {
+                price
+              }
             `
           });
 
-          if (!cart?.discounts?.length) return formatCurrency(0, 'USD');
+          if (!cart?.lineItems?.length) return null;
 
-          // Get region details
-          const region = await sudoContext.query.Region.findOne({
-            where: { id: cart.region.id },
-            query: 'currency { code noDivisionCurrency }'
-          });
-
-          // Calculate base total
+          // 1. Get subtotal
           let subtotal = 0;
           for (const lineItem of cart.lineItems) {
             const prices = await sudoContext.query.MoneyAmount.findMany({
@@ -320,23 +379,100 @@ export const Cart = list({
             subtotal += price * lineItem.quantity;
           }
 
-          // Calculate total discount
+          // 2. Calculate discount
           let discountAmount = 0;
-          for (const discountRef of cart.discounts) {
-            const discount = await sudoContext.query.Discount.findOne({
-              where: { id: discountRef.id },
-              query: 'value type'
-            });
-
-            if (discount.type === 'percentage') {
-              discountAmount += subtotal * (discount.value / 100);
-            } else if (discount.type === 'fixed') {
-              discountAmount += discount.value;
+          if (cart.discounts?.length) {
+            for (const discount of cart.discounts) {
+              if (discount.discountRule.type === 'percentage') {
+                discountAmount += subtotal * (discount.discountRule.value / 100);
+              } else if (discount.discountRule.type === 'fixed') {
+                discountAmount += discount.discountRule.value;
+              }
             }
           }
 
-          const currencyCode = region?.currency?.code || 'USD';
-          const divisor = region?.currency?.noDivisionCurrency ? 1 : 100;
+          // 3. Calculate tax on discounted amount
+          const taxableAmount = subtotal - discountAmount;
+          const tax = taxableAmount * (cart.region.taxRate || 0);
+
+          // 4. Add shipping
+          const shipping = cart.shippingMethods?.[0]?.price || 0;
+
+          // 5. Calculate final total - NOW INCLUDING SHIPPING
+          const total = subtotal - discountAmount + tax + shipping;
+
+          const currencyCode = cart.region?.currency?.code || 'USD';
+          const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
+
+          return formatCurrency(total / divisor, currencyCode);
+        }
+      })
+    }),
+    discount: virtual({
+      field: graphql.field({
+        type: graphql.String,
+        async resolve(item, args, context) {
+          const sudoContext = context.sudo();
+          
+          // Get cart with items and discounts
+          const cart = await sudoContext.query.Cart.findOne({
+            where: { id: item.id },
+            query: `
+              lineItems { 
+                id 
+                quantity 
+              }
+              discounts {
+                id
+                discountRule {
+                  type
+                  value
+                  allocation
+                }
+              }
+              region {
+                currency {
+                  code
+                  noDivisionCurrency
+                }
+              }
+            `
+          });
+
+          if (!cart?.discounts?.length) {
+            return null;
+          }
+
+          // First get subtotal for percentage calculations
+          let subtotal = 0;
+          for (const lineItem of cart.lineItems || []) {
+            const prices = await sudoContext.query.MoneyAmount.findMany({
+              where: { 
+                productVariant: { 
+                  lineItems: { some: { id: { equals: lineItem.id } } }
+                }
+              },
+              query: 'calculatedPrice { calculatedAmount }'
+            });
+            
+            const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
+            subtotal += price * lineItem.quantity;
+          }
+
+          // Calculate discount amount
+          let discountAmount = 0;
+          for (const discount of cart.discounts) {
+            if (discount.discountRule.type === 'percentage') {
+              discountAmount += subtotal * (discount.discountRule.value / 100);
+            } else if (discount.discountRule.type === 'fixed') {
+              discountAmount += discount.discountRule.value;
+            }
+          }
+
+          if (discountAmount === 0) return null;
+
+          const currencyCode = cart.region?.currency?.code || 'USD';
+          const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
 
           return formatCurrency(discountAmount / divisor, currencyCode);
         }
@@ -348,37 +484,39 @@ export const Cart = list({
         async resolve(item, args, context) {
           const sudoContext = context.sudo();
           
-          // Get cart with giftCards
           const cart = await sudoContext.query.Cart.findOne({
             where: { id: item.id },
             query: `
-              region { id }
-              giftCards { id }
+              giftCards {
+                id
+                balance
+                value
+              }
+              region {
+                currency {
+                  code
+                  noDivisionCurrency
+                }
+              }
             `
           });
 
-          if (!cart?.giftCards?.length) return formatCurrency(0, 'USD');
-
-          // Get region details
-          const region = await sudoContext.query.Region.findOne({
-            where: { id: cart.region.id },
-            query: 'currency { code noDivisionCurrency }'
-          });
-
-          // Sum up gift card balances
-          let giftCardTotal = 0;
-          for (const giftCardRef of cart.giftCards) {
-            const giftCard = await sudoContext.query.GiftCard.findOne({
-              where: { id: giftCardRef.id },
-              query: 'balance'
-            });
-            giftCardTotal += giftCard.balance;
+          if (!cart?.giftCards?.length) {
+            return null;
           }
 
-          const currencyCode = region?.currency?.code || 'USD';
-          const divisor = region?.currency?.noDivisionCurrency ? 1 : 100;
+          const total = cart.giftCards.reduce((sum, card) => {
+            // Use the lower of balance or value
+            const usableAmount = Math.min(card.balance, card.value || card.balance);
+            return sum + usableAmount;
+          }, 0);
 
-          return formatCurrency(giftCardTotal / divisor, currencyCode);
+          if (total === 0) return null;
+
+          const currencyCode = cart.region?.currency?.code || 'USD';
+          const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
+
+          return formatCurrency(total / divisor, currencyCode);
         }
       })
     }),
@@ -388,27 +526,34 @@ export const Cart = list({
         async resolve(item, args, context) {
           const sudoContext = context.sudo();
           
-          // Get cart with all needed relations
           const cart = await sudoContext.query.Cart.findOne({
             where: { id: item.id },
             query: `
-              lineItems { id quantity }
-              region { id }
-              discounts { id }
-              giftCards { id }
+              region {
+                taxRate
+                currency {
+                  code
+                  noDivisionCurrency
+                }
+              }
+              lineItems {
+                id
+                quantity
+              }
+              discounts {
+                id
+                discountRule {
+                  type
+                  value
+                }
+              }
             `
           });
 
-          if (!cart?.lineItems?.length) return formatCurrency(0, 'USD');
+          if (!cart?.lineItems?.length) return null;
 
-          // Get region details
-          const region = await sudoContext.query.Region.findOne({
-            where: { id: cart.region.id },
-            query: 'taxRate currency { code noDivisionCurrency }'
-          });
-
-          // Calculate base total
-          let total = 0;
+          // 1. Calculate subtotal first
+          let subtotal = 0;
           for (const lineItem of cart.lineItems) {
             const prices = await sudoContext.query.MoneyAmount.findMany({
               where: { 
@@ -420,42 +565,27 @@ export const Cart = list({
             });
             
             const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
-            total += price * lineItem.quantity;
+            subtotal += price * lineItem.quantity;
           }
 
-          // Apply discounts before tax calculation
+          // 2. Calculate discount amount
+          let discountAmount = 0;
           if (cart.discounts?.length) {
-            for (const discountRef of cart.discounts) {
-              const discount = await sudoContext.query.Discount.findOne({
-                where: { id: discountRef.id },
-                query: 'value type'
-              });
-
-              if (discount.type === 'percentage') {
-                total *= (1 - discount.value / 100);
-              } else if (discount.type === 'fixed') {
-                total = Math.max(0, total - discount.value);
+            for (const discount of cart.discounts) {
+              if (discount.discountRule.type === 'percentage') {
+                discountAmount += subtotal * (discount.discountRule.value / 100);
+              } else if (discount.discountRule.type === 'fixed') {
+                discountAmount += discount.discountRule.value;
               }
             }
           }
 
-          // Apply gift cards before tax calculation
-          if (cart.giftCards?.length) {
-            for (const giftCardRef of cart.giftCards) {
-              const giftCard = await sudoContext.query.GiftCard.findOne({
-                where: { id: giftCardRef.id },
-                query: 'balance'
-              });
-              total = Math.max(0, total - giftCard.balance);
-            }
-          }
-
-          // Calculate tax amount
-          const taxRate = region?.taxRate || 0;
-          const taxAmount = total * taxRate;
-
-          const currencyCode = region?.currency?.code || 'USD';
-          const divisor = region?.currency?.noDivisionCurrency ? 1 : 100;
+          // 3. Calculate tax on discounted amount
+          const taxableAmount = subtotal - discountAmount;
+          const taxAmount = taxableAmount * (cart.region.taxRate || 0);
+          
+          const currencyCode = cart.region?.currency?.code || 'USD';
+          const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
 
           return formatCurrency(taxAmount / divisor, currencyCode);
         }
@@ -467,149 +597,33 @@ export const Cart = list({
         async resolve(item, args, context) {
           const sudoContext = context.sudo();
           
-          // Get cart with region and type
           const cart = await sudoContext.query.Cart.findOne({
             where: { id: item.id },
             query: `
-              type
-              region { 
-                id 
-                currency { 
-                  code 
-                  noDivisionCurrency 
-                }
-              }
-            `
-          });
-
-          if (!cart?.region) return formatCurrency(0, 'USD');
-
-          // Get all shipping options for this region
-          const shippingOptions = await sudoContext.query.ShippingOption.findMany({
-            where: {
-              region: { id: { equals: cart.region.id } },
-              isReturn: { equals: cart.type === 'claim' || cart.type === 'swap' }
-            },
-            query: `
-              id
-              amount
-              priceType
-              shippingOptionRequirements {
-                type
-                amount
-              }
-              customShippingOptions {
+              shippingMethods {
                 price
-                cart {
+                shippingOption {
                   id
+                  name
+                }
+              }
+              region {
+                currency {
+                  code
+                  noDivisionCurrency
                 }
               }
             `
           });
 
-          if (!shippingOptions?.length) return formatCurrency(0, 'USD');
+          // Sum up all shipping method prices
+          const shippingAmount = cart.shippingMethods?.reduce((total, method) => 
+            total + (method.price || 0), 0) || 0;
+          
+          const currencyCode = cart.region?.currency?.code || 'USD';
+          const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
 
-          // Get cart subtotal for requirement checks
-          let subtotal = 0;
-          const cartWithItems = await sudoContext.query.Cart.findOne({
-            where: { id: item.id },
-            query: 'lineItems { id quantity }'
-          });
-
-          if (cartWithItems?.lineItems?.length) {
-            for (const lineItem of cartWithItems.lineItems) {
-              const prices = await sudoContext.query.MoneyAmount.findMany({
-                where: { 
-                  productVariant: { 
-                    lineItems: { some: { id: { equals: lineItem.id } } }
-                  }
-                },
-                query: 'calculatedPrice { calculatedAmount }'
-              });
-              
-              const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
-              subtotal += price * lineItem.quantity;
-            }
-          }
-
-          // Filter and find cheapest valid shipping option
-          let validOptions = shippingOptions.filter(option => {
-            // Check requirements
-            const meetsRequirements = option.shippingOptionRequirements.every(requirement => {
-              if (requirement.type === 'min_subtotal') {
-                return subtotal >= requirement.amount;
-              }
-              if (requirement.type === 'max_subtotal') {
-                return subtotal <= requirement.amount;
-              }
-              return true;
-            });
-
-            return meetsRequirements;
-          });
-
-          if (!validOptions.length) {
-            return formatCurrency(0, cart.region.currency.code);
-          }
-
-          // Find custom shipping option for this cart if any
-          const customOption = validOptions
-            .flatMap(opt => opt.customShippingOptions)
-            .find(custom => custom?.cart?.id === item.id);
-
-          if (customOption) {
-            // Get tax lines for custom shipping
-            const taxLines = await sudoContext.query.ShippingMethodTaxLine.findMany({
-              where: {
-                shippingMethod: {
-                  cart: { id: { equals: item.id } },
-                  shippingOption: { id: { equals: customOption.shippingOption.id } }
-                }
-              },
-              query: 'rate'
-            });
-
-            const amount = customOption.price;
-            const taxMultiplier = taxLines.reduce((sum, tax) => sum + tax.rate, 0);
-            const finalAmount = amount * (1 + taxMultiplier);
-            const divisor = cart.region.currency.noDivisionCurrency ? 1 : 100;
-
-            return formatCurrency(finalAmount / divisor, cart.region.currency.code);
-          }
-
-          // Get cheapest standard option
-          const cheapestOption = validOptions.reduce((cheapest, current) => {
-            if (current.priceType === 'calculated') {
-              return cheapest;
-            }
-
-            if (!cheapest || current.amount < cheapest.amount) {
-              return current;
-            }
-            return cheapest;
-          }, null);
-
-          if (!cheapestOption) {
-            return formatCurrency(0, cart.region.currency.code);
-          }
-
-          // Get tax lines for the shipping option
-          const taxLines = await sudoContext.query.ShippingMethodTaxLine.findMany({
-            where: {
-              shippingMethod: {
-                cart: { id: { equals: item.id } },
-                shippingOption: { id: { equals: cheapestOption.id } }
-              }
-            },
-            query: 'rate'
-          });
-
-          const amount = cheapestOption.amount;
-          const taxMultiplier = taxLines.reduce((sum, tax) => sum + tax.rate, 0);
-          const finalAmount = amount * (1 + taxMultiplier);
-          const divisor = cart.region.currency.noDivisionCurrency ? 1 : 100;
-
-          return formatCurrency(finalAmount / divisor, cart.region.currency.code);
+          return formatCurrency(shippingAmount / divisor, currencyCode);
         }
       })
     }),

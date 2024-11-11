@@ -23,23 +23,37 @@ async function getRegionMap(request) {
 
   if (!regionMap.keys().next().value || regionMapUpdated < Date.now() - 3600 * 1000) {
     const client = gqlClient(request);
-    const { regions } = await client.request(gql`
-      query {
-        regions {
-          countries {
-            id
-            iso2
-            iso3
+    try {
+      const { regions } = await client.request(gql`
+        query {
+          regions {
+            countries {
+              id
+              iso2
+              iso3
+            }
           }
         }
-      }
-    `);
+      `);
 
-    regions.forEach((region) => {
-      region.countries.forEach((country) => {
-        regionMapCache.regionMap.set(country.iso2.toLowerCase(), region);
-      });
-    });
+      regionMapCache.regionMap.clear();
+      if (regions?.length) {
+        regions.forEach((region) => {
+          region.countries.forEach((country) => {
+            regionMapCache.regionMap.set(country.iso2.toLowerCase(), region);
+          });
+        });
+      } else {
+        // Only add 'us' as fallback if no regions were returned
+        regionMapCache.regionMap.set('us', { countries: [{ iso2: 'US' }] });
+      }
+    } catch (error) {
+      console.error('Error fetching regions:', error);
+      // Only add 'us' as fallback if there was an error and map is empty
+      if (!regionMapCache.regionMap.size) {
+        regionMapCache.regionMap.set('us', { countries: [{ iso2: 'US' }] });
+      }
+    }
 
     regionMapCache.regionMapUpdated = Date.now();
   }
@@ -73,17 +87,38 @@ export async function middleware(request) {
   const { authenticatedItem: user, redirectToInit } = await checkAuth(request);
   const searchParams = request.nextUrl.searchParams;
   const cartId = searchParams.get("cart_id");
-  const checkoutStep = searchParams.get("step");
   const cartIdCookie = request.cookies.get("_openfront_cart_id");
 
-  // Handle redirectToInit first
-  if (redirectToInit && !request.nextUrl.pathname.startsWith(`${basePath}/init`)) {
-    return NextResponse.redirect(new URL(`${basePath}/init`, request.url));
+  // Handle redirectToInit for all routes (including root)
+  if (redirectToInit) {
+    const isInitRoute = request.nextUrl.pathname.startsWith(`${basePath}/init`);
+    if (!isInitRoute) {
+      return NextResponse.redirect(new URL(`${basePath}/init`, request.url));
+    }
+    return NextResponse.next();
   }
 
-  // Prevent accessing init page if redirectToInit is false
-  if (!redirectToInit && request.nextUrl.pathname.startsWith(`${basePath}/init`)) {
-    return NextResponse.redirect(new URL(basePath, request.url));
+  // Handle dashboard routes
+  if (request.nextUrl.pathname.startsWith(basePath)) {
+    const isInitRoute = request.nextUrl.pathname.startsWith(`${basePath}/init`);
+    const isSigninRoute = request.nextUrl.pathname.startsWith(`${basePath}/signin`);
+
+    // If redirectToInit is false, prevent access to init page
+    if (isInitRoute) {
+      return NextResponse.redirect(new URL(basePath, request.url));
+    }
+
+    // Handle authentication for non-init routes
+    if (!user && !isSigninRoute) {
+      const signinUrl = new URL(`${basePath}/signin`, request.url);
+      signinUrl.searchParams.set("from", request.nextUrl.pathname);
+      return NextResponse.redirect(signinUrl);
+    }
+
+    // Redirect to dashboard if already authenticated and trying to access signin
+    if (user && isSigninRoute) {
+      return NextResponse.redirect(new URL(basePath, request.url));
+    }
   }
 
   // Only handle country code and cart_id param for non-dashboard routes
@@ -116,31 +151,10 @@ export async function middleware(request) {
     return response;
   }
 
-  // Handle dashboard routes
-  if (request.nextUrl.pathname.startsWith(basePath)) {
-    // Redirect to login if not authenticated
-    if (!user && !request.nextUrl.pathname.startsWith(`${basePath}/signin`)) {
-      const signinUrl = new URL(`${basePath}/signin`, request.url);
-      signinUrl.searchParams.set("from", request.nextUrl.pathname);
-      return NextResponse.redirect(signinUrl);
-    }
-
-    // Redirect to dashboard if already authenticated and trying to access signin
-    if (user && request.nextUrl.pathname.startsWith(`${basePath}/signin`)) {
-      return NextResponse.redirect(new URL(basePath, request.url));
-    }
-
-    // Check permissions for specific routes
-    if (user && !user.isAdmin) {
-      if (request.nextUrl.pathname.startsWith(`${basePath}/admin`)) {
-        return NextResponse.redirect(new URL(basePath, request.url));
-      }
-    }
-  }
-
   return NextResponse.next();
 }
 
 export const config = {
   matcher: ["/((?!api|_next/static|favicon.ico).*)"],
 };
+

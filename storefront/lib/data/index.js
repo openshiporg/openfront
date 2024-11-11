@@ -130,23 +130,72 @@ export async function updateCart(cartId, data) {
 
 export const getCart = cache(async function (cartId) {
   const GET_CART_QUERY = gql`
-    query GetCart($id: ID!) {
-      cart(where: { id: $id }) {
-        id
-        email
-        type
-        user {
+    query GetCart($cartId: ID!) {
+      activeCart(cartId: $cartId) {
+        cart {
           id
-        }
-        region {
-          id
-          currency {
-            code
+          email
+          type
+          user {
+            id
+          }
+          region {
+            id
+            currency {
+              code
+              noDivisionCurrency
+            }
+            taxRate
+          }
+          subtotal
+          total
+          discount
+          giftCardTotal
+          tax
+          shipping
+          addresses {
+            id
+            firstName
+            lastName
+            address1
+            address2
+            company
+            city
+            province
+            postalCode
+            countryCode
+            phone
+          }
+          paymentSessions {
+            id
+            status
+            data
+            idempotencyKey
+            paymentProvider {
+              id
+              code
+              isInstalled
+            }
+          }
+          shippingMethods {
+            id
+            price
+            shippingOption {
+              id
+              name
+            }
           }
         }
         lineItems {
           id
           quantity
+          title
+          thumbnail
+          description
+          unitPrice
+          originalPrice
+          total
+          percentageOff
           productVariant {
             id
             title
@@ -156,57 +205,36 @@ export const getCart = cache(async function (cartId) {
               thumbnail
               handle
             }
-            prices {
-              id
-              amount
-              currency {
-                code
-              }
-              calculatedPrice {
-                calculatedAmount
-                originalAmount
-                currencyCode
-              }
-            }
           }
         }
-        addresses {
+        giftCards {
           id
-          firstName
-          lastName
-          address1
-          address2
-          company
-          city
-          province
-          postalCode
-          countryCode
-          phone
+          code
+          balance
         }
-        paymentSessions {
+        discounts {
           id
-          status
-          data
-          idempotencyKey
-          paymentProvider {
-            id
-            code
-            isInstalled
-          }
-        }
-        shippingMethods {
-          id
-          price
-          shippingOption {
-            id
-            name
+          code
+          isDynamic
+          isDisabled
+          discountRule {
+            type
+            value
+            allocation
           }
         }
       }
     }
   `;
 
-  return openfrontClient.request(GET_CART_QUERY, { id: cartId });
+  const { activeCart } = await openfrontClient.request(GET_CART_QUERY, { cartId });
+  
+  return activeCart?.cart && {
+    ...activeCart.cart,
+    ...(activeCart.lineItems && { lineItems: activeCart.lineItems }),
+    ...(activeCart.giftCards && { giftCards: activeCart.giftCards }),
+    ...(activeCart.discounts && { discounts: activeCart.discounts })
+  };
 });
 
 export async function addItem({ cartId, variantId, quantity }) {
@@ -490,173 +518,159 @@ export async function addShippingMethod({ cartId, shippingMethodId }) {
 }
 
 // Authentication actions
-export async function getToken(credentials) {
-  const GET_TOKEN_MUTATION = gql`
-    mutation GetToken($email: String!, $password: String!) {
-      authenticateUserWithPassword(email: $email, password: $password) {
-        ... on UserAuthenticationWithPasswordSuccess {
-          sessionToken
-          item {
-            id
-            email
-          }
-        }
-        ... on UserAuthenticationWithPasswordFailure {
-          message
-        }
-      }
-    }
-  `;
-
-  const result = await openfrontClient.request(GET_TOKEN_MUTATION, credentials);
-  if (
-    result.authenticateUserWithPassword.__typename ===
-    "UserAuthenticationWithPasswordFailure"
-  ) {
-    throw new Error(result.authenticateUserWithPassword.message);
-  }
-  const token = result.authenticateUserWithPassword.sessionToken;
-  token && cookies().set("_openfront_jwt", token);
-  return token;
-}
-
-export async function authenticate(credentials) {
-  // This might be the same as getToken, depending on your authentication flow
-  return getToken(credentials);
-}
-
-export const getSession = cache(async function () {
-  const GET_SESSION_QUERY = gql`
-    query GetSession {
-      authenticatedItem {
-        ... on User {
-          id
-          email
-        }
-      }
-    }
-  `;
-
-  return openfrontClient.request(GET_SESSION_QUERY);
-});
-
-// Customer actions
-export const getUser = () => {
-  const GET_USER_QUERY = gql`
-    query GetUser {
-      authenticatedItem {
-        ... on User {
-          id
-          email
-        }
-      }
-    }
-  `;
-
-  return openfrontClient.request(GET_USER_QUERY);
-};
-
-export const getUserAddresses = () => {
-  const GET_USER_ADDRESSES_QUERY = gql`
-    query GetUserAddresses {
-      authenticatedItem {
-        ... on User {
-          id
-          addresses {
-            id
-            address1
-            city
-            country {
-              name
+export async function getUser() {
+  try {
+    const { authenticatedItem } = await openfrontClient.request(
+      gql`
+        query GetAuthenticatedItem {
+          authenticatedItem {
+            ... on User {
+              id
+              email
+              firstName
+              lastName
+              phone
+              addresses {
+                id
+                firstName
+                lastName
+                company
+                address1
+                address2
+                city
+                province
+                postalCode
+                countryCode
+                phone
+              }
             }
           }
         }
-      }
-    }
-  `;
-
-  return openfrontClient.request(GET_USER_ADDRESSES_QUERY);
-};
-
-export const createUser = (userData) => {
-  const CREATE_USER_MUTATION = gql`
-    mutation CreateUser($data: UserCreateInput!) {
-      createUser(data: $data) {
-        id
-        email
-        firstName
-        lastName
-      }
-    }
-  `;
-
-  return openfrontClient.request(CREATE_USER_MUTATION, { data: userData });
-};
-
-export const updateUser = (userId, updatedData) => {
-  const UPDATE_USER_MUTATION = gql`
-    mutation UpdateUser($userId: ID!, $data: UserUpdateInput!) {
-      updateUser(userId: $userId, data: $data) {
-        id
-        email
-        firstName
-        lastName
-      }
-    }
-  `;
-
-  return openfrontClient.request(UPDATE_USER_MUTATION, { userId, data: updatedData });
-};
-
-export async function addShippingAddress(data) {
-  const ADD_SHIPPING_ADDRESS_MUTATION = gql`
-    mutation AddShippingAddress($data: AddressCreateInput!) {
-      createAddress(data: $data) {
-        id
-        address1
-        city
-        country {
-          name
-        }
-      }
-    }
-  `;
-
-  return openfrontClient.request(ADD_SHIPPING_ADDRESS_MUTATION, { data });
+      `
+    );
+    return { authenticatedItem };
+  } catch (error) {
+    return { authenticatedItem: null };
+  }
 }
 
-export async function deleteShippingAddress(addressId) {
-  const DELETE_SHIPPING_ADDRESS_MUTATION = gql`
-    mutation DeleteShippingAddress($id: ID!) {
-      deleteAddress(id: $id) {
-        id
+export async function authenticate({ email, password }) {
+  const { authenticateUserWithPassword } = await openfrontClient.request(
+    gql`
+      mutation Authenticate($email: String!, $password: String!) {
+        authenticateUserWithPassword(email: $email, password: $password) {
+          ... on UserAuthenticationWithPasswordSuccess {
+            item {
+              id
+            }
+          }
+          ... on UserAuthenticationWithPasswordFailure {
+            message
+          }
+        }
+      }
+    `,
+    { email, password }
+  );
+
+  if (authenticateUserWithPassword.__typename === "UserAuthenticationWithPasswordFailure") {
+    throw new Error(authenticateUserWithPassword.message);
+  }
+
+  return true;
+}
+
+export async function createCustomer(data) {
+  const { createUser } = await openfrontClient.request(
+    gql`
+      mutation CreateUser($data: UserCreateInput!) {
+        createUser(data: $data) {
+          id
+        }
+      }
+    `,
+    {
+      data: {
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone
       }
     }
-  `;
+  );
 
-  return openfrontClient.request(DELETE_SHIPPING_ADDRESS_MUTATION, {
-    id: addressId,
-  });
+  return createUser;
+}
+
+export async function updateCustomer(data) {
+  const { updateUser } = await openfrontClient.request(
+    gql`
+      mutation UpdateUser($data: UserUpdateInput!) {
+        updateUser(where: { id: "currentUser" }, data: $data) {
+          id
+        }
+      }
+    `,
+    { data }
+  );
+
+  return updateUser;
+}
+
+export async function addShippingAddress(data) {
+  const { createAddress } = await openfrontClient.request(
+    gql`
+      mutation CreateAddress($data: AddressCreateInput!) {
+        createAddress(data: $data) {
+          id
+        }
+      }
+    `,
+    {
+      data: {
+        ...data.address,
+        user: { connect: { id: "currentUser" } }
+      }
+    }
+  );
+
+  return createAddress;
 }
 
 export async function updateShippingAddress(addressId, data) {
-  const UPDATE_SHIPPING_ADDRESS_MUTATION = gql`
-    mutation UpdateShippingAddress($id: ID!, $data: AddressUpdateInput!) {
-      updateAddress(id: $id, data: $data) {
-        id
-        address1
-        city
-        country {
-          name
+  const { updateAddress } = await openfrontClient.request(
+    gql`
+      mutation UpdateAddress($id: ID!, $data: AddressUpdateInput!) {
+        updateAddress(where: { id: $id }, data: $data) {
+          id
         }
       }
+    `,
+    {
+      id: addressId,
+      data
     }
-  `;
+  );
 
-  return openfrontClient.request(UPDATE_SHIPPING_ADDRESS_MUTATION, {
-    id: addressId,
-    data,
-  });
+  return updateAddress;
+}
+
+export async function deleteShippingAddress(addressId) {
+  const { deleteAddress } = await openfrontClient.request(
+    gql`
+      mutation DeleteAddress($id: ID!) {
+        deleteAddress(where: { id: $id }) {
+          id
+        }
+      }
+    `,
+    {
+      id: addressId
+    }
+  );
+
+  return deleteAddress;
 }
 
 export const listCustomerOrders = cache(async function (
@@ -1462,4 +1476,39 @@ export const getProductsByCategoryHandle = cache(async function ({
     response: { products, count },
     nextPage,
   };
+});
+
+export const getUserAddresses = cache(async function() {
+  try {
+    const { authenticatedItem } = await openfrontClient.request(
+      gql`
+        query GetUserAddresses {
+          authenticatedItem {
+            ... on User {
+              id
+              addresses {
+                id
+                firstName
+                lastName
+                company
+                address1
+                address2
+                city
+                province
+                postalCode
+                countryCode
+                phone
+                metadata
+              }
+            }
+          }
+        }
+      `
+    );
+
+    return authenticatedItem?.addresses || [];
+  } catch (error) {
+    console.error("Error fetching user addresses:", error);
+    return [];
+  }
 });

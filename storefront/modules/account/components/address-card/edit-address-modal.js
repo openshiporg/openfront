@@ -39,7 +39,6 @@ const EditAddress = ({
     if (successState) {
       close()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [successState])
 
   useEffect(() => {
@@ -64,7 +63,7 @@ const EditAddress = ({
       )}>
       <div className="flex flex-col">
         <Heading className="text-left text-base-semi">
-          {address.first_name} {address.last_name}
+          {address.firstName} {address.lastName}
         </Heading>
         {address.company && (
           <Text className="txt-compact-small text-ui-fg-base">
@@ -73,15 +72,15 @@ const EditAddress = ({
         )}
         <Text className="flex flex-col text-left text-base-regular mt-2">
           <span>
-            {address.address_1}
-            {address.address_2 && <span>, {address.address_2}</span>}
+            {address.address1}
+            {address.address2 && <span>, {address.address2}</span>}
           </span>
           <span>
-            {address.postal_code}, {address.city}
+            {address.postalCode}, {address.city}
           </span>
           <span>
             {address.province && `${address.province}, `}
-            {address.country_code?.toUpperCase()}
+            {address.countryCode?.toUpperCase()}
           </span>
         </Text>
       </div>
@@ -114,60 +113,60 @@ const EditAddress = ({
                 name="first_name"
                 required
                 autoComplete="given-name"
-                defaultValue={address.first_name || undefined} />
+                defaultValue={address.firstName} />
               <Input
                 label="Last name"
                 name="last_name"
                 required
                 autoComplete="family-name"
-                defaultValue={address.last_name || undefined} />
+                defaultValue={address.lastName} />
             </div>
             <Input
               label="Company"
               name="company"
               autoComplete="organization"
-              defaultValue={address.company || undefined} />
+              defaultValue={address.company} />
             <Input
               label="Address"
               name="address_1"
               required
               autoComplete="address-line1"
-              defaultValue={address.address_1 || undefined} />
+              defaultValue={address.address1} />
             <Input
               label="Apartment, suite, etc."
               name="address_2"
               autoComplete="address-line2"
-              defaultValue={address.address_2 || undefined} />
+              defaultValue={address.address2} />
             <div className="grid grid-cols-[144px_1fr] gap-x-2">
               <Input
                 label="Postal code"
                 name="postal_code"
                 required
                 autoComplete="postal-code"
-                defaultValue={address.postal_code || undefined} />
+                defaultValue={address.postalCode} />
               <Input
                 label="City"
                 name="city"
                 required
                 autoComplete="locality"
-                defaultValue={address.city || undefined} />
+                defaultValue={address.city} />
             </div>
             <Input
               label="Province / State"
               name="province"
               autoComplete="address-level1"
-              defaultValue={address.province || undefined} />
+              defaultValue={address.province} />
             <CountrySelect
               name="country_code"
               region={region}
               required
               autoComplete="country"
-              defaultValue={address.country_code || undefined} />
+              defaultValue={address.countryCode} />
             <Input
               label="Phone"
               name="phone"
               autoComplete="phone"
-              defaultValue={address.phone || undefined} />
+              defaultValue={address.phone} />
           </div>
           {formState.error && (
             <div className="text-rose-500 text-small-regular py-2">

@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { revalidateTag } from "next/cache";
 import { gql } from "graphql-request";
 import { openfrontClient } from "@storefront/lib/config";
-import { getCartId, setCartId } from "@lib/cookies";
+import { getCartId, setCartId, removeCartId } from "@lib/cookies";
 
 export async function retrieveCart() {
   const cartId = getCartId();
@@ -71,11 +71,45 @@ export async function retrieveCart() {
     }
   );
 
-  return { ...cart, lineItems };
+  return { ...cart, ...(lineItems && { lineItems }) };
 }
 
 export async function getOrSetCart(countryCode) {
-  let cart = await retrieveCart();
+  let cartId = getCartId();
+  let cart = null;
+
+  // Try to get cart if we have an ID
+  if (cartId) {
+    try {
+      const result = await openfrontClient.request(
+        gql`
+          query GetCart($cartId: ID!) {
+            activeCart(cartId: $cartId) {
+              cart {
+                id
+                region {
+                  id
+                }
+              }
+            }
+          }
+        `,
+        { cartId }
+      );
+      
+      cart = result.activeCart?.cart;
+      
+      // If cart doesn't exist in DB, remove the cookie
+      if (!cart) {
+        removeCartId();
+        cartId = null;
+      }
+    } catch (error) {
+      // If there's an error (like invalid ID), remove the cookie
+      removeCartId();
+      cartId = null;
+    }
+  }
 
   // Get region ID for country code
   const { regions } = await openfrontClient.request(
@@ -94,13 +128,16 @@ export async function getOrSetCart(countryCode) {
     throw new Error(`No region found for country: ${countryCode}`);
   }
 
-  // If no cart exists, create one
+  // If no cart exists or was invalid, create one
   if (!cart) {
     const { createCart: newCart } = await openfrontClient.request(
       gql`
         mutation CreateCart($regionId: ID!) {
           createCart(data: { region: { connect: { id: $regionId } } }) {
             id
+            region {
+              id
+            }
           }
         }
       `,
@@ -180,33 +217,39 @@ export async function addToCart({ variantId, quantity, countryCode }) {
 
 export async function updateLineItem({ lineId, quantity }) {
   const cartId = cookies().get("_openfront_cart_id")?.value;
-  if (!cartId) return "No cart ID found";
+  if (!cartId) return "No cartId cookie found";
 
   try {
     await openfrontClient.request(
       gql`
-        mutation UpdateActiveCart($cartId: ID!, $data: CartUpdateInput!) {
-          updateActiveCart(cartId: $cartId, data: $data) {
+        mutation UpdateLineItem($cartId: ID!, $lineId: ID!, $quantity: Int!) {
+          updateActiveCartLineItem(cartId: $cartId, lineId: $lineId, quantity: $quantity) {
             id
             lineItems {
               id
               quantity
+              title
+              unitPrice
+              originalPrice
+              total
+              productVariant {
+                id
+                title
+                product {
+                  id
+                  title
+                  thumbnail
+                  handle
+                }
+              }
             }
           }
         }
       `,
       {
         cartId,
-        data: {
-          lineItems: {
-            update: [
-              {
-                where: { id: lineId },
-                data: { quantity },
-              },
-            ],
-          },
-        },
+        lineId,
+        quantity
       }
     );
 
