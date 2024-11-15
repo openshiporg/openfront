@@ -1512,3 +1512,60 @@ export const getUserAddresses = cache(async function() {
     return [];
   }
 });
+
+export const getUserWithOrders = cache(async function() {
+  const { authenticatedItem } = await openfrontClient.request(
+    gql`
+      query GetUserAndOrders {
+        authenticatedItem {
+          ... on User {
+            id
+            email
+            firstName
+            lastName
+            phone
+            addresses {
+              id
+              firstName
+              lastName
+              company
+              address1
+              address2
+              city
+              province
+              postalCode
+              countryCode
+              phone
+            }
+            orders {
+              id
+              total
+              status
+              createdAt
+              displayId
+              shippingAddress {
+                firstName
+                lastName
+                address1
+                city
+                postalCode
+                countryCode
+              }
+              paymentStatus
+              fulfillmentStatus
+              lineItems {
+                id
+                title
+                quantity
+                unitPrice
+                total
+              }
+            }
+          }
+        }
+      }
+    `
+  );
+
+  return authenticatedItem;
+});

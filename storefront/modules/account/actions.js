@@ -2,6 +2,8 @@
 import { revalidateTag } from "next/cache";
 import { gql } from "graphql-request";
 import { openfrontClient } from "@storefront/lib/config";
+import { removeAuthToken, setAuthToken } from "@lib/cookies";
+import { redirect } from "next/navigation";
 
 export async function signUp(_currentState, formData) {
   const customer = {
@@ -13,18 +15,34 @@ export async function signUp(_currentState, formData) {
   }
 
   try {
-    // Create user and authenticate in one step
-    const { authenticateUserWithPassword } = await openfrontClient.request(
+    // First create the user
+    const { createUser } = await openfrontClient.request(
       gql`
-        mutation CreateAndAuthenticateUser($data: UserCreateInput!, $email: String!, $password: String!) {
+        mutation CreateUser($data: UserCreateInput!) {
           createUser(data: $data) {
             id
+            email
           }
+        }
+      `,
+      { 
+        data: {
+          email: customer.email,
+          password: customer.password,
+          name: `${customer.firstName} ${customer.lastName}`,
+          phone: customer.phone
+        }
+      }
+    );
+
+    // Then authenticate them
+    const { authenticateUserWithPassword } = await openfrontClient.request(
+      gql`
+        mutation SignIn($email: String!, $password: String!) {
           authenticateUserWithPassword(email: $email, password: $password) {
             ... on UserAuthenticationWithPasswordSuccess {
               item {
                 id
-                email
               }
             }
             ... on UserAuthenticationWithPasswordFailure {
@@ -33,14 +51,7 @@ export async function signUp(_currentState, formData) {
           }
         }
       `,
-      { 
-        data: {
-          email: customer.email,
-          password: customer.password,
-          firstName: customer.firstName,
-          lastName: customer.lastName,
-          phone: customer.phone
-        },
+      {
         email: customer.email,
         password: customer.password
       }
@@ -56,7 +67,7 @@ export async function signUp(_currentState, formData) {
   }
 }
 
-export async function logCustomerIn(_currentState, formData) {
+export async function login(_currentState, formData) {
   const email = formData.get("email");
   const password = formData.get("password");
 
@@ -66,6 +77,7 @@ export async function logCustomerIn(_currentState, formData) {
         mutation AuthenticateUser($email: String!, $password: String!) {
           authenticateUserWithPassword(email: $email, password: $password) {
             ... on UserAuthenticationWithPasswordSuccess {
+              sessionToken
               item {
                 id
                 email
@@ -80,17 +92,28 @@ export async function logCustomerIn(_currentState, formData) {
       { email, password }
     );
 
+
     if (authenticateUserWithPassword.__typename === "UserAuthenticationWithPasswordFailure") {
       throw new Error(authenticateUserWithPassword.message);
     }
 
+    // Set auth token with same settings as Keystone
+    setAuthToken(authenticateUserWithPassword.sessionToken, {
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      httpOnly: true,
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+    });
+    
     revalidateTag("customer");
   } catch (error) {
+    console.log({error})
     return error.toString();
   }
 }
 
-export async function signOut() {
+export async function signOut(countryCode) {
   try {
     await openfrontClient.request(
       gql`
@@ -99,9 +122,270 @@ export async function signOut() {
         }
       `
     );
-    revalidateTag("customer");
+
+    // Remove the auth token cookie
+    removeAuthToken();
     revalidateTag("auth");
+    revalidateTag("customer");
+    redirect(`/${countryCode}/account`)
   } catch (error) {
     console.error("Error signing out:", error);
+  }
+}
+
+export async function updateCustomerBillingAddress(prevState, formData) {
+  try {
+    await openfrontClient.request(
+      gql`
+        mutation UpdateBillingAddress($address: BillingAddressInput!) {
+          updateActiveUserBillingAddress(address: $address) {
+            id
+            addresses {
+              id
+              firstName
+              lastName
+              company
+              address1
+              address2
+              city
+              province
+              postalCode
+              countryCode
+              phone
+              metadata
+            }
+          }
+        }
+      `,
+      {
+        address: {
+          firstName: formData.get("billingAddress.firstName"),
+          lastName: formData.get("billingAddress.lastName"),
+          company: formData.get("billingAddress.company"),
+          address1: formData.get("billingAddress.address1"),
+          address2: formData.get("billingAddress.address2"),
+          city: formData.get("billingAddress.city"),
+          province: formData.get("billingAddress.province"),
+          postalCode: formData.get("billingAddress.postalCode"),
+          countryCode: formData.get("billingAddress.countryCode"),
+        }
+      }
+    );
+    revalidateTag("customer");
+    return { success: true, error: null };
+  } catch (error) {
+    console.log({error})
+    return { success: false, error: error.toString() };
+  }
+}
+
+export async function updateCustomerEmail(prevState, formData) {
+  try {
+    await openfrontClient.request(
+      gql`
+        mutation UpdateUser($data: UserUpdateProfileInput!) {
+          updateActiveUser(data: $data) {
+            id
+            email
+          }
+        }
+      `,
+      {
+        data: {
+          email: formData.get("email")
+        }
+      }
+    );
+    revalidateTag("customer");
+    return { success: true, error: null };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
+export async function updateCustomerName(prevState, formData) {
+  try {
+    await openfrontClient.request(
+      gql`
+        mutation UpdateUser($data: UserUpdateProfileInput!) {
+          updateActiveUser(data: $data) {
+            id
+            name
+          }
+        }
+      `,
+      {
+        data: {
+          name: formData.get("firstName") + " " + formData.get("lastName")
+        }
+      }
+    );
+    revalidateTag("customer");
+    return { success: true, error: null };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
+export async function updateCustomerPassword(prevState, formData) {
+  try {
+    await openfrontClient.request(
+      gql`
+        mutation UpdatePassword($oldPassword: String!, $newPassword: String!, $confirmPassword: String!) {
+          updateActiveUserPassword(
+            oldPassword: $oldPassword
+            newPassword: $newPassword
+            confirmPassword: $confirmPassword
+          ) {
+            id
+          }
+        }
+      `,
+      {
+        oldPassword: formData.get("oldPassword"),
+        newPassword: formData.get("newPassword"),
+        confirmPassword: formData.get("confirmPassword")
+      }
+    );
+    
+    revalidateTag("customer");
+    return { success: true, error: null };
+  } catch (error) {
+    // Extract just the error message from the GraphQL error
+    const message = error.response?.errors?.[0]?.extensions?.originalError?.message || "An error occurred";
+    return { success: false, error: message };
+  }
+}
+
+export async function updateCustomerPhone(prevState, formData) {
+  try {
+    await openfrontClient.request(
+      gql`
+        mutation UpdateUser($data: UserUpdateProfileInput!) {
+          updateActiveUser(data: $data) {
+            id
+            phone
+          }
+        }
+      `,
+      {
+        data: {
+          phone: formData.get("phone")
+        }
+      }
+    );
+    revalidateTag("customer");
+    return { success: true, error: null };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
+export async function addCustomerShippingAddress(prevState, formData) {
+  try {
+    await openfrontClient.request(
+      gql`
+        mutation CreateAddress($data: UserUpdateProfileInput!) {
+          updateActiveUser(data: $data) {
+            id
+            addresses {
+              id
+            }
+          }
+        }
+      `,
+      {
+        data: {
+          addresses: {
+            create: [{
+              firstName: formData.get("first_name"),
+              lastName: formData.get("last_name"),
+              company: formData.get("company"),
+              address1: formData.get("address_1"),
+              address2: formData.get("address_2"),
+              city: formData.get("city"),
+              province: formData.get("province"),
+              postalCode: formData.get("postal_code"),
+              countryCode: formData.get("country_code"),
+              phone: formData.get("phone")
+            }]
+          }
+        }
+      }
+    );
+    revalidateTag("customer");
+    return { success: true, error: null };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
+export async function updateCustomerShippingAddress(prevState, formData) {
+  try {
+    await openfrontClient.request(
+      gql`
+        mutation UpdateAddress($data: UserUpdateProfileInput!) {
+          updateActiveUser(data: $data) {
+            id
+            addresses {
+              id
+            }
+          }
+        }
+      `,
+      {
+        data: {
+          addresses: {
+            update: [{
+              where: { id: prevState.addressId },
+              data: {
+                firstName: formData.get("first_name"),
+                lastName: formData.get("last_name"),
+                company: formData.get("company"),
+                address1: formData.get("address_1"),
+                address2: formData.get("address_2"),
+                city: formData.get("city"),
+                province: formData.get("province"),
+                postalCode: formData.get("postal_code"),
+                countryCode: formData.get("country_code"),
+                phone: formData.get("phone")
+              }
+            }]
+          }
+        }
+      }
+    );
+    revalidateTag("customer");
+    return { success: true, error: null };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
+export async function deleteCustomerShippingAddress(addressId) {
+  try {
+    await openfrontClient.request(
+      gql`
+        mutation DeleteAddress($data: UserUpdateProfileInput!) {
+          updateActiveUser(data: $data) {
+            id
+            addresses {
+              id
+            }
+          }
+        }
+      `,
+      {
+        data: {
+          addresses: {
+            disconnect: [{ id: addressId }]
+          }
+        }
+      }
+    );
+    revalidateTag("customer");
+    return { success: true, error: null };
+  } catch (error) {
+    return { success: false, error: error.toString() };
   }
 }

@@ -1,4 +1,4 @@
-import { list } from "@keystone-6/core";
+import { list, graphql } from "@keystone-6/core";
 import { denyAll } from "@keystone-6/core/access";
 import {
   json,
@@ -6,7 +6,8 @@ import {
   select,
   text,
   relationship,
-  checkbox
+  checkbox,
+  virtual,
 } from "@keystone-6/core/fields";
 import { isSignedIn, permissions, rules } from "../access";
 import { trackingFields } from "./trackingFields";
@@ -25,9 +26,8 @@ export const User = list({
   access: {
     operation: {
       create: () => true,
-      query: permissions.canManageUsers,
-      // only people with the permission can delete themselves!
-      // You can't delete yourself
+      query: isSignedIn,
+      update: permissions.canManageUsers,
       delete: permissions.canManageUsers,
     },
     filter: {
@@ -41,7 +41,43 @@ export const User = list({
     hideDelete: (args) => !permissions.canManageUsers(args),
   },
   fields: {
-    name: text({ validation: { isRequired: true } }),
+    name: text({ 
+      validation: { isRequired: true },
+    }),
+    firstName: virtual({
+      field: graphql.field({
+        type: graphql.String,
+        resolve(item) {
+          if (!item.name) return '';
+          
+          // Split on spaces and get first part
+          const parts = item.name.trim().split(/\s+/);
+          return parts[0] || '';
+        }
+      })
+    }),
+    lastName: virtual({
+      field: graphql.field({
+        type: graphql.String,
+        resolve(item) {
+          if (!item.name) return '';
+          
+          // Split on spaces
+          const parts = item.name.trim().split(/\s+/);
+          
+          if (parts.length === 1) return ''; // Only first name
+          
+          // Handle middle names/initials:
+          // If second to last part is a single letter (initial), include it in lastName
+          if (parts.length > 2 && parts[parts.length - 2].length === 1) {
+            return parts.slice(-2).join(' ');
+          }
+          
+          // Otherwise return last part
+          return parts[parts.length - 1];
+        }
+      })
+    }),
     email: text({ isIndexed: "unique", validation: { isRequired: true } }),
     password: password(),
     role: relationship({
@@ -59,8 +95,6 @@ export const User = list({
     }),
     apiKeys: relationship({ ref: "ApiKey.user", many: true }),
     metadata: json(),
-    firstName: text(),
-    lastName: text(),
     billingAddress: text(),
     phone: text(),
     hasAccount: checkbox(),

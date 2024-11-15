@@ -4,14 +4,14 @@
 type User {
   id: ID!
   name: String
+  firstName: String
+  lastName: String
   email: String
   password: PasswordState
   role: Role
   apiKeys(where: ApiKeyWhereInput! = {}, orderBy: [ApiKeyOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ApiKeyWhereUniqueInput): [ApiKey!]
   apiKeysCount(where: ApiKeyWhereInput! = {}): Int
   metadata: JSON
-  firstName: String
-  lastName: String
   billingAddress: String
   phone: String
   hasAccount: Boolean
@@ -53,8 +53,6 @@ input UserWhereInput {
   password: PasswordFilter
   role: RoleWhereInput
   apiKeys: ApiKeyManyRelationFilter
-  firstName: StringFilter
-  lastName: StringFilter
   billingAddress: StringFilter
   phone: StringFilter
   hasAccount: BooleanFilter
@@ -186,8 +184,6 @@ input UserOrderByInput {
   id: OrderDirection
   name: OrderDirection
   email: OrderDirection
-  firstName: OrderDirection
-  lastName: OrderDirection
   billingAddress: OrderDirection
   phone: OrderDirection
   hasAccount: OrderDirection
@@ -209,8 +205,6 @@ input UserUpdateInput {
   role: RoleRelateToOneForUpdateInput
   apiKeys: ApiKeyRelateToManyForUpdateInput
   metadata: JSON
-  firstName: String
-  lastName: String
   billingAddress: String
   phone: String
   hasAccount: Boolean
@@ -286,8 +280,6 @@ input UserCreateInput {
   role: RoleRelateToOneForCreateInput
   apiKeys: ApiKeyRelateToManyForCreateInput
   metadata: JSON
-  firstName: String
-  lastName: String
   billingAddress: String
   phone: String
   hasAccount: Boolean
@@ -585,6 +577,7 @@ type Order {
   swapsCount(where: SwapWhereInput! = {}): Int
   createdAt: DateTime
   updatedAt: DateTime
+  total: String
 }
 
 enum OrderStatusType {
@@ -7616,8 +7609,11 @@ type Mutation {
   createInitialUser(data: CreateInitialUserInput!): UserAuthenticationWithPasswordSuccess!
   sendUserPasswordResetLink(email: String!): Boolean!
   redeemUserPasswordResetToken(email: String!, token: String!, password: String!): RedeemUserPasswordResetTokenResult
+  updateActiveUser(data: UserUpdateProfileInput!): User
   updateActiveCart(cartId: ID!, data: CartUpdateInput, code: String): Cart
   updateActiveCartLineItem(cartId: ID!, lineId: ID!, quantity: Int!): Cart
+  updateActiveUserPassword(oldPassword: String!, newPassword: String!, confirmPassword: String!): User
+  updateActiveUserBillingAddress(address: BillingAddressInput!): User
 }
 
 union UserAuthenticationWithPasswordResult = UserAuthenticationWithPasswordSuccess | UserAuthenticationWithPasswordFailure
@@ -7969,4 +7965,25 @@ type CartResponse {
 
 input CartCodeInput {
   code: String!
+}
+
+input UserUpdateProfileInput {
+  email: String
+  name: String
+  phone: String
+  billingAddress: String
+  password: String
+}
+
+input BillingAddressInput {
+  firstName: String!
+  lastName: String!
+  company: String
+  address1: String!
+  address2: String
+  city: String!
+  province: String
+  postalCode: String!
+  countryCode: String!
+  phone: String
 }

@@ -1,4 +1,4 @@
-import { list } from "@keystone-6/core";
+import { graphql, list } from "@keystone-6/core";
 import { denyAll } from "@keystone-6/core/access";
 import {
   checkbox,
@@ -9,9 +9,17 @@ import {
   text,
   timestamp,
   relationship,
+  virtual,
 } from "@keystone-6/core/fields";
 import { trackingFields } from "./trackingFields";
 import { permissions } from "../access";
+
+const formatCurrency = (amount, currencyCode) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currencyCode
+  }).format(amount);
+};
 
 export const Order = list({
   access: {
@@ -220,5 +228,78 @@ export const Order = list({
       many: true,
     }),
     ...trackingFields,
+
+    total: virtual({
+      field: graphql.field({
+        type: graphql.String,
+        async resolve(item, args, context) {
+          const sudoContext = context.sudo();
+          
+          const order = await sudoContext.query.Order.findOne({
+            where: { id: item.id },
+            query: `
+              lineItems {
+                id
+                quantity
+                unitPrice
+              }
+              discounts {
+                id
+                discountRule {
+                  type
+                  value
+                }
+              }
+              currency {
+                code
+                noDivisionCurrency
+              }
+              taxRate
+              shippingMethods {
+                price
+              }
+            `
+          });
+
+          if (!order?.lineItems?.length) return null;
+
+          // Calculate subtotal
+          const subtotal = order.lineItems.reduce((sum, item) => 
+            sum + (item.unitPrice * item.quantity), 0);
+
+          // Calculate discounts
+          let discountAmount = 0;
+          if (order.discounts?.length) {
+            for (const discount of order.discounts) {
+              if (discount.discountRule.type === 'percentage') {
+                discountAmount += subtotal * (discount.discountRule.value / 100);
+              } else if (discount.discountRule.type === 'fixed') {
+                discountAmount += discount.discountRule.value;
+              }
+            }
+          }
+
+          // Add shipping
+          const shipping = order.shippingMethods?.reduce((sum, method) => 
+            sum + (method.price || 0), 0) || 0;
+
+          // Calculate tax on discounted amount
+          const taxableAmount = subtotal - discountAmount + shipping;
+          const tax = taxableAmount * (order.taxRate || 0);
+
+          // Calculate final total
+          const total = taxableAmount + tax;
+
+          const currencyCode = order.currency?.code || 'USD';
+          const divisor = order.currency?.noDivisionCurrency ? 1 : 100;
+
+          // Format currency inline
+          return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currencyCode
+          }).format(total / divisor);
+        }
+      })
+    }),
   },
 });

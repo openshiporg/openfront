@@ -3,6 +3,9 @@ import redirectToInit from "./redirectToInit";
 import activeCart from "./activeCart";
 import updateActiveCart from "./updateActiveCart";
 import updateActiveCartLineItem from "./updateActiveCartLineItem";
+import updateActiveUser from "./updateActiveUser";
+import updateActiveUserPassword from "./updateActiveUserPassword";
+import updateActiveUserBillingAddress from "./updateActiveUserBillingAddress";
 
 const graphql = String.raw;
 
@@ -25,14 +28,38 @@ export const extendGraphqlSchema = (schema) =>
         redirectToInit: Boolean
         activeCart(cartId: ID!): CartResponse
       }
-      
+
+      input UserUpdateProfileInput {
+        email: String
+        name: String
+        phone: String
+        billingAddress: String
+        password: String
+      }
+
+      input BillingAddressInput {
+        firstName: String!
+        lastName: String!
+        company: String
+        address1: String!
+        address2: String
+        city: String!
+        province: String
+        postalCode: String!
+        countryCode: String!
+        phone: String
+      }
+
       type Mutation {
-        updateActiveCart(
-          cartId: ID!
-          data: CartUpdateInput
-          code: String
-        ): Cart
+        updateActiveUser(data: UserUpdateProfileInput!): User
+        updateActiveCart(cartId: ID!, data: CartUpdateInput, code: String): Cart
         updateActiveCartLineItem(cartId: ID!, lineId: ID!, quantity: Int!): Cart
+        updateActiveUserPassword(
+          oldPassword: String!
+          newPassword: String!
+          confirmPassword: String!
+        ): User
+        updateActiveUserBillingAddress(address: BillingAddressInput!): User
       }
     `,
     resolvers: {
@@ -41,8 +68,11 @@ export const extendGraphqlSchema = (schema) =>
         activeCart,
       },
       Mutation: {
+        updateActiveUserPassword,
         updateActiveCart,
-        updateActiveCartLineItem
+        updateActiveCartLineItem,
+        updateActiveUser,
+        updateActiveUserBillingAddress
       }
     },
   });

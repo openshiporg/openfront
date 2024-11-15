@@ -36,9 +36,9 @@ const ProfileName = ({ customer }) => {
         errorMessage={state.error}
         clearState={clearState}>
         <div className="grid grid-cols-2 gap-4">
-          <Input label="Old password" name="old_password" required type="password" />
-          <Input label="New password" type="password" name="new_password" required />
-          <Input label="Confirm password" type="password" name="confirm_password" required />
+          <Input label="Old password" name="oldPassword" required type="password" />
+          <Input label="New password" type="password" name="newPassword" required />
+          <Input label="Confirm password" type="password" name="confirmPassword" required />
         </div>
       </AccountInfo>
     </form>

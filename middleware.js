@@ -88,6 +88,7 @@ export async function middleware(request) {
   const searchParams = request.nextUrl.searchParams;
   const cartId = searchParams.get("cart_id");
   const cartIdCookie = request.cookies.get("_openfront_cart_id");
+  const fromPath = searchParams.get("from");
 
   // Handle redirectToInit for all routes (including root)
   if (redirectToInit) {
@@ -102,6 +103,7 @@ export async function middleware(request) {
   if (request.nextUrl.pathname.startsWith(basePath)) {
     const isInitRoute = request.nextUrl.pathname.startsWith(`${basePath}/init`);
     const isSigninRoute = request.nextUrl.pathname.startsWith(`${basePath}/signin`);
+    const isNoAccessRoute = request.nextUrl.pathname.startsWith(`${basePath}/no-access`);
 
     // If redirectToInit is false, prevent access to init page
     if (isInitRoute) {
@@ -111,13 +113,25 @@ export async function middleware(request) {
     // Handle authentication for non-init routes
     if (!user && !isSigninRoute) {
       const signinUrl = new URL(`${basePath}/signin`, request.url);
-      signinUrl.searchParams.set("from", request.nextUrl.pathname);
+      // Only set 'from' param if not redirecting from no-access
+      if (!isNoAccessRoute) {
+        signinUrl.searchParams.set("from", request.nextUrl.pathname);
+      }
       return NextResponse.redirect(signinUrl);
     }
 
     // Redirect to dashboard if already authenticated and trying to access signin
     if (user && isSigninRoute) {
+      // If there's a 'from' path and it's not no-access, use it
+      if (fromPath && !fromPath.includes('no-access')) {
+        return NextResponse.redirect(new URL(fromPath, request.url));
+      }
       return NextResponse.redirect(new URL(basePath, request.url));
+    }
+
+    // Check role permissions for dashboard access
+    if (user && !isNoAccessRoute && !user.role?.canManageOrders) {
+      return NextResponse.redirect(new URL(`${basePath}/no-access`, request.url));
     }
   }
 

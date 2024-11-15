@@ -20,8 +20,6 @@ model User {
   roleId                  String?         @map("role")
   apiKeys                 ApiKey[]        @relation("ApiKey_user")
   metadata                Json?
-  firstName               String          @default("")
-  lastName                String          @default("")
   billingAddress          String          @default("")
   phone                   String          @default("")
   hasAccount              Boolean         @default(false)

@@ -27,21 +27,21 @@ const ProfileName = ({ customer }) => {
     <form action={formAction} className="w-full overflow-visible">
       <AccountInfo
         label="Name"
-        currentInfo={`${customer.first_name} ${customer.last_name}`}
+        currentInfo={`${customer.firstName} ${customer.lastName}`}
         isSuccess={successState}
         isError={!!state?.error}
         clearState={clearState}>
         <div className="grid grid-cols-2 gap-x-4">
           <Input
             label="First name"
-            name="first_name"
+            name="firstName"
             required
-            defaultValue={customer.first_name} />
+            defaultValue={customer.firstName} />
           <Input
             label="Last name"
-            name="last_name"
+            name="lastName"
             required
-            defaultValue={customer.last_name} />
+            defaultValue={customer.lastName} />
         </div>
       </AccountInfo>
     </form>

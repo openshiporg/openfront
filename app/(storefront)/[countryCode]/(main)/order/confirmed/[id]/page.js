@@ -10,12 +10,7 @@ async function getOrder(id) {
   }
 
 
-  return {
-    order: {
-      ...order,
-      // items: enrichedItems
-    },
-  };
+  return order;
 }
 
 export const metadata = {

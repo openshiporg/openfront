@@ -44,7 +44,7 @@ const ProfileBillingAddress = ({
     }
 
     const country =
-      regionOptions?.find((country) => country.value === customer.billingAddress.countryCode)?.label || customer.billingAddress.countryCode?.toUpperCase()
+      regionOptions?.find((country) => country.value === customer.billingAddress.countryCode)?.label || customer.billingAddress.countryCode
 
     return (
       <div className="flex flex-col font-semibold">

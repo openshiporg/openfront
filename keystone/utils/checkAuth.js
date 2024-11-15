@@ -8,6 +8,9 @@ export const checkAuth = async (req) => {
       authenticatedItem {
         ... on User {
           id
+          role {
+            canManageOrders
+          }
         }
       }
       redirectToInit

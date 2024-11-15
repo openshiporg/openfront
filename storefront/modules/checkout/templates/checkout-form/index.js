@@ -4,7 +4,7 @@ import Payment from "@storefront/modules/checkout/components/payment"
 import Review from "@storefront/modules/checkout/components/review"
 import {
   createPaymentSessions,
-  getCustomer,
+  getUser,
   listShippingMethods,
 } from "@storefront/lib/data"
 import { cookies } from "next/headers"
@@ -34,7 +34,7 @@ export default async function CheckoutForm() {
   }
 
   // get customer if logged in
-  const customer = await getCustomer()
+  const customer = await getUser()
 
   return (
     <div>

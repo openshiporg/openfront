@@ -1,6 +1,7 @@
 import { keystoneContext } from "@keystone/keystoneContext";
 import { GraphQLClient } from "graphql-request";
 import { parse } from "graphql";
+import { getAuthHeaders } from "@lib/cookies";
 
 const shouldRetry = (error) =>
   error.message?.includes("connection pool") ||
@@ -40,27 +41,23 @@ const getEmptyResponseForQuery = (query) => {
 };
 
 class RetryingGraphQLClient extends GraphQLClient {
-  async request(query, variables = {}) {
-    while (true) {
-      try {
-        const response = await super.request(query, variables);
-        return response;
-      } catch (error) {
-        console.log(`GraphQL error: ${error.message}`);
+  async request(query, variables, requestHeaders) {
+    // Get auth headers and merge with any passed headers
+    const authHeaders = getAuthHeaders();
+    const headers = {
+      ...authHeaders,
+      ...requestHeaders
+    };
 
-        if (isEndpointUnreachable(error)) {
-          console.log("Endpoint unreachable, returning empty data");
-          return getEmptyResponseForQuery(query);
-        }
-
-        if (shouldRetry(error)) {
-          console.log(`Retrying in 1s: ${error.message}`);
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          continue;
-        }
-
-        throw error;
+    try {
+      return await super.request(query, variables, headers);
+    } catch (error) {
+      if (error.response?.status === 429) { // Too Many Requests
+        const retryAfter = parseInt(error.response.headers.get("retry-after") || "5");
+        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+        return await super.request(query, variables, headers);
       }
+      throw error;
     }
   }
 }

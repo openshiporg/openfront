@@ -4,7 +4,7 @@ import ProfileEmail from "@storefront/modules/account/components/profile-email"
 import ProfileName from "@storefront/modules/account/components/profile-name"
 import ProfilePassword from "@storefront/modules/account/components/profile-password"
 
-import { getCustomer, listRegions } from "@storefront/lib/data"
+import { getUser, listRegions } from "@storefront/lib/data"
 import { notFound } from "next/navigation"
 
 export const metadata = {
@@ -13,8 +13,8 @@ export const metadata = {
 }
 
 export default async function Profile() {
-  const customer = await getCustomer()
-  const regions = await listRegions()
+  const { authenticatedItem: customer } = await getUser()
+  const { regions } = await listRegions()
 
   if (!customer || !regions) {
     notFound()
