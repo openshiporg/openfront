@@ -1,14 +1,13 @@
 import { notFound } from "next/navigation";
 
+import ProductTemplate from "@storefront/modules/products/templates";
 import {
   getProductByHandle,
   getProductsList,
-  getRegion,
-  listRegions,
   retrievePricedProductByHandle,
   retrievePricedProductById,
-} from "@storefront/lib/data";
-import ProductTemplate from "@storefront/modules/products/templates";
+} from "@storefront/lib/data/products";
+import { getRegion, listRegions } from "@storefront/lib/data/regions";
 
 export async function generateStaticParams() {
   const countryCodes = await listRegions().then(({ regions }) =>

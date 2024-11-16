@@ -20,7 +20,6 @@ model User {
   roleId                  String?         @map("role")
   apiKeys                 ApiKey[]        @relation("ApiKey_user")
   metadata                Json?
-  billingAddress          String          @default("")
   phone                   String          @default("")
   hasAccount              Boolean         @default(false)
   addresses               Address[]       @relation("Address_user")
@@ -353,6 +352,7 @@ model Address {
   province                     String       @default("")
   postalCode                   String       @default("")
   phone                        String       @default("")
+  isBilling                    Boolean      @default(false)
   metadata                     Json?
   country                      Country?     @relation("Address_country", fields: [countryId], references: [id])
   countryId                    String?      @map("country")

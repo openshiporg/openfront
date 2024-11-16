@@ -1,4 +1,4 @@
-import { retrievePricedProductByHandle } from "@storefront/lib/data";
+import { retrievePricedProductByHandle } from "@storefront/lib/data/products";
 import ProductActions from "@storefront/modules/products/components/product-actions";
 
 /**

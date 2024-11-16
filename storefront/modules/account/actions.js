@@ -2,8 +2,8 @@
 import { revalidateTag } from "next/cache";
 import { gql } from "graphql-request";
 import { openfrontClient } from "@storefront/lib/config";
-import { removeAuthToken, setAuthToken } from "@lib/cookies";
 import { redirect } from "next/navigation";
+import { removeAuthToken, setAuthToken } from "@storefront/lib/data/cookies";
 
 export async function signUp(_currentState, formData) {
   const customer = {
@@ -41,6 +41,7 @@ export async function signUp(_currentState, formData) {
         mutation SignIn($email: String!, $password: String!) {
           authenticateUserWithPassword(email: $email, password: $password) {
             ... on UserAuthenticationWithPasswordSuccess {
+              sessionToken
               item {
                 id
               }
@@ -60,6 +61,15 @@ export async function signUp(_currentState, formData) {
     if (authenticateUserWithPassword.__typename === "UserAuthenticationWithPasswordFailure") {
       throw new Error(authenticateUserWithPassword.message);
     }
+
+    // Set auth token with same settings as login
+    setAuthToken(authenticateUserWithPassword.sessionToken, {
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      httpOnly: true,
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+    });
 
     revalidateTag("customer");
   } catch (error) {

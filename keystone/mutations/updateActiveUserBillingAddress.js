@@ -10,7 +10,7 @@ async function updateActiveUserBillingAddress(root, { address }, context) {
   // Get current user with addresses
   const existingUser = await sudoContext.query.User.findOne({
     where: { id: session.itemId },
-    query: 'id addresses { id metadata }'
+    query: 'id addresses { id isBilling }'
   });
 
   if (!existingUser) {
@@ -29,17 +29,17 @@ async function updateActiveUserBillingAddress(root, { address }, context) {
     postalCode: address.postalCode,
     countryCode: address.countryCode,
     phone: address.phone,
-    metadata: { isBilling: true }
+    isBilling: true
   };
 
   // First, update any existing billing addresses to not be billing
   if (existingUser.addresses) {
     for (const addr of existingUser.addresses) {
-      if (addr.metadata?.isBilling) {
+      if (addr.isBilling) {
         await sudoContext.db.Address.updateOne({
           where: { id: addr.id },
           data: {
-            metadata: { isBilling: false }
+            isBilling: false
           }
         });
       }

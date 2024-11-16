@@ -1,11 +1,11 @@
 import { Heading } from "@medusajs/ui"
+import { getCart } from "@storefront/lib/data/cart"
 
 import ItemsPreviewTemplate from "@storefront/modules/cart/templates/preview"
 import DiscountCode from "@storefront/modules/checkout/components/discount-code"
 import CartTotals from "@storefront/modules/common/components/cart-totals"
 import Divider from "@storefront/modules/common/components/divider"
 import { cookies } from "next/headers"
-import { getCart } from "@storefront/lib/data"
 
 const CheckoutSummary = async () => {
   const cartId = cookies().get("_openfront_cart_id")?.value

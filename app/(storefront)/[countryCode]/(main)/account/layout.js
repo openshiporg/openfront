@@ -1,4 +1,4 @@
-import { getUser } from "@storefront/lib/data"
+import { getUser } from "@storefront/lib/data/user";
 import AccountLayout from "@storefront/modules/account/templates/account-layout"
 
 export default async function AccountPageLayout({

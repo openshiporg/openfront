@@ -1,9 +1,9 @@
 import { Suspense } from "react";
 
-import { listRegions } from "@storefront/lib/data";
 import LocalizedClientLink from "@storefront/modules/common/components/localized-client-link";
 import CartButton from "@storefront/modules/layout/components/cart-button";
 import SideMenu from "@storefront/modules/layout/components/side-menu";
+import { listRegions } from "@storefront/lib/data/regions";
 
 export default async function Nav() {
   const { regions } = await listRegions();

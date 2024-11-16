@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation"
 import AddressBook from "@storefront/modules/account/components/address-book"
-import { getUser, getRegion } from "@storefront/lib/data"
 import { headers } from "next/headers"
+import { getUser } from "@storefront/lib/data/user"
+import { getRegion } from "@storefront/lib/data/regions"
 
 export const metadata = {
   title: "Addresses",

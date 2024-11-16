@@ -4,8 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import ReactCountryFlag from "react-country-flag";
 import { useParams, usePathname } from "next/navigation";
 import { updateRegion } from "app/(storefront)/actions";
-import { getRegion } from "@storefront/lib/data";
-import { redirect } from "next/navigation";
+
 
 const CountrySelect = ({ toggleState, regions }) => {
   const [current, setCurrent] = useState(undefined);

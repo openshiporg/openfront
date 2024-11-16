@@ -530,6 +530,18 @@ export async function getUser() {
               firstName
               lastName
               phone
+              billingAddress {
+                firstName
+                lastName
+                company
+                address1
+                address2
+                city
+                province
+                postalCode
+                countryCode
+                phone
+              }
               addresses {
                 id
                 firstName
@@ -1524,6 +1536,18 @@ export const getUserWithOrders = cache(async function() {
             firstName
             lastName
             phone
+            billingAddress {
+              firstName
+              lastName
+              company
+              address1
+              address2
+              city
+              province
+              postalCode
+              countryCode
+              phone
+            }
             addresses {
               id
               firstName

@@ -2,13 +2,12 @@ import Addresses from "@storefront/modules/checkout/components/addresses"
 import Shipping from "@storefront/modules/checkout/components/shipping"
 import Payment from "@storefront/modules/checkout/components/payment"
 import Review from "@storefront/modules/checkout/components/review"
-import {
-  createPaymentSessions,
-  getUser,
-  listShippingMethods,
-} from "@storefront/lib/data"
+
 import { cookies } from "next/headers"
 import { getCheckoutStep } from "@storefront/lib/util/get-checkout-step"
+import { createPaymentSessions } from "@storefront/lib/data/cart"
+import { getUser } from "@storefront/lib/data/user"
+import { listShippingMethods } from "@storefront/lib/data/shipping"
 
 export default async function CheckoutForm() {
   const cartId = cookies().get("_openfront_cart_id")?.value

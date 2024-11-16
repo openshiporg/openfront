@@ -4,7 +4,7 @@ import { notFound } from "next/navigation"
 import Wrapper from "@storefront/modules/checkout/components/payment-wrapper"
 import CheckoutForm from "@storefront/modules/checkout/templates/checkout-form"
 import CheckoutSummary from "@storefront/modules/checkout/templates/checkout-summary"
-import { getCart } from "@storefront/lib/data"
+import { getCart } from "@storefront/lib/data/cart"
 
 export const metadata = {
   title: "Checkout",

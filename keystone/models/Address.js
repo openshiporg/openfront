@@ -1,18 +1,32 @@
 import { list } from "@keystone-6/core";
-import { json, text, relationship } from "@keystone-6/core/fields";
-import { permissions } from "../access";
+import { json, text, relationship, checkbox } from "@keystone-6/core/fields";
+import { permissions, isSignedIn } from "../access";
 import { trackingFields } from "./trackingFields";
+
+const canManageAddresses = ({ session }) => {
+  if (!isSignedIn({ session })) {
+    return false;
+  }
+  if (permissions.canManageUsers({ session })) {
+    return true;
+  }
+  // Users can manage addresses where they are the owner
+  return { user: { id: { equals: session?.itemId } } };
+};
 
 export const Address = list({
   access: {
     operation: {
-      query: ({ session }) =>
-        permissions.canReadUsers({ session }) ||
-        permissions.canManageUsers({ session }),
-      create: permissions.canManageUsers,
+      create: isSignedIn,
+      query: isSignedIn,
       update: permissions.canManageUsers,
       delete: permissions.canManageUsers,
     },
+    filter: {
+      query: canManageAddresses,
+      update: canManageAddresses,
+      delete: canManageAddresses,
+    }
   },
   fields: {
     company: text(),
@@ -25,6 +39,7 @@ export const Address = list({
     province: text(),
     postalCode: text(),
     phone: text(),
+    isBilling: checkbox({ defaultValue: false }),
     metadata: json(),
     country: relationship({
       ref: "Country.addresses",

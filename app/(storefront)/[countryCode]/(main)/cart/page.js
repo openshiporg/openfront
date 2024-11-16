@@ -1,7 +1,6 @@
-import { cookies } from "next/headers"
 import CartTemplate from "@storefront/modules/cart/templates"
 import { retrieveCart } from "@storefront/modules/cart/actions"
-import { getUser } from "@storefront/lib/data"
+import { getUser } from "@storefront/lib/data/user"
 
 export const metadata = {
   title: "Cart",

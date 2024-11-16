@@ -1,4 +1,5 @@
-import { getProductsListWithSort, getRegion } from "@storefront/lib/data"
+import { getProductsListWithSort } from "@storefront/lib/data/products"
+import { getRegion } from "@storefront/lib/data/regions"
 import ProductPreview from "@storefront/modules/products/components/product-preview"
 import { Pagination } from "@storefront/modules/store/components/pagination"
 

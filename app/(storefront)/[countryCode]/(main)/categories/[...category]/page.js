@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 
+import CategoryTemplate from "@storefront/modules/categories/templates";
 import {
   getCategoryByHandle,
   listCategories,
-  listRegions,
-} from "@storefront/lib/data";
-import CategoryTemplate from "@storefront/modules/categories/templates";
+} from "@storefront/lib/data/categories";
+import { listRegions } from "@storefront/lib/data/regions";
 
 // export async function generateStaticParams() {
 // const product_categories = await listCategories()

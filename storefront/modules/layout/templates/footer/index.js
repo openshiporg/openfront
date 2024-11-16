@@ -1,9 +1,11 @@
 import { Text, clx } from "@medusajs/ui"
-
-import { getCategoriesList, getCollectionsList } from "@storefront/lib/data"
+import { getCategoriesList } from "@storefront/lib/data/categories"
+import { getCollectionsList } from "@storefront/lib/data/collections"
 
 import LocalizedClientLink from "@storefront/modules/common/components/localized-client-link"
 import OpenfrontCTA from "@storefront/modules/layout/components/openfront-cta"
+
+
 
 export default async function Footer() {
   const { collections } = await getCollectionsList(0, 6)

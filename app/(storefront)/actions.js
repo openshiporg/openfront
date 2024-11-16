@@ -2,9 +2,9 @@
 
 import { revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
-import { getCartId } from "@lib/cookies";
-import { getRegion } from "@storefront/lib/data";
 import { updateCart } from "@storefront/modules/cart/actions";
+import { getRegion } from "@storefront/lib/data/regions";
+import { getCartId } from "@storefront/lib/data/cookies";
 
 /**
  * Updates the countrycode param and revalidates the regions cache

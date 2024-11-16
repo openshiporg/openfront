@@ -1,4 +1,5 @@
-import { getCollectionsListByRegion, getRegion } from "@storefront/lib/data";
+import { getCollectionsListByRegion } from "@storefront/lib/data/collections";
+import { getRegion } from "@storefront/lib/data/regions";
 import FeaturedProducts from "@storefront/modules/home/components/featured-products";
 import Hero from "@storefront/modules/home/components/hero";
 import { cache } from "react";

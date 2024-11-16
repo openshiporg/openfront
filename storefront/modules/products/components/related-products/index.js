@@ -1,5 +1,6 @@
-import { getProductsList, getRegion } from "@storefront/lib/data";
 
+import { getProductsList } from "@storefront/lib/data/products";
+import { getRegion } from "@storefront/lib/data/regions";
 import ProductPreview from "../product-preview";
 
 export default async function RelatedProducts({ product, countryCode }) {

@@ -1,4 +1,4 @@
-import { retrieveOrder } from "@storefront/lib/data"
+import { retrieveOrder } from "@storefront/lib/data/orders";
 import OrderCompletedTemplate from "@storefront/modules/order/templates/order-completed-template"
 import { notFound } from "next/navigation"
 

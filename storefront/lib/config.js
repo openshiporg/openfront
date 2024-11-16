@@ -1,7 +1,7 @@
 import { keystoneContext } from "@keystone/keystoneContext";
 import { GraphQLClient } from "graphql-request";
 import { parse } from "graphql";
-import { getAuthHeaders } from "@lib/cookies";
+import PQueue from "p-queue";
 
 const shouldRetry = (error) =>
   error.message?.includes("connection pool") ||
@@ -28,7 +28,6 @@ const getEmptyResponseForQuery = (query) => {
     if (def.kind === "OperationDefinition") {
       def.selectionSet.selections.forEach((selection) => {
         if (selection.kind === "Field") {
-          // Check if field type suggests an array
           const name = selection.name.value;
           const isPlural = name.endsWith("s");
           emptyResponse[name] = isPlural ? [] : null;
@@ -40,65 +39,34 @@ const getEmptyResponseForQuery = (query) => {
   return emptyResponse;
 };
 
+// class RetryingGraphQLClient extends GraphQLClient {
+//   async request(query, variables, requestHeaders) {
+//     try {
+//       return await super.request(query, variables, requestHeaders);
+//     } catch (error) {
+//       if (error.response?.status === 429) {
+//         const retryAfter = parseInt(error.response.headers.get("retry-after") || "5");
+//         await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+//         return await super.request(query, variables, requestHeaders);
+//       }
+//       throw error;
+//     }
+//   }
+// }
+
 class RetryingGraphQLClient extends GraphQLClient {
   async request(query, variables, requestHeaders) {
-    // Get auth headers and merge with any passed headers
-    const authHeaders = getAuthHeaders();
-    const headers = {
-      ...authHeaders,
-      ...requestHeaders
-    };
-
-    try {
-      return await super.request(query, variables, headers);
-    } catch (error) {
-      if (error.response?.status === 429) { // Too Many Requests
-        const retryAfter = parseInt(error.response.headers.get("retry-after") || "5");
-        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-        return await super.request(query, variables, headers);
-      }
-      throw error;
-    }
-  }
-}
-
-export const openfrontClient = new RetryingGraphQLClient(
-  `${process.env.FRONTEND_URL}/api/graphql`,
-);
-
-export const openfrontClientKeystone = {
-  request: async (query, variables = {}) => {
     while (true) {
       try {
-        const cleanVariables = Object.fromEntries(
-          Object.entries(variables).filter(([_, value]) => value !== undefined)
-        );
-
-        const { data, errors } = await keystoneContext.graphql.raw({
-          query,
-          ...(Object.keys(cleanVariables).length > 0 && {
-            variables: cleanVariables,
-          }),
-        });
-
-        if (errors) {
-          const error = new Error(errors[0].message);
-          error.response = { errors };
-
-          if (shouldRetry(error)) {
-            console.log(
-              `Retrying in 1s due to GraphQL error: ${error.message}`
-            );
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-            continue;
-          }
-
-          throw error;
-        }
-
-        return JSON.parse(JSON.stringify(data));
+        const response = await super.request(query, variables, requestHeaders);
+        return response;
       } catch (error) {
-        console.log(`Caught error: ${error.message}`);
+        console.log(`GraphQL error: ${error.message}`);
+
+        if (isEndpointUnreachable(error)) {
+          console.log("Endpoint unreachable, returning empty data");
+          return getEmptyResponseForQuery(query);
+        }
 
         if (shouldRetry(error)) {
           console.log(`Retrying in 1s: ${error.message}`);
@@ -109,5 +77,88 @@ export const openfrontClientKeystone = {
         throw error;
       }
     }
+  }
+}
+
+export const openfrontClient = new RetryingGraphQLClient(
+  `${process.env.FRONTEND_URL}/api/graphql`,
+  // { fetch }
+);
+
+// export const openfrontClientKeystone = {
+//   request: async (query, variables = {}) => {
+//     while (true) {
+//       try {
+//         const cleanVariables = Object.fromEntries(
+//           Object.entries(variables).filter(([_, value]) => value !== undefined)
+//         );
+
+//         const { data, errors } = await keystoneContext.graphql.raw({
+//           query,
+//           ...(Object.keys(cleanVariables).length > 0 && {
+//             variables: cleanVariables,
+//           }),
+//         });
+
+//         if (errors) {
+//           const error = new Error(errors[0].message);
+//           error.response = { errors };
+
+//           if (shouldRetry(error)) {
+//             console.log(
+//               `Retrying in 1s due to GraphQL error: ${error.message}`
+//             );
+//             await new Promise((resolve) => setTimeout(resolve, 1000));
+//             continue;
+//           }
+
+//           throw error;
+//         }
+
+//         return JSON.parse(JSON.stringify(data));
+//       } catch (error) {
+//         console.log(`Caught error: ${error.message}`);
+
+//         if (shouldRetry(error)) {
+//           console.log(`Retrying in 1s: ${error.message}`);
+//           await new Promise((resolve) => setTimeout(resolve, 1000));
+//           continue;
+//         }
+
+//         throw error;
+//       }
+//     }
+//   },
+// };
+
+// Create a single queue instance for all Keystone GraphQL requests
+const keystoneQueue = new PQueue({
+  concurrency: 5, // Adjust based on your needs
+  interval: 1000,
+  intervalCap: 10,
+});
+
+export const openfrontClientKeystone = {
+  request: async (query, variables = {}) => {
+    return keystoneQueue.add(async () => {
+      const cleanVariables = Object.fromEntries(
+        Object.entries(variables).filter(([_, value]) => value !== undefined)
+      );
+
+      const { data, errors } = await keystoneContext.graphql.raw({
+        query,
+        ...(Object.keys(cleanVariables).length > 0 && {
+          variables: cleanVariables,
+        }),
+      });
+
+      if (errors) {
+        const error = new Error(errors[0].message);
+        error.response = { errors };
+        throw error;
+      }
+
+      return JSON.parse(JSON.stringify(data));
+    });
   },
 };

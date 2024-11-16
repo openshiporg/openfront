@@ -1,10 +1,11 @@
+import { listRegions } from "@storefront/lib/data/regions"
+import { getUser } from "@storefront/lib/data/user"
 import ProfilePhone from "@storefront/modules/account//components/profile-phone"
 import ProfileBillingAddress from "@storefront/modules/account/components/profile-billing-address"
 import ProfileEmail from "@storefront/modules/account/components/profile-email"
 import ProfileName from "@storefront/modules/account/components/profile-name"
 import ProfilePassword from "@storefront/modules/account/components/profile-password"
 
-import { getUser, listRegions } from "@storefront/lib/data"
 import { notFound } from "next/navigation"
 
 export const metadata = {

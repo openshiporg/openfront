@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation"
 
-import { retrieveOrder } from "@storefront/lib/data"
 import OrderDetailsTemplate from "@storefront/modules/order/templates/order-details-template"
+import { retrieveOrder } from "@storefront/lib/data/orders"
 
 // export async function generateMetadata(
 //   {

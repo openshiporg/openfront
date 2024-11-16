@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { revalidateTag } from "next/cache";
 import { gql } from "graphql-request";
 import { openfrontClient } from "@storefront/lib/config";
-import { getCartId, setCartId, removeCartId } from "@lib/cookies";
+import { getCartId, setCartId, removeCartId } from "@storefront/lib/data/cookies";
 
 export async function retrieveCart() {
   const cartId = getCartId();

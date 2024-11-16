@@ -1,6 +1,6 @@
+import { getUserWithOrders } from "@storefront/lib/data/user";
 import Overview from "@storefront/modules/account/components/overview"
 import { notFound } from "next/navigation"
-import { getUserWithOrders } from "@storefront/lib/data"
 
 export const metadata = {
   title: "Account",

@@ -1,11 +1,8 @@
 import { notFound } from "next/navigation";
 
-import {
-  getCollectionByHandle,
-  getCollectionsList,
-  listRegions,
-} from "@storefront/lib/data";
 import CollectionTemplate from "@storefront/modules/collections/templates";
+import { getCollectionByHandle, getCollectionsList } from "@storefront/lib/data/collections";
+import { listRegions } from "@storefront/lib/data/regions";
 
 export const PRODUCT_LIMIT = 12;
 

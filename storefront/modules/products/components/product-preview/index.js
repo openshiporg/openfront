@@ -1,10 +1,10 @@
 import { Text } from "@medusajs/ui"
 
-import { retrievePricedProductById } from "@storefront/lib/data"
 import { getProductPrice } from "@storefront/lib/util/get-product-price"
 import LocalizedClientLink from "@storefront/modules/common/components/localized-client-link"
 import Thumbnail from "../thumbnail"
 import PreviewPrice from "./price"
+import { retrievePricedProductById } from "@storefront/lib/data/products"
 
 export default async function ProductPreview({
   productPreview,

@@ -1,5 +1,5 @@
+import { listCustomerOrders } from "@storefront/lib/data/orders"
 import OrderOverview from "@storefront/modules/account/components/order-overview"
-import { listCustomerOrders } from "@storefront/lib/data"
 import { notFound } from "next/navigation"
 
 export const metadata = {

@@ -12,7 +12,7 @@ type User {
   apiKeys(where: ApiKeyWhereInput! = {}, orderBy: [ApiKeyOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ApiKeyWhereUniqueInput): [ApiKey!]
   apiKeysCount(where: ApiKeyWhereInput! = {}): Int
   metadata: JSON
-  billingAddress: String
+  billingAddress: Address
   phone: String
   hasAccount: Boolean
   addresses(where: AddressWhereInput! = {}, orderBy: [AddressOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: AddressWhereUniqueInput): [Address!]
@@ -53,7 +53,6 @@ input UserWhereInput {
   password: PasswordFilter
   role: RoleWhereInput
   apiKeys: ApiKeyManyRelationFilter
-  billingAddress: StringFilter
   phone: StringFilter
   hasAccount: BooleanFilter
   addresses: AddressManyRelationFilter
@@ -184,7 +183,6 @@ input UserOrderByInput {
   id: OrderDirection
   name: OrderDirection
   email: OrderDirection
-  billingAddress: OrderDirection
   phone: OrderDirection
   hasAccount: OrderDirection
   createdAt: OrderDirection
@@ -205,7 +203,6 @@ input UserUpdateInput {
   role: RoleRelateToOneForUpdateInput
   apiKeys: ApiKeyRelateToManyForUpdateInput
   metadata: JSON
-  billingAddress: String
   phone: String
   hasAccount: Boolean
   addresses: AddressRelateToManyForUpdateInput
@@ -280,7 +277,6 @@ input UserCreateInput {
   role: RoleRelateToOneForCreateInput
   apiKeys: ApiKeyRelateToManyForCreateInput
   metadata: JSON
-  billingAddress: String
   phone: String
   hasAccount: Boolean
   addresses: AddressRelateToManyForCreateInput
@@ -2518,6 +2514,7 @@ type Address {
   province: String
   postalCode: String
   phone: String
+  isBilling: Boolean
   metadata: JSON
   country: Country
   user: User
@@ -2553,6 +2550,7 @@ input AddressWhereInput {
   province: StringFilter
   postalCode: StringFilter
   phone: StringFilter
+  isBilling: BooleanFilter
   country: CountryWhereInput
   user: UserWhereInput
   cart: CartWhereInput
@@ -2576,6 +2574,7 @@ input AddressOrderByInput {
   province: OrderDirection
   postalCode: OrderDirection
   phone: OrderDirection
+  isBilling: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
 }
@@ -2591,6 +2590,7 @@ input AddressUpdateInput {
   province: String
   postalCode: String
   phone: String
+  isBilling: Boolean
   metadata: JSON
   country: CountryRelateToOneForUpdateInput
   user: UserRelateToOneForUpdateInput
@@ -2625,6 +2625,7 @@ input AddressCreateInput {
   province: String
   postalCode: String
   phone: String
+  isBilling: Boolean
   metadata: JSON
   country: CountryRelateToOneForCreateInput
   user: UserRelateToOneForCreateInput
