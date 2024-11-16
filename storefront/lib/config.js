@@ -82,7 +82,7 @@ class RetryingGraphQLClient extends GraphQLClient {
 
 export const openfrontClient = new RetryingGraphQLClient(
   `${process.env.FRONTEND_URL}/api/graphql`,
-  // { fetch }
+  { fetch }
 );
 
 // export const openfrontClientKeystone = {
