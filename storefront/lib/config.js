@@ -9,6 +9,7 @@ const shouldRetry = (error) =>
   error.code === "P2024" ||
   error.message?.includes("Code: 502") ||
   error.response?.status === 502 ||
+  error.message?.includes("too many clients already") ||
   (error.response?.errors || []).some((e) => e.message?.includes("502"));
 
 const isEndpointUnreachable = (error) =>
@@ -133,9 +134,10 @@ export const openfrontClient = new RetryingGraphQLClient(
 
 // Create a single queue instance for all Keystone GraphQL requests
 const keystoneQueue = new PQueue({
-  concurrency: 5, // Adjust based on your needs
+  concurrency: 3, // Reduced from 5 to limit concurrent connections
   interval: 1000,
-  intervalCap: 10,
+  intervalCap: 5, // Reduced from 10 to be more conservative
+  carryoverConcurrencyCount: true
 });
 
 export const openfrontClientKeystone = {
