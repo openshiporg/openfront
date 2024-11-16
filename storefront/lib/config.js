@@ -1,7 +1,6 @@
 import { keystoneContext } from "@keystone/keystoneContext";
 import { GraphQLClient } from "graphql-request";
 import { parse } from "graphql";
-import PQueue from "p-queue";
 
 const shouldRetry = (error) =>
   error.message?.includes("connection pool") ||
@@ -40,20 +39,6 @@ const getEmptyResponseForQuery = (query) => {
   return emptyResponse;
 };
 
-// class RetryingGraphQLClient extends GraphQLClient {
-//   async request(query, variables, requestHeaders) {
-//     try {
-//       return await super.request(query, variables, requestHeaders);
-//     } catch (error) {
-//       if (error.response?.status === 429) {
-//         const retryAfter = parseInt(error.response.headers.get("retry-after") || "5");
-//         await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-//         return await super.request(query, variables, requestHeaders);
-//       }
-//       throw error;
-//     }
-//   }
-// }
 
 class RetryingGraphQLClient extends GraphQLClient {
   async request(query, variables, requestHeaders) {
@@ -67,67 +52,17 @@ class RetryingGraphQLClient extends GraphQLClient {
   }
 }
 
-export const openfrontClient = new RetryingGraphQLClient(
+export const openfrontClient2 = new RetryingGraphQLClient(
   `${process.env.FRONTEND_URL}/api/graphql`,
   // { fetch }
 );
 
-// export const openfrontClientKeystone = {
-//   request: async (query, variables = {}) => {
-//     while (true) {
-//       try {
-//         const cleanVariables = Object.fromEntries(
-//           Object.entries(variables).filter(([_, value]) => value !== undefined)
-//         );
-
-//         const { data, errors } = await keystoneContext.graphql.raw({
-//           query,
-//           ...(Object.keys(cleanVariables).length > 0 && {
-//             variables: cleanVariables,
-//           }),
-//         });
-
-//         if (errors) {
-//           const error = new Error(errors[0].message);
-//           error.response = { errors };
-
-//           if (shouldRetry(error)) {
-//             console.log(
-//               `Retrying in 1s due to GraphQL error: ${error.message}`
-//             );
-//             await new Promise((resolve) => setTimeout(resolve, 1000));
-//             continue;
-//           }
-
-//           throw error;
-//         }
-
-//         return JSON.parse(JSON.stringify(data));
-//       } catch (error) {
-//         console.log(`Caught error: ${error.message}`);
-
-//         if (shouldRetry(error)) {
-//           console.log(`Retrying in 1s: ${error.message}`);
-//           await new Promise((resolve) => setTimeout(resolve, 1000));
-//           continue;
-//         }
-
-//         throw error;
-//       }
-//     }
-//   },
-// };
-
-// Create a single queue instance for all Keystone GraphQL requests
-const keystoneQueue = new PQueue({
-  concurrency: 3,
-  interval: 1000,
-  intervalCap: 5,
-});
-
-export const openfrontClientKeystone = {
+export const openfrontClient = {
   request: async (query, variables = {}) => {
-    return keystoneQueue.add(async () => {
+    const maxRetries = 12; // Try for up to 1 minute
+    let attempt = 0;
+
+    while (attempt < maxRetries) {
       try {
         const cleanVariables = Object.fromEntries(
           Object.entries(variables).filter(([_, value]) => value !== undefined)
@@ -141,15 +76,35 @@ export const openfrontClientKeystone = {
         });
 
         if (errors) {
-          console.log(`GraphQL errors: ${JSON.stringify(errors)}`);
-          return getEmptyResponseForQuery(query);
+          throw new Error(errors[0].message);
         }
 
-        return JSON.parse(JSON.stringify(data));
+        const result = JSON.parse(JSON.stringify(data));
+        
+        // Explicitly disconnect after successful query
+        if (keystoneContext.prisma?.$disconnect) {
+          await keystoneContext.prisma.$disconnect();
+        }
+        
+        return result;
       } catch (error) {
-        console.log(`Caught error: ${error.message}`);
+        console.log(`Attempt ${attempt + 1}/${maxRetries} failed: ${error.message}`);
+        
+        if (error.message?.includes("too many clients already")) {
+          attempt++;
+          if (attempt < maxRetries) {
+            console.log("Too many clients, waiting 5 seconds before retry...");
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            continue;
+          }
+        }
+        
+        console.log("Returning empty response due to error");
         return getEmptyResponseForQuery(query);
       }
-    });
+    }
+
+    console.log("Max retries reached, returning empty response");
+    return getEmptyResponseForQuery(query);
   },
 };

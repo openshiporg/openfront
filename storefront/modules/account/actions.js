@@ -3,7 +3,7 @@ import { revalidateTag } from "next/cache";
 import { gql } from "graphql-request";
 import { openfrontClient } from "@storefront/lib/config";
 import { redirect } from "next/navigation";
-import { removeAuthToken, setAuthToken } from "@storefront/lib/data/cookies";
+import { getAuthHeaders, removeAuthToken, setAuthToken } from "@storefront/lib/data/cookies";
 
 export async function signUp(_currentState, formData) {
   const customer = {
@@ -15,6 +15,8 @@ export async function signUp(_currentState, formData) {
   }
 
   try {
+    const headers = getAuthHeaders();
+
     // First create the user
     const { createUser } = await openfrontClient.request(
       gql`
@@ -32,7 +34,8 @@ export async function signUp(_currentState, formData) {
           name: `${customer.firstName} ${customer.lastName}`,
           phone: customer.phone
         }
-      }
+      },
+      headers
     );
 
     // Then authenticate them
@@ -55,7 +58,8 @@ export async function signUp(_currentState, formData) {
       {
         email: customer.email,
         password: customer.password
-      }
+      },
+      headers
     );
 
     if (authenticateUserWithPassword.__typename === "UserAuthenticationWithPasswordFailure") {
@@ -82,6 +86,8 @@ export async function login(_currentState, formData) {
   const password = formData.get("password");
 
   try {
+    const headers = getAuthHeaders();
+
     const { authenticateUserWithPassword } = await openfrontClient.request(
       gql`
         mutation AuthenticateUser($email: String!, $password: String!) {
@@ -99,7 +105,8 @@ export async function login(_currentState, formData) {
           }
         }
       `,
-      { email, password }
+      { email, password },
+      headers
     );
 
 
@@ -125,12 +132,16 @@ export async function login(_currentState, formData) {
 
 export async function signOut(countryCode) {
   try {
+    const headers = getAuthHeaders();
+
     await openfrontClient.request(
       gql`
         mutation EndSession {
           endSession
         }
-      `
+      `,
+      {},
+      headers
     );
 
     // Remove the auth token cookie
@@ -145,6 +156,8 @@ export async function signOut(countryCode) {
 
 export async function updateCustomerBillingAddress(prevState, formData) {
   try {
+    const headers = getAuthHeaders();
+
     await openfrontClient.request(
       gql`
         mutation UpdateBillingAddress($address: BillingAddressInput!) {
@@ -179,7 +192,8 @@ export async function updateCustomerBillingAddress(prevState, formData) {
           postalCode: formData.get("billingAddress.postalCode"),
           countryCode: formData.get("billingAddress.countryCode"),
         }
-      }
+      },
+      headers
     );
     revalidateTag("customer");
     return { success: true, error: null };
@@ -191,6 +205,8 @@ export async function updateCustomerBillingAddress(prevState, formData) {
 
 export async function updateCustomerEmail(prevState, formData) {
   try {
+    const headers = getAuthHeaders();
+
     await openfrontClient.request(
       gql`
         mutation UpdateUser($data: UserUpdateProfileInput!) {
@@ -204,7 +220,8 @@ export async function updateCustomerEmail(prevState, formData) {
         data: {
           email: formData.get("email")
         }
-      }
+      },
+      headers
     );
     revalidateTag("customer");
     return { success: true, error: null };
@@ -215,6 +232,8 @@ export async function updateCustomerEmail(prevState, formData) {
 
 export async function updateCustomerName(prevState, formData) {
   try {
+    const headers = getAuthHeaders();
+
     await openfrontClient.request(
       gql`
         mutation UpdateUser($data: UserUpdateProfileInput!) {
@@ -228,7 +247,8 @@ export async function updateCustomerName(prevState, formData) {
         data: {
           name: formData.get("firstName") + " " + formData.get("lastName")
         }
-      }
+      },
+      headers
     );
     revalidateTag("customer");
     return { success: true, error: null };
@@ -239,6 +259,8 @@ export async function updateCustomerName(prevState, formData) {
 
 export async function updateCustomerPassword(prevState, formData) {
   try {
+    const headers = getAuthHeaders();
+
     await openfrontClient.request(
       gql`
         mutation UpdatePassword($oldPassword: String!, $newPassword: String!, $confirmPassword: String!) {
@@ -255,7 +277,8 @@ export async function updateCustomerPassword(prevState, formData) {
         oldPassword: formData.get("oldPassword"),
         newPassword: formData.get("newPassword"),
         confirmPassword: formData.get("confirmPassword")
-      }
+      },
+      headers
     );
     
     revalidateTag("customer");
@@ -269,6 +292,8 @@ export async function updateCustomerPassword(prevState, formData) {
 
 export async function updateCustomerPhone(prevState, formData) {
   try {
+    const headers = getAuthHeaders();
+
     await openfrontClient.request(
       gql`
         mutation UpdateUser($data: UserUpdateProfileInput!) {
@@ -282,7 +307,8 @@ export async function updateCustomerPhone(prevState, formData) {
         data: {
           phone: formData.get("phone")
         }
-      }
+      },
+      headers
     );
     revalidateTag("customer");
     return { success: true, error: null };
@@ -293,6 +319,8 @@ export async function updateCustomerPhone(prevState, formData) {
 
 export async function addCustomerShippingAddress(prevState, formData) {
   try {
+    const headers = getAuthHeaders();
+
     await openfrontClient.request(
       gql`
         mutation CreateAddress($data: UserUpdateProfileInput!) {
@@ -321,7 +349,8 @@ export async function addCustomerShippingAddress(prevState, formData) {
             }]
           }
         }
-      }
+      },
+      headers
     );
     revalidateTag("customer");
     return { success: true, error: null };
@@ -332,6 +361,8 @@ export async function addCustomerShippingAddress(prevState, formData) {
 
 export async function updateCustomerShippingAddress(prevState, formData) {
   try {
+    const headers = getAuthHeaders();
+
     await openfrontClient.request(
       gql`
         mutation UpdateAddress($data: UserUpdateProfileInput!) {
@@ -363,7 +394,8 @@ export async function updateCustomerShippingAddress(prevState, formData) {
             }]
           }
         }
-      }
+      },
+      headers
     );
     revalidateTag("customer");
     return { success: true, error: null };
@@ -374,6 +406,8 @@ export async function updateCustomerShippingAddress(prevState, formData) {
 
 export async function deleteCustomerShippingAddress(addressId) {
   try {
+    const headers = getAuthHeaders();
+
     await openfrontClient.request(
       gql`
         mutation DeleteAddress($data: UserUpdateProfileInput!) {
@@ -391,7 +425,8 @@ export async function deleteCustomerShippingAddress(addressId) {
             disconnect: [{ id: addressId }]
           }
         }
-      }
+      },
+      headers
     );
     revalidateTag("customer");
     return { success: true, error: null };
