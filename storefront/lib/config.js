@@ -57,26 +57,12 @@ const getEmptyResponseForQuery = (query) => {
 
 class RetryingGraphQLClient extends GraphQLClient {
   async request(query, variables, requestHeaders) {
-    while (true) {
-      try {
-        const response = await super.request(query, variables, requestHeaders);
-        return response;
-      } catch (error) {
-        console.log(`GraphQL error: ${error.message}`);
-
-        if (isEndpointUnreachable(error)) {
-          console.log("Endpoint unreachable, returning empty data");
-          return getEmptyResponseForQuery(query);
-        }
-
-        if (shouldRetry(error)) {
-          console.log(`Retrying in 1s: ${error.message}`);
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          continue;
-        }
-
-        throw error;
-      }
+    try {
+      const response = await super.request(query, variables, requestHeaders);
+      return response;
+    } catch (error) {
+      console.log(`GraphQL error: ${error.message}`);
+      return getEmptyResponseForQuery(query);
     }
   }
 }
@@ -134,33 +120,36 @@ export const openfrontClient = new RetryingGraphQLClient(
 
 // Create a single queue instance for all Keystone GraphQL requests
 const keystoneQueue = new PQueue({
-  concurrency: 3, // Reduced from 5 to limit concurrent connections
+  concurrency: 3,
   interval: 1000,
-  intervalCap: 5, // Reduced from 10 to be more conservative
-  carryoverConcurrencyCount: true
+  intervalCap: 5,
 });
 
 export const openfrontClientKeystone = {
   request: async (query, variables = {}) => {
     return keystoneQueue.add(async () => {
-      const cleanVariables = Object.fromEntries(
-        Object.entries(variables).filter(([_, value]) => value !== undefined)
-      );
+      try {
+        const cleanVariables = Object.fromEntries(
+          Object.entries(variables).filter(([_, value]) => value !== undefined)
+        );
 
-      const { data, errors } = await keystoneContext.graphql.raw({
-        query,
-        ...(Object.keys(cleanVariables).length > 0 && {
-          variables: cleanVariables,
-        }),
-      });
+        const { data, errors } = await keystoneContext.graphql.raw({
+          query,
+          ...(Object.keys(cleanVariables).length > 0 && {
+            variables: cleanVariables,
+          }),
+        });
 
-      if (errors) {
-        const error = new Error(errors[0].message);
-        error.response = { errors };
-        throw error;
+        if (errors) {
+          console.log(`GraphQL errors: ${JSON.stringify(errors)}`);
+          return getEmptyResponseForQuery(query);
+        }
+
+        return JSON.parse(JSON.stringify(data));
+      } catch (error) {
+        console.log(`Caught error: ${error.message}`);
+        return getEmptyResponseForQuery(query);
       }
-
-      return JSON.parse(JSON.stringify(data));
     });
   },
 };
