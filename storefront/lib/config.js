@@ -52,7 +52,7 @@ class RetryingGraphQLClient extends GraphQLClient {
   }
 }
 
-export const openfrontClient = new RetryingGraphQLClient(
+export const openfrontClient2 = new RetryingGraphQLClient(
   `${process.env.FRONTEND_URL}/api/graphql`
   // { fetch }
 );
@@ -61,7 +61,7 @@ const sessionSecret =
   process.env.SESSION_SECRET || "this secret should only be used in testing";
 const ironOptions = Iron.defaults;
 
-export const openfrontClient2 = {
+export const openfrontClient = {
   request: async (query, variables = {}, headers) => {
     try {
       const cleanVariables = Object.fromEntries(
