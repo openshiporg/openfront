@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 import { checkAuth } from "@keystone/utils/checkAuth";
-import { gql } from "graphql-request";
-import { openfrontClient } from "@storefront/lib/config";
+import { GraphQLClient, gql } from "graphql-request";
 
 const basePath = "/dashboard";
 const DEFAULT_REGION = process.env.NEXT_PUBLIC_DEFAULT_REGION || "us";
+
+function gqlClient(req) {
+  return new GraphQLClient(`${process.env.FRONTEND_URL}/api/graphql`, {
+    headers: req ? { cookie: req.cookies } : undefined,
+    credentials: "include",
+    fetch,
+  });
+}
 
 const regionMapCache = {
   regionMap: new Map(),
@@ -15,22 +22,19 @@ async function getRegionMap(request) {
   const { regionMap, regionMapUpdated } = regionMapCache;
 
   if (!regionMap.keys().next().value || regionMapUpdated < Date.now() - 3600 * 1000) {
+    const client = gqlClient(request);
     try {
-      const { regions } = await openfrontClient.request(
-        gql`
-          query {
-            regions {
-              countries {
-                id
-                iso2
-                iso3
-              }
+      const { regions } = await client.request(gql`
+        query {
+          regions {
+            countries {
+              id
+              iso2
+              iso3
             }
           }
-        `,
-        {},
-        request.cookies ? { cookie: request.cookies } : undefined
-      );
+        }
+      `);
 
       regionMapCache.regionMap.clear();
       if (regions?.length) {
@@ -40,10 +44,12 @@ async function getRegionMap(request) {
           });
         });
       } else {
+        // Only add 'us' as fallback if no regions were returned
         regionMapCache.regionMap.set('us', { countries: [{ iso2: 'US' }] });
       }
     } catch (error) {
       console.error('Error fetching regions:', error);
+      // Only add 'us' as fallback if there was an error and map is empty
       if (!regionMapCache.regionMap.size) {
         regionMapCache.regionMap.set('us', { countries: [{ iso2: 'US' }] });
       }
