@@ -8,8 +8,8 @@ import {
   retrievePricedProductById,
 } from "@storefront/lib/data/products";
 import { getRegion, listRegions } from "@storefront/lib/data/regions";
-import { gql } from "graphql-tag";
-import { openfrontClient } from "@storefront/lib/config";
+// import { gql } from "graphql-tag";
+// import { openfrontClient } from "@storefront/lib/config";
 
 // export async function generateStaticParams() {
 //   try {
