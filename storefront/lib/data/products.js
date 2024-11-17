@@ -234,21 +234,47 @@ export const retrievePricedProductByHandle = cache(async function ({
   });
 });
 
-export const getProductByHandle = cache(async function (handle) {
+export const getProductByHandle = cache(async function ({ handle, regionId }) {
   const GET_PRODUCT_BY_HANDLE_QUERY = gql`
-    query GetProductByHandle($handle: String!) {
+    query GetProductByHandle($handle: String!, $regionId: ID!) {
       product(where: { handle: $handle }) {
         id
         title
         handle
         thumbnail
+        productCollections {
+          id
+          title
+          handle
+        }
+        productImages {
+          id
+          image {
+            url
+          }
+        }
+        productOptions {
+          id
+          title
+          metadata
+          productOptionValues {
+            id
+            value
+          }
+        }
         productVariants {
           id
           title
-          prices {
+          prices(where: { region: { id: { equals: $regionId } } }) {
+            id
             amount
             currency {
               code
+            }
+            calculatedPrice {
+              calculatedAmount
+              originalAmount
+              currencyCode
             }
           }
         }
@@ -256,9 +282,15 @@ export const getProductByHandle = cache(async function (handle) {
     }
   `;
 
-  const data = await openfrontClient.request(GET_PRODUCT_BY_HANDLE_QUERY, {
-    handle,
-  });
+  const data = await openfrontClient.request(GET_PRODUCT_BY_HANDLE_QUERY, 
+    {
+      handle,
+      regionId,
+    },
+    {
+      next: { tags: ["products"] }
+    }
+  );
   return { product: data.product };
 });
 

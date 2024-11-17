@@ -1,6 +1,7 @@
 import { keystoneContext } from "@keystone/keystoneContext";
 import { GraphQLClient } from "graphql-request";
 import { parse } from "graphql";
+import Iron from "@hapi/iron";
 
 const shouldRetry = (error) =>
   error.message?.includes("connection pool") ||
@@ -39,7 +40,6 @@ const getEmptyResponseForQuery = (query) => {
   return emptyResponse;
 };
 
-
 class RetryingGraphQLClient extends GraphQLClient {
   async request(query, variables, requestHeaders) {
     try {
@@ -53,58 +53,56 @@ class RetryingGraphQLClient extends GraphQLClient {
 }
 
 export const openfrontClient2 = new RetryingGraphQLClient(
-  `${process.env.FRONTEND_URL}/api/graphql`,
+  `${process.env.FRONTEND_URL}/api/graphql`
   // { fetch }
 );
 
+const sessionSecret =
+  process.env.SESSION_SECRET || "this secret should only be used in testing";
+const ironOptions = Iron.defaults;
+
 export const openfrontClient = {
-  request: async (query, variables = {}) => {
-    const maxRetries = 12; // Try for up to 1 minute
-    let attempt = 0;
+  request: async (query, variables = {}, headers) => {
+    try {
+      const cleanVariables = Object.fromEntries(
+        Object.entries(variables).filter(([_, value]) => value !== undefined)
+      );
 
-    while (attempt < maxRetries) {
-      try {
-        const cleanVariables = Object.fromEntries(
-          Object.entries(variables).filter(([_, value]) => value !== undefined)
-        );
+      let context = keystoneContext;
 
-        const { data, errors } = await keystoneContext.graphql.raw({
-          query,
-          ...(Object.keys(cleanVariables).length > 0 && {
-            variables: cleanVariables,
-          }),
-        });
-
-        if (errors) {
-          throw new Error(errors[0].message);
+      // Only attempt to handle session if headers were provided
+      if (headers?.authorization) {
+        const sessionToken = headers.authorization.replace("Bearer ", "");
+        try {
+          const session = await Iron.unseal(
+            sessionToken,
+            sessionSecret,
+            ironOptions
+          );
+          context = keystoneContext.withSession({
+            ...session,
+            data: {},
+          });
+        } catch (err) {
+          console.log("Failed to unseal session token:", err);
+          context = keystoneContext;
+          // Continue with base context if session unsealing fails
         }
-
-        const result = JSON.parse(JSON.stringify(data));
-        
-        // Explicitly disconnect after successful query
-        if (keystoneContext.prisma?.$disconnect) {
-          await keystoneContext.prisma.$disconnect();
-        }
-        
-        return result;
-      } catch (error) {
-        console.log(`Attempt ${attempt + 1}/${maxRetries} failed: ${error.message}`);
-        
-        if (error.message?.includes("too many clients already")) {
-          attempt++;
-          if (attempt < maxRetries) {
-            console.log("Too many clients, waiting 5 seconds before retry...");
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            continue;
-          }
-        }
-        
-        console.log("Returning empty response due to error");
-        return getEmptyResponseForQuery(query);
       }
-    }
 
-    console.log("Max retries reached, returning empty response");
-    return getEmptyResponseForQuery(query);
+      const { data, errors } = await context.graphql.raw({
+        query,
+        variables: cleanVariables,
+      });
+
+      if (errors) {
+        throw new Error(errors[0].message);
+      }
+
+      return JSON.parse(JSON.stringify(data));
+    } catch (error) {
+      console.log(`GraphQL error: ${error.message}`);
+      return getEmptyResponseForQuery(query);
+    }
   },
 };

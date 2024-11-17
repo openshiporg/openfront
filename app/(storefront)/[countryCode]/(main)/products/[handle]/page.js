@@ -8,85 +8,92 @@ import {
   retrievePricedProductById,
 } from "@storefront/lib/data/products";
 import { getRegion, listRegions } from "@storefront/lib/data/regions";
+import { gql } from "graphql-tag";
+import { openfrontClient } from "@storefront/lib/config";
 
 export async function generateStaticParams() {
-  const countryCodes = await listRegions().then(({ regions }) =>
-    regions?.map((r) => r.countries.map((c) => c.iso2)).flat()
-  );
+  try {
+    const GET_ALL_PRODUCTS_HANDLES = gql`
+      query GetAllProductHandles {
+        products {
+          handle
+        }
+      }
+    `;
 
-  if (!countryCodes) {
-    return null;
+    const countryCodes = await listRegions().then(({ regions }) =>
+      regions?.map((r) => r.countries.map((c) => c.iso2)).flat()
+    );
+
+    if (!countryCodes) {
+      return [];
+    }
+
+    const { products } = await openfrontClient.request(GET_ALL_PRODUCTS_HANDLES, {}, {
+      next: { tags: ["products"] }
+    });
+
+    return countryCodes
+      .map((countryCode) =>
+        products.map((product) => ({
+          countryCode,
+          handle: product.handle,
+        }))
+      )
+      .flat()
+      .filter((param) => param.handle);
+  } catch (error) {
+    console.error(
+      `Failed to generate static paths for product pages: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }.`
+    );
+    return [];
   }
-
-  const products = await Promise.all(
-    countryCodes.map((countryCode) => {
-      return getProductsList({ countryCode });
-    })
-  ).then((responses) =>
-    responses.map(({ response }) => response.products).flat()
-  );
-
-  const staticParams = countryCodes
-    ?.map((countryCode) =>
-      products.map((product) => ({
-        countryCode,
-        handle: product.handle,
-      }))
-    )
-    .flat();
-
-  return staticParams;
 }
 
 export async function generateMetadata({ params }) {
   const { handle } = params;
+  const region = await getRegion(params.countryCode)
 
-  const { product } = await getProductByHandle(handle);
+  if (!region) {
+    notFound()
+  }
+
+  const { product } = await getProductByHandle({ handle, regionId: region.id });
 
   if (!product) {
     notFound();
   }
 
   return {
-    title: `${product.title} | Medusa Store`,
+    title: `${product.title} | Openfront Store`,
     description: `${product.title}`,
     openGraph: {
-      title: `${product.title} | Medusa Store`,
+      title: `${product.title} | Openfront Store`,
       description: `${product.title}`,
       images: product.thumbnail ? [product.thumbnail] : [],
     },
   };
 }
 
-const getPricedProductByHandle = async (handle, region) => {
-  const { product: pricedProduct } = await retrievePricedProductByHandle({
-    handle: handle,
-    regionId: region.id,
-  });
-
-  if (!pricedProduct || !pricedProduct.id) {
-    return null;
-  }
-
-  return pricedProduct;
-};
-
 export default async function ProductPage({ params }) {
   const region = await getRegion(params.countryCode);
+  const { handle } = params;
 
   if (!region) {
     notFound();
   }
 
-  const pricedProduct = await getPricedProductByHandle(params.handle, region);
+  const { product } = await getProductByHandle({ handle, regionId: region.id });
 
-  if (!pricedProduct) {
+  if (!product) {
     notFound();
   }
 
   return (
     <ProductTemplate
-      product={pricedProduct}
+      product={product}
       region={region}
       countryCode={params.countryCode}
     />
