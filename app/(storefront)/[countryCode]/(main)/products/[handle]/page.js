@@ -11,71 +11,71 @@ import { getRegion, listRegions } from "@storefront/lib/data/regions";
 import { gql } from "graphql-tag";
 import { openfrontClient } from "@storefront/lib/config";
 
-export async function generateStaticParams() {
-  try {
-    const GET_ALL_PRODUCTS_HANDLES = gql`
-      query GetAllProductHandles {
-        products {
-          handle
-        }
-      }
-    `;
+// export async function generateStaticParams() {
+//   try {
+//     const GET_ALL_PRODUCTS_HANDLES = gql`
+//       query GetAllProductHandles {
+//         products {
+//           handle
+//         }
+//       }
+//     `;
 
-    const countryCodes = await listRegions().then(({ regions }) =>
-      regions?.map((r) => r.countries.map((c) => c.iso2)).flat()
-    );
+//     const countryCodes = await listRegions().then(({ regions }) =>
+//       regions?.map((r) => r.countries.map((c) => c.iso2)).flat()
+//     );
 
-    if (!countryCodes) {
-      return [];
-    }
+//     if (!countryCodes) {
+//       return [];
+//     }
 
-    const { products } = await openfrontClient.request(GET_ALL_PRODUCTS_HANDLES, {}, {
-      next: { tags: ["products"] }
-    });
+//     const { products } = await openfrontClient.request(GET_ALL_PRODUCTS_HANDLES, {}, {
+//       next: { tags: ["products"] }
+//     });
 
-    return countryCodes
-      .map((countryCode) =>
-        products.map((product) => ({
-          countryCode,
-          handle: product.handle,
-        }))
-      )
-      .flat()
-      .filter((param) => param.handle);
-  } catch (error) {
-    console.error(
-      `Failed to generate static paths for product pages: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }.`
-    );
-    return [];
-  }
-}
+//     return countryCodes
+//       .map((countryCode) =>
+//         products.map((product) => ({
+//           countryCode,
+//           handle: product.handle,
+//         }))
+//       )
+//       .flat()
+//       .filter((param) => param.handle);
+//   } catch (error) {
+//     console.error(
+//       `Failed to generate static paths for product pages: ${
+//         error instanceof Error ? error.message : "Unknown error"
+//       }.`
+//     );
+//     return [];
+//   }
+// }
 
-export async function generateMetadata({ params }) {
-  const { handle } = params;
-  const region = await getRegion(params.countryCode)
+// export async function generateMetadata({ params }) {
+//   const { handle } = params;
+//   const region = await getRegion(params.countryCode)
 
-  if (!region) {
-    notFound()
-  }
+//   if (!region) {
+//     notFound()
+//   }
 
-  const { product } = await getProductByHandle({ handle, regionId: region.id });
+//   const { product } = await getProductByHandle({ handle, regionId: region.id });
 
-  if (!product) {
-    notFound();
-  }
+//   if (!product) {
+//     notFound();
+//   }
 
-  return {
-    title: `${product.title} | Openfront Store`,
-    description: `${product.title}`,
-    openGraph: {
-      title: `${product.title} | Openfront Store`,
-      description: `${product.title}`,
-      images: product.thumbnail ? [product.thumbnail] : [],
-    },
-  };
-}
+//   return {
+//     title: `${product.title} | Openfront Store`,
+//     description: `${product.title}`,
+//     openGraph: {
+//       title: `${product.title} | Openfront Store`,
+//       description: `${product.title}`,
+//       images: product.thumbnail ? [product.thumbnail] : [],
+//     },
+//   };
+// }
 
 export default async function ProductPage({ params }) {
   const region = await getRegion(params.countryCode);
