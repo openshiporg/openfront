@@ -7614,7 +7614,10 @@ type Mutation {
   updateActiveCart(cartId: ID!, data: CartUpdateInput, code: String): Cart
   updateActiveCartLineItem(cartId: ID!, lineId: ID!, quantity: Int!): Cart
   updateActiveUserPassword(oldPassword: String!, newPassword: String!, confirmPassword: String!): User
-  updateActiveUserBillingAddress(address: BillingAddressInput!): User
+  updateActiveUserAddress(where: AddressWhereUniqueInput!, data: AddressUpdateInput!): User
+  createActiveUserAddress(data: AddressCreateInput!): User
+  seedStorefront: Boolean
+  deleteActiveUserAddress(where: AddressWhereUniqueInput!): Address
 }
 
 union UserAuthenticationWithPasswordResult = UserAuthenticationWithPasswordSuccess | UserAuthenticationWithPasswordFailure
@@ -7974,17 +7977,4 @@ input UserUpdateProfileInput {
   phone: String
   billingAddress: String
   password: String
-}
-
-input BillingAddressInput {
-  firstName: String!
-  lastName: String!
-  company: String
-  address1: String!
-  address2: String
-  city: String!
-  province: String
-  postalCode: String!
-  countryCode: String!
-  phone: String
 }

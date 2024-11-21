@@ -1,12 +1,33 @@
 import { useMemo } from "react";
 
 import { makeDataGetter } from "@keystone-6/core/admin-ui/utils";
-import { gql, useQuery } from "@keystone-6/core/admin-ui/apollo";
+import { gql, useQuery, useMutation } from "@keystone-6/core/admin-ui/apollo";
 import { useKeystone, useList } from "@keystone/keystoneProvider";
-import { PlusIcon } from "lucide-react";
+import { Check, PlusIcon, Terminal } from "lucide-react";
 import { Skeleton } from "../../primitives/default/ui/skeleton";
 import { LoadingIcon } from "../../components/LoadingIcon";
 import { AdminLink } from "../../components/AdminLink";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "../../primitives/default/ui/alert";
+import { Button } from "../../primitives/default/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "../../primitives/default/ui/card";
+import { cn } from "@keystone/utils/cn";
+
+const SEED_STOREFRONT = gql`
+  mutation {
+    seedStorefront
+  }
+`;
 
 const ListCard = ({ listKey, count, hideCreate }) => {
   const list = useList(listKey);
@@ -66,6 +87,11 @@ export const HomePage = () => {
     adminMeta: { lists },
     visibleLists,
   } = useKeystone();
+
+  const [seedStore, { loading: isSeeding }] = useMutation(SEED_STOREFRONT, {
+    refetchQueries: "active"
+  });
+
   const query = useMemo(
     () => gql`
   query {
@@ -77,6 +103,7 @@ export const HomePage = () => {
         }
       }
     }
+    regionsCount
     ${Object.values(lists)
       .filter((list) => !list.isSingleton)
       .map((list) => `${list.key}: ${list.gqlNames.listQueryCountName}`)
@@ -88,6 +115,14 @@ export const HomePage = () => {
 
   const dataGetter = makeDataGetter(data, error?.graphQLErrors);
 
+  const handleSeed = async () => {
+    try {
+      await seedStore();
+    } catch (error) {
+      console.error('Error seeding store:', error);
+    }
+  };
+
   return (
     <div>
       <div className="mt-2 mb-4 flex-col items-center">
@@ -96,6 +131,28 @@ export const HomePage = () => {
           {Object.keys(lists).length} Models
         </p>
       </div>
+      
+      {data?.regionsCount === 0 && (
+        <Card className="flex mb-4 justify-between p-4 gap-8">
+          <CardHeader className="p-0">
+            <CardTitle className="text-lg">Your store is empty!</CardTitle>
+            <CardDescription>
+              Click confirm to create regions, countries, currencies, shipping options, payment providers, product categories, collections, and sample products.
+            </CardDescription>
+          </CardHeader>
+          <div>
+            <Button 
+              onClick={handleSeed} 
+              disabled={isSeeding}
+              isLoading={isSeeding}
+            >
+              {!isSeeding && <Check className="mr-2 size-4" />}
+              {isSeeding ? 'Creating...' : 'Confirm'}
+            </Button>
+          </div>
+        </Card>
+      )}
+
       {visibleLists.state === "loading" ? (
         <LoadingIcon label="Loading lists" size="large" tone="passive" />
       ) : (

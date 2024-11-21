@@ -16,7 +16,11 @@ const CartDropdown = ({
   const [activeTimer, setActiveTimer] = useState(undefined)
   const [cartDropdownOpen, setCartDropdownOpen] = useState(false)
 
-  const open = () => setCartDropdownOpen(true)
+  const open = () => {
+    setCartDropdownOpen(true);
+    itemRef.current = totalItems;
+  }
+  
   const close = () => setCartDropdownOpen(false)
 
   const totalItems =
@@ -50,6 +54,11 @@ const CartDropdown = ({
   const pathname = usePathname()
 
   useEffect(() => {
+    console.log({ totalItems, pathname });
+    console.log(itemRef.current);
+    console.log(cartState?.lineItems?.reduce((acc, item) => {
+      return acc + item.quantity
+    }, 0));
     if (itemRef.current !== totalItems && !pathname.includes("/cart")) {
       timedOpen()
     }
@@ -59,7 +68,9 @@ const CartDropdown = ({
     <div className="h-full z-50" onMouseEnter={openAndCancel} onMouseLeave={close}>
       <Popover className="relative h-full">
         <Popover.Button className="h-full">
-          <LocalizedClientLink className="hover:text-ui-fg-base" href="/cart">{`Cart (${totalItems})`}</LocalizedClientLink>
+          <LocalizedClientLink className="hover:text-ui-fg-base" href="/cart">
+          {`Cart (${totalItems})`}
+          </LocalizedClientLink>
         </Popover.Button>
         <Transition
           show={cartDropdownOpen}

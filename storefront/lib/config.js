@@ -1,7 +1,6 @@
 import { keystoneContext } from "@keystone/keystoneContext";
 import { GraphQLClient } from "graphql-request";
 import { parse } from "graphql";
-import Iron from "@hapi/iron";
 
 const shouldRetry = (error) =>
   error.message?.includes("connection pool") ||
@@ -57,42 +56,26 @@ export const openfrontClient2 = new RetryingGraphQLClient(
   // { fetch }
 );
 
-const sessionSecret =
-  process.env.SESSION_SECRET || "this secret should only be used in testing";
-const ironOptions = Iron.defaults;
-
 export const openfrontClient = {
-  request: async (query, variables = {}, headers) => {
+  request: async (query, variables = {}, headers = {}) => {
     try {
-      const cleanVariables = Object.fromEntries(
-        Object.entries(variables).filter(([_, value]) => value !== undefined)
-      );
+      const cleanVariables = Object.entries(variables).filter(([_, value]) => value !== undefined);
 
-      let context = keystoneContext;
+      // Basic req/res objects that Keystone needs
+      const req = {
+        headers,
+      };
+      const res = {
+        setHeader: () => {},
+        end: () => {},
+      };
 
-      // Only attempt to handle session if headers were provided
-      if (headers?.authorization) {
-        const sessionToken = headers.authorization.replace("Bearer ", "");
-        try {
-          const session = await Iron.unseal(
-            sessionToken,
-            sessionSecret,
-            ironOptions
-          );
-          context = keystoneContext.withSession({
-            ...session,
-            data: {},
-          });
-        } catch (err) {
-          console.log("Failed to unseal session token:", err);
-          context = keystoneContext;
-          // Continue with base context if session unsealing fails
-        }
-      }
+      // Create context with request
+      const context = await keystoneContext.withRequest(req, res);
 
       const { data, errors } = await context.graphql.raw({
         query,
-        variables: cleanVariables,
+        variables: Object.fromEntries(cleanVariables),
       });
 
       if (errors) {
@@ -102,7 +85,7 @@ export const openfrontClient = {
       return JSON.parse(JSON.stringify(data));
     } catch (error) {
       console.log(`GraphQL error: ${error.message}`);
-      return getEmptyResponseForQuery(query);
+      throw new Error(error.message);
     }
   },
 };

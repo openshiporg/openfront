@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server";
-import { checkAuth } from "@keystone/utils/checkAuth";
+import { checkAuth, gqlClient } from "@keystone/utils/checkAuth";
 import { GraphQLClient, gql } from "graphql-request";
 
 const basePath = "/dashboard";
 const DEFAULT_REGION = process.env.NEXT_PUBLIC_DEFAULT_REGION || "us";
 
-function gqlClient(req) {
-  return new GraphQLClient(`${process.env.FRONTEND_URL}/api/graphql`, {
-    headers: req ? { cookie: req.cookies } : undefined,
-    credentials: "include",
-    fetch,
-  });
-}
+// function gqlClient(req) {
+//   return new GraphQLClient(`${process.env.FRONTEND_URL}/api/graphql`, {
+//     headers: req ? { cookie: req.cookies } : undefined,
+//     credentials: "include",
+//     fetch,
+//   });
+// }
 
 const regionMapCache = {
   regionMap: new Map(),

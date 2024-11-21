@@ -5,7 +5,10 @@ import updateActiveCart from "./updateActiveCart";
 import updateActiveCartLineItem from "./updateActiveCartLineItem";
 import updateActiveUser from "./updateActiveUser";
 import updateActiveUserPassword from "./updateActiveUserPassword";
-import updateActiveUserBillingAddress from "./updateActiveUserBillingAddress";
+import updateActiveUserAddress from "./updateActiveUserAddress";
+import createActiveUserAddress from "./createActiveUserAddress";
+import seedStorefront from './seedStorefront';
+import deleteActiveUserAddress from "./deleteActiveUserAddress";
 
 const graphql = String.raw;
 
@@ -37,18 +40,6 @@ export const extendGraphqlSchema = (schema) =>
         password: String
       }
 
-      input BillingAddressInput {
-        firstName: String!
-        lastName: String!
-        company: String
-        address1: String!
-        address2: String
-        city: String!
-        province: String
-        postalCode: String!
-        countryCode: String!
-        phone: String
-      }
 
       type Mutation {
         updateActiveUser(data: UserUpdateProfileInput!): User
@@ -59,7 +50,10 @@ export const extendGraphqlSchema = (schema) =>
           newPassword: String!
           confirmPassword: String!
         ): User
-        updateActiveUserBillingAddress(address: BillingAddressInput!): User
+        updateActiveUserAddress(where: AddressWhereUniqueInput!, data: AddressUpdateInput!): User
+        createActiveUserAddress(data: AddressCreateInput!): User
+        seedStorefront: Boolean
+        deleteActiveUserAddress(where: AddressWhereUniqueInput!): Address
       }
     `,
     resolvers: {
@@ -72,7 +66,10 @@ export const extendGraphqlSchema = (schema) =>
         updateActiveCart,
         updateActiveCartLineItem,
         updateActiveUser,
-        updateActiveUserBillingAddress
+        createActiveUserAddress,
+        updateActiveUserAddress,
+        seedStorefront,
+        deleteActiveUserAddress
       }
     },
   });

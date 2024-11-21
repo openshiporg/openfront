@@ -100,7 +100,7 @@ export const User = list({
         graphql.field({
           type: lists.Address.types.output,
           async resolve(item, args, context) {
-            const address = await context.query.Address.findMany({
+            const address = await context.db.Address.findMany({
               where: {
                 user: { id: { equals: item.id } },
                 isBilling: { equals: true }
@@ -110,18 +110,7 @@ export const User = list({
 
             if (!address.length) return null;
 
-            return {
-              firstName: address[0].firstName,
-              lastName: address[0].lastName,
-              company: address[0].company,
-              address1: address[0].address1,
-              address2: address[0].address2,
-              city: address[0].city,
-              province: address[0].province,
-              postalCode: address[0].postalCode,
-              countryCode: address[0].countryCode,
-              phone: address[0].phone
-            };
+            return address[0];
           }
         }),
       ui: {

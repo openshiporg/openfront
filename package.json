@@ -10,8 +10,7 @@
     "migrate:gen": "keystone build --no-ui && keystone prisma migrate dev && yarn generate-field-views",
     "migrate": "keystone prisma migrate deploy",
     "generate-field-views": "tsx keystone/scripts/generate-field-views.js",
-    "seed-storefront": "tsx storefront/lib/seed/index.js",
-    "seed-product-images": "tsx storefront/lib/seed/test-product-image.js"
+    "seed-storefront": "tsx storefront/lib/seed/cli.js"
   },
   "dependencies": {
     "@emotion/react": "^11.10.0",
@@ -40,9 +39,9 @@
     "@keystone-ui/segmented-control": "^7.0.3",
     "@keystone-ui/toast": "^6.0.2",
     "@keystone-ui/tooltip": "^6.0.2",
-    "@medusajs/icons": "^1.2.0",
-    "@medusajs/ui": "^2.4.1",
-    "@medusajs/ui-preset": "^1.1.4",
+    "@medusajs/icons": "^2.0.4",
+    "@medusajs/ui": "^4.0.1",
+    "@medusajs/ui-preset": "^2.0.4",
     "@meilisearch/instant-meilisearch": "^0.13.0",
     "@next/bundle-analyzer": "^13.4.1",
     "@paypal/react-paypal-js": "^7.8.3",

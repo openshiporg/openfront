@@ -13,8 +13,8 @@ const CountrySelect = forwardRef(({ placeholder = "Country", region, defaultValu
     }
 
     return region.countries.map((country) => ({
-      value: country.iso_2,
-      label: country.display_name,
+      value: country.iso2,
+      label: country.name,
     }));
   }, [region])
 

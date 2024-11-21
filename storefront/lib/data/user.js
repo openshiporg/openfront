@@ -1,8 +1,8 @@
-"use server"
-import { gql } from "graphql-request"
-import { openfrontClient } from "../config"
-import { getAuthHeaders } from "./cookies"
-import { cache } from "react"
+"use server";
+import { gql } from "graphql-request";
+import { openfrontClient } from "../config";
+import { getAuthHeaders } from "./cookies";
+import { cache } from "react";
 
 export async function getUser() {
   try {
@@ -18,18 +18,6 @@ export async function getUser() {
               lastName
               phone
               billingAddress {
-                firstName
-                lastName
-                company
-                address1
-                address2
-                city
-                province
-                postalCode
-                countryCode
-                phone
-              }
-              addresses {
                 id
                 firstName
                 lastName
@@ -41,6 +29,20 @@ export async function getUser() {
                 postalCode
                 countryCode
                 phone
+              }
+              addresses(orderBy: [{ isBilling: desc }]) {
+                id
+                firstName
+                lastName
+                company
+                address1
+                address2
+                city
+                province
+                postalCode
+                countryCode
+                phone
+                isBilling
               }
             }
           }
@@ -76,14 +78,17 @@ export async function authenticate({ email, password }) {
     headers
   );
 
-  if (authenticateUserWithPassword.__typename === "UserAuthenticationWithPasswordFailure") {
+  if (
+    authenticateUserWithPassword.__typename ===
+    "UserAuthenticationWithPasswordFailure"
+  ) {
     throw new Error(authenticateUserWithPassword.message);
   }
 
   return true;
 }
 
-export const getUserWithOrders = cache(async function() {
+export const getUserWithOrders = cache(async function () {
   const headers = getAuthHeaders();
   const { authenticatedItem } = await openfrontClient.request(
     gql`
@@ -171,8 +176,8 @@ export async function createCustomer(data) {
         password: data.password,
         firstName: data.firstName,
         lastName: data.lastName,
-        phone: data.phone
-      }
+        phone: data.phone,
+      },
     },
     headers
   );
@@ -196,8 +201,8 @@ export async function updateCustomer(data) {
         password: data.password,
         firstName: data.firstName,
         lastName: data.lastName,
-        phone: data.phone
-      }
+        phone: data.phone,
+      },
     },
     headers
   );
@@ -226,8 +231,8 @@ export async function addShippingAddress(data) {
         province: data.province,
         postalCode: data.postalCode,
         countryCode: data.countryCode,
-        phone: data.phone
-      }
+        phone: data.phone,
+      },
     },
     headers
   );
@@ -239,7 +244,10 @@ export async function updateShippingAddress(addressId, data) {
   const headers = getAuthHeaders();
   const { updateShippingAddress } = await openfrontClient.request(
     gql`
-      mutation UpdateShippingAddress($addressId: ID!, $data: ShippingAddressUpdateInput!) {
+      mutation UpdateShippingAddress(
+        $addressId: ID!
+        $data: ShippingAddressUpdateInput!
+      ) {
         updateShippingAddress(addressId: $addressId, data: $data) {
           id
         }
@@ -257,8 +265,8 @@ export async function updateShippingAddress(addressId, data) {
         province: data.province,
         postalCode: data.postalCode,
         countryCode: data.countryCode,
-        phone: data.phone
-      }
+        phone: data.phone,
+      },
     },
     headers
   );
@@ -277,7 +285,7 @@ export async function deleteShippingAddress(addressId) {
       }
     `,
     {
-      addressId
+      addressId,
     },
     headers
   );
@@ -285,7 +293,7 @@ export async function deleteShippingAddress(addressId) {
   return deleteShippingAddress;
 }
 
-export const getUserAddresses = cache(async function() {
+export const getUserAddresses = cache(async function () {
   const headers = getAuthHeaders();
   const { authenticatedItem } = await openfrontClient.request(
     gql`
@@ -332,4 +340,3 @@ export const getUserAddresses = cache(async function() {
 
   return authenticatedItem;
 });
- 

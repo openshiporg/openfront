@@ -3,7 +3,11 @@ import { revalidateTag } from "next/cache";
 import { gql } from "graphql-request";
 import { openfrontClient } from "@storefront/lib/config";
 import { redirect } from "next/navigation";
-import { getAuthHeaders, removeAuthToken, setAuthToken } from "@storefront/lib/data/cookies";
+import {
+  getAuthHeaders,
+  removeAuthToken,
+  setAuthToken,
+} from "@storefront/lib/data/cookies";
 
 export async function signUp(_currentState, formData) {
   const customer = {
@@ -11,12 +15,10 @@ export async function signUp(_currentState, formData) {
     password: formData.get("password"),
     firstName: formData.get("first_name"),
     lastName: formData.get("last_name"),
-    phone: formData.get("phone")
-  }
+    phone: formData.get("phone"),
+  };
 
   try {
-    const headers = getAuthHeaders();
-
     // First create the user
     const { createUser } = await openfrontClient.request(
       gql`
@@ -27,16 +29,19 @@ export async function signUp(_currentState, formData) {
           }
         }
       `,
-      { 
+      {
         data: {
           email: customer.email,
           password: customer.password,
           name: `${customer.firstName} ${customer.lastName}`,
-          phone: customer.phone
-        }
-      },
-      headers
+          phone: customer.phone,
+        },
+      }
     );
+
+    if (!createUser?.id) {
+      return "Failed to create account";
+    }
 
     // Then authenticate them
     const { authenticateUserWithPassword } = await openfrontClient.request(
@@ -51,32 +56,43 @@ export async function signUp(_currentState, formData) {
             }
             ... on UserAuthenticationWithPasswordFailure {
               message
+              __typename
             }
           }
         }
       `,
       {
         email: customer.email,
-        password: customer.password
-      },
-      headers
+        password: customer.password,
+      }
     );
 
+    // Check for authentication failure
     if (authenticateUserWithPassword.__typename === "UserAuthenticationWithPasswordFailure") {
-      throw new Error(authenticateUserWithPassword.message);
+      return authenticateUserWithPassword.message;
     }
 
-    // Set auth token with same settings as login
-    setAuthToken(authenticateUserWithPassword.sessionToken, {
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      httpOnly: true,
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-    });
+    // Only set auth token if authentication was successful
+    if (authenticateUserWithPassword.sessionToken) {
+      setAuthToken(authenticateUserWithPassword.sessionToken, {
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        httpOnly: true,
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+      });
 
-    revalidateTag("customer");
+      revalidateTag("customer");
+      return null; // Success case returns null (no error)
+    }
+
+    return "An unexpected error occurred during sign up";
   } catch (error) {
+    console.error("Sign up error:", error);
+    // Handle specific error cases
+    if (error.message.includes("Unique constraint failed on the fields: (`email`)")) {
+      return "An account with this email already exists";
+    }
     return error.toString();
   }
 }
@@ -87,7 +103,6 @@ export async function login(_currentState, formData) {
 
   try {
     const headers = getAuthHeaders();
-
     const { authenticateUserWithPassword } = await openfrontClient.request(
       gql`
         mutation AuthenticateUser($email: String!, $password: String!) {
@@ -101,6 +116,7 @@ export async function login(_currentState, formData) {
             }
             ... on UserAuthenticationWithPasswordFailure {
               message
+              __typename
             }
           }
         }
@@ -110,22 +126,28 @@ export async function login(_currentState, formData) {
     );
 
 
+    // Check for authentication failure
     if (authenticateUserWithPassword.__typename === "UserAuthenticationWithPasswordFailure") {
-      throw new Error(authenticateUserWithPassword.message);
+      return authenticateUserWithPassword.message;
     }
 
-    // Set auth token with same settings as Keystone
-    setAuthToken(authenticateUserWithPassword.sessionToken, {
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      httpOnly: true,
-      maxAge: 60 * 60 * 24 * 30, // 30 days
-    });
-    
-    revalidateTag("customer");
+    // Only set auth token if authentication was successful
+    if (authenticateUserWithPassword.sessionToken) {
+      setAuthToken(authenticateUserWithPassword.sessionToken, {
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        httpOnly: true,
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+      });
+
+      revalidateTag("customer");
+      return null; // Success case returns null (no error)
+    }
+
+    return "An unexpected error occurred";
   } catch (error) {
-    console.log({error})
+    console.error("Login error:", error);
     return error.toString();
   }
 }
@@ -148,7 +170,7 @@ export async function signOut(countryCode) {
     removeAuthToken();
     revalidateTag("auth");
     revalidateTag("customer");
-    redirect(`/${countryCode}/account`)
+    redirect(`/${countryCode}/account`);
   } catch (error) {
     console.error("Error signing out:", error);
   }
@@ -191,14 +213,14 @@ export async function updateCustomerBillingAddress(prevState, formData) {
           province: formData.get("billingAddress.province"),
           postalCode: formData.get("billingAddress.postalCode"),
           countryCode: formData.get("billingAddress.countryCode"),
-        }
+        },
       },
       headers
     );
     revalidateTag("customer");
     return { success: true, error: null };
   } catch (error) {
-    console.log({error})
+    console.log({ error });
     return { success: false, error: error.toString() };
   }
 }
@@ -218,8 +240,8 @@ export async function updateCustomerEmail(prevState, formData) {
       `,
       {
         data: {
-          email: formData.get("email")
-        }
+          email: formData.get("email"),
+        },
       },
       headers
     );
@@ -245,8 +267,8 @@ export async function updateCustomerName(prevState, formData) {
       `,
       {
         data: {
-          name: formData.get("firstName") + " " + formData.get("lastName")
-        }
+          name: formData.get("firstName") + " " + formData.get("lastName"),
+        },
       },
       headers
     );
@@ -263,7 +285,11 @@ export async function updateCustomerPassword(prevState, formData) {
 
     await openfrontClient.request(
       gql`
-        mutation UpdatePassword($oldPassword: String!, $newPassword: String!, $confirmPassword: String!) {
+        mutation UpdatePassword(
+          $oldPassword: String!
+          $newPassword: String!
+          $confirmPassword: String!
+        ) {
           updateActiveUserPassword(
             oldPassword: $oldPassword
             newPassword: $newPassword
@@ -276,16 +302,18 @@ export async function updateCustomerPassword(prevState, formData) {
       {
         oldPassword: formData.get("oldPassword"),
         newPassword: formData.get("newPassword"),
-        confirmPassword: formData.get("confirmPassword")
+        confirmPassword: formData.get("confirmPassword"),
       },
       headers
     );
-    
+
     revalidateTag("customer");
     return { success: true, error: null };
   } catch (error) {
     // Extract just the error message from the GraphQL error
-    const message = error.response?.errors?.[0]?.extensions?.originalError?.message || "An error occurred";
+    const message =
+      error.response?.errors?.[0]?.extensions?.originalError?.message ||
+      "An error occurred";
     return { success: false, error: message };
   }
 }
@@ -305,8 +333,8 @@ export async function updateCustomerPhone(prevState, formData) {
       `,
       {
         data: {
-          phone: formData.get("phone")
-        }
+          phone: formData.get("phone"),
+        },
       },
       headers
     );
@@ -317,38 +345,37 @@ export async function updateCustomerPhone(prevState, formData) {
   }
 }
 
-export async function addCustomerShippingAddress(prevState, formData) {
+export async function createCustomerAddress(prevState, formData) {
   try {
     const headers = getAuthHeaders();
+    const addressData = {
+      firstName: formData.get("first_name"),
+      lastName: formData.get("last_name"),
+      company: formData.get("company"),
+      address1: formData.get("address_1"),
+      address2: formData.get("address_2"),
+      city: formData.get("city"),
+      province: formData.get("province"),
+      postalCode: formData.get("postal_code"),
+      countryCode: formData.get("country_code"),
+      phone: formData.get("phone"),
+      isBilling: formData.get("is_billing") === "true"
+    };
 
     await openfrontClient.request(
       gql`
-        mutation CreateAddress($data: UserUpdateProfileInput!) {
-          updateActiveUser(data: $data) {
+        mutation CreateAddress($data: AddressCreateInput!) {
+          createActiveUserAddress(data: $data) {
             id
             addresses {
               id
+              isBilling
             }
           }
         }
       `,
       {
-        data: {
-          addresses: {
-            create: [{
-              firstName: formData.get("first_name"),
-              lastName: formData.get("last_name"),
-              company: formData.get("company"),
-              address1: formData.get("address_1"),
-              address2: formData.get("address_2"),
-              city: formData.get("city"),
-              province: formData.get("province"),
-              postalCode: formData.get("postal_code"),
-              countryCode: formData.get("country_code"),
-              phone: formData.get("phone")
-            }]
-          }
-        }
+        data: addressData
       },
       headers
     );
@@ -359,46 +386,43 @@ export async function addCustomerShippingAddress(prevState, formData) {
   }
 }
 
-export async function updateCustomerShippingAddress(prevState, formData) {
+export async function updateCustomerAddress(prevState, formData) {
   try {
     const headers = getAuthHeaders();
+    const addressData = {
+      firstName: formData.get("first_name"),
+      lastName: formData.get("last_name"),
+      company: formData.get("company"),
+      address1: formData.get("address_1"),
+      address2: formData.get("address_2"),
+      city: formData.get("city"),
+      province: formData.get("province"),
+      postalCode: formData.get("postal_code"),
+      countryCode: formData.get("country_code"),
+      phone: formData.get("phone"),
+      isBilling: formData.get("is_billing") === "true"
+    };
 
     await openfrontClient.request(
       gql`
-        mutation UpdateAddress($data: UserUpdateProfileInput!) {
-          updateActiveUser(data: $data) {
+        mutation UpdateAddress($where: AddressWhereUniqueInput!, $data: AddressUpdateInput!) {
+          updateActiveUserAddress(where: $where, data: $data) {
             id
             addresses {
               id
+              isBilling
             }
           }
         }
       `,
       {
-        data: {
-          addresses: {
-            update: [{
-              where: { id: prevState.addressId },
-              data: {
-                firstName: formData.get("first_name"),
-                lastName: formData.get("last_name"),
-                company: formData.get("company"),
-                address1: formData.get("address_1"),
-                address2: formData.get("address_2"),
-                city: formData.get("city"),
-                province: formData.get("province"),
-                postalCode: formData.get("postal_code"),
-                countryCode: formData.get("country_code"),
-                phone: formData.get("phone")
-              }
-            }]
-          }
-        }
+        where: { id: prevState.addressId },
+        data: addressData
       },
       headers
     );
     revalidateTag("customer");
-    return { success: true, error: null };
+    return { success: true, error: null, addressId: prevState.addressId };
   } catch (error) {
     return { success: false, error: error.toString() };
   }
@@ -410,21 +434,14 @@ export async function deleteCustomerShippingAddress(addressId) {
 
     await openfrontClient.request(
       gql`
-        mutation DeleteAddress($data: UserUpdateProfileInput!) {
-          updateActiveUser(data: $data) {
+        mutation DeleteAddress($where: AddressWhereUniqueInput!) {
+          deleteActiveUserAddress(where: $where) {
             id
-            addresses {
-              id
-            }
           }
         }
       `,
       {
-        data: {
-          addresses: {
-            disconnect: [{ id: addressId }]
-          }
-        }
+        where: { id: addressId }
       },
       headers
     );
