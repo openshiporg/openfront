@@ -115,17 +115,22 @@ async function seedStorefront(root, args, context) {
     });
     console.log(`Store created with ID: ${createStore.id}`);
 
-    // Create payment provider
-    const { data: { createPaymentProvider } } = await context.graphql.raw({
-      query: `mutation CreatePaymentProvider($data: PaymentProviderCreateInput!) {
-        createPaymentProvider(data: $data) {
-          id
+    // Create payment providers
+    const providerMap = new Map();
+    for (const provider of seedData.paymentProviders) {
+      const { data: { createPaymentProvider } } = await context.graphql.raw({
+        query: `mutation CreatePaymentProvider($data: PaymentProviderCreateInput!) {
+          createPaymentProvider(data: $data) {
+            id
+            code
+          }
+        }`,
+        variables: {
+          data: provider
         }
-      }`,
-      variables: {
-        data: { code: "manual" }
-      }
-    });
+      });
+      providerMap.set(provider.code, createPaymentProvider.id);
+    }
 
     // Create fulfillment provider
     const { data: { createFulfillmentProvider } } = await context.graphql.raw({
@@ -179,7 +184,7 @@ async function seedStorefront(root, args, context) {
             taxRate: tax_rate,
             currency: { connect: { code: currency_code } },
             paymentProviders: {
-              connect: payment_providers.map((code) => ({ code })),
+              connect: payment_providers.map((code) => ({ id: providerMap.get(code) })),
             },
             fulfillmentProviders: {
               connect: fulfillment_providers.map((code) => ({ code })),
@@ -254,7 +259,7 @@ async function seedStorefront(root, args, context) {
           }
         }`,
         variables: {
-          data: { 
+          data: {
             title: category.name, 
             handle: category.id 
           }

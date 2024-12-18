@@ -73,4 +73,28 @@ export const Discount = list({
     }),
     ...trackingFields,
   },
+  hooks: {
+    async afterOperation({ operation, item, context }) {
+      if (operation === "create" || operation === "update") {
+        const sudoContext = context.sudo();
+        const discount = await sudoContext.query.Discount.findOne({
+          where: { id: item.id },
+          query: 'carts { id }'
+        });
+        
+        if (discount?.carts?.length) {
+          for (const cart of discount.carts) {
+            await sudoContext.query.Cart.updateOne({
+              where: { id: cart.id },
+              data: {
+                paymentCollection: {
+                  disconnect: true
+                }
+              }
+            });
+          }
+        }
+      }
+    }
+  },
 });

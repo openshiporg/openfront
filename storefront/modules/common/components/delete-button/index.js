@@ -2,7 +2,7 @@ import { Spinner, Trash } from "@medusajs/icons"
 import { clx } from "@medusajs/ui"
 import { useState } from "react"
 
-import { deleteLineItem } from "@storefront/modules/cart/actions"
+import { deleteLineItem } from "@storefront/lib/data/cart"
 
 const DeleteButton = ({
   id,

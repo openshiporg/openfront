@@ -1,23 +1,50 @@
 "use server"
 import { gql } from "graphql-request"
 import { openfrontClient } from "../config"
-import { getAuthHeaders } from "./cookies"
+import { cache } from "react"
 
-export async function createFulfillment(orderId, items) {
-  const CREATE_FULFILLMENT_MUTATION = gql`
-    mutation CreateFulfillment($orderId: ID!, $items: [FulfillmentItemInput!]!) {
-      createFulfillment(orderId: $orderId, items: $items) {
+export const listCartShippingMethods = cache(async function (cartId) {
+  const LIST_CART_SHIPPING_METHODS = gql`
+    query ListCartShippingMethods($cartId: ID!) {
+      cart(where: { id: $cartId }) {
         id
-        status
-        trackingNumbers
-        items {
+        region {
           id
-          quantity
+          shippingOptions {
+            id
+            name
+            amount
+            priceType
+            data
+            isReturn
+            adminOnly
+            shippingProfile {
+              id
+              type
+            }
+            requirements {
+              id
+              type
+              amount
+            }
+          }
         }
       }
     }
   `;
 
-  const headers = getAuthHeaders();
-  return openfrontClient.request(CREATE_FULFILLMENT_MUTATION, { orderId, items }, headers);
-} 
+  const { cart } = await openfrontClient.request(LIST_CART_SHIPPING_METHODS, { cartId });
+
+  // Filter shipping options
+  const shippingOptions = cart.region.shippingOptions.filter(option => {
+    // Skip admin-only and return shipping options
+    if (option.adminOnly || option.isReturn) return false;
+
+    // Skip gift card shipping options
+    if (option.shippingProfile?.type === "gift_card") return false;
+
+    return true;
+  });
+
+  return shippingOptions;
+}); 

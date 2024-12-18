@@ -32,6 +32,28 @@ export const LineItem = list({
       delete: permissions.canManageOrders,
     },
   },
+  hooks: {
+    async afterOperation({ operation, item, context }) {
+      if (operation === "create" || operation === "update") {
+        const sudoContext = context.sudo();
+        const lineItem = await sudoContext.query.LineItem.findOne({
+          where: { id: item.id },
+          query: 'cart { id }'
+        });
+        
+        if (lineItem?.cart?.id) {
+          await sudoContext.query.Cart.updateOne({
+            where: { id: lineItem.cart.id },
+            data: {
+              paymentCollection: {
+                disconnect: true
+              }
+            }
+          });
+        }
+      }
+    }
+  },
   fields: {
     // Virtual fields from productVariant
     title: virtual({
@@ -231,55 +253,7 @@ export const LineItem = list({
           return formatCurrency(finalAmount, currencyCode);
         },
       }),
-    }),    //   field: graphql.field({
-    //     type: graphql.String,
-    //     async resolve(item, args, context) {
-    //       const sudoContext = context.sudo();
-          
-    //       const { cart, quantity } = await sudoContext.query.LineItem.findOne({
-    //         where: { id: item.id },
-    //         query: `
-    //           cart { 
-    //             region {
-    //               currency {
-    //                 code
-    //                 noDivisionCurrency
-    //               }
-    //             }
-    //           }
-    //           quantity
-    //         `
-    //       });
-
-    //       const prices = await sudoContext.query.MoneyAmount.findMany({
-    //         where: {
-    //           productVariant: {
-    //             lineItems: { some: { id: { equals: item.id } } }
-    //           },
-    //           region: { id: { equals: cart.region.id } }
-    //         },
-    //         query: `
-    //           calculatedPrice {
-    //             originalAmount
-    //             currencyCode
-    //           }
-    //         `
-    //       });
-
-    //       const price = prices[0]?.calculatedPrice;
-    //       const currencyCode = cart?.region?.currency?.code || price?.currencyCode;
-    //       if (!price || !currencyCode) {
-    //         throw new Error("No price or currency information available");
-    //       }
-
-    //       const amount = price.originalAmount * quantity;
-    //       const divisor = cart?.region?.currency?.noDivisionCurrency ? 1 : 100;
-    //       const finalAmount = Math.round(amount) / divisor;
-
-    //       return formatCurrency(finalAmount, currencyCode);
-    //     }
-    //   })
-    // }),
+    }),    
 
     availableInRegion: virtual({
       field: graphql.field({

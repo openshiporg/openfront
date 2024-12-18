@@ -1,5 +1,5 @@
 import CartDropdown from "../cart-dropdown";
-import { retrieveCart } from "@storefront/modules/cart/actions";
+import { retrieveCart } from "@storefront/lib/data/cart";
 
 const fetchCart = async () => {
   const cart = await retrieveCart();

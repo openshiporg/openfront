@@ -18,6 +18,28 @@ export const ShippingMethod = list({
       delete: permissions.canManageOrders,
     },
   },
+  hooks: {
+    async afterOperation({ operation, item, context }) {
+      if (operation === "create" || operation === "update") {
+        const sudoContext = context.sudo();
+        const shippingMethod = await sudoContext.query.ShippingMethod.findOne({
+          where: { id: item.id },
+          query: 'cart { id }'
+        });
+        
+        if (shippingMethod?.cart?.id) {
+          await sudoContext.query.Cart.updateOne({
+            where: { id: shippingMethod.cart.id },
+            data: {
+              paymentCollection: {
+                disconnect: true
+              }
+            }
+          });
+        }
+      }
+    }
+  },
   fields: {
     price: integer({
       validation: {

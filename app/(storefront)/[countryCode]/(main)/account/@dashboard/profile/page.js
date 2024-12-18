@@ -14,7 +14,7 @@ export const metadata = {
 }
 
 export default async function Profile() {
-  const { authenticatedItem: customer } = await getUser()
+  const customer = await getUser()
   const { regions } = await listRegions()
 
   if (!customer || !regions) {

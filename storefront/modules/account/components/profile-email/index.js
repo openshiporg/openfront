@@ -5,7 +5,7 @@ import { useFormState } from "react-dom"
 import Input from "@storefront/modules/common/components/input"
 
 import AccountInfo from "../account-info"
-import { updateCustomerEmail } from "@storefront/modules/account/actions"
+import { updateCustomerEmail } from "@storefront/lib/data/user"
 
 const ProfileEmail = ({ customer }) => {
   const [successState, setSuccessState] = React.useState(false)

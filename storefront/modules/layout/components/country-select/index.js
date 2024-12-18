@@ -3,8 +3,7 @@ import { Listbox, Transition } from "@headlessui/react";
 import { Fragment, useEffect, useMemo, useState } from "react";
 import ReactCountryFlag from "react-country-flag";
 import { useParams, usePathname } from "next/navigation";
-import { updateRegion } from "app/(storefront)/actions";
-
+import { updateRegion } from "@storefront/lib/data/cart";
 
 const CountrySelect = ({ toggleState, regions }) => {
   const [current, setCurrent] = useState(undefined);

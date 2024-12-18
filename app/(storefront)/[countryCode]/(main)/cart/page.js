@@ -1,5 +1,5 @@
 import CartTemplate from "@storefront/modules/cart/templates"
-import { retrieveCart } from "@storefront/modules/cart/actions"
+import { retrieveCart } from "@storefront/lib/data/cart"
 import { getUser } from "@storefront/lib/data/user"
 
 export const metadata = {
@@ -9,7 +9,7 @@ export const metadata = {
 
 export default async function Cart() {
   const cart = await retrieveCart()
-  const { authenticatedItem: user } = await getUser()
+  const user = await getUser()
 
   return <CartTemplate cart={cart} user={user} />
 }

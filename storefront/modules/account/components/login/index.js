@@ -2,7 +2,7 @@ import { useFormState } from "react-dom"
 
 import { LOGIN_VIEW } from "@storefront/modules/account/templates/login-template"
 import Input from "@storefront/modules/common/components/input"
-import { login } from "@storefront/modules/account/actions"
+import { login } from "@storefront/lib/data/user"
 import ErrorMessage from "@storefront/modules/checkout/components/error-message"
 import { SubmitButton } from "@storefront/modules/checkout/components/submit-button"
 

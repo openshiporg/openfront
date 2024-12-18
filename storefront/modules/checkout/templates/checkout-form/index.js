@@ -1,39 +1,22 @@
-import Addresses from "@storefront/modules/checkout/components/addresses"
-import Shipping from "@storefront/modules/checkout/components/shipping"
-import Payment from "@storefront/modules/checkout/components/payment"
-import Review from "@storefront/modules/checkout/components/review"
+import Addresses from "@storefront/modules/checkout/components/addresses";
+import Shipping from "@storefront/modules/checkout/components/shipping";
+import Payment from "@storefront/modules/checkout/components/payment";
+import Review from "@storefront/modules/checkout/components/review";
+import { listCartPaymentMethods } from "@storefront/lib/data/payment";
+import { getCartShippingOptions } from "@storefront/lib/data/shipping";
 
-import { cookies } from "next/headers"
-import { getCheckoutStep } from "@storefront/lib/util/get-checkout-step"
-import { createPaymentSessions } from "@storefront/lib/data/cart"
-import { getUser } from "@storefront/lib/data/user"
-import { listShippingMethods } from "@storefront/lib/data/shipping"
-
-export default async function CheckoutForm() {
-  const cartId = cookies().get("_openfront_cart_id")?.value
-
-  if (!cartId) {
-    return null
-  }
-
-  // create payment sessions and get cart
-  const cart = (await createPaymentSessions(cartId).then((cart) => cart))
-
+export default async function CheckoutForm({ cart, customer }) {
   if (!cart) {
-    return null
+    return null;
   }
 
-  cart.checkout_step = cart && getCheckoutStep(cart)
+  // get available shipping methods and payment methods
+  const availableShippingMethods = await getCartShippingOptions(cart.id);
+  const availablePaymentMethods = await listCartPaymentMethods(cart.region.id);
 
-  // get available shipping methods
-  const availableShippingMethods = await listShippingMethods(cart.region_id).then((methods) => methods?.filter((m) => !m.is_return))
-
-  if (!availableShippingMethods) {
-    return null
+  if (!availableShippingMethods || !availablePaymentMethods) {
+    return null;
   }
-
-  // get customer if logged in
-  const customer = await getUser()
 
   return (
     <div>
@@ -47,7 +30,7 @@ export default async function CheckoutForm() {
         </div>
 
         <div>
-          <Payment cart={cart} />
+          <Payment cart={cart} availablePaymentMethods={availablePaymentMethods} />
         </div>
 
         <div>

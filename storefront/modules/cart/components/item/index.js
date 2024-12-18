@@ -7,7 +7,7 @@ import LineItemOptions from "@storefront/modules/common/components/line-item-opt
 import LineItemPrice from "@storefront/modules/common/components/line-item-price"
 import LineItemUnitPrice from "@storefront/modules/common/components/line-item-unit-price"
 import Thumbnail from "@storefront/modules/products/components/thumbnail"
-import { updateLineItem } from "@storefront/modules/cart/actions"
+import { updateLineItem } from "@storefront/lib/data/cart"
 import Spinner from "@storefront/modules/common/icons/spinner"
 import { useState } from "react"
 import ErrorMessage from "@storefront/modules/checkout/components/error-message"

@@ -211,10 +211,6 @@ export const Order = list({
       ref: "Payment.order",
       many: true,
     }),
-    refunds: relationship({
-      ref: "Refund.order",
-      many: true,
-    }),
     returns: relationship({
       ref: "Return.order",
       many: true,

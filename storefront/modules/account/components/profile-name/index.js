@@ -3,7 +3,7 @@ import React, { useEffect } from "react"
 import { useFormState } from "react-dom"
 
 import Input from "@storefront/modules/common/components/input"
-import { updateCustomerName } from "@storefront/modules/account/actions"
+import { updateCustomerName } from "@storefront/lib/data/user"
 
 import AccountInfo from "../account-info"
 

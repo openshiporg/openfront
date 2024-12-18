@@ -48,6 +48,18 @@ export const Address = list({
     user: relationship({
       ref: "User.addresses",
       many: false,
+      hooks: {
+        resolveInput({ operation, resolvedData, context }) {
+          if (
+            (operation === "create" || operation === "update") &&
+            !resolvedData.user &&
+            context.session?.itemId
+          ) {
+            return { connect: { id: context.session.itemId } };
+          }
+          return resolvedData.user;
+        },
+      },
     }),
     cart: relationship({
       ref: "Cart.addresses",
@@ -63,6 +75,14 @@ export const Address = list({
     }),
     ordersUsingAsShippingAddress: relationship({
       ref: "Order.shippingAddress",
+      many: true,
+    }),
+    cartsUsingAsBillingAddress: relationship({
+      ref: 'Cart.billingAddress',
+      many: true,
+    }),
+    cartsUsingAsShippingAddress: relationship({
+      ref: 'Cart.shippingAddress',
       many: true,
     }),
     swaps: relationship({

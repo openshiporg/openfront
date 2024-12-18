@@ -12,6 +12,7 @@ const ShippingAddress = ({
   onChange,
   countryCode
 }) => {
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [formData, setFormData] = useState({
     "shippingAddress.firstName": cart?.shippingAddress?.firstName || "",
     "shippingAddress.lastName": cart?.shippingAddress?.lastName || "",
@@ -21,15 +22,18 @@ const ShippingAddress = ({
     "shippingAddress.city": cart?.shippingAddress?.city || "",
     "shippingAddress.countryCode": cart?.shippingAddress?.countryCode || countryCode || "",
     "shippingAddress.province": cart?.shippingAddress?.province || "",
-    email: cart?.email || "",
-    "shippingAddress.phone": cart?.shippingAddress?.phone || "",
-  })
+    email: cart?.email || customer?.email || "",
+    "shippingAddress.phone": cart?.shippingAddress?.phone || customer?.phone || "",
+  });
 
-  const countriesInRegion = useMemo(() => cart?.region.countries.map((c) => c.iso2), [cart?.region])
+  const [hasModifiedFields, setHasModifiedFields] = useState(false);
 
-  // check if customer has saved addresses that are in the current region
+  const countriesInRegion = useMemo(() => cart?.region?.countries?.map((c) => c.iso2), [cart?.region]);
+
   const addressesInRegion = useMemo(() =>
-    customer?.shippingAddresses.filter((a) => a.countryCode && countriesInRegion?.includes(a.countryCode)), [customer?.shippingAddresses, countriesInRegion])
+    customer?.addresses?.filter((a) => a.countryCode && countriesInRegion?.includes(a.countryCode)), 
+    [customer?.addresses, countriesInRegion]
+  );
 
   useEffect(() => {
     setFormData({
@@ -39,29 +43,55 @@ const ShippingAddress = ({
       "shippingAddress.company": cart?.shippingAddress?.company || "",
       "shippingAddress.postalCode": cart?.shippingAddress?.postalCode || "",
       "shippingAddress.city": cart?.shippingAddress?.city || "",
-      "shippingAddress.countryCode": cart?.shippingAddress?.countryCode || "",
+      "shippingAddress.countryCode": cart?.shippingAddress?.countryCode || countryCode || "",
       "shippingAddress.province": cart?.shippingAddress?.province || "",
-      email: cart?.email || "",
-      "shippingAddress.phone": cart?.shippingAddress?.phone || "",
-    })
-  }, [cart?.shippingAddress, cart?.email])
+      email: cart?.email || customer?.email || "",
+      "shippingAddress.phone": cart?.shippingAddress?.phone || customer?.phone || "",
+    });
+  }, [cart?.shippingAddress, cart?.email, countryCode, customer]);
 
   const handleChange = (e) => {
+    setHasModifiedFields(true);
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
-    })
-  }
+    });
+  };
+
+  const handleAddressSelect = (address) => {
+    if (!address) return;
+    
+    setSelectedAddressId(address.id);
+    setHasModifiedFields(false);
+    setFormData(prev => ({
+      ...prev,
+      "shippingAddress.firstName": address.firstName || "",
+      "shippingAddress.lastName": address.lastName || "",
+      "shippingAddress.address1": address.address1 || "",
+      "shippingAddress.company": address.company || "",
+      "shippingAddress.postalCode": address.postalCode || "",
+      "shippingAddress.city": address.city || "",
+      "shippingAddress.countryCode": address.countryCode || countryCode || "",
+      "shippingAddress.province": address.province || "",
+      "shippingAddress.phone": address.phone || prev["shippingAddress.phone"],
+    }));
+  };
 
   return <>
     {customer && (addressesInRegion?.length || 0) > 0 && (
       <Container className="mb-6 flex flex-col gap-y-4 p-5">
         <p className="text-small-regular">
-          {`Hi ${customer.firstName}, do you want to use one of your saved addresses?`}
+          {`Hi ${customer.firstName || ''}, do you want to use one of your saved addresses?`}
         </p>
-        <AddressSelect addresses={customer.shippingAddresses} cart={cart} />
+        <AddressSelect 
+          addresses={customer.addresses} 
+          cart={cart}
+          onSelect={handleAddressSelect}
+        />
       </Container>
     )}
+    <input type="hidden" name="selectedAddressId" value={selectedAddressId || ""} />
+    <input type="hidden" name="hasModifiedFields" value={hasModifiedFields.toString()} />
     <div className="grid grid-cols-2 gap-4">
       <Input
         label="First name"

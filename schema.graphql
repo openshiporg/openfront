@@ -25,6 +25,8 @@ type User {
   customerGroupsCount(where: CustomerGroupWhereInput! = {}): Int
   notifications(where: NotificationWhereInput! = {}, orderBy: [NotificationOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: NotificationWhereUniqueInput): [Notification!]
   notificationsCount(where: NotificationWhereInput! = {}): Int
+  payments(where: PaymentWhereInput! = {}, orderBy: [PaymentOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PaymentWhereUniqueInput): [Payment!]
+  paymentsCount(where: PaymentWhereInput! = {}): Int
   createdAt: DateTime
   updatedAt: DateTime
   passwordResetToken: PasswordState
@@ -60,6 +62,7 @@ input UserWhereInput {
   carts: CartManyRelationFilter
   customerGroups: CustomerGroupManyRelationFilter
   notifications: NotificationManyRelationFilter
+  payments: PaymentManyRelationFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
   passwordResetToken: PasswordFilter
@@ -157,6 +160,12 @@ input NotificationManyRelationFilter {
   none: NotificationWhereInput
 }
 
+input PaymentManyRelationFilter {
+  every: PaymentWhereInput
+  some: PaymentWhereInput
+  none: PaymentWhereInput
+}
+
 input DateTimeFilter {
   equals: DateTime
   in: [DateTime!]
@@ -210,6 +219,7 @@ input UserUpdateInput {
   carts: CartRelateToManyForUpdateInput
   customerGroups: CustomerGroupRelateToManyForUpdateInput
   notifications: NotificationRelateToManyForUpdateInput
+  payments: PaymentRelateToManyForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
   passwordResetToken: String
@@ -265,6 +275,13 @@ input NotificationRelateToManyForUpdateInput {
   connect: [NotificationWhereUniqueInput!]
 }
 
+input PaymentRelateToManyForUpdateInput {
+  disconnect: [PaymentWhereUniqueInput!]
+  set: [PaymentWhereUniqueInput!]
+  create: [PaymentCreateInput!]
+  connect: [PaymentWhereUniqueInput!]
+}
+
 input UserUpdateArgs {
   where: UserWhereUniqueInput!
   data: UserUpdateInput!
@@ -284,6 +301,7 @@ input UserCreateInput {
   carts: CartRelateToManyForCreateInput
   customerGroups: CustomerGroupRelateToManyForCreateInput
   notifications: NotificationRelateToManyForCreateInput
+  payments: PaymentRelateToManyForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
   passwordResetToken: String
@@ -324,6 +342,11 @@ input CustomerGroupRelateToManyForCreateInput {
 input NotificationRelateToManyForCreateInput {
   create: [NotificationCreateInput!]
   connect: [NotificationWhereUniqueInput!]
+}
+
+input PaymentRelateToManyForCreateInput {
+  create: [PaymentCreateInput!]
+  connect: [PaymentWhereUniqueInput!]
 }
 
 type Role {
@@ -563,8 +586,6 @@ type Order {
   discountsCount(where: DiscountWhereInput! = {}): Int
   payments(where: PaymentWhereInput! = {}, orderBy: [PaymentOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PaymentWhereUniqueInput): [Payment!]
   paymentsCount(where: PaymentWhereInput! = {}): Int
-  refunds(where: RefundWhereInput! = {}, orderBy: [RefundOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: RefundWhereUniqueInput): [Refund!]
-  refundsCount(where: RefundWhereInput! = {}): Int
   returns(where: ReturnWhereInput! = {}, orderBy: [ReturnOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ReturnWhereUniqueInput): [Return!]
   returnsCount(where: ReturnWhereInput! = {}): Int
   shippingMethods(where: ShippingMethodWhereInput! = {}, orderBy: [ShippingMethodOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ShippingMethodWhereUniqueInput): [ShippingMethod!]
@@ -639,7 +660,6 @@ input OrderWhereInput {
   lineItems: LineItemManyRelationFilter
   discounts: DiscountManyRelationFilter
   payments: PaymentManyRelationFilter
-  refunds: RefundManyRelationFilter
   returns: ReturnManyRelationFilter
   shippingMethods: ShippingMethodManyRelationFilter
   swaps: SwapManyRelationFilter
@@ -726,18 +746,6 @@ input DiscountManyRelationFilter {
   none: DiscountWhereInput
 }
 
-input PaymentManyRelationFilter {
-  every: PaymentWhereInput
-  some: PaymentWhereInput
-  none: PaymentWhereInput
-}
-
-input RefundManyRelationFilter {
-  every: RefundWhereInput
-  some: RefundWhereInput
-  none: RefundWhereInput
-}
-
 input ReturnManyRelationFilter {
   every: ReturnWhereInput
   some: ReturnWhereInput
@@ -798,7 +806,6 @@ input OrderUpdateInput {
   lineItems: LineItemRelateToManyForUpdateInput
   discounts: DiscountRelateToManyForUpdateInput
   payments: PaymentRelateToManyForUpdateInput
-  refunds: RefundRelateToManyForUpdateInput
   returns: ReturnRelateToManyForUpdateInput
   shippingMethods: ShippingMethodRelateToManyForUpdateInput
   swaps: SwapRelateToManyForUpdateInput
@@ -884,20 +891,6 @@ input DiscountRelateToManyForUpdateInput {
   connect: [DiscountWhereUniqueInput!]
 }
 
-input PaymentRelateToManyForUpdateInput {
-  disconnect: [PaymentWhereUniqueInput!]
-  set: [PaymentWhereUniqueInput!]
-  create: [PaymentCreateInput!]
-  connect: [PaymentWhereUniqueInput!]
-}
-
-input RefundRelateToManyForUpdateInput {
-  disconnect: [RefundWhereUniqueInput!]
-  set: [RefundWhereUniqueInput!]
-  create: [RefundCreateInput!]
-  connect: [RefundWhereUniqueInput!]
-}
-
 input ReturnRelateToManyForUpdateInput {
   disconnect: [ReturnWhereUniqueInput!]
   set: [ReturnWhereUniqueInput!]
@@ -950,7 +943,6 @@ input OrderCreateInput {
   lineItems: LineItemRelateToManyForCreateInput
   discounts: DiscountRelateToManyForCreateInput
   payments: PaymentRelateToManyForCreateInput
-  refunds: RefundRelateToManyForCreateInput
   returns: ReturnRelateToManyForCreateInput
   shippingMethods: ShippingMethodRelateToManyForCreateInput
   swaps: SwapRelateToManyForCreateInput
@@ -1016,16 +1008,6 @@ input LineItemRelateToManyForCreateInput {
 input DiscountRelateToManyForCreateInput {
   create: [DiscountCreateInput!]
   connect: [DiscountWhereUniqueInput!]
-}
-
-input PaymentRelateToManyForCreateInput {
-  create: [PaymentCreateInput!]
-  connect: [PaymentWhereUniqueInput!]
-}
-
-input RefundRelateToManyForCreateInput {
-  create: [RefundCreateInput!]
-  connect: [RefundWhereUniqueInput!]
 }
 
 input ReturnRelateToManyForCreateInput {
@@ -2407,6 +2389,7 @@ input MoneyAmountRelateToManyForCreateInput {
 
 type Payment {
   id: ID!
+  status: PaymentStatusType
   amount: Int
   currencyCode: String
   amountRefunded: Int
@@ -2417,11 +2400,25 @@ type Payment {
   metadata: JSON
   idempotencyKey: String
   cart: Cart
+  paymentCollection: PaymentCollection
   swap: Swap
   currency: Currency
   order: Order
+  captures(where: CaptureWhereInput! = {}, orderBy: [CaptureOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: CaptureWhereUniqueInput): [Capture!]
+  capturesCount(where: CaptureWhereInput! = {}): Int
+  refunds(where: RefundWhereInput! = {}, orderBy: [RefundOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: RefundWhereUniqueInput): [Refund!]
+  refundsCount(where: RefundWhereInput! = {}): Int
+  user: User
   createdAt: DateTime
   updatedAt: DateTime
+}
+
+enum PaymentStatusType {
+  pending
+  authorized
+  captured
+  failed
+  canceled
 }
 
 input PaymentWhereUniqueInput {
@@ -2433,6 +2430,7 @@ input PaymentWhereInput {
   OR: [PaymentWhereInput!]
   NOT: [PaymentWhereInput!]
   id: IDFilter
+  status: PaymentStatusTypeNullableFilter
   amount: IntFilter
   currencyCode: StringFilter
   amountRefunded: IntFilter
@@ -2441,15 +2439,39 @@ input PaymentWhereInput {
   canceledAt: DateTimeNullableFilter
   idempotencyKey: StringFilter
   cart: CartWhereInput
+  paymentCollection: PaymentCollectionWhereInput
   swap: SwapWhereInput
   currency: CurrencyWhereInput
   order: OrderWhereInput
+  captures: CaptureManyRelationFilter
+  refunds: RefundManyRelationFilter
+  user: UserWhereInput
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
 
+input PaymentStatusTypeNullableFilter {
+  equals: PaymentStatusType
+  in: [PaymentStatusType!]
+  notIn: [PaymentStatusType!]
+  not: PaymentStatusTypeNullableFilter
+}
+
+input CaptureManyRelationFilter {
+  every: CaptureWhereInput
+  some: CaptureWhereInput
+  none: CaptureWhereInput
+}
+
+input RefundManyRelationFilter {
+  every: RefundWhereInput
+  some: RefundWhereInput
+  none: RefundWhereInput
+}
+
 input PaymentOrderByInput {
   id: OrderDirection
+  status: OrderDirection
   amount: OrderDirection
   currencyCode: OrderDirection
   amountRefunded: OrderDirection
@@ -2462,6 +2484,7 @@ input PaymentOrderByInput {
 }
 
 input PaymentUpdateInput {
+  status: PaymentStatusType
   amount: Int
   currencyCode: String
   amountRefunded: Int
@@ -2472,11 +2495,35 @@ input PaymentUpdateInput {
   metadata: JSON
   idempotencyKey: String
   cart: CartRelateToOneForUpdateInput
+  paymentCollection: PaymentCollectionRelateToOneForUpdateInput
   swap: SwapRelateToOneForUpdateInput
   currency: CurrencyRelateToOneForUpdateInput
   order: OrderRelateToOneForUpdateInput
+  captures: CaptureRelateToManyForUpdateInput
+  refunds: RefundRelateToManyForUpdateInput
+  user: UserRelateToOneForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
+}
+
+input PaymentCollectionRelateToOneForUpdateInput {
+  create: PaymentCollectionCreateInput
+  connect: PaymentCollectionWhereUniqueInput
+  disconnect: Boolean
+}
+
+input CaptureRelateToManyForUpdateInput {
+  disconnect: [CaptureWhereUniqueInput!]
+  set: [CaptureWhereUniqueInput!]
+  create: [CaptureCreateInput!]
+  connect: [CaptureWhereUniqueInput!]
+}
+
+input RefundRelateToManyForUpdateInput {
+  disconnect: [RefundWhereUniqueInput!]
+  set: [RefundWhereUniqueInput!]
+  create: [RefundCreateInput!]
+  connect: [RefundWhereUniqueInput!]
 }
 
 input PaymentUpdateArgs {
@@ -2485,6 +2532,7 @@ input PaymentUpdateArgs {
 }
 
 input PaymentCreateInput {
+  status: PaymentStatusType
   amount: Int
   currencyCode: String
   amountRefunded: Int
@@ -2495,11 +2543,30 @@ input PaymentCreateInput {
   metadata: JSON
   idempotencyKey: String
   cart: CartRelateToOneForCreateInput
+  paymentCollection: PaymentCollectionRelateToOneForCreateInput
   swap: SwapRelateToOneForCreateInput
   currency: CurrencyRelateToOneForCreateInput
   order: OrderRelateToOneForCreateInput
+  captures: CaptureRelateToManyForCreateInput
+  refunds: RefundRelateToManyForCreateInput
+  user: UserRelateToOneForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
+}
+
+input PaymentCollectionRelateToOneForCreateInput {
+  create: PaymentCollectionCreateInput
+  connect: PaymentCollectionWhereUniqueInput
+}
+
+input CaptureRelateToManyForCreateInput {
+  create: [CaptureCreateInput!]
+  connect: [CaptureWhereUniqueInput!]
+}
+
+input RefundRelateToManyForCreateInput {
+  create: [RefundCreateInput!]
+  connect: [RefundWhereUniqueInput!]
 }
 
 type Address {
@@ -2525,6 +2592,10 @@ type Address {
   ordersUsingAsBillingAddressCount(where: OrderWhereInput! = {}): Int
   ordersUsingAsShippingAddress(where: OrderWhereInput! = {}, orderBy: [OrderOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: OrderWhereUniqueInput): [Order!]
   ordersUsingAsShippingAddressCount(where: OrderWhereInput! = {}): Int
+  cartsUsingAsBillingAddress(where: CartWhereInput! = {}, orderBy: [CartOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: CartWhereUniqueInput): [Cart!]
+  cartsUsingAsBillingAddressCount(where: CartWhereInput! = {}): Int
+  cartsUsingAsShippingAddress(where: CartWhereInput! = {}, orderBy: [CartOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: CartWhereUniqueInput): [Cart!]
+  cartsUsingAsShippingAddressCount(where: CartWhereInput! = {}): Int
   swaps(where: SwapWhereInput! = {}, orderBy: [SwapOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: SwapWhereUniqueInput): [Swap!]
   swapsCount(where: SwapWhereInput! = {}): Int
   createdAt: DateTime
@@ -2557,6 +2628,8 @@ input AddressWhereInput {
   claimOrders: ClaimOrderManyRelationFilter
   ordersUsingAsBillingAddress: OrderManyRelationFilter
   ordersUsingAsShippingAddress: OrderManyRelationFilter
+  cartsUsingAsBillingAddress: CartManyRelationFilter
+  cartsUsingAsShippingAddress: CartManyRelationFilter
   swaps: SwapManyRelationFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
@@ -2598,6 +2671,8 @@ input AddressUpdateInput {
   claimOrders: ClaimOrderRelateToManyForUpdateInput
   ordersUsingAsBillingAddress: OrderRelateToManyForUpdateInput
   ordersUsingAsShippingAddress: OrderRelateToManyForUpdateInput
+  cartsUsingAsBillingAddress: CartRelateToManyForUpdateInput
+  cartsUsingAsShippingAddress: CartRelateToManyForUpdateInput
   swaps: SwapRelateToManyForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
@@ -2633,6 +2708,8 @@ input AddressCreateInput {
   claimOrders: ClaimOrderRelateToManyForCreateInput
   ordersUsingAsBillingAddress: OrderRelateToManyForCreateInput
   ordersUsingAsShippingAddress: OrderRelateToManyForCreateInput
+  cartsUsingAsBillingAddress: CartRelateToManyForCreateInput
+  cartsUsingAsShippingAddress: CartRelateToManyForCreateInput
   swaps: SwapRelateToManyForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
@@ -2673,14 +2750,19 @@ type Cart {
   shippingMethods(where: ShippingMethodWhereInput! = {}, orderBy: [ShippingMethodOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ShippingMethodWhereUniqueInput): [ShippingMethod!]
   shippingMethodsCount(where: ShippingMethodWhereInput! = {}): Int
   payment: Payment
-  paymentSessions(where: PaymentSessionWhereInput! = {}, orderBy: [PaymentSessionOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PaymentSessionWhereUniqueInput): [PaymentSession!]
-  paymentSessionsCount(where: PaymentSessionWhereInput! = {}): Int
+  paymentCollection: PaymentCollection
+  billingAddress: Address
+  shippingAddress: Address
   subtotal: String
   total: String
+  rawTotal: Int
   discount: String
   giftCardTotal: String
   tax: String
   shipping: String
+  cheapestShipping: String
+  discountsById: JSON
+  checkoutStep: String
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -2724,7 +2806,9 @@ input CartWhereInput {
   swap: SwapWhereInput
   shippingMethods: ShippingMethodManyRelationFilter
   payment: PaymentWhereInput
-  paymentSessions: PaymentSessionManyRelationFilter
+  paymentCollection: PaymentCollectionWhereInput
+  billingAddress: AddressWhereInput
+  shippingAddress: AddressWhereInput
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
@@ -2740,12 +2824,6 @@ input CustomShippingOptionManyRelationFilter {
   every: CustomShippingOptionWhereInput
   some: CustomShippingOptionWhereInput
   none: CustomShippingOptionWhereInput
-}
-
-input PaymentSessionManyRelationFilter {
-  every: PaymentSessionWhereInput
-  some: PaymentSessionWhereInput
-  none: PaymentSessionWhereInput
 }
 
 input CartOrderByInput {
@@ -2779,7 +2857,9 @@ input CartUpdateInput {
   swap: SwapRelateToOneForUpdateInput
   shippingMethods: ShippingMethodRelateToManyForUpdateInput
   payment: PaymentRelateToOneForUpdateInput
-  paymentSessions: PaymentSessionRelateToManyForUpdateInput
+  paymentCollection: PaymentCollectionRelateToOneForUpdateInput
+  billingAddress: AddressRelateToOneForUpdateInput
+  shippingAddress: AddressRelateToOneForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -2795,13 +2875,6 @@ input PaymentRelateToOneForUpdateInput {
   create: PaymentCreateInput
   connect: PaymentWhereUniqueInput
   disconnect: Boolean
-}
-
-input PaymentSessionRelateToManyForUpdateInput {
-  disconnect: [PaymentSessionWhereUniqueInput!]
-  set: [PaymentSessionWhereUniqueInput!]
-  create: [PaymentSessionCreateInput!]
-  connect: [PaymentSessionWhereUniqueInput!]
 }
 
 input CartUpdateArgs {
@@ -2829,7 +2902,9 @@ input CartCreateInput {
   swap: SwapRelateToOneForCreateInput
   shippingMethods: ShippingMethodRelateToManyForCreateInput
   payment: PaymentRelateToOneForCreateInput
-  paymentSessions: PaymentSessionRelateToManyForCreateInput
+  paymentCollection: PaymentCollectionRelateToOneForCreateInput
+  billingAddress: AddressRelateToOneForCreateInput
+  shippingAddress: AddressRelateToOneForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -2842,11 +2917,6 @@ input CustomShippingOptionRelateToManyForCreateInput {
 input PaymentRelateToOneForCreateInput {
   create: PaymentCreateInput
   connect: PaymentWhereUniqueInput
-}
-
-input PaymentSessionRelateToManyForCreateInput {
-  create: [PaymentSessionCreateInput!]
-  connect: [PaymentSessionWhereUniqueInput!]
 }
 
 type ApiKey {
@@ -5255,8 +5325,10 @@ input OAuthCreateInput {
 
 type PaymentProvider {
   id: ID!
+  name: String
   code: String
   isInstalled: Boolean
+  metadata: JSON
   regions(where: RegionWhereInput! = {}, orderBy: [RegionOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: RegionWhereUniqueInput): [Region!]
   regionsCount(where: RegionWhereInput! = {}): Int
   paymentSessions(where: PaymentSessionWhereInput! = {}, orderBy: [PaymentSessionOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PaymentSessionWhereUniqueInput): [PaymentSession!]
@@ -5275,6 +5347,7 @@ input PaymentProviderWhereInput {
   OR: [PaymentProviderWhereInput!]
   NOT: [PaymentProviderWhereInput!]
   id: IDFilter
+  name: StringFilter
   code: StringFilter
   isInstalled: BooleanFilter
   regions: RegionManyRelationFilter
@@ -5283,8 +5356,15 @@ input PaymentProviderWhereInput {
   updatedAt: DateTimeFilter
 }
 
+input PaymentSessionManyRelationFilter {
+  every: PaymentSessionWhereInput
+  some: PaymentSessionWhereInput
+  none: PaymentSessionWhereInput
+}
+
 input PaymentProviderOrderByInput {
   id: OrderDirection
+  name: OrderDirection
   code: OrderDirection
   isInstalled: OrderDirection
   createdAt: OrderDirection
@@ -5292,12 +5372,21 @@ input PaymentProviderOrderByInput {
 }
 
 input PaymentProviderUpdateInput {
+  name: String
   code: String
   isInstalled: Boolean
+  metadata: JSON
   regions: RegionRelateToManyForUpdateInput
   paymentSessions: PaymentSessionRelateToManyForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
+}
+
+input PaymentSessionRelateToManyForUpdateInput {
+  disconnect: [PaymentSessionWhereUniqueInput!]
+  set: [PaymentSessionWhereUniqueInput!]
+  create: [PaymentSessionCreateInput!]
+  connect: [PaymentSessionWhereUniqueInput!]
 }
 
 input PaymentProviderUpdateArgs {
@@ -5306,10 +5395,126 @@ input PaymentProviderUpdateArgs {
 }
 
 input PaymentProviderCreateInput {
+  name: String
   code: String
   isInstalled: Boolean
+  metadata: JSON
   regions: RegionRelateToManyForCreateInput
   paymentSessions: PaymentSessionRelateToManyForCreateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input PaymentSessionRelateToManyForCreateInput {
+  create: [PaymentSessionCreateInput!]
+  connect: [PaymentSessionWhereUniqueInput!]
+}
+
+type PaymentCollection {
+  id: ID!
+  status: PaymentCollectionStatusType
+  description: PaymentCollectionDescriptionType
+  amount: Int
+  authorizedAmount: Int
+  refundedAmount: Int
+  metadata: JSON
+  paymentSessions(where: PaymentSessionWhereInput! = {}, orderBy: [PaymentSessionOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PaymentSessionWhereUniqueInput): [PaymentSession!]
+  paymentSessionsCount(where: PaymentSessionWhereInput! = {}): Int
+  payments(where: PaymentWhereInput! = {}, orderBy: [PaymentOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PaymentWhereUniqueInput): [Payment!]
+  paymentsCount(where: PaymentWhereInput! = {}): Int
+  cart: Cart
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+enum PaymentCollectionStatusType {
+  not_paid
+  pending
+  partially_paid
+  paid
+  canceled
+}
+
+enum PaymentCollectionDescriptionType {
+  default
+  refund
+}
+
+input PaymentCollectionWhereUniqueInput {
+  id: ID
+}
+
+input PaymentCollectionWhereInput {
+  AND: [PaymentCollectionWhereInput!]
+  OR: [PaymentCollectionWhereInput!]
+  NOT: [PaymentCollectionWhereInput!]
+  id: IDFilter
+  status: PaymentCollectionStatusTypeNullableFilter
+  description: PaymentCollectionDescriptionTypeNullableFilter
+  amount: IntFilter
+  authorizedAmount: IntNullableFilter
+  refundedAmount: IntNullableFilter
+  paymentSessions: PaymentSessionManyRelationFilter
+  payments: PaymentManyRelationFilter
+  cart: CartWhereInput
+  createdAt: DateTimeFilter
+  updatedAt: DateTimeFilter
+}
+
+input PaymentCollectionStatusTypeNullableFilter {
+  equals: PaymentCollectionStatusType
+  in: [PaymentCollectionStatusType!]
+  notIn: [PaymentCollectionStatusType!]
+  not: PaymentCollectionStatusTypeNullableFilter
+}
+
+input PaymentCollectionDescriptionTypeNullableFilter {
+  equals: PaymentCollectionDescriptionType
+  in: [PaymentCollectionDescriptionType!]
+  notIn: [PaymentCollectionDescriptionType!]
+  not: PaymentCollectionDescriptionTypeNullableFilter
+}
+
+input PaymentCollectionOrderByInput {
+  id: OrderDirection
+  status: OrderDirection
+  description: OrderDirection
+  amount: OrderDirection
+  authorizedAmount: OrderDirection
+  refundedAmount: OrderDirection
+  createdAt: OrderDirection
+  updatedAt: OrderDirection
+}
+
+input PaymentCollectionUpdateInput {
+  status: PaymentCollectionStatusType
+  description: PaymentCollectionDescriptionType
+  amount: Int
+  authorizedAmount: Int
+  refundedAmount: Int
+  metadata: JSON
+  paymentSessions: PaymentSessionRelateToManyForUpdateInput
+  payments: PaymentRelateToManyForUpdateInput
+  cart: CartRelateToOneForUpdateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input PaymentCollectionUpdateArgs {
+  where: PaymentCollectionWhereUniqueInput!
+  data: PaymentCollectionUpdateInput!
+}
+
+input PaymentCollectionCreateInput {
+  status: PaymentCollectionStatusType
+  description: PaymentCollectionDescriptionType
+  amount: Int
+  authorizedAmount: Int
+  refundedAmount: Int
+  metadata: JSON
+  paymentSessions: PaymentSessionRelateToManyForCreateInput
+  payments: PaymentRelateToManyForCreateInput
+  cart: CartRelateToOneForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -5317,18 +5522,22 @@ input PaymentProviderCreateInput {
 type PaymentSession {
   id: ID!
   isSelected: Boolean
+  isInitiated: Boolean
+  amount: Int
   status: PaymentSessionStatusType
   data: JSON
   idempotencyKey: String
-  cart: Cart
+  paymentCollection: PaymentCollection
   paymentProvider: PaymentProvider
+  paymentAuthorizedAt: DateTime
   createdAt: DateTime
   updatedAt: DateTime
 }
 
 enum PaymentSessionStatusType {
-  authorized
   pending
+  processing
+  authorized
   requires_more
   error
   canceled
@@ -5344,10 +5553,13 @@ input PaymentSessionWhereInput {
   NOT: [PaymentSessionWhereInput!]
   id: IDFilter
   isSelected: BooleanFilter
+  isInitiated: BooleanFilter
+  amount: IntFilter
   status: PaymentSessionStatusTypeNullableFilter
   idempotencyKey: StringFilter
-  cart: CartWhereInput
+  paymentCollection: PaymentCollectionWhereInput
   paymentProvider: PaymentProviderWhereInput
+  paymentAuthorizedAt: DateTimeNullableFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
@@ -5362,19 +5574,25 @@ input PaymentSessionStatusTypeNullableFilter {
 input PaymentSessionOrderByInput {
   id: OrderDirection
   isSelected: OrderDirection
+  isInitiated: OrderDirection
+  amount: OrderDirection
   status: OrderDirection
   idempotencyKey: OrderDirection
+  paymentAuthorizedAt: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
 }
 
 input PaymentSessionUpdateInput {
   isSelected: Boolean
+  isInitiated: Boolean
+  amount: Int
   status: PaymentSessionStatusType
   data: JSON
   idempotencyKey: String
-  cart: CartRelateToOneForUpdateInput
+  paymentCollection: PaymentCollectionRelateToOneForUpdateInput
   paymentProvider: PaymentProviderRelateToOneForUpdateInput
+  paymentAuthorizedAt: DateTime
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -5392,11 +5610,14 @@ input PaymentSessionUpdateArgs {
 
 input PaymentSessionCreateInput {
   isSelected: Boolean
+  isInitiated: Boolean
+  amount: Int
   status: PaymentSessionStatusType
   data: JSON
   idempotencyKey: String
-  cart: CartRelateToOneForCreateInput
+  paymentCollection: PaymentCollectionRelateToOneForCreateInput
   paymentProvider: PaymentProviderRelateToOneForCreateInput
+  paymentAuthorizedAt: DateTime
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -5404,6 +5625,63 @@ input PaymentSessionCreateInput {
 input PaymentProviderRelateToOneForCreateInput {
   create: PaymentProviderCreateInput
   connect: PaymentProviderWhereUniqueInput
+}
+
+type Capture {
+  id: ID!
+  amount: Int
+  payment: Payment
+  metadata: JSON
+  createdBy: String
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input CaptureWhereUniqueInput {
+  id: ID
+}
+
+input CaptureWhereInput {
+  AND: [CaptureWhereInput!]
+  OR: [CaptureWhereInput!]
+  NOT: [CaptureWhereInput!]
+  id: IDFilter
+  amount: IntFilter
+  payment: PaymentWhereInput
+  createdBy: StringFilter
+  createdAt: DateTimeFilter
+  updatedAt: DateTimeFilter
+}
+
+input CaptureOrderByInput {
+  id: OrderDirection
+  amount: OrderDirection
+  createdBy: OrderDirection
+  createdAt: OrderDirection
+  updatedAt: OrderDirection
+}
+
+input CaptureUpdateInput {
+  amount: Int
+  payment: PaymentRelateToOneForUpdateInput
+  metadata: JSON
+  createdBy: String
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input CaptureUpdateArgs {
+  where: CaptureWhereUniqueInput!
+  data: CaptureUpdateInput!
+}
+
+input CaptureCreateInput {
+  amount: Int
+  payment: PaymentRelateToOneForCreateInput
+  metadata: JSON
+  createdBy: String
+  createdAt: DateTime
+  updatedAt: DateTime
 }
 
 type PriceList {
@@ -5750,7 +6028,7 @@ type Refund {
   reason: RefundReasonType
   metadata: JSON
   idempotencyKey: String
-  order: Order
+  payment: Payment
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -5776,7 +6054,7 @@ input RefundWhereInput {
   note: StringFilter
   reason: RefundReasonTypeNullableFilter
   idempotencyKey: StringFilter
-  order: OrderWhereInput
+  payment: PaymentWhereInput
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
@@ -5804,7 +6082,7 @@ input RefundUpdateInput {
   reason: RefundReasonType
   metadata: JSON
   idempotencyKey: String
-  order: OrderRelateToOneForUpdateInput
+  payment: PaymentRelateToOneForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -5820,7 +6098,7 @@ input RefundCreateInput {
   reason: RefundReasonType
   metadata: JSON
   idempotencyKey: String
-  order: OrderRelateToOneForCreateInput
+  payment: PaymentRelateToOneForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -6530,6 +6808,8 @@ type ShippingOption {
   shippingOptionRequirementsCount(where: ShippingOptionRequirementWhereInput! = {}): Int
   taxRates(where: TaxRateWhereInput! = {}, orderBy: [TaxRateOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: TaxRateWhereUniqueInput): [TaxRate!]
   taxRatesCount(where: TaxRateWhereInput! = {}): Int
+  calculatedAmount: String
+  isTaxInclusive: Boolean
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -7479,12 +7759,24 @@ type Mutation {
   updatePaymentProviders(data: [PaymentProviderUpdateArgs!]!): [PaymentProvider]
   deletePaymentProvider(where: PaymentProviderWhereUniqueInput!): PaymentProvider
   deletePaymentProviders(where: [PaymentProviderWhereUniqueInput!]!): [PaymentProvider]
+  createPaymentCollection(data: PaymentCollectionCreateInput!): PaymentCollection
+  createPaymentCollections(data: [PaymentCollectionCreateInput!]!): [PaymentCollection]
+  updatePaymentCollection(where: PaymentCollectionWhereUniqueInput!, data: PaymentCollectionUpdateInput!): PaymentCollection
+  updatePaymentCollections(data: [PaymentCollectionUpdateArgs!]!): [PaymentCollection]
+  deletePaymentCollection(where: PaymentCollectionWhereUniqueInput!): PaymentCollection
+  deletePaymentCollections(where: [PaymentCollectionWhereUniqueInput!]!): [PaymentCollection]
   createPaymentSession(data: PaymentSessionCreateInput!): PaymentSession
   createPaymentSessions(data: [PaymentSessionCreateInput!]!): [PaymentSession]
   updatePaymentSession(where: PaymentSessionWhereUniqueInput!, data: PaymentSessionUpdateInput!): PaymentSession
   updatePaymentSessions(data: [PaymentSessionUpdateArgs!]!): [PaymentSession]
   deletePaymentSession(where: PaymentSessionWhereUniqueInput!): PaymentSession
   deletePaymentSessions(where: [PaymentSessionWhereUniqueInput!]!): [PaymentSession]
+  createCapture(data: CaptureCreateInput!): Capture
+  createCaptures(data: [CaptureCreateInput!]!): [Capture]
+  updateCapture(where: CaptureWhereUniqueInput!, data: CaptureUpdateInput!): Capture
+  updateCaptures(data: [CaptureUpdateArgs!]!): [Capture]
+  deleteCapture(where: CaptureWhereUniqueInput!): Capture
+  deleteCaptures(where: [CaptureWhereUniqueInput!]!): [Capture]
   createPriceList(data: PriceListCreateInput!): PriceList
   createPriceLists(data: [PriceListCreateInput!]!): [PriceList]
   updatePriceList(where: PriceListWhereUniqueInput!, data: PriceListUpdateInput!): PriceList
@@ -7618,6 +7910,15 @@ type Mutation {
   createActiveUserAddress(data: AddressCreateInput!): User
   seedStorefront: Boolean
   deleteActiveUserAddress(where: AddressWhereUniqueInput!): Address
+  addDiscountToActiveCart(cartId: ID!, code: String!): Cart
+  removeDiscountFromActiveCart(cartId: ID!, code: String!): Cart
+  createActiveCartPaymentSessions(cartId: ID!): Cart
+  setActiveCartPaymentSession(cartId: ID!, providerId: ID!): Cart
+  completeActiveCart(cartId: ID!): Order
+  addActiveCartShippingMethod(cartId: ID!, shippingMethodId: ID!): Cart
+  initiatePaymentSession(cartId: ID!, paymentProviderId: String!): PaymentSession
+  handleStripeWebhook(event: JSON!, headers: JSON!): WebhookResult!
+  handlePayPalWebhook(event: JSON!, headers: JSON!): WebhookResult!
 }
 
 union UserAuthenticationWithPasswordResult = UserAuthenticationWithPasswordSuccess | UserAuthenticationWithPasswordFailure
@@ -7781,9 +8082,15 @@ type Query {
   paymentProviders(where: PaymentProviderWhereInput! = {}, orderBy: [PaymentProviderOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PaymentProviderWhereUniqueInput): [PaymentProvider!]
   paymentProvider(where: PaymentProviderWhereUniqueInput!): PaymentProvider
   paymentProvidersCount(where: PaymentProviderWhereInput! = {}): Int
+  paymentCollections(where: PaymentCollectionWhereInput! = {}, orderBy: [PaymentCollectionOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PaymentCollectionWhereUniqueInput): [PaymentCollection!]
+  paymentCollection(where: PaymentCollectionWhereUniqueInput!): PaymentCollection
+  paymentCollectionsCount(where: PaymentCollectionWhereInput! = {}): Int
   paymentSessions(where: PaymentSessionWhereInput! = {}, orderBy: [PaymentSessionOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PaymentSessionWhereUniqueInput): [PaymentSession!]
   paymentSession(where: PaymentSessionWhereUniqueInput!): PaymentSession
   paymentSessionsCount(where: PaymentSessionWhereInput! = {}): Int
+  captures(where: CaptureWhereInput! = {}, orderBy: [CaptureOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: CaptureWhereUniqueInput): [Capture!]
+  capture(where: CaptureWhereUniqueInput!): Capture
+  capturesCount(where: CaptureWhereInput! = {}): Int
   priceLists(where: PriceListWhereInput! = {}, orderBy: [PriceListOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PriceListWhereUniqueInput): [PriceList!]
   priceList(where: PriceListWhereUniqueInput!): PriceList
   priceListsCount(where: PriceListWhereInput! = {}): Int
@@ -7848,7 +8155,10 @@ type Query {
   authenticatedItem: AuthenticatedItem
   validateUserPasswordResetToken(email: String!, token: String!): ValidateUserPasswordResetTokenResult
   redirectToInit: Boolean
-  activeCart(cartId: ID!): CartResponse
+  activeCart(cartId: ID!): JSON
+  activeCartShippingOptions(cartId: ID!): [ShippingOption!]
+  activeCartPaymentProviders(regionId: ID!): [PaymentProvider!]
+  activeCartRegion(countryCode: String!): Region
 }
 
 union AuthenticatedItem = User
@@ -7960,13 +8270,6 @@ enum KeystoneAdminUISortDirection {
   DESC
 }
 
-type CartResponse {
-  cart: Cart
-  lineItems: [LineItem!]!
-  giftCards: [GiftCard!]!
-  discounts: [Discount!]!
-}
-
 input CartCodeInput {
   code: String!
 }
@@ -7977,4 +8280,8 @@ input UserUpdateProfileInput {
   phone: String
   billingAddress: String
   password: String
+}
+
+type WebhookResult {
+  success: Boolean!
 }

@@ -9,7 +9,7 @@ import CountrySelect from "@storefront/modules/checkout/components/country-selec
 import Input from "@storefront/modules/common/components/input";
 import Modal from "@storefront/modules/common/components/modal";
 import { SubmitButton } from "@storefront/modules/checkout/components/submit-button";
-import { createCustomerAddress } from "@storefront/modules/account/actions";
+import { createCustomerAddress } from "@storefront/lib/data/user";
 
 const AddAddress = ({ region }) => {
   const [successState, setSuccessState] = useState(false);

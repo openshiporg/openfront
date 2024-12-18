@@ -92,7 +92,7 @@
       "name": "Europe",
       "currency_code": "eur",
       "tax_rate": 0.21,
-      "payment_providers": ["manual"],
+      "payment_providers": ["pp_stripe_stripe", "pp_paypal_paypal", "pp_system_default"],
       "fulfillment_providers": ["manual"],
       "countries": ["gb", "de", "dk", "se", "fr", "es", "it"]
     },
@@ -101,7 +101,7 @@
       "name": "North America",
       "currency_code": "usd",
       "tax_rate": 0.05,
-      "payment_providers": ["manual"],
+      "payment_providers": ["pp_stripe_stripe", "pp_paypal_paypal", "pp_system_default"],
       "fulfillment_providers": ["manual"],
       "countries": ["us", "ca"]
     }
@@ -704,6 +704,98 @@
           "manage_inventory": true
         },
         {
+          "title": "S / White",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2200
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2500
+            }
+          ],
+          "options": [
+            {
+              "value": "S"
+            },
+            {
+              "value": "White"
+            }
+          ],
+          "inventory_quantity": 50,
+          "manage_inventory": true
+        },
+        {
+          "title": "M / White",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2200
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2500
+            }
+          ],
+          "options": [
+            {
+              "value": "M"
+            },
+            {
+              "value": "White"
+            }
+          ],
+          "inventory_quantity": 50,
+          "manage_inventory": true
+        },
+        {
+          "title": "L / White",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2200
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2500
+            }
+          ],
+          "options": [
+            {
+              "value": "L"
+            },
+            {
+              "value": "White"
+            }
+          ],
+          "inventory_quantity": 50,
+          "manage_inventory": true
+        },
+        {
+          "title": "XS / Black",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2200
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2500
+            }
+          ],
+          "options": [
+            {
+              "value": "XS"
+            },
+            {
+              "value": "Black"
+            }
+          ],
+          "inventory_quantity": 50,
+          "manage_inventory": true
+        },
+        {
           "title": "S / Black",
           "prices": [
             {
@@ -718,6 +810,52 @@
           "options": [
             {
               "value": "S"
+            },
+            {
+              "value": "Black"
+            }
+          ],
+          "inventory_quantity": 50,
+          "manage_inventory": true
+        },
+        {
+          "title": "M / Black",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2200
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2500
+            }
+          ],
+          "options": [
+            {
+              "value": "M"
+            },
+            {
+              "value": "Black"
+            }
+          ],
+          "inventory_quantity": 50,
+          "manage_inventory": true
+        },
+        {
+          "title": "L / Black",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2200
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2500
+            }
+          ],
+          "options": [
+            {
+              "value": "L"
             },
             {
               "value": "Black"
@@ -756,7 +894,7 @@
       ],
       "variants": [
         {
-          "title": "S / Black",
+          "title": "S / White",
           "prices": [
             {
               "currency_code": "eur",
@@ -772,7 +910,7 @@
               "value": "S"
             },
             {
-              "value": "Black"
+              "value": "White"
             }
           ],
           "inventory_quantity": 100,
@@ -796,6 +934,98 @@
             },
             {
               "value": "White"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "L / White",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 1500
+            },
+            {
+              "currency_code": "usd",
+              "amount": 1700
+            }
+          ],
+          "options": [
+            {
+              "value": "L"
+            },
+            {
+              "value": "White"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "S / Black",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 1500
+            },
+            {
+              "currency_code": "usd",
+              "amount": 1700
+            }
+          ],
+          "options": [
+            {
+              "value": "S"
+            },
+            {
+              "value": "Black"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "M / Black",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 1500
+            },
+            {
+              "currency_code": "usd",
+              "amount": 1700
+            }
+          ],
+          "options": [
+            {
+              "value": "M"
+            },
+            {
+              "value": "Black"
+            }
+          ],
+          "inventory_quantity": 100,
+          "manage_inventory": true
+        },
+        {
+          "title": "L / Black",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 1500
+            },
+            {
+              "currency_code": "usd",
+              "amount": 1700
+            }
+          ],
+          "options": [
+            {
+              "value": "L"
+            },
+            {
+              "value": "Black"
             }
           ],
           "inventory_quantity": 100,
@@ -832,7 +1062,30 @@
       ],
       "variants": [
         {
-          "title": "S / Black",
+          "title": "XS / White",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2000
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2200
+            }
+          ],
+          "options": [
+            {
+              "value": "XS"
+            },
+            {
+              "value": "White"
+            }
+          ],
+          "inventory_quantity": 75,
+          "manage_inventory": true
+        },
+        {
+          "title": "S / White",
           "prices": [
             {
               "currency_code": "eur",
@@ -848,7 +1101,7 @@
               "value": "S"
             },
             {
-              "value": "Black"
+              "value": "White"
             }
           ],
           "inventory_quantity": 75,
@@ -872,6 +1125,167 @@
             },
             {
               "value": "White"
+            }
+          ],
+          "inventory_quantity": 75,
+          "manage_inventory": true
+        },
+        {
+          "title": "L / White",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2000
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2200
+            }
+          ],
+          "options": [
+            {
+              "value": "L"
+            },
+            {
+              "value": "White"
+            }
+          ],
+          "inventory_quantity": 75,
+          "manage_inventory": true
+        },
+        {
+          "title": "XL / White",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2000
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2200
+            }
+          ],
+          "options": [
+            {
+              "value": "XL"
+            },
+            {
+              "value": "White"
+            }
+          ],
+          "inventory_quantity": 75,
+          "manage_inventory": true
+        },
+        {
+          "title": "XS / Black",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2000
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2200
+            }
+          ],
+          "options": [
+            {
+              "value": "XS"
+            },
+            {
+              "value": "Black"
+            }
+          ],
+          "inventory_quantity": 75,
+          "manage_inventory": true
+        },
+        {
+          "title": "S / Black",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2000
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2200
+            }
+          ],
+          "options": [
+            {
+              "value": "S"
+            },
+            {
+              "value": "Black"
+            }
+          ],
+          "inventory_quantity": 75,
+          "manage_inventory": true
+        },
+        {
+          "title": "M / Black",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2000
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2200
+            }
+          ],
+          "options": [
+            {
+              "value": "M"
+            },
+            {
+              "value": "Black"
+            }
+          ],
+          "inventory_quantity": 75,
+          "manage_inventory": true
+        },
+        {
+          "title": "L / Black",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2000
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2200
+            }
+          ],
+          "options": [
+            {
+              "value": "L"
+            },
+            {
+              "value": "Black"
+            }
+          ],
+          "inventory_quantity": 75,
+          "manage_inventory": true
+        },
+        {
+          "title": "XL / Black",
+          "prices": [
+            {
+              "currency_code": "eur",
+              "amount": 2000
+            },
+            {
+              "currency_code": "usd",
+              "amount": 2200
+            }
+          ],
+          "options": [
+            {
+              "value": "XL"
+            },
+            {
+              "value": "Black"
             }
           ],
           "inventory_quantity": 75,
@@ -1240,6 +1654,23 @@
       "id": "pcol_trending",
       "title": "Trending",
       "handle": "trending"
+    }
+  ],
+  "paymentProviders": [
+    {
+      "name": "Stripe",
+      "code": "pp_stripe_stripe",
+      "isInstalled": true
+    },
+    {
+      "name": "PayPal",
+      "code": "pp_paypal_paypal",
+      "isInstalled": true
+    },
+    {
+      "name": "Manual",
+      "code": "pp_system_default",
+      "isInstalled": true
     }
   ]
 }

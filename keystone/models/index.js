@@ -42,6 +42,7 @@ import { Notification } from "./Notification";
 import { NotificationProvider } from "./NotificationProvider";
 import { OAuth } from "./OAuth";
 import { PaymentProvider } from "./PaymentProvider";
+import { PaymentCollection } from "./PaymentCollection";
 import { PaymentSession } from "./PaymentSession";
 import { PriceList } from "./PriceList";
 import { PriceRule } from './PriceRule';
@@ -63,6 +64,7 @@ import { TaxProvider } from "./TaxProvider";
 import { TaxRate } from "./TaxRate";
 import { TrackingLink } from "./TrackingLink";
 import { RuleType } from "./RuleType";
+import { Capture } from "./Capture";
 
 export const models = {
   User,
@@ -109,7 +111,9 @@ export const models = {
   NotificationProvider,
   OAuth,
   PaymentProvider,
+  PaymentCollection,
   PaymentSession,
+  Capture,
   PriceList,
   PriceRule,
   RuleType,

@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useIntersection } from "@storefront/lib/hooks/use-in-view";
-import { addToCart } from "@storefront/modules/cart/actions";
+import { addToCart } from "@storefront/lib/data/cart";
 import Divider from "@storefront/modules/common/components/divider";
 import OptionSelect from "@storefront/modules/products/components/option-select";
 

@@ -10,7 +10,7 @@ export const metadata = {
 };
 
 export default async function Addresses({ params: { countryCode } }) {
-  const { authenticatedItem: user } = await getUser();
+  const user = await getUser();
   const region = await getRegion(countryCode);
 
 

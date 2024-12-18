@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, Container, Text } from "@medusajs/ui";
-// import { resetOnboardingState } from "app/actions";
+import { resetOnboardingState } from "@storefront/lib/data/onboarding";
 
 const OnboardingCta = ({ orderId }) => {
   return (

@@ -44,31 +44,38 @@ export const useDeleteItem = (listKey) => {
   const toasts = useToasts();
   const client = useApolloClient();
 
-  const [deleteItem, { loading: deleteLoading, error: deleteError }] = useMutation(
-    gql`mutation ($id: ID!) {
+  const [deleteItem, { loading: deleteLoading, error: deleteError }] =
+    useMutation(
+      gql`mutation ($id: ID!) {
       ${list.gqlNames.deleteMutationName}(where: { id: $id }) {
         id
       }
-    }`
-  );
+    }`,
+      {
+        refetchQueries: "active",
+      }
+    );
 
-  const handleDelete = useCallback(async (itemId, itemLabel) => {
-    try {
-      await deleteItem({ variables: { id: itemId } });
-      await client.refetchQueries({ include: "active" });
-      toasts.addToast({
-        title: itemLabel,
-        message: `Deleted ${list.singular} item successfully`,
-        tone: "positive",
-      });
-    } catch (err) {
-      toasts.addToast({
-        title: `Failed to delete ${list.singular} item: ${itemLabel}`,
-        message: err.message,
-        tone: "negative",
-      });
-    }
-  }, [deleteItem, client, list, toasts]);
+  const handleDelete = useCallback(
+    async (itemId, itemLabel) => {
+      try {
+        await deleteItem({ variables: { id: itemId } });
+        // await client.refetchQueries({ include: "active" });
+        toasts.addToast({
+          title: itemLabel,
+          message: `Deleted ${list.singular} item successfully`,
+          tone: "positive",
+        });
+      } catch (err) {
+        toasts.addToast({
+          title: `Failed to delete ${list.singular} item: ${itemLabel}`,
+          message: err.message,
+          tone: "negative",
+        });
+      }
+    },
+    [deleteItem, client, list, toasts]
+  );
 
   return { handleDelete, deleteLoading, deleteError };
 };
@@ -88,24 +95,27 @@ export const useUpdateItem = (listKey) => {
     `
   );
 
-  const handleUpdate = useCallback(async (itemId, data) => {
-    try {
-      await update({ variables: { data, id: itemId } });
-      await client.refetchQueries({ include: "active" });
-      toasts.addToast({
-        title: `Updated ${list.singular}`,
-        message: `Updated ${list.singular} item successfully`,
-        tone: "positive",
-      });
-    } catch (error) {
-      console.error(`Error updating item:`, error);
-      toasts.addToast({
-        title: `Failed to update ${list.singular}`,
-        message: error.message,
-        tone: "negative",
-      });
-    }
-  }, [update, client, list, toasts]);
+  const handleUpdate = useCallback(
+    async (itemId, data) => {
+      try {
+        await update({ variables: { data, id: itemId } });
+        // await client.refetchQueries({ include: "active" });
+        toasts.addToast({
+          title: `Updated ${list.singular}`,
+          message: `Updated ${list.singular} item successfully`,
+          tone: "positive",
+        });
+      } catch (error) {
+        console.error(`Error updating item:`, error);
+        toasts.addToast({
+          title: `Failed to update ${list.singular}`,
+          message: error.message,
+          tone: "negative",
+        });
+      }
+    },
+    [update, client, list, toasts]
+  );
 
   return { handleUpdate, updateLoading, updateError };
 };
@@ -256,11 +266,11 @@ export function EditItemDrawer({ listKey, itemId, closeDrawer, open }) {
     });
   };
 
-  const refetchListQuery = async () => {
-    await client.refetchQueries({
-      include: "active",
-    });
-  };
+  // const refetchListQuery = async () => {
+  //   await client.refetchQueries({
+  //     include: "active",
+  //   });
+  // };
 
   return (
     <DrawerBase
@@ -286,7 +296,7 @@ export function EditItemDrawer({ listKey, itemId, closeDrawer, open }) {
                   itemId={itemId}
                   list={list}
                   onClose={async () => {
-                    await refetchListQuery();
+                    // await refetchListQuery();
                     closeDrawer();
                   }}
                 />
@@ -295,7 +305,14 @@ export function EditItemDrawer({ listKey, itemId, closeDrawer, open }) {
                   disabled={!changedFields.size}
                 />
               </div>
-              <div><Badge color="zinc" className="border text-xs font-medium tracking-wide">ID: {itemId}</Badge></div>
+              <div>
+                <Badge
+                  color="zinc"
+                  className="border text-xs font-medium tracking-wide"
+                >
+                  ID: {itemId}
+                </Badge>
+              </div>
             </div>
           </SheetDescription>
         </SheetHeader>

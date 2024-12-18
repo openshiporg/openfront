@@ -7,27 +7,40 @@ import PayPal from "@storefront/modules/common/icons/paypal"
 
 /* Map of payment provider_id to their title and icon. Add in any payment providers you want to use. */
 export const paymentInfoMap = {
-  stripe: {
+  pp_stripe_stripe: {
     title: "Credit card",
     icon: <CreditCard />,
   },
-  "stripe-ideal": {
+  "pp_stripe-ideal_stripe": {
     title: "iDeal",
     icon: <Ideal />,
   },
-  "stripe-bancontact": {
+  "pp_stripe-bancontact_stripe": {
     title: "Bancontact",
     icon: <Bancontact />,
   },
-  paypal: {
+  pp_paypal_paypal: {
     title: "PayPal",
     icon: <PayPal />,
   },
-  manual: {
-    title: "Test payment",
+  pp_system_default: {
+    title: "Manual Payment",
     icon: <CreditCard />,
   },
   // Add more payment providers here
+}
+
+// Helper functions to check provider types
+export const isStripe = (code) => {
+  return code?.startsWith("pp_stripe_")
+}
+
+export const isPaypal = (code) => {
+  return code?.startsWith("pp_paypal_")
+}
+
+export const isManual = (code) => {
+  return code?.startsWith("pp_system_default")
 }
 
 // Add currencies that don't need to be divided by 100

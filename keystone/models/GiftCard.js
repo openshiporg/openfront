@@ -22,6 +22,30 @@ export const GiftCard = list({
       delete: permissions.canManageGiftCards,
     },
   },
+  hooks: {
+    async afterOperation({ operation, item, context }) {
+      if (operation === "create" || operation === "update") {
+        const sudoContext = context.sudo();
+        const giftCard = await sudoContext.query.GiftCard.findOne({
+          where: { id: item.id },
+          query: 'carts { id }'
+        });
+        
+        if (giftCard?.carts?.length) {
+          for (const cart of giftCard.carts) {
+            await sudoContext.query.Cart.updateOne({
+              where: { id: cart.id },
+              data: {
+                paymentCollection: {
+                  disconnect: true
+                }
+              }
+            });
+          }
+        }
+      }
+    }
+  },
   fields: {
     code: text({
       validation: {

@@ -2,13 +2,12 @@
 import { RadioGroup } from "@headlessui/react"
 import { CheckCircleSolid } from "@medusajs/icons"
 import { Button, Heading, Text, clx } from "@medusajs/ui";
-import { formatAmount } from "@storefront/lib/util/prices"
 
 import Divider from "@storefront/modules/common/components/divider"
 import Radio from "@storefront/modules/common/components/radio"
 import Spinner from "@storefront/modules/common/icons/spinner"
 import ErrorMessage from "@storefront/modules/checkout/components/error-message"
-import { setShippingMethod } from "@storefront/modules/checkout/actions"
+import { setShippingMethod } from "@storefront/lib/data/cart"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 
@@ -55,6 +54,9 @@ const Shipping = ({
     setError(null)
   }, [isOpen])
 
+  // Get the currently selected shipping method's option ID
+  const selectedOptionId = cart?.shippingMethods?.[0]?.shippingOption?.id;
+
   return (
     <div className="bg-white">
       <div className="flex flex-row items-center justify-between mb-6">
@@ -62,14 +64,14 @@ const Shipping = ({
           level="h2"
           className={clx("flex flex-row text-3xl-regular gap-x-2 items-baseline", {
             "opacity-50 pointer-events-none select-none":
-              !isOpen && cart.shipping_methods.length === 0,
+              !isOpen && cart.shippingMethods.length === 0,
           })}>
           Delivery
-          {!isOpen && cart.shipping_methods.length > 0 && <CheckCircleSolid />}
+          {!isOpen && cart.shippingMethods.length > 0 && <CheckCircleSolid />}
         </Heading>
         {!isOpen &&
-          cart?.shipping_address &&
-          cart?.billing_address &&
+          cart?.shippingAddress &&
+          cart?.billingAddress &&
           cart?.email && (
             <Text>
               <button
@@ -84,7 +86,7 @@ const Shipping = ({
         <div>
           <div className="pb-8">
             <RadioGroup
-              value={cart.shipping_methods[0]?.shipping_option_id}
+              value={cart.shippingMethods[0]?.shippingOption.id}
               onChange={(value) => handleChange(value)}>
               {availableShippingMethods ? (
                 (availableShippingMethods.map((option) => {
@@ -97,23 +99,19 @@ const Shipping = ({
                         {
                           "border-ui-border-interactive":
                             option.id ===
-                            cart.shipping_methods[0]?.shipping_option_id,
+                            cart.shippingMethods[0]?.shippingOption.id,
                         }
                       )}>
                       <div className="flex items-center gap-x-4">
                         <Radio
                           checked={
                             option.id ===
-                            cart.shipping_methods[0]?.shipping_option_id
+                            cart.shippingMethods[0]?.shippingOption.id
                           } />
                         <span className="text-base-regular">{option.name}</span>
                       </div>
                       <span className="justify-self-end text-ui-fg-base">
-                        {formatAmount({
-                          amount: option.amount,
-                          region: cart?.region,
-                          includeTaxes: false,
-                        })}
+                        {option.calculatedAmount}
                       </span>
                     </RadioGroup.Option>
                   );
@@ -134,28 +132,20 @@ const Shipping = ({
             className="mt-6"
             onClick={handleSubmit}
             isLoading={isLoading}
-            disabled={!cart.shipping_methods[0]}>
+            disabled={!cart.shippingMethods[0]}>
             Continue to payment
           </Button>
         </div>
       ) : (
         <div>
           <div className="text-small-regular">
-            {cart && cart.shipping_methods.length > 0 && (
+            {cart && cart.shippingMethods.length > 0 && (
               <div className="flex flex-col w-1/3">
                 <Text className="txt-medium-plus text-ui-fg-base mb-1">
                   Method
                 </Text>
                 <Text className="txt-medium text-ui-fg-subtle">
-                  {cart.shipping_methods[0].shipping_option.name} (
-                  {formatAmount({
-                    amount: cart.shipping_methods[0].price,
-                    region: cart.region,
-                    includeTaxes: false,
-                  })
-                    .replace(/,/g, "")
-                    .replace(/\./g, ",")}
-                  )
+                  {cart.shippingMethods[0].shippingOption.name} ({cart.shipping})
                 </Text>
               </div>
             )}

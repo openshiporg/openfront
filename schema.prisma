@@ -27,6 +27,7 @@ model User {
   carts                   Cart[]          @relation("Cart_user")
   customerGroups          CustomerGroup[] @relation("CustomerGroup_users")
   notifications           Notification[]  @relation("Notification_user")
+  payments                Payment[]       @relation("Payment_user")
   createdAt               DateTime        @default(now())
   updatedAt               DateTime        @default(now()) @updatedAt
   passwordResetToken      String?
@@ -103,7 +104,6 @@ model Order {
   lineItems            LineItem[]                 @relation("LineItem_order")
   discounts            Discount[]                 @relation("Discount_orders")
   payments             Payment[]                  @relation("Payment_order")
-  refunds              Refund[]                   @relation("Refund_order")
   returns              Return[]                   @relation("Return_order")
   shippingMethods      ShippingMethod[]           @relation("ShippingMethod_order")
   swaps                Swap[]                     @relation("Swap_order")
@@ -316,28 +316,37 @@ model ProductVariant {
 }
 
 model Payment {
-  id              String    @id @default(cuid())
-  amount          Int
-  currencyCode    String    @default("")
-  amountRefunded  Int       @default(0)
-  paymentProvider String    @default("")
-  data            Json?
-  capturedAt      DateTime?
-  canceledAt      DateTime?
-  metadata        Json?
-  idempotencyKey  String    @default("")
-  cart            Cart?     @relation("Cart_payment")
-  swap            Swap?     @relation("Payment_swap", fields: [swapId], references: [id])
-  swapId          String?   @unique @map("swap")
-  currency        Currency? @relation("Payment_currency", fields: [currencyId], references: [id])
-  currencyId      String?   @map("currency")
-  order           Order?    @relation("Payment_order", fields: [orderId], references: [id])
-  orderId         String?   @map("order")
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @default(now()) @updatedAt
+  id                  String             @id @default(cuid())
+  status              PaymentStatusType  @default(pending)
+  amount              Int
+  currencyCode        String             @default("")
+  amountRefunded      Int                @default(0)
+  paymentProvider     String             @default("")
+  data                Json?
+  capturedAt          DateTime?
+  canceledAt          DateTime?
+  metadata            Json?
+  idempotencyKey      String             @default("")
+  cart                Cart?              @relation("Cart_payment")
+  paymentCollection   PaymentCollection? @relation("Payment_paymentCollection", fields: [paymentCollectionId], references: [id])
+  paymentCollectionId String?            @map("paymentCollection")
+  swap                Swap?              @relation("Payment_swap", fields: [swapId], references: [id])
+  swapId              String?            @unique @map("swap")
+  currency            Currency?          @relation("Payment_currency", fields: [currencyId], references: [id])
+  currencyId          String?            @map("currency")
+  order               Order?             @relation("Payment_order", fields: [orderId], references: [id])
+  orderId             String?            @map("order")
+  captures            Capture[]          @relation("Capture_payment")
+  refunds             Refund[]           @relation("Refund_payment")
+  user                User?              @relation("Payment_user", fields: [userId], references: [id])
+  userId              String?            @map("user")
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @default(now()) @updatedAt
 
+  @@index([paymentCollectionId])
   @@index([currencyId])
   @@index([orderId])
+  @@index([userId])
 }
 
 model Address {
@@ -363,6 +372,8 @@ model Address {
   claimOrders                  ClaimOrder[] @relation("ClaimOrder_address")
   ordersUsingAsBillingAddress  Order[]      @relation("Order_billingAddress")
   ordersUsingAsShippingAddress Order[]      @relation("Order_shippingAddress")
+  cartsUsingAsBillingAddress   Cart[]       @relation("Cart_billingAddress")
+  cartsUsingAsShippingAddress  Cart[]       @relation("Cart_shippingAddress")
   swaps                        Swap[]       @relation("Swap_address")
   createdAt                    DateTime     @default(now())
   updatedAt                    DateTime     @default(now()) @updatedAt
@@ -399,12 +410,19 @@ model Cart {
   shippingMethods       ShippingMethod[]       @relation("ShippingMethod_cart")
   payment               Payment?               @relation("Cart_payment", fields: [paymentId], references: [id])
   paymentId             String?                @unique @map("payment")
-  paymentSessions       PaymentSession[]       @relation("PaymentSession_cart")
+  paymentCollection     PaymentCollection?     @relation("Cart_paymentCollection", fields: [paymentCollectionId], references: [id])
+  paymentCollectionId   String?                @unique @map("paymentCollection")
+  billingAddress        Address?               @relation("Cart_billingAddress", fields: [billingAddressId], references: [id])
+  billingAddressId      String?                @map("billingAddress")
+  shippingAddress       Address?               @relation("Cart_shippingAddress", fields: [shippingAddressId], references: [id])
+  shippingAddressId     String?                @map("shippingAddress")
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @default(now()) @updatedAt
 
   @@index([userId])
   @@index([regionId])
+  @@index([billingAddressId])
+  @@index([shippingAddressId])
 }
 
 model ApiKey {
@@ -847,29 +865,63 @@ model OAuth {
 
 model PaymentProvider {
   id              String           @id @default(cuid())
+  name            String           @default("")
   code            String           @unique @default("")
   isInstalled     Boolean          @default(true)
+  metadata        Json?            @default("{}")
   regions         Region[]         @relation("PaymentProvider_regions")
   paymentSessions PaymentSession[] @relation("PaymentSession_paymentProvider")
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @default(now()) @updatedAt
 }
 
-model PaymentSession {
-  id                String                   @id @default(cuid())
-  isSelected        Boolean                  @default(false)
-  status            PaymentSessionStatusType
-  data              Json?
-  idempotencyKey    String                   @default("")
-  cart              Cart?                    @relation("PaymentSession_cart", fields: [cartId], references: [id])
-  cartId            String?                  @map("cart")
-  paymentProvider   PaymentProvider?         @relation("PaymentSession_paymentProvider", fields: [paymentProviderId], references: [id])
-  paymentProviderId String?                  @map("paymentProvider")
-  createdAt         DateTime                 @default(now())
-  updatedAt         DateTime                 @default(now()) @updatedAt
+model PaymentCollection {
+  id               String                            @id @default(cuid())
+  status           PaymentCollectionStatusType       @default(not_paid)
+  description      PaymentCollectionDescriptionType? @default(default)
+  amount           Int
+  authorizedAmount Int?                              @default(0)
+  refundedAmount   Int?                              @default(0)
+  metadata         Json?
+  paymentSessions  PaymentSession[]                  @relation("PaymentSession_paymentCollection")
+  payments         Payment[]                         @relation("Payment_paymentCollection")
+  cart             Cart?                             @relation("Cart_paymentCollection")
+  createdAt        DateTime                          @default(now())
+  updatedAt        DateTime                          @default(now()) @updatedAt
+}
 
-  @@index([cartId])
+model PaymentSession {
+  id                  String                   @id @default(cuid())
+  isSelected          Boolean                  @default(false)
+  isInitiated         Boolean                  @default(false)
+  amount              Int
+  status              PaymentSessionStatusType @default(pending)
+  data                Json?                    @default("{}")
+  idempotencyKey      String                   @default("")
+  paymentCollection   PaymentCollection?       @relation("PaymentSession_paymentCollection", fields: [paymentCollectionId], references: [id])
+  paymentCollectionId String?                  @map("paymentCollection")
+  paymentProvider     PaymentProvider?         @relation("PaymentSession_paymentProvider", fields: [paymentProviderId], references: [id])
+  paymentProviderId   String?                  @map("paymentProvider")
+  paymentAuthorizedAt DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @default(now()) @updatedAt
+
+  @@index([idempotencyKey])
+  @@index([paymentCollectionId])
   @@index([paymentProviderId])
+}
+
+model Capture {
+  id        String   @id @default(cuid())
+  amount    Int
+  payment   Payment? @relation("Capture_payment", fields: [paymentId], references: [id])
+  paymentId String?  @map("payment")
+  metadata  Json?
+  createdBy String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([paymentId])
 }
 
 model PriceList {
@@ -927,12 +979,12 @@ model Refund {
   reason         RefundReasonType
   metadata       Json?
   idempotencyKey String           @default("")
-  order          Order?           @relation("Refund_order", fields: [orderId], references: [id])
-  orderId        String?          @map("order")
+  payment        Payment?         @relation("Refund_payment", fields: [paymentId], references: [id])
+  paymentId      String?          @map("payment")
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @default(now()) @updatedAt
 
-  @@index([orderId])
+  @@index([paymentId])
 }
 
 model Region {
@@ -1240,6 +1292,14 @@ enum ProductStatusType {
   rejected
 }
 
+enum PaymentStatusType {
+  pending
+  authorized
+  captured
+  failed
+  canceled
+}
+
 enum CartTypeType {
   default
   swap
@@ -1313,9 +1373,23 @@ enum InviteRoleType {
   developer
 }
 
-enum PaymentSessionStatusType {
-  authorized
+enum PaymentCollectionStatusType {
+  not_paid
   pending
+  partially_paid
+  paid
+  canceled
+}
+
+enum PaymentCollectionDescriptionType {
+  default
+  refund
+}
+
+enum PaymentSessionStatusType {
+  pending
+  processing
+  authorized
   requires_more
   error
   canceled

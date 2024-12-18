@@ -9,6 +9,18 @@ import updateActiveUserAddress from "./updateActiveUserAddress";
 import createActiveUserAddress from "./createActiveUserAddress";
 import seedStorefront from './seedStorefront';
 import deleteActiveUserAddress from "./deleteActiveUserAddress";
+import addDiscountToActiveCart from './addDiscountToActiveCart';
+import removeDiscountFromActiveCart from './removeDiscountFromActiveCart';
+import createActiveCartPaymentSessions from './createActiveCartPaymentSessions';
+import setActiveCartPaymentSession from './setActiveCartPaymentSession';
+import completeActiveCart from './completeActiveCart';
+import addActiveCartShippingMethod from './addActiveCartShippingMethod';
+import activeCartShippingOptions from '../queries/activeCartShippingOptions';
+import activeCartPaymentProviders from '../queries/activeCartPaymentProviders';
+import activeCartRegion from '../queries/activeCartRegion';
+import initiatePaymentSession from './initiatePaymentSession';
+import handleStripeWebhook from './handleStripeWebhook';
+import handlePayPalWebhook from './handlePayPalWebhook';
 
 const graphql = String.raw;
 
@@ -16,20 +28,16 @@ export const extendGraphqlSchema = (schema) =>
   mergeSchemas({
     schemas: [schema],
     typeDefs: graphql`
-      type CartResponse {
-        cart: Cart
-        lineItems: [LineItem!]!
-        giftCards: [GiftCard!]!
-        discounts: [Discount!]!
-      }
-
       input CartCodeInput {
         code: String!
       }
 
       type Query {
         redirectToInit: Boolean
-        activeCart(cartId: ID!): CartResponse
+        activeCart(cartId: ID!): JSON
+        activeCartShippingOptions(cartId: ID!): [ShippingOption!]
+        activeCartPaymentProviders(regionId: ID!): [PaymentProvider!]
+        activeCartRegion(countryCode: String!): Region
       }
 
       input UserUpdateProfileInput {
@@ -40,6 +48,9 @@ export const extendGraphqlSchema = (schema) =>
         password: String
       }
 
+      type WebhookResult {
+        success: Boolean!
+      }
 
       type Mutation {
         updateActiveUser(data: UserUpdateProfileInput!): User
@@ -54,12 +65,27 @@ export const extendGraphqlSchema = (schema) =>
         createActiveUserAddress(data: AddressCreateInput!): User
         seedStorefront: Boolean
         deleteActiveUserAddress(where: AddressWhereUniqueInput!): Address
+        addDiscountToActiveCart(cartId: ID!, code: String!): Cart
+        removeDiscountFromActiveCart(cartId: ID!, code: String!): Cart
+        createActiveCartPaymentSessions(cartId: ID!): Cart
+        setActiveCartPaymentSession(cartId: ID!, providerId: ID!): Cart
+        completeActiveCart(cartId: ID!): Order
+        addActiveCartShippingMethod(cartId: ID!, shippingMethodId: ID!): Cart
+        initiatePaymentSession(
+          cartId: ID!
+          paymentProviderId: String!
+        ): PaymentSession
+        handleStripeWebhook(event: JSON!, headers: JSON!): WebhookResult!
+        handlePayPalWebhook(event: JSON!, headers: JSON!): WebhookResult!
       }
     `,
     resolvers: {
       Query: { 
         redirectToInit,
         activeCart,
+        activeCartShippingOptions,
+        activeCartPaymentProviders,
+        activeCartRegion,
       },
       Mutation: {
         updateActiveUserPassword,
@@ -69,7 +95,16 @@ export const extendGraphqlSchema = (schema) =>
         createActiveUserAddress,
         updateActiveUserAddress,
         seedStorefront,
-        deleteActiveUserAddress
+        deleteActiveUserAddress,
+        addDiscountToActiveCart,
+        removeDiscountFromActiveCart,
+        createActiveCartPaymentSessions,
+        setActiveCartPaymentSession,
+        completeActiveCart,
+        addActiveCartShippingMethod,
+        initiatePaymentSession,
+        handleStripeWebhook,
+        handlePayPalWebhook,
       }
     },
   });

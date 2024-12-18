@@ -150,6 +150,10 @@ export const User = list({
       ref: "Notification.user",
       many: true,
     }),
+    payments: relationship({
+      ref: "Payment.user",
+      many: true,
+    }),
     ...trackingFields,
   },
 });

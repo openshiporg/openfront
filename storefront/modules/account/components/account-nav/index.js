@@ -4,7 +4,7 @@ import { ArrowRightOnRectangle } from "@medusajs/icons"
 import { useParams, usePathname } from "next/navigation"
 
 import ChevronDown from "@storefront/modules/common/icons/chevron-down"
-import { signOut } from "@storefront/modules/account/actions"
+import { signOut } from "@storefront/lib/data/user"
 import User from "@storefront/modules/common/icons/user"
 import MapPin from "@storefront/modules/common/icons/map-pin"
 import Package from "@storefront/modules/common/icons/package"

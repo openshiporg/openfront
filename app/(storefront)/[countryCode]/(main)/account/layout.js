@@ -6,7 +6,7 @@ export default async function AccountPageLayout({
   login
 }) {
   // Get user but don't throw if not found
-  const { authenticatedItem: user } = await getUser()
+  const user = await getUser()
 
   // If we're on a dashboard route and not logged in, show login
   // If we're on login route and logged in, show dashboard

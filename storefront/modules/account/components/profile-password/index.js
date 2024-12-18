@@ -4,7 +4,7 @@ import React, { useEffect } from "react"
 import Input from "@storefront/modules/common/components/input"
 
 import AccountInfo from "../account-info"
-import { updateCustomerPassword } from "@storefront/modules/account/actions"
+import { updateCustomerPassword } from "@storefront/lib/data/user"
 import { useFormState } from "react-dom"
 
 const ProfileName = ({ customer }) => {

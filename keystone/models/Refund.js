@@ -56,11 +56,10 @@ export const Refund = list({
         isRequired: true,
       },
     }),
-
     metadata: json(),
     idempotencyKey: text(),
-    order: relationship({
-      ref: "Order.refunds",
+    payment: relationship({
+      ref: "Payment.refunds",
     }),
     ...trackingFields,
   },

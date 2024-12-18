@@ -19,7 +19,7 @@ import Modal from "@storefront/modules/common/components/modal";
 import {
   deleteCustomerShippingAddress,
   updateCustomerAddress,
-} from "@storefront/modules/account/actions";
+} from "@storefront/lib/data/user";
 import Spinner from "@storefront/modules/common/icons/spinner";
 import { useFormState } from "react-dom";
 import { SubmitButton } from "@storefront/modules/checkout/components/submit-button";

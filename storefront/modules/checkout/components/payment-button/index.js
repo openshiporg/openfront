@@ -1,34 +1,73 @@
 "use client";
+import { isManual, isStripe, isPaypal } from "@storefront/lib/constants"
 import { Button } from "@medusajs/ui"
 import { PayPalButtons, usePayPalScriptReducer } from "@paypal/react-paypal-js"
 import { useElements, useStripe } from "@stripe/react-stripe-js"
-import { placeOrder } from "@storefront/modules/checkout/actions"
+import { placeOrder } from "@storefront/lib/data/cart"
 import React, { useState } from "react"
 import ErrorMessage from "../error-message"
 import Spinner from "@storefront/modules/common/icons/spinner"
+import { usePathname, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 
-const PaymentButton = ({ cart }) => {
+const PaymentButton = ({ cart, "data-testid": dataTestId }) => {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  const createQueryString = (name, value) => {
+    const params = new URLSearchParams(searchParams)
+    params.set(name, value)
+    return params.toString()
+  }
+
+  const handleEdit = () => {
+    router.push(pathname + "?" + createQueryString("step", "payment"), {
+      scroll: false,
+    })
+  }
+
   const notReady =
     !cart ||
     !cart.shippingAddress ||
     !cart.billingAddress ||
     !cart.email ||
     cart.shippingMethods.length < 1
-      ? true
-      : false
 
-  const paymentSession = cart.paymentSession
+  const paymentSession = cart.paymentCollection?.paymentSessions?.find(
+    s => s.isSelected
+  )
 
-
-  switch (paymentSession.providerId) {
-    case "stripe":
-      return <StripePaymentButton notReady={notReady} cart={cart} />;
-    case "manual":
-      return <ManualTestPaymentButton notReady={notReady} />;
-    case "paypal":
-      return <PayPalPaymentButton notReady={notReady} cart={cart} />;
+  switch (true) {
+    case isStripe(paymentSession?.paymentProvider?.code):
+      return (
+        <StripePaymentButton
+          notReady={notReady}
+          cart={cart}
+          data-testid={dataTestId}
+        />
+      )
+    case isPaypal(paymentSession?.paymentProvider?.code):
+      return (
+        <PayPalPaymentButton
+          notReady={notReady}
+          cart={cart}
+          data-testid={dataTestId}
+        />
+      )
+    case isManual(paymentSession?.paymentProvider?.code):
+      return (
+        <ManualTestPaymentButton 
+          notReady={notReady} 
+          data-testid={dataTestId} 
+        />
+      )
     default:
-      return <Button disabled>Select a payment method</Button>;
+      return (
+        <Button onClick={handleEdit} size="large">
+          Select a payment method
+        </Button>
+      )
   }
 }
 
@@ -40,17 +79,20 @@ const StripePaymentButton = ({
   const [errorMessage, setErrorMessage] = useState(null)
 
   const onPaymentCompleted = async () => {
-    await placeOrder().catch(() => {
-      setErrorMessage("An error occurred, please try again.")
-      setSubmitting(false)
-    })
+    await placeOrder()
+      .catch((err) => {
+        setErrorMessage(err.message)
+      })
+      .finally(() => {
+        setSubmitting(false)
+      })
   }
 
   const stripe = useStripe()
   const elements = useElements()
   const card = elements?.getElement("card")
 
-  const session = cart.paymentSession
+  const session = cart.paymentCollection?.paymentSessions?.find(s => s.isSelected)
 
   const disabled = !stripe || !elements ? true : false
 
@@ -103,7 +145,7 @@ const StripePaymentButton = ({
           (paymentIntent && paymentIntent.status === "requiresCapture") ||
           paymentIntent.status === "succeeded"
         ) {
-          return onPaymentCompleted();
+          return onPaymentCompleted()
         }
 
         return
@@ -115,10 +157,11 @@ const StripePaymentButton = ({
       disabled={disabled || notReady}
       onClick={handlePayment}
       size="large"
-      isLoading={submitting}>
+      isLoading={submitting}
+      data-testid="stripe-payment-button">
       Place order
     </Button>
-    <ErrorMessage error={errorMessage} />
+    <ErrorMessage error={errorMessage} data-testid="stripe-payment-error-message" />
   </>;
 }
 
@@ -130,13 +173,16 @@ const PayPalPaymentButton = ({
   const [errorMessage, setErrorMessage] = useState(null)
 
   const onPaymentCompleted = async () => {
-    await placeOrder().catch(() => {
-      setErrorMessage("An error occurred, please try again.")
-      setSubmitting(false)
-    })
+    await placeOrder()
+      .catch((err) => {
+        setErrorMessage(err.message)
+      })
+      .finally(() => {
+        setSubmitting(false)
+      })
   }
 
-  const session = cart.paymentSession
+  const session = cart.paymentCollection?.paymentSessions?.find(s => s.isSelected)
 
   const handlePayment = async (
     _data,
@@ -167,10 +213,11 @@ const PayPalPaymentButton = ({
     return <>
       <PayPalButtons
         style={{ layout: "horizontal" }}
-        createOrder={async () => session.data.id}
+        createOrder={async () => session.data.orderId}
         onApprove={handlePayment}
-        disabled={notReady || submitting || isPending} />
-      <ErrorMessage error={errorMessage} />
+        disabled={notReady || submitting || isPending}
+        data-testid="paypal-payment-button" />
+      <ErrorMessage error={errorMessage} data-testid="paypal-payment-error-message" />
     </>;
   }
 }
@@ -182,10 +229,13 @@ const ManualTestPaymentButton = ({
   const [errorMessage, setErrorMessage] = useState(null)
 
   const onPaymentCompleted = async () => {
-    await placeOrder().catch((err) => {
-      setErrorMessage(err.toString())
-      setSubmitting(false)
-    })
+    await placeOrder()
+      .catch((err) => {
+        setErrorMessage(err.message)
+      })
+      .finally(() => {
+        setSubmitting(false)
+      })
   }
 
   const handlePayment = () => {
@@ -199,10 +249,11 @@ const ManualTestPaymentButton = ({
       disabled={notReady}
       isLoading={submitting}
       onClick={handlePayment}
-      size="large">
+      size="large"
+      data-testid="manual-payment-button">
       Place order
     </Button>
-    <ErrorMessage error={errorMessage} />
+    <ErrorMessage error={errorMessage} data-testid="manual-payment-error-message" />
   </>;
 }
 

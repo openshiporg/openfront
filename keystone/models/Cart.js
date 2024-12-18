@@ -19,6 +19,83 @@ const formatCurrency = (amount, currencyCode) => {
   }).format(amount);
 };
 
+// Shared calculation functions
+async function calculateCartSubtotal(cart, context) {
+  const sudoContext = context.sudo();
+  
+  if (!cart?.lineItems?.length) return 0;
+
+  let subtotal = 0;
+  for (const lineItem of cart.lineItems) {
+    const prices = await sudoContext.query.MoneyAmount.findMany({
+      where: {
+        productVariant: { id: { equals: lineItem.productVariant.id } },
+        region: { id: { equals: cart.region.id } },
+        currency: { code: { equals: cart.region?.currency?.code } }
+      },
+      query: "calculatedPrice { calculatedAmount }",
+    });
+
+    const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
+    subtotal += price * lineItem.quantity;
+  }
+
+  return subtotal;
+}
+
+async function calculateCartDiscount(cart, context) {
+  const sudoContext = context.sudo();
+  
+  if (!cart?.discounts?.length) return 0;
+
+  const subtotal = await calculateCartSubtotal(cart, context);
+  let discountAmount = 0;
+
+  for (const discount of cart.discounts) {
+    if (!discount.discountRule?.type) continue;
+
+    switch (discount.discountRule.type) {
+      case "percentage":
+        discountAmount += subtotal * (discount.discountRule.value / 100);
+        break;
+      case "fixed":
+        discountAmount += discount.discountRule.value * (cart.region?.currency?.noDivisionCurrency ? 1 : 100);
+        break;
+      case "free_shipping":
+        discountAmount += cart.shippingMethods?.reduce(
+          (total, method) => total + (method.price || 0),
+          0
+        ) || 0;
+        break;
+    }
+  }
+
+  return discountAmount;
+}
+
+async function calculateCartShipping(cart) {
+  if (!cart?.shippingMethods?.length) return 0;
+  return cart.shippingMethods.reduce((total, method) => total + (method.price || 0), 0);
+}
+
+async function calculateCartTax(cart, context) {
+  const subtotal = await calculateCartSubtotal(cart, context);
+  const discount = await calculateCartDiscount(cart, context);
+  const taxableAmount = subtotal - discount;
+  return taxableAmount * (cart.region?.taxRate || 0);
+}
+
+async function calculateCartTotal(cart, context) {
+  const [subtotal, discount, shipping, tax] = await Promise.all([
+    calculateCartSubtotal(cart, context),
+    calculateCartDiscount(cart, context),
+    calculateCartShipping(cart),
+    calculateCartTax(cart, context)
+  ]);
+
+  return subtotal - discount + shipping + tax;
+}
+
 export const Cart = list({
   access: {
     operation: {
@@ -44,138 +121,21 @@ export const Cart = list({
     },
   },
   hooks: {
-    async afterOperation({ operation, item, context }) {
-      // Run for both create and update operations
-      if (operation === "create" || operation === "update") {
+    async afterOperation({ operation, item, context, originalItem }) {
+      if (operation === "update") {
         const sudoContext = context.sudo();
-
-        // Get cart with all needed data
-        const cart = await sudoContext.query.Cart.findOne({
-          where: { id: item.id },
-          query: `
-            subtotal
-            region {
-              id
-              shippingOptions {
-                id
-                name
-                priceType
-                amount
-                isReturn
-                adminOnly
-                shippingOptionRequirements {
-                  id
-                  type
-                  amount
-                }
-                shippingProfile {
-                  id
-                  type
-                }
-                fulfillmentProvider {
-                  id
-                }
-                taxRates {
-                  id
-                  rate
-                }
-              }
-            }
-            shippingMethods {
-              id
-              price
-              shippingOption {
-                id
-                shippingOptionRequirements {
-                  type
-                  amount
-                }
-              }
-            }
-          `,
-        });
-
-        // Get valid shipping options based on current cart state
-        const validShippingOptions = cart.region.shippingOptions.filter(
-          (option) => {
-            // Skip admin-only and return shipping options
-            if (option.adminOnly || option.isReturn) return false;
-
-            // Check shipping profile type
-            if (option.shippingProfile?.type === "gift_card") return false;
-
-            // Check requirements against current cart state
-            if (option.shippingOptionRequirements?.length) {
-              for (const req of option.shippingOptionRequirements) {
-                // Convert amounts to same currency unit
-                const cartSubtotal = cart.subtotal / 100; // Assuming stored in cents
-                const reqAmount = req.amount / 100;
-
-                if (req.type === "min_subtotal" && cartSubtotal < reqAmount)
-                  return false;
-                if (req.type === "max_subtotal" && cartSubtotal > reqAmount)
-                  return false;
-              }
-            }
-
-            return true;
-          }
-        );
-
-        // Get cheapest valid option
-        const cheapestOption = validShippingOptions.reduce((min, curr) => {
-          const currAmount = curr.priceType === "flat_rate" ? curr.amount : 0;
-          const minAmount = min?.priceType === "flat_rate" ? min.amount : 0;
-          return !min || currAmount < minAmount ? curr : min;
-        }, null);
-
-        // Check if current shipping method is still valid
-        const currentMethod = cart.shippingMethods?.[0];
-        const needsNewMethod =
-          !currentMethod ||
-          !validShippingOptions.some(
-            (opt) => opt.id === currentMethod.shippingOption.id
-          );
-
-        // Update shipping method if needed
-        if (cheapestOption && needsNewMethod) {
-          // Remove existing shipping method if any
-          if (currentMethod) {
-            await sudoContext.db.ShippingMethod.deleteOne({
-              where: { id: currentMethod.id },
-            });
-          }
-
-          // Create new shipping method with tax lines
-          const shippingMethod = await sudoContext.db.ShippingMethod.createOne({
+        if (item.region?.id !== originalItem?.region?.id) {
+          await sudoContext.query.Cart.updateOne({
+            where: { id: item.id },
             data: {
-              cart: { connect: { id: item.id } },
-              shippingOption: { connect: { id: cheapestOption.id } },
-              price: cheapestOption.amount,
-              data: {
-                name: cheapestOption.name,
-              },
-            },
+              paymentCollection: {
+                disconnect: true
+              }
+            }
           });
-
-          // Create tax lines if needed
-          if (cheapestOption.taxRates?.length) {
-            await Promise.all(
-              cheapestOption.taxRates.map((tax) =>
-                sudoContext.db.ShippingMethodTaxLine.createOne({
-                  data: {
-                    shippingMethod: { connect: { id: shippingMethod.id } },
-                    rate: tax.rate,
-                    name: `Shipping Tax ${tax.rate * 100}%`,
-                    code: `shipping_tax_${tax.rate}`,
-                  },
-                })
-              )
-            );
-          }
         }
       }
-    },
+    }
   },
   fields: {
     email: text(),
@@ -282,9 +242,16 @@ export const Cart = list({
     payment: relationship({
       ref: "Payment.cart",
     }),
-    paymentSessions: relationship({
-      ref: "PaymentSession.cart",
-      many: true,
+    paymentCollection: relationship({
+      ref: "PaymentCollection.cart",
+    }),
+    billingAddress: relationship({
+      ref: 'Address.cartsUsingAsBillingAddress',
+      many: false,
+    }),
+    shippingAddress: relationship({
+      ref: 'Address.cartsUsingAsShippingAddress',
+      many: false,
     }),
     subtotal: virtual({
       field: graphql.field({
@@ -292,7 +259,7 @@ export const Cart = list({
         async resolve(item, args, context) {
           const sudoContext = context.sudo();
 
-          const cartWithItems = await sudoContext.query.Cart.findOne({
+          const cart = await sudoContext.query.Cart.findOne({
             where: { id: item.id },
             query: `
               lineItems { 
@@ -312,31 +279,11 @@ export const Cart = list({
             `,
           });
 
-          if (!cartWithItems?.lineItems?.length) {
-            return formatCurrency(
-              0,
-              cartWithItems?.region?.currency?.code || "USD"
-            );
-          }
+          if (!cart) return null;
 
-          let subtotal = 0;
-          for (const lineItem of cartWithItems.lineItems) {
-            const prices = await sudoContext.query.MoneyAmount.findMany({
-              where: {
-                productVariant: { id: { equals: lineItem.productVariant.id } },
-                region: { id: { equals: cartWithItems.region.id } },
-              },
-              query: "calculatedPrice { calculatedAmount }",
-            });
-
-            const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
-            subtotal += price * lineItem.quantity;
-          }
-
-          const currencyCode = cartWithItems.region?.currency?.code || "USD";
-          const divisor = cartWithItems.region?.currency?.noDivisionCurrency
-            ? 1
-            : 100;
+          const subtotal = await calculateCartSubtotal(cart, context);
+          const currencyCode = cart.region?.currency?.code || "USD";
+          const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
 
           return formatCurrency(subtotal / divisor, currencyCode);
         },
@@ -361,6 +308,9 @@ export const Cart = list({
               lineItems {
                 id
                 quantity
+                productVariant {
+                  id
+                }
               }
               discounts {
                 id
@@ -369,9 +319,49 @@ export const Cart = list({
                   value
                 }
               }
-              giftCards {
+              shippingMethods {
+                price
+              }
+            `,
+          });
+
+          const total = await calculateCartTotal(cart, context);
+          const currencyCode = cart.region?.currency?.code || "USD";
+          const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
+
+          return formatCurrency(total / divisor, currencyCode);
+        },
+      }),
+    }),
+    rawTotal: virtual({
+      field: graphql.field({
+        type: graphql.Int,
+        async resolve(item, args, context) {
+          const sudoContext = context.sudo();
+
+          const cart = await sudoContext.query.Cart.findOne({
+            where: { id: item.id },
+            query: `
+              region {
+                taxRate
+                currency {
+                  code
+                  noDivisionCurrency
+                }
+              }
+              lineItems {
                 id
-                balance
+                quantity
+                productVariant {
+                  id
+                }
+              }
+              discounts {
+                id
+                discountRule {
+                  type
+                  value
+                }
               }
               shippingMethods {
                 price
@@ -379,51 +369,9 @@ export const Cart = list({
             `,
           });
 
-          if (!cart?.lineItems?.length) return null;
+          if (!cart) return 0;
 
-          // 1. Get subtotal
-          let subtotal = 0;
-          for (const lineItem of cart.lineItems) {
-            const prices = await sudoContext.query.MoneyAmount.findMany({
-              where: {
-                productVariant: {
-                  lineItems: { some: { id: { equals: lineItem.id } } },
-                },
-              },
-              query: "calculatedPrice { calculatedAmount }",
-            });
-
-            const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
-            subtotal += price * lineItem.quantity;
-          }
-
-          // 2. Calculate discount
-          let discountAmount = 0;
-          if (cart.discounts?.length) {
-            for (const discount of cart.discounts) {
-              if (discount.discountRule.type === "percentage") {
-                discountAmount +=
-                  subtotal * (discount.discountRule.value / 100);
-              } else if (discount.discountRule.type === "fixed") {
-                discountAmount += discount.discountRule.value;
-              }
-            }
-          }
-
-          // 3. Calculate tax on discounted amount
-          const taxableAmount = subtotal - discountAmount;
-          const tax = taxableAmount * (cart.region.taxRate || 0);
-
-          // 4. Add shipping
-          const shipping = cart.shippingMethods?.[0]?.price || 0;
-
-          // 5. Calculate final total - NOW INCLUDING SHIPPING
-          const total = subtotal - discountAmount + tax + shipping;
-
-          const currencyCode = cart.region?.currency?.code || "USD";
-          const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
-
-          return formatCurrency(total / divisor, currencyCode);
+          return Math.round(await calculateCartTotal(cart, context));
         },
       }),
     }),
@@ -459,6 +407,13 @@ export const Cart = list({
                   noDivisionCurrency
                 }
               }
+              shippingMethods {
+                price
+                shippingOption {
+                  id
+                  name
+                }
+              }
             `,
           });
 
@@ -473,6 +428,7 @@ export const Cart = list({
               where: {
                 productVariant: { id: { equals: lineItem.productVariant.id } },
                 region: { id: { equals: cart.region.id } },
+                currency: { code: { equals: cart.region?.currency?.code } }
               },
               query: "calculatedPrice { calculatedAmount }",
             });
@@ -481,25 +437,35 @@ export const Cart = list({
             subtotal += price * lineItem.quantity;
           }
 
-          // Calculate discount amount
-          let discountAmount = 0;
+          // Calculate total discount amount
+          let totalDiscountAmount = 0;
           for (const discount of cart.discounts) {
-            if (discount.discountRule.type === "percentage") {
-              const percentageAmount =
-                subtotal * (discount.discountRule.value / 100);
+            // Skip if no discount rule or type
+            if (!discount.discountRule?.type) continue;
 
-              discountAmount += percentageAmount;
-            } else if (discount.discountRule.type === "fixed") {
-              discountAmount += discount.discountRule.value;
+            switch (discount.discountRule.type) {
+              case "percentage":
+                totalDiscountAmount += subtotal * (discount.discountRule.value / 100);
+                break;
+              case "fixed":
+                totalDiscountAmount += discount.discountRule.value * (cart.region?.currency?.noDivisionCurrency ? 1 : 100);
+                break;
+              case "free_shipping":
+                // Add shipping amount to discount
+                totalDiscountAmount += cart.shippingMethods?.reduce(
+                  (total, method) => total + (method.price || 0),
+                  0
+                ) || 0;
+                break;
             }
           }
 
-          if (discountAmount === 0) return null;
+          if (totalDiscountAmount === 0) return null;
 
           const currencyCode = cart.region?.currency?.code || "USD";
           const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
 
-          return formatCurrency(discountAmount / divisor, currencyCode);
+          return formatCurrency(totalDiscountAmount / divisor, currencyCode);
         },
       }),
     }),
@@ -567,6 +533,9 @@ export const Cart = list({
               lineItems {
                 id
                 quantity
+                productVariant {
+                  id
+                }
               }
               discounts {
                 id
@@ -578,45 +547,11 @@ export const Cart = list({
             `,
           });
 
-          if (!cart?.lineItems?.length) return null;
-
-          // 1. Calculate subtotal first
-          let subtotal = 0;
-          for (const lineItem of cart.lineItems) {
-            const prices = await sudoContext.query.MoneyAmount.findMany({
-              where: {
-                productVariant: {
-                  lineItems: { some: { id: { equals: lineItem.id } } },
-                },
-              },
-              query: "calculatedPrice { calculatedAmount }",
-            });
-
-            const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
-            subtotal += price * lineItem.quantity;
-          }
-
-          // 2. Calculate discount amount
-          let discountAmount = 0;
-          if (cart.discounts?.length) {
-            for (const discount of cart.discounts) {
-              if (discount.discountRule.type === "percentage") {
-                discountAmount +=
-                  subtotal * (discount.discountRule.value / 100);
-              } else if (discount.discountRule.type === "fixed") {
-                discountAmount += discount.discountRule.value;
-              }
-            }
-          }
-
-          // 3. Calculate tax on discounted amount
-          const taxableAmount = subtotal - discountAmount;
-          const taxAmount = taxableAmount * (cart.region.taxRate || 0);
-
+          const tax = await calculateCartTax(cart, context);
           const currencyCode = cart.region?.currency?.code || "USD";
           const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
 
-          return formatCurrency(taxAmount / divisor, currencyCode);
+          return formatCurrency(tax / divisor, currencyCode);
         },
       }),
     }),
@@ -625,16 +560,12 @@ export const Cart = list({
         type: graphql.String,
         async resolve(item, args, context) {
           const sudoContext = context.sudo();
-
+          
           const cart = await sudoContext.query.Cart.findOne({
             where: { id: item.id },
             query: `
               shippingMethods {
                 price
-                shippingOption {
-                  id
-                  name
-                }
               }
               region {
                 currency {
@@ -642,22 +573,217 @@ export const Cart = list({
                   noDivisionCurrency
                 }
               }
+            `
+          });
+
+          const shipping = await calculateCartShipping(cart);
+          const currencyCode = cart.region?.currency?.code || "USD";
+          const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
+
+          return shipping > 0 ? formatCurrency(shipping / divisor, currencyCode) : null;
+        }
+      })
+    }),
+    cheapestShipping: virtual({
+      field: graphql.field({
+        type: graphql.String,
+        async resolve(item, args, context) {
+          const sudoContext = context.sudo();
+          
+          // First check if cart has actual shipping methods
+          const cart = await sudoContext.query.Cart.findOne({
+            where: { id: item.id },
+            query: `
+              shippingMethods {
+                price
+              }
+              region {
+                id
+                currency {
+                  code
+                  noDivisionCurrency
+                }
+              }
+            `
+          });
+
+          // If cart has shipping methods, use their sum
+          if (cart?.shippingMethods?.length > 0) {
+            const shippingAmount = cart.shippingMethods.reduce((total, method) => total + (method.price || 0), 0);
+            const currencyCode = cart.region?.currency?.code || "USD";
+            const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
+
+            return formatCurrency(shippingAmount / divisor, currencyCode);
+          }
+
+          // If no shipping methods, find the cheapest available option
+          if (cart?.region?.id) {
+            const shippingOptions = await sudoContext.query.ShippingOption.findMany({
+              where: {
+                region: { id: { equals: cart.region.id } },
+                isReturn: { equals: false }
+              },
+              query: `
+                amount
+                priceType
+                calculatedAmount
+              `,
+              orderBy: { amount: 'asc' }
+            });
+
+            if (shippingOptions?.length > 0) {
+              const currencyCode = cart.region?.currency?.code || "USD";
+              const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
+              return formatCurrency(shippingOptions[0].amount / divisor, currencyCode);
+            }
+          }
+
+          // Return null if no options available
+          return null;
+        }
+      })
+    }),
+    discountsById: virtual({
+      field: graphql.field({
+        type: graphql.JSON,
+        async resolve(item, args, context) {
+          const sudoContext = context.sudo();
+
+          const cart = await sudoContext.query.Cart.findOne({
+            where: { id: item.id },
+            query: `
+              lineItems { 
+                id 
+                quantity 
+                productVariant {
+                  id
+                }
+              }
+              discounts {
+                id
+                discountRule {
+                  type
+                  value
+                  allocation
+                }
+              }
+              region {
+                id
+                currency {
+                  code
+                  noDivisionCurrency
+                }
+              }
+              shippingMethods {
+                price
+                shippingOption {
+                  id
+                  name
+                }
+              }
             `,
           });
 
-          // Sum up all shipping method prices
-          const shippingAmount =
-            cart.shippingMethods?.reduce(
-              (total, method) => total + (method.price || 0),
-              0
-            ) || 0;
+          if (!cart?.discounts?.length) {
+            return {};
+          }
 
           const currencyCode = cart.region?.currency?.code || "USD";
           const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
 
-          return formatCurrency(shippingAmount / divisor, currencyCode);
+          // Calculate subtotal for percentage calculations
+          let subtotal = 0;
+          for (const lineItem of cart.lineItems || []) {
+            const prices = await sudoContext.query.MoneyAmount.findMany({
+              where: {
+                productVariant: { id: { equals: lineItem.productVariant.id } },
+                region: { id: { equals: cart.region.id } },
+                currency: { code: { equals: currencyCode } }
+              },
+              query: "calculatedPrice { calculatedAmount }",
+            });
+
+            const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
+            subtotal += price * lineItem.quantity;
+          }
+
+          // Calculate amounts for all discounts
+          const discountAmounts = {};
+          for (const discount of cart.discounts) {
+            // Skip if no discount rule or type
+            if (!discount.discountRule?.type) continue;
+
+            let amount = 0;
+            
+            switch (discount.discountRule.type) {
+              case "percentage":
+                amount = subtotal * (discount.discountRule.value / 100);
+                break;
+              case "fixed":
+                amount = discount.discountRule.value * (cart.region?.currency?.noDivisionCurrency ? 1 : 100);
+                break;
+              case "free_shipping":
+                amount = cart.shippingMethods?.reduce(
+                  (total, method) => total + (method.price || 0),
+                  0
+                ) || 0;
+                break;
+            }
+
+            if (amount > 0) {
+              discountAmounts[discount.id] = formatCurrency(amount / divisor, currencyCode);
+            }
+          }
+
+          return discountAmounts;
         },
       }),
+    }),
+    checkoutStep: virtual({
+      field: graphql.field({
+        type: graphql.String,
+        async resolve(item, args, context) {
+          const sudoContext = context.sudo();
+          
+          const cart = await sudoContext.query.Cart.findOne({
+            where: { id: item.id },
+            query: `
+              id
+              email
+              addresses {
+                id
+              }
+              shippingMethods {
+                id
+              }
+              paymentCollection {
+                id
+                paymentSessions {
+                  id
+                  isSelected
+                }
+              }
+            `
+          });
+
+          // No items
+          if (!cart) return "cart";
+
+          // No address
+          if (!cart.addresses?.length) return "address";
+
+          // No shipping method
+          if (!cart.shippingMethods?.length) return "delivery";
+
+          // No selected payment session
+          if (!cart.paymentCollection?.paymentSessions?.some(s => s.isSelected)) {
+            return "payment";
+          }
+
+          // All steps completed
+          return "review";
+        }
+      })
     }),
     ...trackingFields,
   },

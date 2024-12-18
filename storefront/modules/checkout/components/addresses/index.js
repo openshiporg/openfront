@@ -11,13 +11,13 @@ import { Heading, Text, useToggleState } from "@medusajs/ui"
 import Divider from "@storefront/modules/common/components/divider"
 import Spinner from "@storefront/modules/common/icons/spinner"
 
-import BillingAddress from "../billing_address"
+import BillingAddress from "../billing-address"
 import ShippingAddress from "../shipping-address"
-import { setAddresses } from "../../actions"
 import { SubmitButton } from "../submit-button"
 import { useFormState } from "react-dom"
 import ErrorMessage from "../error-message"
 import compareAddresses from "@storefront/lib/util/compare-addresses"
+import { setAddresses } from "@storefront/lib/data/cart";
 
 const Addresses = ({
   cart,
@@ -35,10 +35,14 @@ const Addresses = ({
   const { state: sameAsSBilling, toggle: toggleSameAsBilling } = useToggleState(
     cart?.shippingAddress && cart?.billingAddress
       ? compareAddresses(cart?.shippingAddress, cart?.billingAddress)
-      : true
+      : !cart?.billingAddress
   )
 
   const handleEdit = () => {
+    if (!cart) {
+      console.error("No cart available")
+      return
+    }
     router.push(pathname + "?step=address")
   }
 
@@ -51,7 +55,7 @@ const Addresses = ({
           level="h2"
           className="flex flex-row text-3xl-regular gap-x-2 items-baseline">
           Shipping Address
-          {!isOpen && <CheckCircleSolid />}
+          {!isOpen && cart?.shippingAddress && <CheckCircleSolid />}
         </Heading>
         {!isOpen && cart?.shippingAddress && (
           <Text>
@@ -63,7 +67,7 @@ const Addresses = ({
           </Text>
         )}
       </div>
-      {isOpen ? (
+      {isOpen || !cart?.shippingAddress ? (
         <form action={formAction}>
           <div className="pb-8">
             <ShippingAddress
@@ -89,78 +93,72 @@ const Addresses = ({
       ) : (
         <div>
           <div className="text-small-regular">
-            {cart && cart.shippingAddress ? (
-              <div className="flex items-start gap-x-8">
-                <div className="flex items-start gap-x-1 w-full">
-                  <div className="flex flex-col w-1/3">
-                    <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                      Shipping Address
-                    </Text>
-                    <Text className="txt-medium text-ui-fg-subtle">
-                      {cart.shippingAddress.firstName}{" "}
-                      {cart.shippingAddress.lastName}
-                    </Text>
-                    <Text className="txt-medium text-ui-fg-subtle">
-                      {cart.shippingAddress.address1}{" "}
-                      {cart.shippingAddress.address2}
-                    </Text>
-                    <Text className="txt-medium text-ui-fg-subtle">
-                      {cart.shippingAddress.postalCode},{" "}
-                      {cart.shippingAddress.city}
-                    </Text>
-                    <Text className="txt-medium text-ui-fg-subtle">
-                      {cart.shippingAddress.countryCode?.toUpperCase()}
-                    </Text>
-                  </div>
+            <div className="flex items-start gap-x-8">
+              <div className="flex items-start gap-x-1 w-full">
+                <div className="flex flex-col w-1/3">
+                  <Text className="txt-medium-plus text-ui-fg-base mb-1">
+                    Shipping Address
+                  </Text>
+                  <Text className="txt-medium text-ui-fg-subtle">
+                    {cart.shippingAddress.firstName}{" "}
+                    {cart.shippingAddress.lastName}
+                  </Text>
+                  <Text className="txt-medium text-ui-fg-subtle">
+                    {cart.shippingAddress.address1}{" "}
+                    {cart.shippingAddress.address2}
+                  </Text>
+                  <Text className="txt-medium text-ui-fg-subtle">
+                    {cart.shippingAddress.postalCode},{" "}
+                    {cart.shippingAddress.city}
+                  </Text>
+                  <Text className="txt-medium text-ui-fg-subtle">
+                    {cart.shippingAddress.countryCode?.toUpperCase()}
+                  </Text>
+                </div>
 
-                  <div className="flex flex-col w-1/3 ">
-                    <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                      Contact
-                    </Text>
-                    <Text className="txt-medium text-ui-fg-subtle">
-                      {cart.shippingAddress.phone}
-                    </Text>
-                    <Text className="txt-medium text-ui-fg-subtle">
-                      {cart.email}
-                    </Text>
-                  </div>
+                <div className="flex flex-col w-1/3 ">
+                  <Text className="txt-medium-plus text-ui-fg-base mb-1">
+                    Contact
+                  </Text>
+                  <Text className="txt-medium text-ui-fg-subtle">
+                    {cart.shippingAddress.phone}
+                  </Text>
+                  <Text className="txt-medium text-ui-fg-subtle">
+                    {cart.email}
+                  </Text>
+                </div>
 
-                  <div className="flex flex-col w-1/3">
-                    <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                      Billing Address
-                    </Text>
+                <div className="flex flex-col w-1/3">
+                  <Text className="txt-medium-plus text-ui-fg-base mb-1">
+                    Billing Address
+                  </Text>
 
-                    {sameAsSBilling ? (
+                  {sameAsSBilling ? (
+                    <Text className="txt-medium text-ui-fg-subtle">
+                      Billing- and delivery address are the same.
+                    </Text>
+                  ) : (
+                    <>
                       <Text className="txt-medium text-ui-fg-subtle">
-                        Billing- and delivery address are the same.
+                        {cart.billingAddress.firstName}{" "}
+                        {cart.billingAddress.lastName}
                       </Text>
-                    ) : (
-                      <>
-                        <Text className="txt-medium text-ui-fg-subtle">
-                          {cart.billingAddress.firstName}{" "}
-                          {cart.billingAddress.lastName}
-                        </Text>
-                        <Text className="txt-medium text-ui-fg-subtle">
-                          {cart.billingAddress.address1}{" "}
-                          {cart.billingAddress.address2}
-                        </Text>
-                        <Text className="txt-medium text-ui-fg-subtle">
-                          {cart.billingAddress.postalCode},{" "}
-                          {cart.billingAddress.city}
-                        </Text>
-                        <Text className="txt-medium text-ui-fg-subtle">
-                          {cart.billingAddress.countryCode?.toUpperCase()}
-                        </Text>
-                      </>
-                    )}
-                  </div>
+                      <Text className="txt-medium text-ui-fg-subtle">
+                        {cart.billingAddress.address1}{" "}
+                        {cart.billingAddress.address2}
+                      </Text>
+                      <Text className="txt-medium text-ui-fg-subtle">
+                        {cart.billingAddress.postalCode},{" "}
+                        {cart.billingAddress.city}
+                      </Text>
+                      <Text className="txt-medium text-ui-fg-subtle">
+                        {cart.billingAddress.countryCode?.toUpperCase()}
+                      </Text>
+                    </>
+                  )}
                 </div>
               </div>
-            ) : (
-              <div>
-                <Spinner />
-              </div>
-            )}
+            </div>
           </div>
         </div>
       )}

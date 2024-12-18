@@ -3,24 +3,21 @@ import { gql } from "graphql-request"
 import { openfrontClient } from "../config"
 import { cache } from "react"
 
-export const listShippingMethods = cache(async function (regionId, productIds) {
-  const LIST_SHIPPING_METHODS_QUERY = gql`
-    query ListShippingMethods($regionId: ID!, $productIds: [ID!]) {
-      shippingOptions(
-        where: {
-          region: { id: { equals: $regionId } }
-          products: { some: { id: { in: $productIds } } }
-        }
-      ) {
+export const getCartShippingOptions = cache(async function (cartId) {
+  const GET_SHIPPING_OPTIONS = gql`
+    query GetShippingOptions($cartId: ID!) {
+      activeCartShippingOptions(cartId: $cartId) {
         id
         name
-        price
+        amount
+        calculatedAmount
+        isTaxInclusive
+        priceType
+        data
       }
     }
   `;
 
-  return openfrontClient.request(LIST_SHIPPING_METHODS_QUERY, {
-    regionId,
-    productIds,
-  });
+  const { activeCartShippingOptions } = await openfrontClient.request(GET_SHIPPING_OPTIONS, { cartId });
+  return activeCartShippingOptions;
 }); 

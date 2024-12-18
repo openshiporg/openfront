@@ -1,5 +1,5 @@
 import { Heading } from "@medusajs/ui"
-import { getCart } from "@storefront/lib/data/cart"
+import { retrieveCart } from "@storefront/lib/data/cart"
 
 import ItemsPreviewTemplate from "@storefront/modules/cart/templates/preview"
 import DiscountCode from "@storefront/modules/checkout/components/discount-code"
@@ -14,7 +14,8 @@ const CheckoutSummary = async () => {
     return null
   }
 
-  const cart = await getCart(cartId).then((cart) => cart)
+  // const cart = await getCart(cartId).then((cart) => cart)
+  const cart = await retrieveCart(cartId);
 
   if (!cart) {
     return null
@@ -30,7 +31,7 @@ const CheckoutSummary = async () => {
         </Heading>
         <Divider className="my-6" />
         <CartTotals data={cart} />
-        <ItemsPreviewTemplate region={cart?.region} items={cart?.items} />
+        <ItemsPreviewTemplate region={cart?.region} items={cart?.lineItems} />
         <div className="my-6">
           <DiscountCode cart={cart} />
         </div>

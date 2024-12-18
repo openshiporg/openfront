@@ -3,7 +3,7 @@ import { useFormState } from "react-dom"
 
 import Input from "@storefront/modules/common/components/input"
 import { LOGIN_VIEW } from "@storefront/modules/account/templates/login-template"
-import { signUp } from "@storefront/modules/account/actions"
+import { signUp } from "@storefront/lib/data/user"
 import ErrorMessage from "@storefront/modules/checkout/components/error-message"
 import { SubmitButton } from "@storefront/modules/checkout/components/submit-button"
 import LocalizedClientLink from "@storefront/modules/common/components/localized-client-link"
