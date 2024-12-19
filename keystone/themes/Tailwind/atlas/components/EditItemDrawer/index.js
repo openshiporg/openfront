@@ -333,7 +333,8 @@ export function EditItemDrawer({ listKey, itemId, closeDrawer, open }) {
               />
             )}
             {loading ? (
-              <LoadingIcon label="Loading item data" />
+              // <LoadingIcon label="Loading item data" />
+              null
             ) : (
               <>
                 {updateError && (

@@ -154,7 +154,8 @@ export const HomePage = () => {
       )}
 
       {visibleLists.state === "loading" ? (
-        <LoadingIcon label="Loading lists" size="large" tone="passive" />
+        // <LoadingIcon label="Loading lists" size="large" tone="passive" />
+        null 
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 pb-12">
           {(() => {
