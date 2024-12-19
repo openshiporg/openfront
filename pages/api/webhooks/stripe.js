@@ -1,6 +1,5 @@
-import { buffer } from 'micro';
-import { gql } from 'graphql-request';
 import { openfrontClient } from '@storefront/lib/config';
+import { gql } from 'graphql-request';
 
 export const config = {
   api: {
@@ -21,22 +20,22 @@ export default async function handler(req, res) {
     return;
   }
 
-  try {
-    const buf = await buffer(req);
-    const event = JSON.parse(buf.toString());
-    const headers = {
-      'stripe-signature': req.headers['stripe-signature']
-    };
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  const rawBody = Buffer.concat(chunks);
 
-    // Call the mutation to handle the webhook
+  try {
+    const event = JSON.parse(rawBody.toString());
     const result = await openfrontClient.request(HANDLE_STRIPE_WEBHOOK, {
       event,
-      headers,
+      headers: req.headers
     });
 
     res.json({ received: true });
   } catch (err) {
     console.error('Webhook error:', err.message);
-    res.status(500).json({ error: `Webhook Error: ${err.message}` });
+    res.status(400).json({ error: `Webhook Error: ${err.message}` });
   }
 } 
