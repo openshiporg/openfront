@@ -2,6 +2,9 @@
   "name": "openfront",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "keystone build --no-ui && yarn migrate && next dev",
     "build": "keystone build --no-ui && yarn migrate && next build",
