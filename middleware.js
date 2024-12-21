@@ -21,7 +21,10 @@ const regionMapCache = {
 async function getRegionMap(request) {
   const { regionMap, regionMapUpdated } = regionMapCache;
 
-  if (!regionMap.keys().next().value || regionMapUpdated < Date.now() - 3600 * 1000) {
+  if (
+    !regionMap.keys().next().value ||
+    regionMapUpdated < Date.now() - 3600 * 1000
+  ) {
     const client = gqlClient(request);
     try {
       const { regions } = await client.request(gql`
@@ -45,13 +48,13 @@ async function getRegionMap(request) {
         });
       } else {
         // Only add 'us' as fallback if no regions were returned
-        regionMapCache.regionMap.set('us', { countries: [{ iso2: 'US' }] });
+        regionMapCache.regionMap.set("us", { countries: [{ iso2: "US" }] });
       }
     } catch (error) {
-      console.error('Error fetching regions:', error);
+      console.error("Error fetching regions:", error);
       // Only add 'us' as fallback if there was an error and map is empty
       if (!regionMapCache.regionMap.size) {
-        regionMapCache.regionMap.set('us', { countries: [{ iso2: 'US' }] });
+        regionMapCache.regionMap.set("us", { countries: [{ iso2: "US" }] });
       }
     }
 
@@ -64,8 +67,12 @@ async function getRegionMap(request) {
 async function getCountryCode(request, regionMap) {
   try {
     let countryCode;
-    const vercelCountryCode = request.headers.get("x-vercel-ip-country")?.toLowerCase();
-    const urlCountryCode = request.nextUrl.pathname.split("/")[1]?.toLowerCase();
+    const vercelCountryCode = request.headers
+      .get("x-vercel-ip-country")
+      ?.toLowerCase();
+    const urlCountryCode = request.nextUrl.pathname
+      .split("/")[1]
+      ?.toLowerCase();
 
     if (urlCountryCode && regionMap.has(urlCountryCode)) {
       countryCode = urlCountryCode;
@@ -102,8 +109,12 @@ export async function middleware(request) {
   // Handle dashboard routes
   if (request.nextUrl.pathname.startsWith(basePath)) {
     const isInitRoute = request.nextUrl.pathname.startsWith(`${basePath}/init`);
-    const isSigninRoute = request.nextUrl.pathname.startsWith(`${basePath}/signin`);
-    const isNoAccessRoute = request.nextUrl.pathname.startsWith(`${basePath}/no-access`);
+    const isSigninRoute = request.nextUrl.pathname.startsWith(
+      `${basePath}/signin`
+    );
+    const isNoAccessRoute = request.nextUrl.pathname.startsWith(
+      `${basePath}/no-access`
+    );
 
     // If redirectToInit is false, prevent access to init page
     if (isInitRoute) {
@@ -123,7 +134,7 @@ export async function middleware(request) {
     // Redirect to dashboard if already authenticated and trying to access signin
     if (user && isSigninRoute) {
       // If there's a 'from' path and it's not no-access, use it
-      if (fromPath && !fromPath.includes('no-access')) {
+      if (fromPath && !fromPath.includes("no-access")) {
         return NextResponse.redirect(new URL(fromPath, request.url));
       }
       return NextResponse.redirect(new URL(basePath, request.url));
@@ -131,7 +142,9 @@ export async function middleware(request) {
 
     // Check role permissions for dashboard access
     if (user && !isNoAccessRoute && !user.role?.canManageOrders) {
-      return NextResponse.redirect(new URL(`${basePath}/no-access`, request.url));
+      return NextResponse.redirect(
+        new URL(`${basePath}/no-access`, request.url)
+      );
     }
   }
 
@@ -139,13 +152,16 @@ export async function middleware(request) {
   if (!request.nextUrl.pathname.startsWith(basePath)) {
     const regionMap = await getRegionMap(request);
     const countryCode = await getCountryCode(request, regionMap);
-    
+
     let response;
 
     // Handle country code redirect
-    const urlHasCountryCode = countryCode && request.nextUrl.pathname.split("/")[1]?.includes(countryCode);
+    const urlHasCountryCode =
+      countryCode &&
+      request.nextUrl.pathname.split("/")[1]?.includes(countryCode);
     if (!urlHasCountryCode && countryCode) {
-      const redirectPath = request.nextUrl.pathname === "/" ? "" : request.nextUrl.pathname;
+      const redirectPath =
+        request.nextUrl.pathname === "/" ? "" : request.nextUrl.pathname;
       const queryString = request.nextUrl.search ? request.nextUrl.search : "";
       const redirectUrl = `${request.nextUrl.origin}/${countryCode}${redirectPath}${queryString}`;
       response = NextResponse.redirect(redirectUrl);
@@ -157,7 +173,7 @@ export async function middleware(request) {
     if (cartId && !cartIdCookie) {
       const redirectUrl = `${request.nextUrl.href}&step=address`;
       response = NextResponse.redirect(redirectUrl);
-      response.cookies.set("_openfront_cart_id", cartId, { 
+      response.cookies.set("_openfront_cart_id", cartId, {
         maxAge: 60 * 60 * 24 * 7,
       });
     }
@@ -170,5 +186,5 @@ export async function middleware(request) {
 
 export const config = {
   matcher: ["/((?!api|_next/static|favicon.ico).*)"],
+  runtime: "experimental-edge",
 };
-

@@ -628,49 +628,54 @@ export async function deleteLineItem(lineId) {
 
 export async function updateRegion(countryCode, currentPath) {
   const cartId = cookies().get("_openfront_cart_id")?.value;
-  if (!cartId) return;
 
-  try {
-    // Get region ID for country code
-    const { regions } = await openfrontClient.request(
-      gql`
-        query GetRegion($code: String!) {
-          regions(where: { countries: { some: { iso2: { equals: $code } } } }) {
-            id
+  // Always revalidate regions and products, and redirect - even without a cart
+  revalidateTag("regions");
+  revalidateTag("products");
+
+  // Only update cart if it exists
+  if (cartId) {
+    try {
+      const { regions } = await openfrontClient.request(
+        gql`
+          query GetRegion($code: String!) {
+            regions(where: { countries: { some: { iso2: { equals: $code } } } }) {
+              id
+            }
           }
-        }
-      `,
-      { code: countryCode }
-    );
+        `,
+        { code: countryCode }
+      );
 
-    const regionId = regions[0]?.id;
-    if (!regionId) {
-      throw new Error(`No region found for country: ${countryCode}`);
-    }
-
-    // Update cart with new region
-    await openfrontClient.request(
-      gql`
-        mutation UpdateActiveCart($cartId: ID!, $data: CartUpdateInput!) {
-          updateActiveCart(cartId: $cartId, data: $data) {
-            id
-          }
-        }
-      `,
-      {
-        cartId,
-        data: {
-          region: { connect: { id: regionId } },
-        },
+      const regionId = regions[0]?.id;
+      if (!regionId) {
+        throw new Error(`No region found for country: ${countryCode}`);
       }
-    );
 
-    // Revalidate cart data
-    revalidateTag("cart");
-  } catch (error) {
-    console.error("Error updating region:", error);
-    throw error;
+      await openfrontClient.request(
+        gql`
+          mutation UpdateActiveCart($cartId: ID!, $data: CartUpdateInput!) {
+            updateActiveCart(cartId: $cartId, data: $data) {
+              id
+            }
+          }
+        `,
+        {
+          cartId,
+          data: {
+            region: { connect: { id: regionId } },
+          },
+        }
+      );
+
+      revalidateTag("cart");
+    } catch (error) {
+      console.error("Error updating region:", error);
+      throw error;
+    }
   }
+
+  redirect(`/${countryCode}${currentPath}`);
 }
 
 export async function updateCart(data) {

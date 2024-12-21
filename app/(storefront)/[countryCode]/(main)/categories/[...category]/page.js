@@ -7,54 +7,52 @@ import {
 } from "@storefront/lib/data/categories";
 import { listRegions } from "@storefront/lib/data/regions";
 
-// export async function generateStaticParams() {
-// const product_categories = await listCategories()
+export async function generateStaticParams() {
+  if (process.env.ENABLE_SSG !== 'true') {
+    return [];
+  }
 
-// if (!product_categories) {
-//   return []
-// }
+  const product_categories = await listCategories()
 
-// const countryCodes = await listRegions().then((regions) =>
-//   regions?.map((r) => r.countries.map((c) => c.iso_2)).flat())
+  if (!product_categories) {
+    return []
+  }
 
-// const categoryHandles = product_categories.map((category) => category.handle)
+  const countryCodes = await listRegions().then((regions) =>
+    regions?.map((r) => r.countries.map((c) => c.iso_2)).flat())
 
-// const staticParams = countryCodes
-//   ?.map((countryCode) =>
-//     categoryHandles.map((handle) => ({
-//       countryCode,
-//       category: [handle],
-//     })))
-//   .flat()
+  const categoryHandles = product_categories.map((category) => category.handle)
 
-// return staticParams
-// }
+  const staticParams = countryCodes
+    ?.map((countryCode) =>
+      categoryHandles.map((handle) => ({
+        countryCode,
+        category: [handle],
+      })))
+    .flat()
 
-// export async function generateMetadata({ params }) {
-//   try {
-//     const { product_categories } = await getCategoryByHandle(
-//       params.category
-//     ).then((product_categories) => product_categories);
+  return staticParams
+}
 
-//     const title = product_categories
-//       .map((category) => category.name)
-//       .join(" | ");
+export async function generateMetadata({ params }) {
+  try {
+    const { productCategory } = await getCategoryByHandle(params.category);
+    
+    if (!productCategory) {
+      notFound();
+    }
 
-//     const description =
-//       product_categories[product_categories.length - 1].description ??
-//       `${title} category.`;
-
-//     return {
-//       title: `${title} | Openfront Store`,
-//       description,
-//       alternates: {
-//         canonical: `${params.category.join("/")}`,
-//       },
-//     };
-//   } catch (error) {
-//     notFound();
-//   }
-// }
+    return {
+      title: `${productCategory.title} | Openfront Store`,
+      description: productCategory.description || `${productCategory.title} category`,
+      alternates: {
+        canonical: `${params.category.join("/")}`,
+      },
+    };
+  } catch (error) {
+    notFound();
+  }
+}
 
 export default async function CategoryPage({ params, searchParams }) {
   const { sortBy, page } = searchParams;

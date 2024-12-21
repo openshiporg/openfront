@@ -13,10 +13,15 @@ function configureWebpack(config, { isServer }) {
   return config;
 }
 
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+})
+
 const nextConfig = {
   webpack: configureWebpack,
   experimental: {
     serverComponentsExternalPackages: ["graphql"],
+    optimizeCss: true,
   },
   async redirects() {
     return [
@@ -39,7 +44,7 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+module.exports = withBundleAnalyzer(nextConfig);
 
 
 

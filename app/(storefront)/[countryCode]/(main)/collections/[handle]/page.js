@@ -6,43 +6,47 @@ import { listRegions } from "@storefront/lib/data/regions";
 
 export const PRODUCT_LIMIT = 12;
 
-// export async function generateStaticParams() {
-//   const { collections } = await getCollectionsList()
+export async function generateStaticParams() {
+  if (process.env.ENABLE_SSG !== 'true') {
+    return [];
+  }
+  const { collections } = await getCollectionsList()
 
-//   if (!collections) {
-//     return []
-//   }
+  if (!collections) {
+    return []
+  }
 
-//   const countryCodes = await listRegions().then((regions) =>
-//     regions?.map((r) => r.countries.map((c) => c.iso_2)).flat())
+  const countryCodes = await listRegions().then((regions) =>
+    regions?.map((r) => r.countries.map((c) => c.iso_2)).flat())
 
-//   const collectionHandles = collections.map((collection) => collection.handle)
+  const collectionHandles = collections.map((collection) => collection.handle)
 
-//   const staticParams = countryCodes
-//     ?.map((countryCode) =>
-//       collectionHandles.map((handle) => ({
-//         countryCode,
-//         handle,
-//       })))
-//     .flat()
+  const staticParams = countryCodes
+    ?.map((countryCode) =>
+      collectionHandles.map((handle) => ({
+        countryCode,
+        handle,
+      })))
+    .flat()
 
-//   return staticParams
-// }
+  return staticParams
+}
 
-// export async function generateMetadata({ params }) {
-//   const collection = await getCollectionByHandle(params.handle);
+export async function generateMetadata({ params }) {
+  const { productCollection } = await getCollectionByHandle(params.handle);
 
-//   if (!collection) {
-//     notFound();
-//   }
+  if (!productCollection) {
+    notFound();
+  }
 
-//   const metadata = {
-//     title: `${collection.title} | Openfront Store`,
-//     description: `${collection.title} collection`,
-//   };
-
-//   return metadata;
-// }
+  return {
+    title: `${productCollection.title} | Openfront Store`,
+    description: `${productCollection.title} collection`,
+    alternates: {
+      canonical: `collections/${params.handle}`,
+    },
+  };
+}
 
 export default async function CollectionPage({ params, searchParams }) {
   const { sortBy, page } = searchParams;

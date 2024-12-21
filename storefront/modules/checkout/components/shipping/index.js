@@ -17,6 +17,9 @@ const Shipping = ({
 }) => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [selectedOption, setSelectedOption] = useState(
+    cart?.shippingMethods?.[0]?.shippingOption?.id || null
+  )
 
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -28,34 +31,30 @@ const Shipping = ({
     router.push(pathname + "?step=delivery", { scroll: false })
   }
 
-  const handleSubmit = () => {
-    setIsLoading(true)
-    router.push(pathname + "?step=payment", { scroll: false })
-  }
+  const handleSubmit = async () => {
+    if (!selectedOption) return;
 
-  const set = async (id) => {
     setIsLoading(true)
-    await setShippingMethod(id)
-      .then(() => {
-        setIsLoading(false)
-      })
-      .catch((err) => {
-        setError(err.toString())
-        setIsLoading(false)
-      })
+    try {
+      await setShippingMethod(selectedOption)
+      router.push(pathname + "?step=payment", { scroll: false })
+    } catch (err) {
+      setError(err.toString())
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleChange = (value) => {
-    set(value)
+    setSelectedOption(value)
   }
 
   useEffect(() => {
     setIsLoading(false)
     setError(null)
-  }, [isOpen])
-
-  // Get the currently selected shipping method's option ID
-  const selectedOptionId = cart?.shippingMethods?.[0]?.shippingOption?.id;
+    // Set initial selected option when component opens
+    setSelectedOption(cart?.shippingMethods?.[0]?.shippingOption?.id || null)
+  }, [isOpen, cart?.shippingMethods])
 
   return (
     <div className="bg-white">
@@ -86,10 +85,10 @@ const Shipping = ({
         <div>
           <div className="pb-8">
             <RadioGroup
-              value={cart.shippingMethods[0]?.shippingOption.id}
-              onChange={(value) => handleChange(value)}>
+              value={selectedOption}
+              onChange={handleChange}>
               {availableShippingMethods ? (
-                (availableShippingMethods.map((option) => {
+                availableShippingMethods.map((option) => {
                   return (
                     <RadioGroup.Option
                       key={option.id}
@@ -97,17 +96,11 @@ const Shipping = ({
                       className={clx(
                         "flex items-center justify-between text-small-regular cursor-pointer py-4 border rounded-rounded px-8 mb-2 hover:shadow-borders-interactive-with-active",
                         {
-                          "border-ui-border-interactive":
-                            option.id ===
-                            cart.shippingMethods[0]?.shippingOption.id,
+                          "border-ui-border-interactive": option.id === selectedOption,
                         }
                       )}>
                       <div className="flex items-center gap-x-4">
-                        <Radio
-                          checked={
-                            option.id ===
-                            cart.shippingMethods[0]?.shippingOption.id
-                          } />
+                        <Radio checked={option.id === selectedOption} />
                         <span className="text-base-regular">{option.name}</span>
                       </div>
                       <span className="justify-self-end text-ui-fg-base">
@@ -115,7 +108,7 @@ const Shipping = ({
                       </span>
                     </RadioGroup.Option>
                   );
-                }))
+                })
               ) : (
                 <div
                   className="flex flex-col items-center justify-center px-4 py-8 text-ui-fg-base">
@@ -132,7 +125,7 @@ const Shipping = ({
             className="mt-6"
             onClick={handleSubmit}
             isLoading={isLoading}
-            disabled={!cart.shippingMethods[0]}>
+            disabled={!selectedOption}>
             Continue to payment
           </Button>
         </div>

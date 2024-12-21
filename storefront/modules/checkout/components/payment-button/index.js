@@ -106,23 +106,20 @@ const StripePaymentButton = ({
 
     await stripe
       .confirmCardPayment(session.data.clientSecret, {
-        paymentMethod: {
+        payment_method: {
           card: card,
-          billingDetails: {
-            name:
-              cart.billingAddress.firstName +
-              " " +
-              cart.billingAddress.lastName,
-            address: {
-              city: cart.billingAddress.city ?? undefined,
-              country: cart.billingAddress.countryCode ?? undefined,
-              line1: cart.billingAddress.address1 ?? undefined,
-              line2: cart.billingAddress.address2 ?? undefined,
-              postalCode: cart.billingAddress.postalCode ?? undefined,
-              state: cart.billingAddress.province ?? undefined,
-            },
+          billing_details: {
+            name: cart.billingAddress.firstName + " " + cart.billingAddress.lastName,
             email: cart.email,
-            phone: cart.billingAddress.phone ?? undefined,
+            phone: cart.billingAddress.phone,
+            address: {
+              city: cart.billingAddress.city,
+              country: cart.billingAddress.countryCode,
+              line1: cart.billingAddress.address1,
+              line2: cart.billingAddress.address2,
+              postal_code: cart.billingAddress.postalCode,
+              state: cart.billingAddress.province,
+            },
           },
         },
       })
@@ -161,6 +158,7 @@ const StripePaymentButton = ({
       data-testid="stripe-payment-button">
       Place order
     </Button>
+    {JSON.stringify(session.data.clientSecret)}
     <ErrorMessage error={errorMessage} data-testid="stripe-payment-error-message" />
   </>;
 }

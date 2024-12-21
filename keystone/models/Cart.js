@@ -568,6 +568,7 @@ export const Cart = list({
                 price
               }
               region {
+                id
                 currency {
                   code
                   noDivisionCurrency
@@ -576,11 +577,38 @@ export const Cart = list({
             `
           });
 
-          const shipping = await calculateCartShipping(cart);
-          const currencyCode = cart.region?.currency?.code || "USD";
-          const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
+          // If cart has shipping methods, use their sum
+          if (cart?.shippingMethods?.length > 0) {
+            const shipping = await calculateCartShipping(cart);
+            const currencyCode = cart.region?.currency?.code || "USD";
+            const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
+            return shipping > 0 ? formatCurrency(shipping / divisor, currencyCode) : null;
+          }
 
-          return shipping > 0 ? formatCurrency(shipping / divisor, currencyCode) : null;
+          // If no shipping methods, find the cheapest available option
+          if (cart?.region?.id) {
+            const shippingOptions = await sudoContext.query.ShippingOption.findMany({
+              where: {
+                region: { id: { equals: cart.region.id } },
+                isReturn: { equals: false }
+              },
+              query: `
+                amount
+                priceType
+                calculatedAmount
+              `,
+              orderBy: { amount: 'asc' }
+            });
+
+            if (shippingOptions?.length > 0) {
+              const currencyCode = cart.region?.currency?.code || "USD";
+              const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
+              return formatCurrency(shippingOptions[0].amount / divisor, currencyCode);
+            }
+          }
+
+          // Return null if no options available
+          return null;
         }
       })
     }),

@@ -12,7 +12,7 @@ import OptionSelect from "@storefront/modules/products/components/option-select"
 import MobileActions from "../mobile-actions";
 import ProductPrice from "../product-price";
 
-export default function ProductActions({ product, region }) {
+export default function ProductActions({ product, region, disabled }) {
   const [options, setOptions] = useState({});
   const [isAdding, setIsAdding] = useState(false);
 
@@ -110,6 +110,20 @@ export default function ProductActions({ product, region }) {
     setIsAdding(false);
   };
 
+  // Add isValidVariant check
+  const isValidVariant = useMemo(() => {
+    return variants.some((v) => {
+      if (!v.productOptionValues?.length) return false;
+      
+      const temp = {};
+      for (const optionValue of v.productOptionValues) {
+        temp[optionValue.productOption.id] = optionValue.value;
+      }
+      
+      return isEqual(temp, options);
+    });
+  }, [variants, options]);
+
   return (
     <>
       <div className="flex flex-col gap-y-2" ref={actionsRef}>
@@ -136,14 +150,14 @@ export default function ProductActions({ product, region }) {
         <ProductPrice product={product} variant={variant} region={region} />
         <Button
           onClick={handleAddToCart}
-          disabled={!inStock || !variant}
+          disabled={!inStock || !variant || !isValidVariant}
           variant="primary"
           className="w-full h-10"
           isLoading={isAdding}
         >
           {!variant
             ? "Select variant"
-            : !inStock
+            : !inStock || !isValidVariant
               ? "Out of stock"
               : "Add to cart"}
         </Button>
@@ -153,10 +167,11 @@ export default function ProductActions({ product, region }) {
           region={region}
           options={options}
           updateOptions={updateOptions}
-          inStock={inStock}
+          inStock={inStock && isValidVariant}
           handleAddToCart={handleAddToCart}
           isAdding={isAdding}
           show={!inView}
+          optionsDisabled={!!disabled || isAdding}
         />
       </div>
     </>

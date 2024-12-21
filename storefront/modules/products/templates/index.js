@@ -28,7 +28,13 @@ const ProductTemplate = ({ product, region, countryCode }) => {
         <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">
           <ProductOnboardingCta />
           <Suspense
-            fallback={<ProductActions product={product} region={region} />}
+            fallback={
+              <ProductActions
+                disabled={true}
+                product={product}
+                region={region}
+              />
+            }
           >
             <ProductActionsWrapper handle={product.handle} region={region} />
           </Suspense>

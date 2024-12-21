@@ -19,6 +19,7 @@ const MobileActions = ({
   handleAddToCart,
   isAdding,
   show,
+  optionsDisabled,
 }) => {
   const { state, open, close } = useToggleState()
 
@@ -41,7 +42,8 @@ const MobileActions = ({
     <div
       className={clx("lg:hidden inset-x-0 bottom-0 fixed", {
         "pointer-events-none": !show,
-      })}>
+      })}
+      data-testid="mobile-actions">
       <Transition
         as={Fragment}
         show={show}
@@ -78,7 +80,11 @@ const MobileActions = ({
             )}
           </div>
           <div className="grid grid-cols-2 w-full gap-x-4">
-            <Button onClick={open} variant="secondary" className="w-full">
+            <Button
+              onClick={open}
+              variant="secondary"
+              className="w-full"
+              data-testid="mobile-actions-button">
               <div className="flex items-center justify-between w-full">
                 <span>
                   {variant
@@ -92,7 +98,8 @@ const MobileActions = ({
               onClick={handleAddToCart}
               disabled={!inStock || !variant}
               className="w-full"
-              isLoading={isAdding}>
+              isLoading={isAdding}
+              data-testid="mobile-cart-button">
               {!variant
                 ? "Select variant"
                 : !inStock
@@ -137,7 +144,7 @@ const MobileActions = ({
                   </button>
                 </div>
                 <div className="bg-white px-6 py-12">
-                  {product.productVariants.length > 1 && (
+                  {(product.productVariants?.length ?? 0) > 1 && (
                     <div className="flex flex-col gap-y-6">
                       {(product.productOptions || []).map((option) => {
                         return (
@@ -146,7 +153,9 @@ const MobileActions = ({
                               option={option}
                               current={options[option.id]}
                               updateOption={updateOptions}
-                              title={option.title} />
+                              title={option.title}
+                              disabled={optionsDisabled}
+                            />
                           </div>
                         );
                       })}

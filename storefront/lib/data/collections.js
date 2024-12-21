@@ -64,7 +64,7 @@ export const getCollectionsList = cache(async function (offset = 0, limit = 3) {
 export const getCollectionByHandle = cache(async function (handle) {
   const GET_COLLECTION_BY_HANDLE_QUERY = gql`
     query GetCollectionByHandle($handle: String!) {
-      collection(where: { handle: $handle }) {
+      productCollection(where: { handle: $handle }) {
         id
         title
         handle
