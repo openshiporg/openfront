@@ -17,7 +17,6 @@ const nextConfig = {
   webpack: configureWebpack,
   experimental: {
     serverComponentsExternalPackages: ["graphql"],
-    optimizeCss: true,
   },
   async redirects() {
     return [

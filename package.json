@@ -19,7 +19,6 @@
     "@emotion/react": "^11.10.0",
     "@emotion/server": "^11.10.0",
     "@escape.tech/graphql-armor": "^3.0.1",
-    "@fullhuman/postcss-purgecss": "^7.0.2",
     "@graphql-hive/client": "^0.31.0",
     "@graphql-tools/schema": "^9.0.10",
     "@graphql-yoga/plugin-sofa": "^3.0.0",
