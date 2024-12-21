@@ -13,10 +13,6 @@ function configureWebpack(config, { isServer }) {
   return config;
 }
 
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
-  enabled: process.env.ANALYZE === 'true',
-})
-
 const nextConfig = {
   webpack: configureWebpack,
   experimental: {
@@ -44,7 +40,7 @@ const nextConfig = {
   },
 };
 
-module.exports = withBundleAnalyzer(nextConfig);
+module.exports = nextConfig;
 
 
 

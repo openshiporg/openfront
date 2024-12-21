@@ -5,7 +5,7 @@ import { ThemeProvider } from "./themeProvider";
 import "./dashboard.css";
 import { TooltipProvider } from "../../primitives/default/ui/tooltip";
 
-const inter = Inter({ subsets: ["latin"], display: "swap" });
+const inter = Inter({ subsets: ["latin"] });
 
 export const UIProvider = ({ children }) => {
   return (
