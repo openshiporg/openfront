@@ -3,15 +3,15 @@ import FilterRadioGroup from "@storefront/modules/common/components/filter-radio
 
 const sortOptions = [
   {
-    value: "created_at",
+    value: "createdAt",
     label: "Latest Arrivals",
   },
   {
-    value: "price_asc",
+    value: "priceAsc",
     label: "Price: Low -> High",
   },
   {
-    value: "price_desc",
+    value: "priceDesc",
     label: "Price: High -> Low",
   },
 ]

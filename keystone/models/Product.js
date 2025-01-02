@@ -21,6 +21,20 @@ export const Product = list({
       update: permissions.canManageProducts,
       delete: permissions.canManageProducts,
     },
+    filter: {
+      query: ({ session }) => {
+        // Admin users can see all products
+        if (permissions.canManageProducts({ session })) {
+          return true;
+        }
+        // Non-admin users can only see published products
+        return {
+          status: {
+            equals: 'published'
+          }
+        };
+      }
+    }
   },
   fields: {
     title: text({

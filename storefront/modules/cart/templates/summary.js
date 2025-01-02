@@ -21,7 +21,7 @@ const Summary = ({ cart }) => {
       <DiscountCode cart={cart} />
       <Divider />
       <CartTotals data={cartData} />
-      <LocalizedClientLink href={"/checkout?step=" + cart.checkout_step}>
+      <LocalizedClientLink href={"/checkout?step=" + cart.checkoutStep}>
         <Button className="w-full h-10">Go to checkout</Button>
       </LocalizedClientLink>
     </div>

@@ -237,6 +237,7 @@ async function seedStorefront(root, args, context) {
         query: `mutation CreateCollection($data: ProductCollectionCreateInput!) {
           createProductCollection(data: $data) {
             id
+            handle
           }
         }`,
         variables: {
@@ -256,12 +257,14 @@ async function seedStorefront(root, args, context) {
         query: `mutation CreateProductCategory($data: ProductCategoryCreateInput!) {
           createProductCategory(data: $data) {
             id
+            handle
           }
         }`,
         variables: {
           data: {
-            title: category.name, 
-            handle: category.id 
+            title: category.name,
+            handle: category.id,
+            isActive: true
           }
         }
       });
@@ -280,7 +283,8 @@ async function seedStorefront(root, args, context) {
         weight,
         options,
         variants,
-        collections: productCollections
+        collections: productCollections,
+        status = "published" // Set default status to published
       } = product;
 
       // Create product
@@ -305,6 +309,7 @@ async function seedStorefront(root, args, context) {
             handle,
             isGiftcard: is_giftcard,
             weight,
+            status,
             productOptions: {
               create: options.map((option) => ({
                 title: option.title,
@@ -315,13 +320,13 @@ async function seedStorefront(root, args, context) {
             },
             productCategories: { 
               connect: categories.map((category) => ({
-                handle: category.id,
+                handle: category.id
               }))
             },
             productCollections: {
               connect: productCollections
                 ? productCollections.map((collection) => ({
-                    id: collectionIds[collection],
+                    handle: collection
                   }))
                 : [],
             },

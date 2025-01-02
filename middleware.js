@@ -5,19 +5,12 @@ import { GraphQLClient, gql } from "graphql-request";
 const basePath = "/dashboard";
 const DEFAULT_REGION = process.env.NEXT_PUBLIC_DEFAULT_REGION || "us";
 
-// function gqlClient(req) {
-//   return new GraphQLClient(`${process.env.FRONTEND_URL}/api/graphql`, {
-//     headers: req ? { cookie: req.cookies } : undefined,
-//     credentials: "include",
-//     fetch,
-//   });
-// }
-
 const regionMapCache = {
   regionMap: new Map(),
   regionMapUpdated: Date.now(),
 };
 
+// Fetches and caches the region map from the GraphQL API
 async function getRegionMap(request) {
   const { regionMap, regionMapUpdated } = regionMapCache;
 
@@ -47,12 +40,10 @@ async function getRegionMap(request) {
           });
         });
       } else {
-        // Only add 'us' as fallback if no regions were returned
         regionMapCache.regionMap.set("us", { countries: [{ iso2: "US" }] });
       }
     } catch (error) {
       console.error("Error fetching regions:", error);
-      // Only add 'us' as fallback if there was an error and map is empty
       if (!regionMapCache.regionMap.size) {
         regionMapCache.regionMap.set("us", { countries: [{ iso2: "US" }] });
       }
@@ -64,6 +55,7 @@ async function getRegionMap(request) {
   return regionMapCache.regionMap;
 }
 
+// Determines the appropriate country code based on URL, headers, and defaults
 async function getCountryCode(request, regionMap) {
   try {
     let countryCode;
@@ -90,14 +82,80 @@ async function getCountryCode(request, regionMap) {
   }
 }
 
+// Handles authentication and access control for dashboard routes
+async function handleDashboardRoutes(request, user) {
+  const isInitRoute = request.nextUrl.pathname.startsWith(`${basePath}/init`);
+  const isSigninRoute = request.nextUrl.pathname.startsWith(`${basePath}/signin`);
+  const isNoAccessRoute = request.nextUrl.pathname.startsWith(`${basePath}/no-access`);
+  const fromPath = request.nextUrl.searchParams.get("from");
+
+  // Prevent access to init page if not needed
+  if (isInitRoute) {
+    return NextResponse.redirect(new URL(basePath, request.url));
+  }
+
+  // Handle unauthenticated users
+  if (!user && !isSigninRoute) {
+    const signinUrl = new URL(`${basePath}/signin`, request.url);
+    if (!isNoAccessRoute) {
+      signinUrl.searchParams.set("from", request.nextUrl.pathname);
+    }
+    return NextResponse.redirect(signinUrl);
+  }
+
+  // Handle authenticated users trying to access signin
+  if (user && isSigninRoute) {
+    if (fromPath && !fromPath.includes("no-access")) {
+      return NextResponse.redirect(new URL(fromPath, request.url));
+    }
+    return NextResponse.redirect(new URL(basePath, request.url));
+  }
+
+  // Check role permissions
+  if (user && !isNoAccessRoute && !user.role?.canManageOrders) {
+    return NextResponse.redirect(new URL(`${basePath}/no-access`, request.url));
+  }
+
+  return NextResponse.next();
+}
+
+// Handles country code redirects and cart management for storefront routes
+async function handleStorefrontRoutes(request) {
+  const regionMap = await getRegionMap(request);
+  const countryCode = await getCountryCode(request, regionMap);
+  const cartId = request.nextUrl.searchParams.get("cart_id");
+  const cartIdCookie = request.cookies.get("_openfront_cart_id");
+
+  let response;
+
+  // Handle country code redirect
+  const urlHasCountryCode = countryCode && request.nextUrl.pathname.split("/")[1]?.includes(countryCode);
+  if (!urlHasCountryCode && countryCode) {
+    const redirectPath = request.nextUrl.pathname === "/" ? "" : request.nextUrl.pathname;
+    const queryString = request.nextUrl.search ? request.nextUrl.search : "";
+    const redirectUrl = `${request.nextUrl.origin}/${countryCode}${redirectPath}${queryString}`;
+    response = NextResponse.redirect(redirectUrl);
+  } else {
+    response = NextResponse.next();
+  }
+
+  // Handle cart_id in URL
+  if (cartId && !cartIdCookie) {
+    const redirectUrl = `${request.nextUrl.href}&step=address`;
+    response = NextResponse.redirect(redirectUrl);
+    response.cookies.set("_openfront_cart_id", cartId, {
+      maxAge: 60 * 60 * 24 * 7,
+    });
+  }
+
+  return response;
+}
+
+// Main middleware function that handles all routes
 export async function middleware(request) {
   const { authenticatedItem: user, redirectToInit } = await checkAuth(request);
-  const searchParams = request.nextUrl.searchParams;
-  const cartId = searchParams.get("cart_id");
-  const cartIdCookie = request.cookies.get("_openfront_cart_id");
-  const fromPath = searchParams.get("from");
 
-  // Handle redirectToInit for all routes (including root)
+  // Handle redirectToInit for all routes
   if (redirectToInit) {
     const isInitRoute = request.nextUrl.pathname.startsWith(`${basePath}/init`);
     if (!isInitRoute) {
@@ -108,80 +166,11 @@ export async function middleware(request) {
 
   // Handle dashboard routes
   if (request.nextUrl.pathname.startsWith(basePath)) {
-    const isInitRoute = request.nextUrl.pathname.startsWith(`${basePath}/init`);
-    const isSigninRoute = request.nextUrl.pathname.startsWith(
-      `${basePath}/signin`
-    );
-    const isNoAccessRoute = request.nextUrl.pathname.startsWith(
-      `${basePath}/no-access`
-    );
-
-    // If redirectToInit is false, prevent access to init page
-    if (isInitRoute) {
-      return NextResponse.redirect(new URL(basePath, request.url));
-    }
-
-    // Handle authentication for non-init routes
-    if (!user && !isSigninRoute) {
-      const signinUrl = new URL(`${basePath}/signin`, request.url);
-      // Only set 'from' param if not redirecting from no-access
-      if (!isNoAccessRoute) {
-        signinUrl.searchParams.set("from", request.nextUrl.pathname);
-      }
-      return NextResponse.redirect(signinUrl);
-    }
-
-    // Redirect to dashboard if already authenticated and trying to access signin
-    if (user && isSigninRoute) {
-      // If there's a 'from' path and it's not no-access, use it
-      if (fromPath && !fromPath.includes("no-access")) {
-        return NextResponse.redirect(new URL(fromPath, request.url));
-      }
-      return NextResponse.redirect(new URL(basePath, request.url));
-    }
-
-    // Check role permissions for dashboard access
-    if (user && !isNoAccessRoute && !user.role?.canManageOrders) {
-      return NextResponse.redirect(
-        new URL(`${basePath}/no-access`, request.url)
-      );
-    }
+    return handleDashboardRoutes(request, user);
   }
 
-  // Only handle country code and cart_id param for non-dashboard routes
-  if (!request.nextUrl.pathname.startsWith(basePath)) {
-    const regionMap = await getRegionMap(request);
-    const countryCode = await getCountryCode(request, regionMap);
-
-    let response;
-
-    // Handle country code redirect
-    const urlHasCountryCode =
-      countryCode &&
-      request.nextUrl.pathname.split("/")[1]?.includes(countryCode);
-    if (!urlHasCountryCode && countryCode) {
-      const redirectPath =
-        request.nextUrl.pathname === "/" ? "" : request.nextUrl.pathname;
-      const queryString = request.nextUrl.search ? request.nextUrl.search : "";
-      const redirectUrl = `${request.nextUrl.origin}/${countryCode}${redirectPath}${queryString}`;
-      response = NextResponse.redirect(redirectUrl);
-    } else {
-      response = NextResponse.next();
-    }
-
-    // If cart_id in URL params and no existing cookie, set it and redirect to address step
-    if (cartId && !cartIdCookie) {
-      const redirectUrl = `${request.nextUrl.href}&step=address`;
-      response = NextResponse.redirect(redirectUrl);
-      response.cookies.set("_openfront_cart_id", cartId, {
-        maxAge: 60 * 60 * 24 * 7,
-      });
-    }
-
-    return response;
-  }
-
-  return NextResponse.next();
+  // Handle storefront routes
+  return handleStorefrontRoutes(request);
 }
 
 export const config = {

@@ -2,13 +2,12 @@ import { retrieveOrder } from "@storefront/lib/data/orders";
 import OrderCompletedTemplate from "@storefront/modules/order/templates/order-completed-template"
 import { notFound } from "next/navigation"
 
-async function getOrder(id) {
-  const order = await retrieveOrder(id)
+async function getOrder(id, secretKey) {
+  const order = await retrieveOrder(id, secretKey)
 
   if (!order) {
     return notFound();
   }
-
 
   return order;
 }
@@ -19,9 +18,12 @@ export const metadata = {
 }
 
 export default async function OrderConfirmedPage({
-  params
+  params,
+  searchParams
 }) {
-  const { order } = await getOrder(params.id)
+  const { secretKey } = searchParams
+  const order = await getOrder(params.id, secretKey)
 
   return <OrderCompletedTemplate order={order} />;
+  // return <div>{params.id}{secretKey}</div>;
 }

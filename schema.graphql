@@ -9,6 +9,7 @@ type User {
   email: String
   password: PasswordState
   role: Role
+  activeCartId: String
   apiKeys(where: ApiKeyWhereInput! = {}, orderBy: [ApiKeyOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ApiKeyWhereUniqueInput): [ApiKey!]
   apiKeysCount(where: ApiKeyWhereInput! = {}): Int
   metadata: JSON
@@ -594,7 +595,13 @@ type Order {
   swapsCount(where: SwapWhereInput! = {}): Int
   createdAt: DateTime
   updatedAt: DateTime
+  secretKey: String
+  subtotal: String
+  shipping: String
+  tax: String
+  discount: String
   total: String
+  rawTotal: Int
 }
 
 enum OrderStatusType {
@@ -665,6 +672,7 @@ input OrderWhereInput {
   swaps: SwapManyRelationFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
+  secretKey: StringFilter
 }
 
 input OrderStatusTypeNullableFilter {
@@ -778,6 +786,7 @@ input OrderOrderByInput {
   externalId: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
+  secretKey: OrderDirection
 }
 
 input OrderUpdateInput {
@@ -811,6 +820,7 @@ input OrderUpdateInput {
   swaps: SwapRelateToManyForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
+  secretKey: String
 }
 
 input AddressRelateToOneForUpdateInput {
@@ -948,6 +958,7 @@ input OrderCreateInput {
   swaps: SwapRelateToManyForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
+  secretKey: String
 }
 
 input AddressRelateToOneForCreateInput {
@@ -1702,6 +1713,7 @@ type ProductCollection {
 
 input ProductCollectionWhereUniqueInput {
   id: ID
+  handle: String
 }
 
 input ProductCollectionWhereInput {
@@ -2393,7 +2405,6 @@ type Payment {
   amount: Int
   currencyCode: String
   amountRefunded: Int
-  paymentProvider: String
   data: JSON
   capturedAt: DateTime
   canceledAt: DateTime
@@ -2434,7 +2445,6 @@ input PaymentWhereInput {
   amount: IntFilter
   currencyCode: StringFilter
   amountRefunded: IntFilter
-  paymentProvider: StringFilter
   capturedAt: DateTimeNullableFilter
   canceledAt: DateTimeNullableFilter
   idempotencyKey: StringFilter
@@ -2475,7 +2485,6 @@ input PaymentOrderByInput {
   amount: OrderDirection
   currencyCode: OrderDirection
   amountRefunded: OrderDirection
-  paymentProvider: OrderDirection
   capturedAt: OrderDirection
   canceledAt: OrderDirection
   idempotencyKey: OrderDirection
@@ -2488,7 +2497,6 @@ input PaymentUpdateInput {
   amount: Int
   currencyCode: String
   amountRefunded: Int
-  paymentProvider: String
   data: JSON
   capturedAt: DateTime
   canceledAt: DateTime
@@ -2536,7 +2544,6 @@ input PaymentCreateInput {
   amount: Int
   currencyCode: String
   amountRefunded: Int
-  paymentProvider: String
   data: JSON
   capturedAt: DateTime
   canceledAt: DateTime
@@ -7914,7 +7921,7 @@ type Mutation {
   removeDiscountFromActiveCart(cartId: ID!, code: String!): Cart
   createActiveCartPaymentSessions(cartId: ID!): Cart
   setActiveCartPaymentSession(cartId: ID!, providerId: ID!): Cart
-  completeActiveCart(cartId: ID!): Order
+  completeActiveCart(cartId: ID!): JSON
   addActiveCartShippingMethod(cartId: ID!, shippingMethodId: ID!): Cart
   initiatePaymentSession(cartId: ID!, paymentProviderId: String!): PaymentSession
   handleStripeWebhook(event: JSON!, headers: JSON!): WebhookResult!
@@ -8159,6 +8166,8 @@ type Query {
   activeCartShippingOptions(cartId: ID!): [ShippingOption!]
   activeCartPaymentProviders(regionId: ID!): [PaymentProvider!]
   activeCartRegion(countryCode: String!): Region
+  getCustomerOrder(orderId: ID!, secretKey: String): JSON
+  getCustomerOrders(limit: Int, offset: Int): JSON
 }
 
 union AuthenticatedItem = User

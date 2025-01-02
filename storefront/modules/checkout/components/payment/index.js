@@ -124,7 +124,7 @@ const Payment = ({ cart, availablePaymentMethods }) => {
           Payment
           {!isOpen && paymentReady && <CheckCircleSolid />}
         </Heading>
-        {!isOpen && (
+        {!isOpen && paymentReady && (
           <Text>
             <button
               onClick={handleEdit}

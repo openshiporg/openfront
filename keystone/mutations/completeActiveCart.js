@@ -1,14 +1,16 @@
 async function completeActiveCart(root, { cartId }, context) {
   const sudoContext = context.sudo();
 
-  // Get cart with all needed data
+  // Get cart with all needed data and total
   const cart = await sudoContext.query.Cart.findOne({
     where: { id: cartId },
     query: `
       id
       email
+      rawTotal
       region {
         id
+        taxRate
         currency {
           code
         }
@@ -34,6 +36,7 @@ async function completeActiveCart(root, { cartId }, context) {
       }
       lineItems {
         id
+        title
         quantity
         unitPrice
         productVariant {
@@ -42,15 +45,16 @@ async function completeActiveCart(root, { cartId }, context) {
       }
       discounts {
         id
-        discountRule {
-          type
-          value
-        }
       }
       billingAddress {
         id
+        countryCode
       }
       shippingAddress {
+        id
+        countryCode
+      }
+      user {
         id
       }
     `
@@ -82,51 +86,38 @@ async function completeActiveCart(root, { cartId }, context) {
     throw new Error("Payment session has error status");
   }
 
-  // Calculate order total
-  const subtotal = cart.lineItems.reduce((sum, item) => 
-    sum + (item.unitPrice * item.quantity), 0);
+  // Create order with all necessary data
+  const orderData = {
+    cart: { connect: { id: cartId } },
+    email: cart.email,
+    region: { connect: { id: cart.region.id } },
+    currency: { connect: { code: cart.region.currency.code } },
+    billingAddress: { connect: { id: cart.billingAddress.id } },
+    shippingAddress: { connect: { id: cart.shippingAddress.id } },
+    discounts: { connect: cart.discounts.map(d => ({ id: d.id })) },
+    shippingMethods: { connect: cart.shippingMethods.map(sm => ({ id: sm.id })) },
+    lineItems: { connect: cart.lineItems.map(li => ({ id: li.id })) },
+    status: "pending",
+    paymentStatus: selectedSession.status === 'authorized' ? 'captured' : 'awaiting',
+    fulfillmentStatus: "not_fulfilled",
+    displayId: Math.floor(Date.now() / 1000), // Unix timestamp as display ID
+    taxRate: cart.region.taxRate || 0,
+  };
 
-  let discountAmount = 0;
-  if (cart.discounts?.length) {
-    for (const discount of cart.discounts) {
-      if (discount.discountRule.type === 'percentage') {
-        discountAmount += subtotal * (discount.discountRule.value / 100);
-      } else if (discount.discountRule.type === 'fixed') {
-        discountAmount += discount.discountRule.value;
-      }
-    }
+  // Connect user if available
+  if (cart.user?.id) {
+    orderData.user = { connect: { id: cart.user.id } };
   }
 
-  const shipping = cart.shippingMethods.reduce((sum, method) => 
-    sum + (method.price || 0), 0);
-
-  const total = subtotal - discountAmount + shipping;
-
-  // Create order
   const order = await sudoContext.query.Order.createOne({
-    data: {
-      cart: { connect: { id: cartId } },
-      email: cart.email,
-      region: { connect: { id: cart.region.id } },
-      currency: { connect: { code: cart.region.currency.code } },
-      billingAddress: { connect: { id: cart.billingAddress.id } },
-      shippingAddress: { connect: { id: cart.shippingAddress.id } },
-      discounts: { connect: cart.discounts.map(d => ({ id: d.id })) },
-      shippingMethods: { connect: cart.shippingMethods.map(sm => ({ id: sm.id })) },
-      lineItems: { connect: cart.lineItems.map(li => ({ id: li.id })) },
-      status: "pending",
-      paymentStatus: selectedSession.status === 'authorized' ? 'captured' : 'awaiting',
-      fulfillmentStatus: "not_fulfilled",
-      displayId: Math.floor(Date.now() / 1000), // Unix timestamp as display ID
-    },
+    data: orderData
   });
 
   // Create payment record
   const payment = await sudoContext.query.Payment.createOne({
     data: {
-      amount: total,
+      amount: cart.rawTotal,
       currencyCode: cart.region.currency.code,
-      paymentProvider: selectedSession.paymentProvider.code,
       order: { connect: { id: order.id } },
       paymentCollection: { connect: { id: cart.paymentCollection.id } },
       data: selectedSession.data,
@@ -139,7 +130,7 @@ async function completeActiveCart(root, { cartId }, context) {
   if (selectedSession.status === 'authorized') {
     await sudoContext.query.Capture.createOne({
       data: {
-        amount: total,
+        amount: cart.rawTotal,
         payment: { connect: { id: payment.id } },
         metadata: {
           provider: selectedSession.paymentProvider.code,
@@ -158,24 +149,37 @@ async function completeActiveCart(root, { cartId }, context) {
     }
   });
 
-  return {
-    id: order.id,
-    status: order.status,
-    paymentStatus: order.paymentStatus,
-    displayId: order.displayId,
-    email: order.email,
-    payment: {
-      id: payment.id,
-      status: payment.status,
-      amount: payment.amount,
-      capturedAt: payment.capturedAt,
-      captures: selectedSession.status === 'authorized' ? [{
-        id: payment.id,
-        amount: total,
-        createdAt: new Date().toISOString(),
-      }] : [],
-    },
-  };
+  // Get the created order with all necessary fields
+  const createdOrder = await sudoContext.query.Order.findOne({
+    where: { id: order.id },
+    query: `
+      id
+      status
+      paymentStatus
+      displayId
+      secretKey
+      subtotal
+      total
+      shipping
+      discount
+      tax
+      shippingAddress {
+        id
+        firstName
+        lastName
+        company
+        address1
+        address2
+        city
+        province
+        postalCode
+        countryCode
+        phone
+      }
+    `
+  });
+
+  return createdOrder;
 }
 
 export default completeActiveCart; 

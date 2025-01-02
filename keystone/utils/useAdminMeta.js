@@ -120,6 +120,9 @@ export function useAdminMeta(adminMetaHash, fieldViews) {
           });
         }
 
+        console.log('views:', views);
+        console.log('fieldViews[field.viewsIndex]', fieldViews[field.viewsIndex]);
+
         runtimeAdminMeta.lists[list.key].fields[field.path] = {
           ...field,
           itemView: {

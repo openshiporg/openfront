@@ -1,7 +1,7 @@
-import { Container } from "@medusajs/ui"
-import { formatAmount } from "@storefront/lib/util/prices"
-import ChevronDown from "@storefront/modules/common/icons/chevron-down"
-import LocalizedClientLink from "@storefront/modules/common/components/localized-client-link"
+import { Container } from "@medusajs/ui";
+import { formatAmount } from "@storefront/lib/util/prices";
+import ChevronDown from "@storefront/modules/common/icons/chevron-down";
+import LocalizedClientLink from "@storefront/modules/common/components/localized-client-link";
 
 const Overview = ({ user, orders }) => {
   return (
@@ -50,30 +50,34 @@ const Overview = ({ user, orders }) => {
                   orders.slice(0, 5).map((order) => {
                     return (
                       <li key={order.id}>
-                        <LocalizedClientLink href={`/account/orders/details/${order.id}`}>
+                        <LocalizedClientLink
+                          href={`/account/orders/details/${order.id}`}
+                        >
                           <Container className="bg-gray-50 flex justify-between items-center p-4">
                             <div className="grid grid-cols-3 grid-rows-2 text-small-regular gap-x-4 flex-1">
                               <span className="font-semibold">Date placed</span>
-                              <span className="font-semibold">Order number</span>
-                              <span className="font-semibold">Total amount</span>
-                              <span>{new Date(order.createdAt).toDateString()}</span>
-                              <span>#{order.id}</span>
-                              <span>
-                                {formatAmount({
-                                  amount: order.total,
-                                  region: order.region,
-                                  includeTaxes: false,
-                                })}
+                              <span className="font-semibold">
+                                Order number
                               </span>
+                              <span className="font-semibold">
+                                Total amount
+                              </span>
+                              <span>
+                                {new Date(order.createdAt).toDateString()}
+                              </span>
+                              <span>#{order.displayId}</span>
+                              <span>{order.total}</span>
                             </div>
                             <button className="flex items-center justify-between">
-                              <span className="sr-only">Go to order #{order.id}</span>
+                              <span className="sr-only">
+                                Go to order #{order.id}
+                              </span>
                               <ChevronDown className="-rotate-90" />
                             </button>
                           </Container>
                         </LocalizedClientLink>
                       </li>
-                    )
+                    );
                   })
                 ) : (
                   <span>No recent orders</span>
@@ -84,33 +88,32 @@ const Overview = ({ user, orders }) => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 const getProfileCompletion = (user) => {
-  let count = 0
+  let count = 0;
 
   if (!user) {
-    return 0
+    return 0;
   }
 
   if (user.email) {
-    count++
+    count++;
   }
 
   if (user.firstName && user.lastName) {
-    count++
+    count++;
   }
 
   if (user.phone) {
-    count++
+    count++;
   }
 
   if (user.billingAddress) {
-    count++
+    count++;
   }
 
-  return (count / 4) * 100
-}
+  return (count / 4) * 100;
+};
 
-export default Overview
-
+export default Overview;

@@ -12,6 +12,7 @@ export function useSelectedFields(list, fieldModesByFieldPath) {
 
   const selectedFieldsFromUrl =
     typeof query.fields === "string" ? query.fields : "";
+
   return useMemo(() => {
     let selectedFieldsArray = selectedFieldsFromUrl
       ? selectedFieldsFromUrl.split(",")

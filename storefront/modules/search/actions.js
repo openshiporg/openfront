@@ -1,20 +1,29 @@
 "use server";
-import { SEARCH_INDEX_NAME, searchClient } from "@storefront/lib/search-client"
+import { searchClient } from "@storefront/lib/search-client"
 
 /**
- * Uses MeiliSearch or Algolia to search for a query
+ * Uses FlexSearch to search for products
  * @param {string} query - search query
+ * @param {number} [limit=100] - maximum number of results to return
  */
-export async function search(query) {
-  // MeiliSearch
-  const queries = [{ params: { query }, indexName: SEARCH_INDEX_NAME }]
-  const { results } = (await searchClient.search(queries))
-  const { hits } = results[0]
+export async function search(query, limit = 100) {
+  if (!query?.trim()) {
+    return []
+  }
 
-  // In case you want to use Algolia instead of MeiliSearch, uncomment the following lines and delete the above lines.
-
-  // const index = searchClient.initIndex(SEARCH_INDEX_NAME)
-  // const { hits } = (await index.search(query)) as { hits: Hits[] }
-
-  return hits
+  try {
+    const response = await searchClient.search([
+      {
+        params: {
+          query: query.trim(),
+          hitsPerPage: limit
+        }
+      }
+    ])
+    
+    return response.results[0].hits || []
+  } catch (error) {
+    console.error("Search error:", error)
+    return []
+  }
 }

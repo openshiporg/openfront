@@ -51,11 +51,6 @@ export const Payment = list({
         isRequired: true,
       },
     }),
-    paymentProvider: text({
-      validation: {
-        isRequired: true,
-      },
-    }),
     data: json(),
     capturedAt: timestamp(),
     canceledAt: timestamp(),

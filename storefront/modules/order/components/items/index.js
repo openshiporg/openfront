@@ -16,7 +16,7 @@ const Items = ({
           {items?.length && region
             ? items
                 .sort((a, b) => {
-                  return a.created_at > b.created_at ? -1 : 1
+                  return a.createdAt > b.createdAt ? -1 : 1
                 })
                 .map((item) => {
                   return <Item key={item.id} item={item} region={region} />;

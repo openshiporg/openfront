@@ -96,6 +96,24 @@ async function calculateCartTotal(cart, context) {
   return subtotal - discount + shipping + tax;
 }
 
+async function findCheapestShippingOption(regionId, context) {
+  const sudoContext = context.sudo();
+  const shippingOptions = await sudoContext.query.ShippingOption.findMany({
+    where: {
+      region: { id: { equals: regionId } },
+      isReturn: { equals: false }
+    },
+    query: `
+      id
+      amount
+      name
+    `,
+    orderBy: { amount: 'asc' }
+  });
+
+  return shippingOptions[0];
+}
+
 export const Cart = list({
   access: {
     operation: {
@@ -122,14 +140,69 @@ export const Cart = list({
   },
   hooks: {
     async afterOperation({ operation, item, context, originalItem }) {
-      if (operation === "update") {
-        const sudoContext = context.sudo();
-        if (item.region?.id !== originalItem?.region?.id) {
-          await sudoContext.query.Cart.updateOne({
-            where: { id: item.id },
+      const sudoContext = context.sudo();
+
+      // Handle region change
+      if (operation === "update" && item.regionId !== originalItem?.regionId) {
+        // Get cart with shipping methods
+        const cart = await sudoContext.query.Cart.findOne({
+          where: { id: item.id },
+          query: `
+            id
+            shippingMethods {
+              id
+            }
+          `
+        });
+
+        // Delete existing shipping methods
+        if (cart?.shippingMethods?.length > 0) {
+          await Promise.all(
+            cart.shippingMethods.map(method => 
+              sudoContext.db.ShippingMethod.deleteOne({
+                where: { id: method.id }
+              })
+            )
+          );
+        }
+
+        // Disconnect payment collection as in original code
+        await sudoContext.query.Cart.updateOne({
+          where: { id: item.id },
+          data: {
+            paymentCollection: {
+              disconnect: true
+            }
+          }
+        });
+
+        // Connect cheapest shipping option for new region
+        const cheapestShippingOption = await findCheapestShippingOption(item.regionId, context);
+        if (cheapestShippingOption) {
+          await sudoContext.db.ShippingMethod.createOne({
             data: {
-              paymentCollection: {
-                disconnect: true
+              cart: { connect: { id: item.id } },
+              shippingOption: { connect: { id: cheapestShippingOption.id } },
+              price: cheapestShippingOption.amount,
+              data: {
+                name: cheapestShippingOption.name
+              }
+            }
+          });
+        }
+      }
+
+      // Handle cart creation
+      if (operation === "create" && item.regionId) {
+        const cheapestShippingOption = await findCheapestShippingOption(item.regionId, context);
+        if (cheapestShippingOption) {
+          await sudoContext.db.ShippingMethod.createOne({
+            data: {
+              cart: { connect: { id: item.id } },
+              shippingOption: { connect: { id: cheapestShippingOption.id } },
+              price: cheapestShippingOption.amount,
+              data: {
+                name: cheapestShippingOption.name
               }
             }
           });
@@ -778,9 +851,8 @@ export const Cart = list({
             query: `
               id
               email
-              addresses {
-                id
-              }
+              billingAddress { id }
+              shippingAddress { id }
               shippingMethods {
                 id
               }
@@ -791,20 +863,24 @@ export const Cart = list({
                   isSelected
                 }
               }
+              lineItems {
+                id
+              }
             `
           });
 
-          // No items
-          if (!cart) return "cart";
+          // No cart or no items
+          if (!cart || !cart.lineItems?.length) return "cart";
 
-          // No address
-          if (!cart.addresses?.length) return "address";
+          // No addresses - check both billing and shipping
+          if (!cart.billingAddress?.id || !cart.shippingAddress?.id) return "address";
 
           // No shipping method
           if (!cart.shippingMethods?.length) return "delivery";
 
-          // No selected payment session
-          if (!cart.paymentCollection?.paymentSessions?.some(s => s.isSelected)) {
+          // No payment collection or no selected payment session
+          if (!cart.paymentCollection?.id || 
+              !cart.paymentCollection?.paymentSessions?.some(s => s.isSelected)) {
             return "payment";
           }
 

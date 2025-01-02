@@ -12,6 +12,7 @@ async function activeCart(root, { cartId }, context) {
       id
       email
       type
+      checkoutStep
       region {
         id
         name

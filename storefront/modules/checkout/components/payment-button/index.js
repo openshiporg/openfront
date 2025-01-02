@@ -79,7 +79,7 @@ const StripePaymentButton = ({
   const [errorMessage, setErrorMessage] = useState(null)
 
   const onPaymentCompleted = async () => {
-    await placeOrder()
+    await placeOrder(cart.id)
       .catch((err) => {
         setErrorMessage(err.message)
       })
@@ -158,7 +158,6 @@ const StripePaymentButton = ({
       data-testid="stripe-payment-button">
       Place order
     </Button>
-    {JSON.stringify(session.data.clientSecret)}
     <ErrorMessage error={errorMessage} data-testid="stripe-payment-error-message" />
   </>;
 }
@@ -171,7 +170,7 @@ const PayPalPaymentButton = ({
   const [errorMessage, setErrorMessage] = useState(null)
 
   const onPaymentCompleted = async () => {
-    await placeOrder()
+    await placeOrder(cart.id)
       .catch((err) => {
         setErrorMessage(err.message)
       })

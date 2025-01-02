@@ -24,7 +24,7 @@ const OrderDetailsTemplate = ({
       </div>
       <div className="flex flex-col gap-4 h-full bg-white w-full">
         <OrderDetails order={order} showStatus />
-        <Items items={order.items} region={order.region} />
+        <Items items={order.lineItems} region={order.region} />
         <ShippingDetails order={order} />
         <OrderSummary order={order} />
         <Help />

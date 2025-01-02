@@ -6,7 +6,7 @@ import { Pagination } from "@storefront/modules/store/components/pagination"
 const PRODUCT_LIMIT = 12
 
 export default async function PaginatedProducts({
-  sortBy,
+  sortBy = "createdAt",
   page,
   collectionId,
   categoryId,
@@ -24,25 +24,56 @@ export default async function PaginatedProducts({
   }
 
   if (collectionId) {
-    queryParams["collection_id"] = [collectionId]
+    queryParams["collectionId"] = collectionId
   }
 
   if (categoryId) {
-    queryParams["category_id"] = [categoryId]
+    queryParams["categoryId"] = categoryId
   }
 
-  if (productsIds) {
-    queryParams["id"] = productsIds
+  if (productsIds?.length > 0) {
+    queryParams["productsIds"] = productsIds
+  }
+
+  // For price sorting, we need to fetch all products to sort them correctly
+  const isPriceSort = sortBy === "priceAsc" || sortBy === "priceDesc"
+  if (isPriceSort) {
+    queryParams.limit = 1000 // Set a high limit to get all products
   }
 
   const {
-    response: { products, count },
+    response: { products: allProducts, count },
   } = await getProductsListWithSort({
-    page,
+    page: isPriceSort ? 0 : page, // Start from first page when fetching all
     queryParams,
-    sortBy,
+    sortBy: { createdAt: "desc" }, // Use a basic sort for the initial fetch
     countryCode,
   })
+
+  // Sort and paginate products if needed
+  let products = allProducts
+  if (isPriceSort) {
+    const getMinPrice = (product) => {
+      const prices = product.productVariants
+        ?.flatMap(v => v.prices)
+        ?.map(p => p?.calculatedPrice?.calculatedAmount)
+        ?.filter(Boolean) || []
+      return prices.length > 0 ? Math.min(...prices) : Infinity
+    }
+
+    // Sort all products by price
+    products = [...allProducts].sort((a, b) => {
+      const aPrice = getMinPrice(a)
+      const bPrice = getMinPrice(b)
+      return sortBy === "priceAsc" 
+        ? aPrice - bPrice 
+        : bPrice - aPrice
+    })
+
+    // Manual pagination
+    const startIndex = (page - 1) * PRODUCT_LIMIT
+    products = products.slice(startIndex, startIndex + PRODUCT_LIMIT)
+  }
 
   const totalPages = Math.ceil(count / PRODUCT_LIMIT)
 

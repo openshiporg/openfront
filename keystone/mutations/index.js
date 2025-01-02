@@ -21,6 +21,8 @@ import activeCartRegion from '../queries/activeCartRegion';
 import initiatePaymentSession from './initiatePaymentSession';
 import handleStripeWebhook from './handleStripeWebhook';
 import handlePayPalWebhook from './handlePayPalWebhook';
+import getCustomerOrder from "./getCustomerOrder";
+import getCustomerOrders from "./getCustomerOrders";
 
 const graphql = String.raw;
 
@@ -38,6 +40,8 @@ export const extendGraphqlSchema = (schema) =>
         activeCartShippingOptions(cartId: ID!): [ShippingOption!]
         activeCartPaymentProviders(regionId: ID!): [PaymentProvider!]
         activeCartRegion(countryCode: String!): Region
+        getCustomerOrder(orderId: ID!, secretKey: String): JSON
+        getCustomerOrders(limit: Int, offset: Int): JSON
       }
 
       input UserUpdateProfileInput {
@@ -69,7 +73,7 @@ export const extendGraphqlSchema = (schema) =>
         removeDiscountFromActiveCart(cartId: ID!, code: String!): Cart
         createActiveCartPaymentSessions(cartId: ID!): Cart
         setActiveCartPaymentSession(cartId: ID!, providerId: ID!): Cart
-        completeActiveCart(cartId: ID!): Order
+        completeActiveCart(cartId: ID!): JSON
         addActiveCartShippingMethod(cartId: ID!, shippingMethodId: ID!): Cart
         initiatePaymentSession(
           cartId: ID!
@@ -86,6 +90,8 @@ export const extendGraphqlSchema = (schema) =>
         activeCartShippingOptions,
         activeCartPaymentProviders,
         activeCartRegion,
+        getCustomerOrder,
+        getCustomerOrders,
       },
       Mutation: {
         updateActiveUserPassword,

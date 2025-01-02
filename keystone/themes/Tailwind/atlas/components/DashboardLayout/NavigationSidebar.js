@@ -40,6 +40,15 @@ import { AccountDropdown } from "./AccountDropdown";
 import { AccountDropdownMobile } from "./AccountDropdownMobile";
 import { AdminLink } from "../AdminLink";
 
+// Try to import customNavItems, fallback to empty array if not found
+let customNavItems = [];
+try {
+  const navItems = require("@keystone/index").customNavItems;
+  if (navItems) customNavItems = navItems;
+} catch (e) {
+  // Project doesn't have customNavItems defined
+}
+
 export function NavigationSidebar({
   authenticatedItem,
   sidebarLinks,
@@ -71,6 +80,12 @@ export function NavigationSidebar({
                 <HomeIcon className="w-6 h-6" />
                 <SidebarLabel>Home</SidebarLabel>
               </SidebarItem>
+              {customNavItems?.map(({ title, href, icon: Icon }) => (
+                <SidebarItem key={href} href={href} as={AdminLink}>
+                  <Icon className="w-6 h-6" />
+                  <SidebarLabel>{title}</SidebarLabel>
+                </SidebarItem>
+              ))}
             </SidebarSection>
             <SidebarHeading
               className="mb-4 mt-2 flex items-center justify-between cursor-pointer pt-2"

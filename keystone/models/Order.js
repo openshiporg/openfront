@@ -14,19 +14,10 @@ import {
 import { trackingFields } from "./trackingFields";
 import { permissions } from "../access";
 
-const formatCurrency = (amount, currencyCode) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currencyCode
-  }).format(amount);
-};
-
 export const Order = list({
   access: {
     operation: {
-      query: ({ session }) =>
-        permissions.canReadOrders({ session }) ||
-        permissions.canManageOrders({ session }),
+      query: () => true, // Allow public access for order confirmation
       create: permissions.canManageOrders,
       update: permissions.canManageOrders,
       delete: permissions.canManageOrders,
@@ -225,77 +216,181 @@ export const Order = list({
     }),
     ...trackingFields,
 
+    secretKey: text({
+      hooks: {
+        resolveInput: ({ operation }) => {
+          // Only generate secretKey on creation
+          if (operation === 'create') {
+            const randomBytes = require('crypto').randomBytes(32);
+            return randomBytes.toString('hex');
+          }
+          // Don't allow updates to secretKey
+          return undefined;
+        },
+      },
+    }),
+
+    // Virtual fields that reference Cart's calculations
+    subtotal: virtual({
+      field: graphql.field({
+        type: graphql.String,
+        async resolve(item, args, context) {
+          const order = await context.sudo().query.Order.findOne({
+            where: { id: item.id },
+            query: 'cart { subtotal }'
+          });
+          return order.cart?.subtotal;
+        }
+      })
+    }),
+
+    shipping: virtual({
+      field: graphql.field({
+        type: graphql.String,
+        async resolve(item, args, context) {
+          const order = await context.sudo().query.Order.findOne({
+            where: { id: item.id },
+            query: 'cart { shipping }'
+          });
+          return order.cart?.shipping;
+        }
+      })
+    }),
+
+    tax: virtual({
+      field: graphql.field({
+        type: graphql.String,
+        async resolve(item, args, context) {
+          const order = await context.sudo().query.Order.findOne({
+            where: { id: item.id },
+            query: 'cart { tax }'
+          });
+          return order.cart?.tax;
+        }
+      })
+    }),
+
+    discount: virtual({
+      field: graphql.field({
+        type: graphql.String,
+        async resolve(item, args, context) {
+          const order = await context.sudo().query.Order.findOne({
+            where: { id: item.id },
+            query: 'cart { discount }'
+          });
+          return order.cart?.discount;
+        }
+      })
+    }),
+
     total: virtual({
       field: graphql.field({
         type: graphql.String,
         async resolve(item, args, context) {
-          const sudoContext = context.sudo();
-          
-          const order = await sudoContext.query.Order.findOne({
+          const order = await context.sudo().query.Order.findOne({
             where: { id: item.id },
-            query: `
-              lineItems {
-                id
-                quantity
-                unitPrice
-              }
-              discounts {
-                id
-                discountRule {
-                  type
-                  value
-                }
-              }
-              currency {
-                code
-                noDivisionCurrency
-              }
-              taxRate
-              shippingMethods {
-                price
-              }
-            `
+            query: 'cart { total }'
           });
-
-          if (!order?.lineItems?.length) return null;
-
-          // Calculate subtotal
-          const subtotal = order.lineItems.reduce((sum, item) => 
-            sum + (item.unitPrice * item.quantity), 0);
-
-          // Calculate discounts
-          let discountAmount = 0;
-          if (order.discounts?.length) {
-            for (const discount of order.discounts) {
-              if (discount.discountRule.type === 'percentage') {
-                discountAmount += subtotal * (discount.discountRule.value / 100);
-              } else if (discount.discountRule.type === 'fixed') {
-                discountAmount += discount.discountRule.value;
-              }
-            }
-          }
-
-          // Add shipping
-          const shipping = order.shippingMethods?.reduce((sum, method) => 
-            sum + (method.price || 0), 0) || 0;
-
-          // Calculate tax on discounted amount
-          const taxableAmount = subtotal - discountAmount + shipping;
-          const tax = taxableAmount * (order.taxRate || 0);
-
-          // Calculate final total
-          const total = taxableAmount + tax;
-
-          const currencyCode = order.currency?.code || 'USD';
-          const divisor = order.currency?.noDivisionCurrency ? 1 : 100;
-
-          // Format currency inline
-          return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: currencyCode
-          }).format(total / divisor);
+          return order.cart?.total;
         }
       })
     }),
+
+    rawTotal: virtual({
+      field: graphql.field({
+        type: graphql.Int,
+        async resolve(item, args, context) {
+          const order = await context.sudo().query.Order.findOne({
+            where: { id: item.id },
+            query: 'cart { rawTotal }'
+          });
+          return order.cart?.rawTotal || 0;
+        }
+      })
+    }),
+    // fulfillmentStatus: virtual({
+    //   field: graphql.field({
+    //     type: graphql.String,
+    //     async resolve(item, args, context) {
+    //       const order = await context.sudo().query.Order.findOne({
+    //         where: { id: item.id },
+    //         query: `
+    //           lineItems {
+    //             id
+    //             quantity
+    //           }
+    //           fulfillments {
+    //             id
+    //             fulfillmentItems {
+    //               quantity
+    //             }
+    //           }
+    //           returns {
+    //             id
+    //             returnItems {
+    //               quantity
+    //             }
+    //           }
+    //         `
+    //       });
+
+    //       if (!order) return 'not_fulfilled';
+
+    //       // Calculate total quantities
+    //       const totalQuantity = order.lineItems?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+    //       const fulfilledQuantity = order.fulfillments?.reduce((sum, fulfillment) => 
+    //         sum + (fulfillment.fulfillmentItems?.reduce((itemSum, item) => itemSum + item.quantity, 0) || 0), 0) || 0;
+    //       const returnedQuantity = order.returns?.reduce((sum, ret) => 
+    //         sum + (ret.returnItems?.reduce((itemSum, item) => itemSum + item.quantity, 0) || 0), 0) || 0;
+
+    //       // Return the actual fulfillmentStatus enum values
+    //       if (returnedQuantity === totalQuantity) return 'returned';
+    //       if (returnedQuantity > 0) return 'partially_returned';
+    //       if (fulfilledQuantity === 0) return 'not_fulfilled';
+    //       if (fulfilledQuantity === totalQuantity) return 'fulfilled';
+    //       if (fulfilledQuantity > 0) return 'partially_fulfilled';
+
+    //       return 'not_fulfilled';
+    //     }
+    //   })
+    // }),
+
+    // paymentStatus: virtual({
+    //   field: graphql.field({
+    //     type: graphql.String,
+    //     async resolve(item, args, context) {
+    //       const order = await context.sudo().query.Order.findOne({
+    //         where: { id: item.id },
+    //         query: `
+    //           rawTotal
+    //           payments {
+    //             id
+    //             status
+    //             amount
+    //           }
+    //           refunds: payments(where: { status: { equals: canceled } }) {
+    //             id
+    //             amount
+    //           }
+    //         `
+    //       });
+
+    //       if (!order) return 'pending';
+
+    //       const totalAmount = order.rawTotal || 0;
+    //       const capturedAmount = order.payments?.reduce((sum, payment) => 
+    //         payment.status === 'captured' ? sum + payment.amount : sum, 0) || 0;
+    //       const refundedAmount = order.refunds?.reduce((sum, refund) => sum + refund.amount, 0) || 0;
+
+    //       // Return the actual PaymentStatusType enum values
+    //       if (refundedAmount === totalAmount) return 'canceled';
+    //       if (capturedAmount === totalAmount) return 'captured';
+    //       if (order.payments?.some(p => p.status === 'authorized')) return 'authorized';
+    //       if (order.payments?.some(p => p.status === 'failed')) return 'failed';
+          
+    //       return 'pending';
+    //     }
+    //   })
+    // }),
   },
 });

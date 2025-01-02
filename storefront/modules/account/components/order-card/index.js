@@ -9,36 +9,37 @@ const OrderCard = ({
   order
 }) => {
   const numberOfLines = useMemo(() => {
-    return order.items.reduce((acc, item) => {
+    return order.lineItems.reduce((acc, item) => {
       return acc + item.quantity
     }, 0);
   }, [order])
 
   const numberOfProducts = useMemo(() => {
-    return order.items.length
+    return order.lineItems.length
   }, [order])
 
   return (
     <div className="bg-white flex flex-col">
-      <div className="uppercase text-large-semi mb-1">#{order.display_id}</div>
+      <div className="uppercase text-large-semi mb-1">#{order.displayId}</div>
       <div
         className="flex items-center divide-x divide-gray-200 text-small-regular text-ui-fg-base">
         <span className="pr-2">
-          {new Date(order.created_at).toDateString()}
+          {new Date(order.createdAt).toDateString()}
         </span>
         <span className="px-2">
-          {formatAmount({
+          {/* {formatAmount({
             amount: order.total,
             region: order.region,
             includeTaxes: false,
-          })}
+          })} */}
+          {order.total}
         </span>
         <span className="pl-2">{`${numberOfLines} ${
           numberOfLines > 1 ? "items" : "item"
         }`}</span>
       </div>
       <div className="grid grid-cols-2 small:grid-cols-4 gap-4 my-4">
-        {order.items.slice(0, 3).map((i) => {
+        {order.lineItems.slice(0, 3).map((i) => {
           return (
             <div key={i.id} className="flex flex-col gap-y-2">
               <Thumbnail thumbnail={i.thumbnail} images={[]} size="full" />

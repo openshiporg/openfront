@@ -32,12 +32,14 @@ export const getCartId = () => {
   return cookies().get("_openfront_cart_id")?.value
 }
 
-export const setCartId = (cartId) => {
+export const setCartId = (cartId, options = {}) => {
   cookies().set("_openfront_cart_id", cartId, {
     maxAge: 60 * 60 * 24 * 7,
     httpOnly: true,
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
+    path: "/",
+    ...options
   })
 }
 

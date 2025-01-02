@@ -13,37 +13,47 @@ export const getProductsList = cache(async function ({
   pageParam = 0,
   queryParams,
   countryCode,
+  sortBy = { createdAt: 'desc' }
 }) {
   const limit = queryParams?.limit || 12;
   const offset = pageParam * limit;
+
+  const whereClause = {
+    productCollections: queryParams?.collectionId ? {
+      some: { id: { equals: queryParams.collectionId } }
+    } : undefined,
+    isGiftcard: { equals: queryParams?.isGiftcard },
+    productVariants: {
+      some: {
+        prices: {
+          some: {
+            region: {
+              countries: { some: { iso2: { equals: countryCode } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Add ID filtering if productsIds are provided
+  if (queryParams?.id?.length > 0) {
+    whereClause.id = { in: queryParams.id }
+  }
 
   const GET_PRODUCTS_QUERY = gql`
     query GetProducts(
       $limit: Int!
       $offset: Int!
-      $collectionId: ID
-      $isGiftcard: Boolean
+      $where: ProductWhereInput!
+      $orderBy: [ProductOrderByInput!]!
       $countryCode: String!
     ) {
       products(
-        where: {
-          productCollections: { some: { id: { equals: $collectionId } } }
-          isGiftcard: { equals: $isGiftcard }
-          productVariants: {
-            some: {
-              prices: {
-                some: {
-                  region: {
-                    countries: { some: { iso2: { equals: $countryCode } } }
-                  }
-                }
-              }
-            }
-          }
-        }
+        where: $where
         take: $limit
         skip: $offset
-        orderBy: { createdAt: desc }
+        orderBy: $orderBy
       ) {
         id
         title
@@ -72,15 +82,15 @@ export const getProductsList = cache(async function ({
           }
         }
       }
-      productsCount
+      productsCount(where: $where)
     }
   `;
 
   const data = await openfrontClient.request(GET_PRODUCTS_QUERY, {
     limit,
     offset,
-    collectionId: queryParams?.collectionId,
-    isGiftcard: queryParams?.isGiftcard,
+    where: whereClause,
+    orderBy: [sortBy],
     countryCode
   });
 
@@ -297,33 +307,31 @@ export const getProductByHandle = cache(async function ({ handle, regionId }) {
 export const getProductsListWithSort = cache(async function ({
   page = 0,
   queryParams,
-  sortBy = "created_at",
+  sortBy = { createdAt: "desc" },
   countryCode,
 }) {
   const limit = queryParams?.limit || 12;
+  const pageParam = Math.max(0, page - 1); // Ensure we don't get negative pages
 
   const {
     response: { products, count },
   } = await getProductsList({
-    pageParam: 0,
+    pageParam,
     queryParams: {
       ...queryParams,
-      limit: 100,
+      limit,
+      id: queryParams?.productsIds // Map productsIds to id for the where clause
     },
+    sortBy,
     countryCode,
   });
 
-  const sortedProducts = sortProducts(products, sortBy);
-  const pageParam = (page - 1) * limit;
-  const nextPage = count > pageParam + limit ? pageParam + limit : null;
-  const paginatedProducts = sortedProducts.slice(pageParam, pageParam + limit);
-
   return {
     response: {
-      products: paginatedProducts,
+      products,
       count,
     },
-    nextPage,
+    nextPage: count > (pageParam * limit) + limit ? page + 1 : null,
     queryParams,
   };
 });
@@ -352,4 +360,29 @@ export const getHomepageProducts = cache(async function ({
 
   return collectionProductsMap;
 });
+
+export const getProductsForSearch = cache(async function() {
+  const GET_PRODUCTS_FOR_SEARCH = gql`
+    query GetProductsForSearch {
+      products {
+        id
+        title
+        handle
+        description
+        thumbnail
+        productTags {
+          value
+        }
+        productVariants {
+          id
+          title
+          sku
+        }
+      }
+    }
+  `
+
+  const data = await openfrontClient.request(GET_PRODUCTS_FOR_SEARCH)
+  return data.products
+})
 

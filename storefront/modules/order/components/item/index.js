@@ -13,13 +13,13 @@ const Item = ({
     <Table.Row className="w-full">
       <Table.Cell className="!pl-0 p-4 w-24">
         <div className="flex w-16">
-          <Thumbnail thumbnail={item.thumbnail} size="square" />
+          <Thumbnail thumbnail={item.productVariant.product.thumbnail} size="square" />
         </div>
       </Table.Cell>
 
       <Table.Cell className="text-left">
         <Text className="txt-medium-plus text-ui-fg-base">{item.title}</Text>
-        <LineItemOptions variant={item.variant} />
+        <LineItemOptions variant={item.productVariant} />
       </Table.Cell>
 
       <Table.Cell className="!pr-0">

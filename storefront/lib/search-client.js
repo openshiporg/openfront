@@ -1,25 +1,72 @@
-import { instantMeiliSearch } from "@meilisearch/instant-meilisearch"
+import { getProductsForSearch } from "./data/products"
+import FlexSearch from "flexsearch"
 
-const endpoint =
-  process.env.NEXT_PUBLIC_SEARCH_ENDPOINT || "http://127.0.0.1:7700"
+const index = new FlexSearch.Index({
+  preset: "match",
+  tokenize: "forward",
+  cache: true,
+  context: true
+})
 
-const apiKey = process.env.NEXT_PUBLIC_SEARCH_API_KEY || "test_key"
+let initialized = false
+let productsMap = new Map()
 
-export const searchClient = instantMeiliSearch(endpoint, apiKey)
+async function initializeSearch() {
+  if (initialized) return productsMap
+  
+  const products = await getProductsForSearch()
+  
+  // Create a map for efficient lookups
+  productsMap = new Map(products.map(product => [product.id, product]))
+  
+  // Index the products
+  products.forEach(product => {
+    const searchableText = [
+      product.title,
+      product.description,
+      product.handle,
+      product.productTags?.map(t => t.value).join(" "),
+      product.productVariants?.map(v => v.title).join(" "),
+      product.productVariants?.map(v => v.sku).join(" ")
+    ].filter(Boolean).join(" ")
 
-export const SEARCH_INDEX_NAME =
-  process.env.NEXT_PUBLIC_INDEX_NAME || "products"
+    index.add(product.id, searchableText)
+  })
 
-// If you want to use Algolia instead then uncomment the following lines, and delete the above lines
-// you should also install algoliasearch - yarn add algoliasearch
+  initialized = true
+  return productsMap
+}
 
-// import algoliasearch from "algoliasearch/lite"
+export const searchClient = {
+  search: async (queries) => {
+    const productsData = await initializeSearch()
+    
+    const results = await Promise.all(
+      queries.map(async ({ params }) => {
+        if (!params.query) {
+          return { hits: [] }
+        }
 
-// const appId = process.env.NEXT_PUBLIC_SEARCH_APP_ID || "test_app_id"
+        const ids = await index.search(params.query, {
+          limit: params.hitsPerPage || 20,
+          suggest: true
+        })
 
-// const apiKey = process.env.NEXT_PUBLIC_SEARCH_API_KEY || "test_key"
+        const hits = ids
+          .map(id => {
+            const product = productsData.get(id)
+            return product ? {
+              objectID: id,
+              ...product
+            } : null
+          })
+          .filter(Boolean)
 
-// export const searchClient = algoliasearch(appId, apiKey)
+        return { hits }
+      })
+    )
+    return { results }
+  }
+}
 
-// export const SEARCH_INDEX_NAME =
-//   process.env.NEXT_PUBLIC_INDEX_NAME || "products"
+export const SEARCH_INDEX_NAME = "products"

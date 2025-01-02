@@ -93,6 +93,43 @@ export const User = list({
         },
       },
     }),
+    activeCartId: virtual({
+      field: graphql.field({
+        type: graphql.String,
+        async resolve(item, args, context) {
+          // Use sudo context to bypass access control for this check
+          const sudoContext = context.sudo();
+          
+          // Find the most recently updated cart that is:
+          // 1. Owned by this user
+          // 2. Has no associated order
+          // 3. Is of type 'default'
+          const activeCarts = await sudoContext.query.Cart.findMany({
+            where: {
+              user: { id: { equals: item.id } },
+              order: null,
+              type: { equals: 'default' }
+            },
+            orderBy: { updatedAt: 'desc' },
+            take: 1,
+            query: `
+              id
+              lineItems {
+                id
+              }
+            `
+          });
+
+          // Only return the cart ID if it has line items
+          const cart = activeCarts[0];
+          if (cart && cart.lineItems?.length > 0) {
+            return cart.id;
+          }
+          
+          return null;
+        }
+      })
+    }),
     apiKeys: relationship({ ref: "ApiKey.user", many: true }),
     metadata: json(),
     billingAddress: virtual({

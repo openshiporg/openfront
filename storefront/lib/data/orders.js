@@ -4,45 +4,44 @@ import { openfrontClient } from "../config"
 import { getAuthHeaders } from "./cookies"
 import { cache } from "react"
 
-export const retrieveOrder = cache(async function (id) {
-  const RETRIEVE_ORDER_QUERY = gql`
-    query RetrieveOrder($id: ID!) {
-      order(where: { id: $id }) {
-        id
-        status
-        total
-        items {
-          id
-          title
-          quantity
-        }
+export const retrieveOrder = cache(async function(id, secretKey) {
+  try {
+    const query = gql`
+      query GetCustomerOrder($id: ID!, $secretKey: String) {
+        getCustomerOrder(orderId: $id, secretKey: $secretKey)
       }
-    }
-  `;
+    `;
 
-  const headers = getAuthHeaders();
-  return openfrontClient.request(RETRIEVE_ORDER_QUERY, { id }, headers);
+    const { getCustomerOrder } = await openfrontClient.request(
+      query,
+      { id, secretKey },
+      getAuthHeaders()
+    );
+
+    return getCustomerOrder;
+  } catch (error) {
+    console.error("Error retrieving order:", error);
+    return null;
+  }
 });
 
-export const listCustomerOrders = cache(async function (limit = 10, offset = 0) {
-  const LIST_CUSTOMER_ORDERS_QUERY = gql`
-    query ListCustomerOrders($limit: Int!, $offset: Int!) {
-      orders(
-        where: { user: { id: { equals: "currentCustomerId" } } }
-        take: $limit
-        skip: $offset
-        orderBy: { createdAt: desc }
-      ) {
-        id
-        total
-        status
-        createdAt
-      }
-    }
-  `;
+export const listCustomerOrders = cache(async function(limit = 10, offset = 0) {
+  try {
+    const { getCustomerOrders } = await openfrontClient.request(
+      gql`
+        query GetCustomerOrders($limit: Int, $offset: Int) {
+          getCustomerOrders(limit: $limit, offset: $offset)
+        }
+      `,
+      { limit, offset },
+      getAuthHeaders()
+    );
 
-  const headers = getAuthHeaders();
-  return openfrontClient.request(LIST_CUSTOMER_ORDERS_QUERY, { limit, offset }, headers);
+    return getCustomerOrders;
+  } catch (error) {
+    console.error("Error listing orders:", error);
+    return null;
+  }
 });
 
 // Add other order-related functions... 

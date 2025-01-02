@@ -7,6 +7,7 @@ import {
   getAuthHeaders,
   removeAuthToken,
   setAuthToken,
+  setCartId,
 } from "@storefront/lib/data/cookies";
 import { cache } from "react";
 
@@ -450,6 +451,7 @@ export async function login(_currentState, formData) {
               item {
                 id
                 email
+                activeCartId
               }
             }
             ... on UserAuthenticationWithPasswordFailure {
@@ -463,14 +465,14 @@ export async function login(_currentState, formData) {
       headers
     );
 
-
     // Check for authentication failure
     if (authenticateUserWithPassword.__typename === "UserAuthenticationWithPasswordFailure") {
       return authenticateUserWithPassword.message;
     }
 
-    // Only set auth token if authentication was successful
+    // Only set auth token and cart if authentication was successful
     if (authenticateUserWithPassword.sessionToken) {
+      // Set the auth token
       setAuthToken(authenticateUserWithPassword.sessionToken, {
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
@@ -478,6 +480,17 @@ export async function login(_currentState, formData) {
         httpOnly: true,
         maxAge: 60 * 60 * 24 * 30, // 30 days
       });
+
+      // Set the cart ID if it exists
+      const activeCartId = authenticateUserWithPassword.item?.activeCartId;
+      if (activeCartId) {
+        setCartId(activeCartId, {
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+          maxAge: 60 * 60 * 24 * 7, // 7 days
+        });
+      }
 
       revalidateTag("customer");
       return null; // Success case returns null (no error)
@@ -558,7 +571,6 @@ export async function updateCustomerBillingAddress(prevState, formData) {
     revalidateTag("customer");
     return { success: true, error: null };
   } catch (error) {
-    console.log({ error });
     return { success: false, error: error.toString() };
   }
 }

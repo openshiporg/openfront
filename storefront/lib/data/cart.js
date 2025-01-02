@@ -7,7 +7,6 @@ import { openfrontClient } from "../config";
 import { getAuthHeaders, getCartId, setCartId, removeCartId } from "./cookies";
 import { redirect } from "next/navigation";
 
-
 const CART_QUERY = gql`
   query GetCart($cartId: ID!) {
     activeCart(cartId: $cartId)
@@ -18,9 +17,7 @@ export async function retrieveCart() {
   const cartId = getCartId();
   if (!cartId) return null;
 
-  const {
-    activeCart,
-  } = await openfrontClient.request(
+  const { activeCart } = await openfrontClient.request(
     CART_QUERY,
     { cartId },
     {
@@ -37,7 +34,7 @@ export async function retrieveCart() {
 export async function getCart(cartId) {
   const GET_CART_QUERY = gql`
     query GetCart($cartId: ID!) {
-      activeCart(cartId: $cartId) 
+      activeCart(cartId: $cartId)
     }
   `;
 
@@ -283,7 +280,7 @@ export async function deleteDiscount(cartId, code) {
 
 export async function createPaymentSessions(cartId) {
   if (!cartId) return null;
-  
+
   return openfrontClient.request(
     gql`
       mutation CreatePaymentSessions($cartId: ID!) {
@@ -639,7 +636,9 @@ export async function updateRegion(countryCode, currentPath) {
       const { regions } = await openfrontClient.request(
         gql`
           query GetRegion($code: String!) {
-            regions(where: { countries: { some: { iso2: { equals: $code } } } }) {
+            regions(
+              where: { countries: { some: { iso2: { equals: $code } } } }
+            ) {
               id
             }
           }
@@ -842,18 +841,18 @@ export async function setAddresses(currentState, formData) {
   const sameAsBilling = formData.get("same_as_billing") === "on";
 
   const data = {
-    email: formData.get("email")
+    email: formData.get("email"),
   };
 
   // If we selected an address and haven't modified it, just connect it
   if (selectedAddressId && !hasModifiedFields) {
     data.shippingAddress = {
-      connect: { id: selectedAddressId }
+      connect: { id: selectedAddressId },
     };
 
     if (sameAsBilling) {
       data.billingAddress = {
-        connect: { id: selectedAddressId }
+        connect: { id: selectedAddressId },
       };
     }
   } else {
@@ -873,27 +872,28 @@ export async function setAddresses(currentState, formData) {
 
     // Create shipping address first
     try {
-      const { createAddress: newShippingAddress } = await openfrontClient.request(
-        gql`
-          mutation CreateAddress($data: AddressCreateInput!) {
-            createAddress(data: $data) {
-              id
+      const { createAddress: newShippingAddress } =
+        await openfrontClient.request(
+          gql`
+            mutation CreateAddress($data: AddressCreateInput!) {
+              createAddress(data: $data) {
+                id
+              }
             }
-          }
-        `,
-        {
-          data: shippingAddress
-        },
-        getAuthHeaders()
-      );
+          `,
+          {
+            data: shippingAddress,
+          },
+          getAuthHeaders()
+        );
 
       data.shippingAddress = {
-        connect: { id: newShippingAddress.id }
+        connect: { id: newShippingAddress.id },
       };
 
       if (sameAsBilling) {
         data.billingAddress = {
-          connect: { id: newShippingAddress.id }
+          connect: { id: newShippingAddress.id },
         };
       } else {
         const billingAddress = {
@@ -909,22 +909,23 @@ export async function setAddresses(currentState, formData) {
           phone: formData.get("billingAddress.phone"),
         };
 
-        const { createAddress: newBillingAddress } = await openfrontClient.request(
-          gql`
-            mutation CreateAddress($data: AddressCreateInput!) {
-              createAddress(data: $data) {
-                id
+        const { createAddress: newBillingAddress } =
+          await openfrontClient.request(
+            gql`
+              mutation CreateAddress($data: AddressCreateInput!) {
+                createAddress(data: $data) {
+                  id
+                }
               }
-            }
-          `,
-          {
-            data: billingAddress
-          },
-          getAuthHeaders()
-        );
+            `,
+            {
+              data: billingAddress,
+            },
+            getAuthHeaders()
+          );
 
         data.billingAddress = {
-          connect: { id: newBillingAddress.id }
+          connect: { id: newBillingAddress.id },
         };
       }
     } catch (error) {
@@ -986,7 +987,10 @@ export async function setShippingMethod(shippingOptionId) {
     await openfrontClient.request(
       gql`
         mutation AddShippingMethod($cartId: ID!, $shippingMethodId: ID!) {
-          addActiveCartShippingMethod(cartId: $cartId, shippingMethodId: $shippingMethodId) {
+          addActiveCartShippingMethod(
+            cartId: $cartId
+            shippingMethodId: $shippingMethodId
+          ) {
             id
             shippingMethods {
               id
@@ -1005,7 +1009,7 @@ export async function setShippingMethod(shippingOptionId) {
       },
       getAuthHeaders()
     );
-    
+
     revalidateTag("cart");
   } catch (error) {
     throw error;
@@ -1028,33 +1032,49 @@ export async function setPaymentMethod(providerId) {
 
 export async function placeOrder() {
   const cartId = cookies().get("_openfront_cart_id")?.value;
-
   if (!cartId) throw new Error("No cartId cookie found");
 
-  const COMPLETE_CART_MUTATION = gql`
-    mutation CompleteActiveCart($cartId: ID!) {
-      completeActiveCart(cartId: $cartId) {
-        id
-        status
-        paymentStatus
-        displayId
-        email
-        payment {
-          id
-          status
-          amount
-          capturedAt
-          captures {
-            id
-            amount
-            createdAt
-          }
+  try {
+    const { completeActiveCart } = await openfrontClient.request(
+      gql`
+        mutation CompleteActiveCart($cartId: ID!) {
+          completeActiveCart(cartId: $cartId)
         }
+      `,
+      {
+        cartId,
       }
-    }
-  `;
+    );
 
-  const headers = getAuthHeaders();
-  const result = await openfrontClient.request(COMPLETE_CART_MUTATION, { cartId }, headers);
-  return result;
+    if (completeActiveCart?.id) {
+      // Remove cart cookie after successful order
+      removeCartId();
+      revalidateTag("cart");
+
+      // Redirect to order confirmation page with lowercase countryCode
+      const countryCode =
+        completeActiveCart.shippingAddress?.countryCode?.toLowerCase();
+      if (!countryCode) {
+        throw new Error("No country code found in completed order");
+      }
+
+      // Add secretKey to URL if it exists (for non-logged-in users)
+      const secretKeyParam = completeActiveCart.secretKey ? 
+        `?secretKey=${completeActiveCart.secretKey}` : '';
+
+      redirect(`/${countryCode}/order/confirmed/${completeActiveCart.id}${secretKeyParam}`);
+    }
+
+    return completeActiveCart;
+  } catch (error) {
+    // Check if this is a Next.js redirect error
+    if (error?.digest?.startsWith('NEXT_REDIRECT')) {
+      // This is an expected redirect, let it propagate
+      throw error;
+    }
+    
+    // Log and rethrow other errors
+    console.error("Error placing order:", error);
+    throw error;
+  }
 }
