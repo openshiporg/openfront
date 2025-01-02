@@ -1,3 +1,4 @@
+"use client"
 import { CellLink } from "../../components/CellLink"
 import { CellContainer } from "../../components/CellContainer"
 import { FieldContainer } from "../../components/FieldContainer"

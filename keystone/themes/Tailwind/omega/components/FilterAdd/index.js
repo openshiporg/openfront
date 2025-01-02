@@ -1,5 +1,4 @@
-import { Fragment, cloneElement, useMemo, useState } from "react";
-import { useList } from "@keystone/keystoneProvider";
+import { Fragment, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "../../primitives/default/ui/button";
 import {
@@ -27,40 +26,32 @@ import {
 import { ScrollArea } from "../../primitives/default/ui/scroll-area";
 import { Separator } from "../../primitives/default/ui/separator";
 
-export function FilterAdd({ listKey, filterableFields, dropdownTrigger }) {
+export function FilterAdd({ children, filterableFields, list }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const defaultButton = (
-    <button
-      type="button"
-      onClick={() => setIsOpen(true)}
-      className="shadow-sm border p-[.15rem] mt-[2px] text-sm font-medium text-zinc-900 bg-white dark:bg-zinc-800 rounded-md hover:bg-zinc-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:border-zinc-600 dark:text-white dark:hover:text-white dark:hover:bg-zinc-600 dark:focus:ring-blue-500 dark:focus:text-white"
-    >
-      <PlusIcon size={13} className="stroke-muted-foreground" />
-    </button>
-  );
-
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger>
-        {/* Render custom button if provided, else render default button */}
-        {dropdownTrigger
-          ? cloneElement(dropdownTrigger, { onClick: () => setIsOpen(true) })
-          : defaultButton}
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+      <DropdownMenuTrigger asChild>
+        {children || (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-xs"
+          >
+            <PlusIcon size={13} className="stroke-muted-foreground" />
+          </Button>
+        )}
       </DropdownMenuTrigger>
-      {isOpen && (
-        <FilterAddPopoverContent
-          onClose={() => setIsOpen(false)}
-          listKey={listKey}
-          filterableFields={filterableFields}
-        />
-      )}
+      <FilterAddPopoverContent
+        onClose={() => setIsOpen(false)}
+        list={list}
+        filterableFields={filterableFields}
+      />
     </DropdownMenu>
   );
 }
 
-function FilterAddPopoverContent({ onClose, listKey, filterableFields }) {
-  const list = useList(listKey);
+function FilterAddPopoverContent({ onClose, list, filterableFields }) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
 

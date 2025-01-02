@@ -6,7 +6,6 @@ import CheckoutForm from "@storefront/modules/checkout/templates/checkout-form";
 import CheckoutSummary from "@storefront/modules/checkout/templates/checkout-summary";
 import { retrieveCart } from "@storefront/lib/data/cart";
 import { getUser } from "@storefront/lib/data/user";
-import { Card } from "@keystone/themes/Tailwind/atlas/primitives/default/ui/card";
 
 export const metadata = {
   title: "Checkout",

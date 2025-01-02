@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState, createContext, useContext } from "react";
-import { EditItemDrawer } from "@keystone/themes/Tailwind/atlas/components/EditItemDrawer";
+import { EditItemDrawer } from "../EditItemDrawer";
 
 const DrawerContext = createContext(null);
 

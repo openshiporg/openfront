@@ -54,16 +54,19 @@ import {
 import { Input } from "../../primitives/default/ui/input";
 import { Badge } from "../../primitives/default/ui/badge";
 import { AdminLink } from "../../components/AdminLink";
+import Link from "next/link";
 
-export function ListPageClient({ 
-  listKey, 
-  list, 
-  metaData, 
-  items, 
-  count, 
-  currentPage, 
+const expectedExports = new Set(["Cell", "Field", "controller", "CardValue"]);
+
+export function ListPageClient({
+  listKey,
+  list,
+  metaData,
+  items,
+  count,
+  currentPage,
   pageSize,
-  listTableData
+  listTableData,
 }) {
   const { push } = useRouter();
   const searchParams = useSearchParams();
@@ -138,15 +141,22 @@ export function ListPageClient({
     });
   }
 
-  const dataGetter = makeDataGetter({ items, count }, null);
+  // Create data object in the format expected by makeDataGetter
+  const data = useMemo(() => ({
+    items,
+    count
+  }), [items, count]);
+
+  const dataGetter = makeDataGetter(data, null);
+
   const showCreate = !(metaData?.hideCreate ?? true) || null;
   const showDelete = !(metaData?.hideDelete ?? true) || null;
 
   // Build runtime list data with controllers
   const runtimeListData = useMemo(() => {
-    console.log('Building runtime list data on client side');
+    console.log("Building runtime list data on client side");
     const fields = {};
-    
+
     for (const field of listTableData.fields) {
       const views = { ...fieldViews[field.viewsIndex] };
       const customViews = {};
@@ -190,7 +200,7 @@ export function ListPageClient({
 
     return {
       ...listTableData,
-      fields
+      fields,
     };
   }, [listTableData, listKey]);
 
@@ -199,7 +209,7 @@ export function ListPageClient({
       <Breadcrumb className="hidden md:flex">
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink>
+            <BreadcrumbLink asChild>
               <AdminLink href="/">Dashboard</AdminLink>
             </BreadcrumbLink>
           </BreadcrumbItem>
@@ -306,16 +316,15 @@ export function ListPageClient({
             <FilterAdd
               list={list}
               filterableFields={filterableFields}
-              dropdownTrigger={
-                <button
-                  type="button"
-                  className="flex gap-1.5 pr-2 pl-2 tracking-wider items-center text-xs shadow-sm border p-[.15rem] font-medium text-zinc-600 bg-white dark:bg-zinc-800 rounded-md hover:bg-zinc-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:border-zinc-600 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-600 dark:focus:ring-blue-500 dark:focus:text-white"
-                >
-                  <PlusIcon2 size={13} className="stroke-muted-foreground" />
-                  FILTER
-                </button>
-              }
-            />
+            >
+              <button
+                type="button"
+                className="flex gap-1.5 pr-2 pl-2 tracking-wider items-center text-xs shadow-sm border p-[.15rem] font-medium text-zinc-600 bg-white dark:bg-zinc-800 rounded-md hover:bg-zinc-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:border-zinc-600 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-600 dark:focus:ring-blue-500 dark:focus:text-white"
+              >
+                <PlusIcon2 size={13} className="stroke-muted-foreground" />
+                FILTER
+              </button>
+            </FilterAdd>
           </div>
         </div>
 
@@ -349,7 +358,7 @@ export function ListPageClient({
                 <DeleteManyButton
                   list={list}
                   selectedItems={selectedItemsState.selectedItems}
-                  refetch={refetch}
+                  totalItems={items.length}
                 />
               )}
             </div>
@@ -363,6 +372,7 @@ export function ListPageClient({
             pageSize={pageSize}
           />
         </div>
+        {JSON.stringify(dataGetter.get("items"))}
 
         {count ? (
           <ListTable

@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useState } from "react";
-import { keystoneClient } from "@keystone/keystoneClient";
 import { useToasts } from "../Toast";
 import { Button } from "../../primitives/default/ui/button";
+import { deleteManyListItems } from "../../data/lists";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +17,6 @@ import {
 export function DeleteManyButton({
   selectedItems,
   list,
-  refetch,
   isDisabled,
   totalItems,
   children,
@@ -29,19 +28,8 @@ export function DeleteManyButton({
 
   const deleteItems = async () => {
     setIsLoading(true);
-    const deleteMutation = `
-      mutation($where: [${list.gqlNames.whereUniqueInputName}!]!) {
-        ${list.gqlNames.deleteManyMutationName}(where: $where) {
-          id
-          ${list.labelField}
-        }
-      }
-    `;
-
     try {
-      const { [list.gqlNames.deleteManyMutationName]: deletedItems } = await keystoneClient.request(deleteMutation, {
-        where: [...selectedItems].map((id) => ({ id })),
-      });
+      const deletedItems = await deleteManyListItems(list.key, [...selectedItems]);
 
       const { successfulItems, unsuccessfulItems, successMessage } = deletedItems.reduce(
         (acc, curr) => {
@@ -78,7 +66,6 @@ export function DeleteManyButton({
         });
       }
 
-      refetch();
     } catch (err) {
       toasts.addToast({
         title: "Failed to delete",

@@ -1,4 +1,3 @@
-"use client";
 import bytes from "bytes";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 

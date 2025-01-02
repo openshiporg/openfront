@@ -1,3 +1,5 @@
+"use client"
+
 import { FieldContainer } from "../../components/FieldContainer";
 import { FieldLabel } from "../../components/FieldLabel";
 import { validateImage, ImageWrapper } from "./Field";

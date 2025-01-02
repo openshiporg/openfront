@@ -2,10 +2,6 @@
 
 import { revalidateTag } from "next/cache";
 import { keystoneClient } from "@keystone/keystoneClient";
-import { fieldViews } from "@keystone/fieldViews";
-import { getGqlNames } from "@keystone-6/core/types";
-
-const expectedExports = new Set(["Cell", "Field", "controller", "CardValue"]);
 
 export async function getList(listKey) {
   try {
@@ -236,9 +232,34 @@ export async function deleteListItem(listKey, id) {
   }
 }
 
-export async function getListPageData(key, { currentPage = 1, pageSize = 50, search = "", filters = {} }) {
-  'use server';
-  
+export async function deleteManyListItems(listKey, ids) {
+  try {
+    const list = await getList(listKey);
+    const result = await keystoneClient.request(
+      `
+      mutation($where: [${list.gqlNames.whereUniqueInputName}!]!) {
+        items: ${list.gqlNames.deleteManyMutationName}(where: $where) {
+          id
+          ${list.labelField}
+        }
+      }
+    `,
+      {
+        where: ids.map((id) => ({ id })),
+      }
+    );
+
+    revalidateTag('lists');
+    revalidateTag(`list-${listKey.toLowerCase()}`);
+    
+    return result?.items;
+  } catch (err) {
+    console.error('Error deleting list items:', err);
+    throw err;
+  }
+}
+
+export async function getListPageData(key, { currentPage = 1, pageSize = 50, search = "", filters = {} }) {  
   try {
     // Get list metadata using existing functions
     const [list, metaData] = await Promise.all([
@@ -246,16 +267,11 @@ export async function getListPageData(key, { currentPage = 1, pageSize = 50, sea
       getListMetadata(key)
     ]);
 
-    console.log('List data:', {
-      key,
-      path: list.path,
-      initialColumns: list.initialColumns
-    });
-
     // Then fetch items with the correct fields
     const query = `
       query($where: ${key}WhereInput, $orderBy: [${key}OrderByInput!]!, $take: Int, $skip: Int) {
         items: ${list.path}(where: $where, orderBy: $orderBy, take: $take, skip: $skip) {
+          id
           ${list.initialColumns.join("\n")}
         }
         count: ${list.path}Count(where: $where)
@@ -271,9 +287,6 @@ export async function getListPageData(key, { currentPage = 1, pageSize = 50, sea
       take: pageSize,
       skip: (currentPage - 1) * pageSize,
     };
-
-    console.log('GraphQL Query:', query);
-    console.log('Variables:', variables);
 
     const data = await keystoneClient.request(
       query,
@@ -385,170 +398,6 @@ export async function getListData(key) {
   return lists[key];
 }
 
-export async function getAdminMeta() {
-  try {
-    const data = await keystoneClient.request(
-      `
-      query StaticAdminMeta {
-        keystone {
-          adminMeta {
-            lists {
-              key
-              itemQueryName
-              listQueryName
-              initialSort {
-                field
-                direction
-              }
-              path
-              label
-              singular
-              plural
-              description
-              initialColumns
-              pageSize
-              labelField
-              isSingleton
-              groups {
-                label
-                description
-                fields {
-                  path
-                }
-              }
-              fields {
-                path
-                label
-                description
-                fieldMeta
-                viewsIndex
-                customViewsIndex
-                search
-                isNonNull
-                itemView {
-                  fieldMode
-                  fieldPosition
-                }
-                listView {
-                  fieldMode
-                }
-              }
-            }
-          }
-        }
-      }
-    `);
-
-    const adminMeta = data?.keystone?.adminMeta;
-    if (!adminMeta) {
-      throw new Error('Failed to fetch admin metadata');
-    }
-
-    console.log('fieldViews available:', fieldViews);
-    console.log('Expected exports:', expectedExports);
-
-    const runtimeAdminMeta = {
-      lists: {},
-    };
-
-    for (const list of adminMeta.lists) {
-      runtimeAdminMeta.lists[list.key] = {
-        ...list,
-        groups: [],
-        gqlNames: getGqlNames({
-          listKey: list.key,
-          pluralGraphQLName: list.listQueryName,
-        }),
-        fields: {},
-      };
-
-      for (const field of list.fields) {
-        console.log(`Processing field ${list.key}.${field.path}:`);
-        console.log('viewsIndex:', field.viewsIndex);
-        console.log('fieldViews[viewsIndex]:', fieldViews[field.viewsIndex]);
-
-        // Validate required exports
-        expectedExports.forEach((exportName) => {
-          if (fieldViews[field.viewsIndex][exportName] === undefined) {
-            console.log(`Missing export ${exportName} for field ${list.key}.${field.path}`);
-            throw new Error(
-              `The view for the field at ${list.key}.${field.path} is missing the ${exportName} export`
-            );
-          }
-        });
-
-        const views = { ...fieldViews[field.viewsIndex] };
-        console.log('Views after spread:', views);
-        console.log('Controller type:', typeof views.controller);
-        console.log('Controller value:', views.controller);
-
-        const customViews = {};
-
-        if (field.customViewsIndex !== null) {
-          const customViewsSource = fieldViews[field.customViewsIndex];
-          const allowedExportsOnCustomViews = new Set(
-            views.allowedExportsOnCustomViews
-          );
-          Object.keys(customViewsSource).forEach((exportName) => {
-            if (allowedExportsOnCustomViews.has(exportName)) {
-              customViews[exportName] = customViewsSource[exportName];
-            } else if (expectedExports.has(exportName)) {
-              views[exportName] = customViewsSource[exportName];
-            } else {
-              throw new Error(
-                `Unexpected export named ${exportName} from the custom view from field at ${list.key}.${field.path}`
-              );
-            }
-          });
-        }
-
-        try {
-          const controller = views.controller({
-            listKey: list.key,
-            fieldMeta: field.fieldMeta,
-            label: field.label,
-            description: field.description,
-            path: field.path,
-            customViews,
-          });
-          console.log('Controller created successfully:', controller);
-
-          runtimeAdminMeta.lists[list.key].fields[field.path] = {
-            ...field,
-            itemView: {
-              fieldMode: field.itemView?.fieldMode ?? null,
-              fieldPosition: field.itemView?.fieldPosition ?? null,
-            },
-            graphql: {
-              isNonNull: field.isNonNull,
-            },
-            views,
-            controller,
-          };
-        } catch (err) {
-          console.error('Error creating controller:', err);
-          throw err;
-        }
-      }
-
-      for (const group of list.groups) {
-        runtimeAdminMeta.lists[list.key].groups.push({
-          label: group.label,
-          description: group.description,
-          fields: group.fields.map(
-            (field) => runtimeAdminMeta.lists[list.key].fields[field.path]
-          ),
-        });
-      }
-    }
-
-    return runtimeAdminMeta;
-  } catch (err) {
-    console.error('Error getting admin meta:', err);
-    throw err;
-  }
-}
-
 export async function getListTableData(listKey) {
   try {
     const data = await keystoneClient.request(
@@ -597,12 +446,7 @@ export async function getListTableData(listKey) {
 
     return list;
   } catch (err) {
-    console.error('Error getting list table data:', err);
-    console.error('Error details:', {
-      message: err.message,
-      stack: err.stack,
-      listKey
-    });
+    console.error('Error getting list table metadata:', err);
     throw err;
   }
 } 

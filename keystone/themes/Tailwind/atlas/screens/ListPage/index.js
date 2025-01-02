@@ -449,7 +449,6 @@ export const ListPageTemplate = ({ listKey }) => {
                 pageSize={pageSize}
               />
             </div>
-
             {data.count ? (
               <ListTable
                 count={data.count}
@@ -519,10 +518,8 @@ export const ListPageTemplate = ({ listKey }) => {
             )}
           </div>
         </main>
-      ) : (
-        // <LoadingIcon label="Loading item data" />
-        null
-      )}
+      ) : // <LoadingIcon label="Loading item data" />
+      null}
     </>
   );
 };

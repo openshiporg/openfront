@@ -20,9 +20,9 @@ export async function ListPage({ params, searchParams }) {
     getListPageData(key, {
       currentPage,
       pageSize,
-      search
+      search,
     }),
-    getListTableData(key)
+    getListTableData(key),
   ]);
 
   return (
