@@ -1,65 +1,10 @@
-"use client";
-
-import { useState } from "react"
-import { useFormattedInput } from '@keystone/utils/useFormattedInput';
 import { FieldContainer } from '../../components/FieldContainer';
 import { FieldDescription } from '../../components/FieldDescription';
 import { FieldLabel } from '../../components/FieldLabel';
 import { TextInput } from '../../components/TextInput';
 import { CellContainer } from '../../components/CellContainer';
 import { CellLink } from '../../components/CellLink';
-
-function IntegerInput({
-  value,
-  onChange,
-  id,
-  autoFocus,
-  forceValidation,
-  validationMessage,
-  placeholder
-}) {
-  const [hasBlurred, setHasBlurred] = useState(false)
-  const props = useFormattedInput(
-    {
-      format: value => (value === null ? "" : value.toString()),
-      parse: raw => {
-        raw = raw.trim()
-        if (raw === "") {
-          return null
-        }
-        if (/^[+-]?\d+$/.test(raw)) {
-          let parsed = parseInt(raw)
-          if (!Number.isSafeInteger(parsed)) {
-            return raw
-          }
-          return parsed
-        }
-        return raw
-      }
-    },
-    {
-      value,
-      onChange,
-      onBlur: () => {
-        setHasBlurred(true)
-      }
-    }
-  )
-  return (
-    <span>
-      <TextInput
-        placeholder={placeholder}
-        id={id}
-        autoFocus={autoFocus}
-        inputMode="numeric"
-        {...props}
-      />
-      {(hasBlurred || forceValidation) && validationMessage && (
-        <span className="text-red-600 dark:text-red-700 text-sm">{validationMessage}</span>
-      )}
-    </span>
-  )
-}
+import { IntegerInput } from "./IntegerInput";
 
 export const Field = ({
   field,

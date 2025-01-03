@@ -1,296 +1,64 @@
-"use client";
-
-import { Fragment, useState } from "react";
-
-import { gql, useQuery } from "@keystone-6/core/admin-ui/apollo";
-import { useKeystone, useList } from "@keystone/keystoneProvider";
-import { cn } from "@keystone/utils/cn";
-
-import { CellContainer } from "../../components/CellContainer";
-import { FieldContainer } from "../../components/FieldContainer";
-import { FieldDescription } from "../../components/FieldDescription";
-import { FieldLabel } from "../../components/FieldLabel";
-import { FieldLegend } from "../../components/FieldLegend";
-import { AdminLink } from "../../components/AdminLink";
-import { CreateItemDrawer } from "../../components/CreateItemDrawer";
+import { Field as ClientField, Cell as ClientCell, CardValue as ClientCardValue } from "./RelationshipField";
+import { getFormattedList } from "../../data/lists";
+import { getAuthenticatedItem } from "../../data/auth";
 import { RelationshipSelect } from "../../components/RelationshipSelect";
-import { Cards } from "../../components/Cards";
-import { Button, buttonVariants } from "../../primitives/default/ui/button";
 
-function LinkToRelatedItems({ itemId, value, list, refFieldKey }) {
-  function constructQuery({ refFieldKey, itemId, value }) {
-    if (!!refFieldKey && itemId) {
-      return `!${refFieldKey}_matches="${itemId}"`;
-    }
-    return `!id_in="${(value?.value)
-      .slice(0, 100)
-      .map(({ id }) => id)
-      .join(",")}"`;
-  }
-  if (value.kind === "many") {
-    const query = constructQuery({ refFieldKey, value, itemId });
-    return (
-      <Button variant="light" className="bg-transparent">
-        <AdminLink href={`/${list.path}?${query}`}>
-          View related {list.plural}
-        </AdminLink>
-      </Button>
-    );
-  }
+async function RelationshipField(props) {
+  const [list, foreignList] = await Promise.all([
+    getFormattedList(props.field.listKey),
+    getFormattedList(props.field.refListKey)
+  ]);
+  const authenticatedItem = await getAuthenticatedItem();
 
   return (
-    <AdminLink
-      className={cn(buttonVariants({ variant: "light" }), "bg-transparent")}
-      href={`/${list.path}/${value.value?.id}`}
-    >
-      View {list.singular} details
-    </AdminLink>
+    <ClientField
+      {...props}
+      list={list}
+      foreignList={foreignList}
+      authenticatedItem={{
+        state: authenticatedItem ? "authenticated" : "unauthenticated",
+        ...authenticatedItem,
+        listKey: props.field.refListKey
+      }}
+    />
   );
 }
 
-export const Field = ({
-  field,
-  autoFocus,
-  value,
-  onChange,
-  forceValidation,
-}) => {
-  const keystone = useKeystone();
-  const foreignList = useList(field.refListKey);
-  const localList = useList(field.listKey);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+async function RelationshipCell(props) {
+  const list = await getFormattedList(props.field.refListKey);
+  return <ClientCell {...props} list={list} />;
+}
 
-  if (value.kind === "cards-view") {
-    return (
-      <FieldContainer as="fieldset">
-        <FieldLegend>{field.label}</FieldLegend>
-        <FieldDescription id={`${field.path}-description`}>
-          {field.description}
-        </FieldDescription>
-        <Cards
-          forceValidation={forceValidation}
-          field={field}
-          id={value.id}
-          value={value}
-          onChange={onChange}
-          foreignList={foreignList}
-          localList={localList}
-        />
-      </FieldContainer>
-    );
-  }
+async function RelationshipCardValue(props) {
+  const list = await getFormattedList(props.field.refListKey);
+  return <ClientCardValue {...props} list={list} />;
+}
 
-  if (value.kind === "count") {
-    return (
-      <fieldset className="space-y-4">
-        <FieldLegend>{field.label}</FieldLegend>
-        <FieldDescription id={`${field.path}-description`}>
-          {field.description}
-        </FieldDescription>
-        <div>
-          {value.count === 1
-            ? `There is 1 ${foreignList.singular} `
-            : `There are ${value.count} ${foreignList.plural} `}
-          linked to this {localList.singular}
-        </div>
-      </fieldset>
-    );
-  }
-
-  const authenticatedItem = keystone.authenticatedItem;
-
+async function RelationshipFilter({ onChange, value, config }) {
+  const foreignList = await getFormattedList(config.fieldMeta.refListKey);
+  const filterValues = value ? value.split(",").map(id => ({ id, label: id })) : [];
+  
   return (
-    <FieldContainer as="fieldset">
-      <FieldLabel as="legend">{field.label}</FieldLabel>
-      <FieldDescription id={`${field.path}-description`}>
-        {field.description}
-      </FieldDescription>
-      <Fragment>
-        <div className="space-y-4">
-          <RelationshipSelect
-            controlShouldRenderValue
-            aria-describedby={
-              field.description === null
-                ? undefined
-                : `${field.path}-description`
-            }
-            autoFocus={autoFocus}
-            isDisabled={onChange === undefined}
-            labelField={field.refLabelField}
-            searchFields={field.refSearchFields}
-            list={foreignList}
-            portalMenu
-            state={
-              value.kind === "many"
-                ? {
-                    kind: "many",
-                    value: value.value,
-                    onChange(newItems) {
-                      onChange?.({
-                        ...value,
-                        value: newItems,
-                      });
-                    },
-                  }
-                : {
-                    kind: "one",
-                    value: value.value,
-                    onChange(newVal) {
-                      if (value.kind === "one") {
-                        onChange?.({
-                          ...value,
-                          value: newVal,
-                        });
-                      }
-                    },
-                  }
-            }
-          />
-          {!field.hideButtons && (
-            <div className="flex space-x-2">
-              {onChange !== undefined &&
-                !field.hideCreate &&
-                onChange !== undefined && (
-                  <CreateItemDrawer
-                    listKey={foreignList.key}
-                    isDrawerOpen={isDrawerOpen}
-                    setIsDrawerOpen={setIsDrawerOpen}
-                    trigger={
-                      <Button
-                        // disabled={isDrawerOpen}
-                        // onClick={() => {
-                        //   setIsDrawerOpen(true);
-                        // }}
-                        // variant="secondary"
-                        variant="secondary"
-                      >
-                        Create related {foreignList.singular}
-                      </Button>
-                    }
-                    onClose={() => {
-                      setIsDrawerOpen(false);
-                    }}
-                    onCreate={(val) => {
-                      setIsDrawerOpen(false);
-                      if (value.kind === "many") {
-                        onChange({
-                          ...value,
-                          value: [...value.value, val],
-                        });
-                      } else if (value.kind === "one") {
-                        onChange({
-                          ...value,
-                          value: val,
-                        });
-                      }
-                    }}
-                  />
-                )}
-              {onChange !== undefined &&
-                authenticatedItem.state === "authenticated" &&
-                authenticatedItem.listKey === field.refListKey &&
-                (value.kind === "many"
-                  ? value.value.find((x) => x.id === authenticatedItem.id) ===
-                    undefined
-                  : value.value?.id !== authenticatedItem.id) && (
-                  <Button
-                    onClick={() => {
-                      const val = {
-                        label: authenticatedItem.label,
-                        id: authenticatedItem.id,
-                      };
-                      if (value.kind === "many") {
-                        onChange({
-                          ...value,
-                          value: [...value.value, val],
-                        });
-                      } else {
-                        onChange({
-                          ...value,
-                          value: val,
-                        });
-                      }
-                    }}
-                  >
-                    {value.kind === "many" ? "Add " : "Set as "}
-                    {authenticatedItem.label}
-                  </Button>
-                )}
-              {!!(value.kind === "many"
-                ? value.value.length
-                : value.kind === "one" && value.value) && (
-                <LinkToRelatedItems
-                  itemId={value.id}
-                  refFieldKey={field.refFieldKey}
-                  list={foreignList}
-                  value={value}
-                />
-              )}
-            </div>
-          )}
-        </div>
-      </Fragment>
-    </FieldContainer>
+    <RelationshipSelect
+      controlShouldRenderValue
+      list={foreignList}
+      labelField={config.fieldMeta.refLabelField}
+      searchFields={config.fieldMeta.refSearchFields}
+      isDisabled={onChange === undefined}
+      state={{
+        kind: "many",
+        value: filterValues,
+        onChange(newItems) {
+          onChange(newItems.map((item) => item.id).join(","));
+        },
+      }}
+    />
   );
-};
+}
 
-export const Cell = ({ field, item }) => {
-  const list = useList(field.refListKey);
-
-  if (field.display === "count") {
-    const count = item[`${field.path}Count`] ?? 0;
-    return (
-      <CellContainer>
-        {count} {count === 1 ? list.singular : list.plural}
-      </CellContainer>
-    );
-  }
-
-  const data = item[field.path];
-  const items = (Array.isArray(data) ? data : [data]).filter((item) => item);
-  const displayItems = items.length < 5 ? items : items.slice(0, 3);
-  const overflow = items.length < 5 ? 0 : items.length - 3;
-
-  return (
-    <CellContainer>
-      {displayItems.map((item, index) => (
-        <Fragment key={item.id}>
-          {!!index ? ", " : ""}
-          <AdminLink
-            // href={`/${list.path}/[id]`}
-            href={`/${list.path}/${item.id}`}
-          >
-            {item.label || item.id}
-          </AdminLink>
-        </Fragment>
-      ))}
-      <span className="opacity-50 font-medium">{overflow ? `, and ${overflow} more` : null}</span>
-    </CellContainer>
-  );
-};
-
-export const CardValue = ({ field, item }) => {
-  const list = useList(field.refListKey);
-  const data = item[field.path];
-  return (
-    <FieldContainer>
-      <FieldLabel>{field.label}</FieldLabel>
-      {(Array.isArray(data) ? data : [data])
-        .filter((item) => item)
-        .map((item, index) => (
-          <Fragment key={item.id}>
-            {!!index ? ", " : ""}
-            <AdminLink
-              href={`/${list.path}/[id]`}
-              as={`/${list.path}/${item.id}`}
-            >
-              {item.label || item.id}
-            </AdminLink>
-          </Fragment>
-        ))}
-    </FieldContainer>
-  );
-};
+export const Field = RelationshipField;
+export const Cell = RelationshipCell;
+export const CardValue = RelationshipCardValue;
 
 export const controller = (config) => {
   const cardsDisplayOptions =
@@ -550,37 +318,6 @@ export const controller = (config) => {
     },
   };
 };
-
-function useRelationshipFilterValues({ value, list }) {
-  const foreignIds = getForeignIds(value);
-  const where = { id: { in: foreignIds } };
-
-  const query = gql`
-    query FOREIGNLIST_QUERY($where: ${list.gqlNames.whereInputName}!) {
-      items: ${list.gqlNames.listQueryName}(where: $where) {
-        id
-        ${list.labelField}
-      }
-    }
-  `;
-
-  const { data, loading } = useQuery(query, {
-    variables: {
-      where,
-    },
-  });
-
-  return {
-    filterValues:
-      data?.items?.map((item) => {
-        return {
-          id: item.id,
-          label: item[list.labelField] || item.id,
-        };
-      }) || foreignIds.map((f) => ({ label: f, id: f })),
-    loading: loading,
-  };
-}
 
 function getForeignIds(value) {
   if (typeof value === "string" && value.length > 0) {

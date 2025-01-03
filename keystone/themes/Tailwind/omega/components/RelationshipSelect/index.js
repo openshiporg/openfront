@@ -1,3 +1,4 @@
+"use client";
 import "intersection-observer";
 
 import {

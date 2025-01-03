@@ -1,13 +1,10 @@
-"use client";
-
-import { useState } from "react";
-import { useFormattedInput } from "@keystone/utils/useFormattedInput";
 import { FieldContainer } from "../../components/FieldContainer";
 import { FieldDescription } from "../../components/FieldDescription";
 import { FieldLabel } from "../../components/FieldLabel";
 import { TextInput } from "../../components/TextInput";
 import { CellContainer } from "../../components/CellContainer";
 import { CellLink } from "../../components/CellLink";
+import { FloatInput } from "./FloatInput";
 
 function validate(value, validation, label) {
   const val = value.value;
@@ -48,56 +45,6 @@ function validate(value, validation, label) {
   }
 
   return undefined;
-}
-
-function FloatInput({
-  value,
-  onChange,
-  id,
-  autoFocus,
-  forceValidation,
-  validationMessage,
-  placeholder,
-}) {
-  const [hasBlurred, setHasBlurred] = useState(false);
-  const props = useFormattedInput(
-    {
-      format: (value) => (value === null ? "" : value.toString()),
-      parse: (raw) => {
-        raw = raw.trim();
-        if (raw === "") {
-          return null;
-        }
-        let parsed = parseFloat(raw);
-        if (Number.isFinite(parsed)) {
-          return parsed;
-        }
-        return raw;
-      },
-    },
-    {
-      value,
-      onChange,
-      onBlur: () => {
-        setHasBlurred(true);
-      },
-    }
-  );
-
-  return (
-    <span>
-      <TextInput
-        placeholder={placeholder}
-        id={id}
-        autoFocus={autoFocus}
-        inputMode="numeric"
-        {...props}
-      />
-      {(hasBlurred || forceValidation) && validationMessage && (
-        <span className="text-red-600 dark:text-red-700 text-sm">{validationMessage}</span>
-      )}
-    </span>
-  );
 }
 
 export const Field = ({

@@ -1,8 +1,5 @@
-
 // the fieldView order is based on the schema
 // if the schema is changed, yarn generate-field-views should be run to update this file
-"use client"
-
 import * as view0 from "@keystone/views/IDField";
 import * as view1 from "@keystone/views/Text";
 import * as view2 from "@keystone/views/Virtual";

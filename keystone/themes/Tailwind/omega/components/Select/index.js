@@ -1,3 +1,5 @@
+"use client";
+
 import { cn } from "@keystone/utils/cn";
 import { ChevronDown, X } from "lucide-react";
 import { RiLoader2Fill } from "@remixicon/react";
