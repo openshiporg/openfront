@@ -82,8 +82,14 @@ export const ProductVariant = list({
       ref: "ProductOptionValue.productVariants",
       many: true,
     }),
+    location: relationship({
+      ref: "Location.variants",
+    }),
+    stockMovements: relationship({
+      ref: "StockMovement.variant",
+      many: true,
+    }),
     ...trackingFields,
-
   },
   ui: {
     labelField: "fullTitle",

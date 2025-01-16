@@ -14,6 +14,25 @@ import { ApolloArmor } from "@escape.tech/graphql-armor";
 import { applyMiddleware } from "graphql-middleware";
 import { RateLimiterMemory } from "rate-limiter-flexible";
 import { applyRateLimiting } from "./applyRateLimiting";
+import {
+  ShoppingBag,
+  Store,
+  Globe,
+  Box,
+  Users,
+  Package,
+  BarChart3,
+  Tag,
+  Gift,
+  RefreshCcw,
+  Clock,
+  UserPlus,
+  PieChart,
+  Files,
+  DollarSign,
+  Truck,
+  Settings,
+} from "lucide-react";
 
 const databaseURL = process.env.DATABASE_URL || "file:./keystone.db";
 
@@ -178,6 +197,99 @@ const { withAuth } = createAuth({
 });
 
 const armor = new ApolloArmor();
+
+export const customNavItems = [
+  {
+    title: 'Orders',
+    href: '/platform/orders',
+    icon: ShoppingBag,
+    color: 'text-blue-500'
+  },
+  {
+    title: 'Products',
+    href: '/platform/products',
+    icon: Package,
+    color: 'text-green-500'
+  },
+  {
+    title: 'Customers',
+    href: '/platform/customers',
+    icon: Users,
+    color: 'text-purple-500'
+  },
+  {
+    title: 'Discounts',
+    href: '/platform/discounts',
+    icon: Tag,
+    color: 'text-pink-500'
+  },
+  {
+    title: 'Gift Cards',
+    href: '/platform/gift-cards',
+    icon: Gift,
+    color: 'text-yellow-500'
+  },
+  {
+    title: 'Price Lists',
+    href: '/platform/price-lists',
+    icon: DollarSign,
+    color: 'text-emerald-500'
+  },
+  {
+    title: 'Draft Orders',
+    href: '/platform/draft-orders',
+    icon: Files,
+    color: 'text-gray-500'
+  },
+  {
+    title: 'Analytics',
+    href: '/platform/analytics',
+    icon: PieChart,
+    color: 'text-indigo-500'
+  },
+  {
+    title: 'Users',
+    href: '/platform/users',
+    icon: UserPlus,
+    color: 'text-orange-500'
+  },
+  {
+    title: 'Batch Jobs',
+    href: '/platform/batch-jobs',
+    icon: Clock,
+    color: 'text-cyan-500'
+  },
+  {
+    title: 'Returns',
+    href: '/platform/returns',
+    icon: RefreshCcw,
+    color: 'text-red-500'
+  },
+  {
+    title: 'Claims',
+    href: '/platform/claims',
+    icon: Files,
+    color: 'text-rose-500'
+  },
+  {
+    title: 'Inventory',
+    href: '/platform/inventory',
+    icon: Box,
+    color: 'text-teal-500'
+  },
+  {
+    title: 'Shipping',
+    href: '/platform/shipping',
+    icon: Truck,
+    color: 'text-sky-500'
+  },
+  {
+    title: 'Settings',
+    href: '/platform/settings',
+    icon: Settings,
+    color: 'text-zinc-500'
+  }
+];
 
 // Modify the export statement
 export default withAuth(

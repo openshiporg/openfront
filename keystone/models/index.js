@@ -1,4 +1,5 @@
 import { User } from "./User";
+import { UserField } from "./UserField";
 import { Role } from "./Role";
 import { Order } from "./Order";
 import { LineItem } from "./LineItem";
@@ -65,9 +66,15 @@ import { TaxRate } from "./TaxRate";
 import { TrackingLink } from "./TrackingLink";
 import { RuleType } from "./RuleType";
 import { Capture } from "./Capture";
+import { BatchJob } from './BatchJob';
+import { Team } from './Team';
+import { Location } from './Location';
+import { StockMovement } from './StockMovement';
+import { OrderEvent } from './OrderEvent';
 
 export const models = {
   User,
+  UserField,
   Role,
   Order,
   LineItem,
@@ -134,4 +141,9 @@ export const models = {
   TaxProvider,
   TaxRate,
   TrackingLink,
+  BatchJob,
+  Team,
+  Location,
+  StockMovement,
+  OrderEvent,
 };

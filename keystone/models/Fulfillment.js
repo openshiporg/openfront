@@ -22,9 +22,6 @@ export const Fulfillment = list({
     },
   },
   fields: {
-    trackingNumbers: json({
-      defaultValue: "[]",
-    }),
     data: json(),
     shippedAt: timestamp(),
     canceledAt: timestamp(),

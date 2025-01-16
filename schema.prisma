@@ -12,29 +12,51 @@ generator client {
 }
 
 model User {
-  id                      String          @id @default(cuid())
-  name                    String          @default("")
-  email                   String          @unique @default("")
-  password                String?
-  role                    Role?           @relation("User_role", fields: [roleId], references: [id])
-  roleId                  String?         @map("role")
-  apiKeys                 ApiKey[]        @relation("ApiKey_user")
-  metadata                Json?
-  phone                   String          @default("")
-  hasAccount              Boolean         @default(false)
-  addresses               Address[]       @relation("Address_user")
-  orders                  Order[]         @relation("Order_user")
-  carts                   Cart[]          @relation("Cart_user")
-  customerGroups          CustomerGroup[] @relation("CustomerGroup_users")
-  notifications           Notification[]  @relation("Notification_user")
-  payments                Payment[]       @relation("Payment_user")
-  createdAt               DateTime        @default(now())
-  updatedAt               DateTime        @default(now()) @updatedAt
-  passwordResetToken      String?
-  passwordResetIssuedAt   DateTime?
-  passwordResetRedeemedAt DateTime?
+  id                        String          @id @default(cuid())
+  name                      String          @default("")
+  email                     String          @unique @default("")
+  password                  String?
+  role                      Role?           @relation("User_role", fields: [roleId], references: [id])
+  roleId                    String?         @map("role")
+  apiKeys                   ApiKey[]        @relation("ApiKey_user")
+  phone                     String          @default("")
+  hasAccount                Boolean         @default(false)
+  addresses                 Address[]       @relation("Address_user")
+  orders                    Order[]         @relation("Order_user")
+  orderEvents               OrderEvent[]    @relation("OrderEvent_user")
+  carts                     Cart[]          @relation("Cart_user")
+  customerGroups            CustomerGroup[] @relation("CustomerGroup_users")
+  notifications             Notification[]  @relation("Notification_user")
+  payments                  Payment[]       @relation("Payment_user")
+  batchJobs                 BatchJob[]      @relation("BatchJob_createdBy")
+  team                      Team?           @relation("User_team", fields: [teamId], references: [id])
+  teamId                    String?         @map("team")
+  teamLead                  Team[]          @relation("Team_leader")
+  userField                 UserField?      @relation("User_userField", fields: [userFieldId], references: [id])
+  userFieldId               String?         @unique @map("userField")
+  createdAt                 DateTime        @default(now())
+  updatedAt                 DateTime        @default(now()) @updatedAt
+  passwordResetToken        String?
+  passwordResetIssuedAt     DateTime?
+  passwordResetRedeemedAt   DateTime?
+  from_OrderEvent_createdBy OrderEvent[]    @relation("OrderEvent_createdBy")
 
   @@index([roleId])
+  @@index([teamId])
+}
+
+model UserField {
+  id                  String    @id @default(cuid())
+  user                User?     @relation("User_userField")
+  lastLoginIp         String    @default("")
+  lastLoginUserAgent  String    @default("")
+  loginHistory        Json?     @default("[]")
+  preferences         Json?     @default("{\"theme\":\"light\",\"notifications\":true,\"emailNotifications\":true}")
+  notes               String    @default("")
+  lastPasswordChange  DateTime?
+  failedLoginAttempts Json?     @default("{\"count\":0,\"lastAttempt\":null,\"lockedUntil\":null}")
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @default(now()) @updatedAt
 }
 
 model Role {
@@ -110,6 +132,7 @@ model Order {
   createdAt            DateTime                   @default(now())
   updatedAt            DateTime                   @default(now()) @updatedAt
   secretKey            String                     @default("")
+  events               OrderEvent[]               @relation("OrderEvent_order")
 
   @@index([shippingAddressId])
   @@index([billingAddressId])
@@ -310,10 +333,14 @@ model ProductVariant {
   lineItems           LineItem[]           @relation("LineItem_productVariant")
   prices              MoneyAmount[]        @relation("MoneyAmount_productVariant")
   productOptionValues ProductOptionValue[] @relation("ProductOptionValue_productVariants")
+  location            Location?            @relation("ProductVariant_location", fields: [locationId], references: [id])
+  locationId          String?              @map("location")
+  stockMovements      StockMovement[]      @relation("StockMovement_variant")
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @default(now()) @updatedAt
 
   @@index([productId])
+  @@index([locationId])
 }
 
 model Payment {
@@ -642,7 +669,6 @@ model DraftOrder {
 
 model Fulfillment {
   id                    String               @id @default(cuid())
-  trackingNumbers       Json?                @default("\"[]\"")
   data                  Json?
   shippedAt             DateTime?
   canceledAt            DateTime?
@@ -1255,6 +1281,79 @@ model TrackingLink {
   @@index([fulfillmentId])
 }
 
+model BatchJob {
+  id          String             @id @default(cuid())
+  type        BatchJobTypeType
+  status      BatchJobStatusType @default(CREATED)
+  context     Json?              @default("{}")
+  result      Json?              @default("{}")
+  error       String             @default("")
+  progress    Int?               @default(0)
+  createdBy   User?              @relation("BatchJob_createdBy", fields: [createdById], references: [id])
+  createdById String?            @map("createdBy")
+  completedAt DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @default(now()) @updatedAt
+
+  @@index([createdById])
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String   @default("")
+  description String   @default("")
+  members     User[]   @relation("User_team")
+  leader      User?    @relation("Team_leader", fields: [leaderId], references: [id])
+  leaderId    String?  @map("leader")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  @@index([leaderId])
+}
+
+model Location {
+  id          String           @id @default(cuid())
+  name        String           @default("")
+  description String           @default("")
+  address     String           @default("")
+  variants    ProductVariant[] @relation("ProductVariant_location")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @default(now()) @updatedAt
+}
+
+model StockMovement {
+  id        String                @id @default(cuid())
+  type      StockMovementTypeType
+  quantity  Int
+  reason    String                @default("")
+  note      String                @default("")
+  variant   ProductVariant?       @relation("StockMovement_variant", fields: [variantId], references: [id])
+  variantId String?               @map("variant")
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @default(now()) @updatedAt
+
+  @@index([variantId])
+}
+
+model OrderEvent {
+  id          String             @id @default(cuid())
+  order       Order?             @relation("OrderEvent_order", fields: [orderId], references: [id])
+  orderId     String?            @map("order")
+  user        User?              @relation("OrderEvent_user", fields: [userId], references: [id])
+  userId      String?            @map("user")
+  type        OrderEventTypeType @default(STATUS_CHANGE)
+  data        Json?              @default("{}")
+  time        DateTime?          @default(now())
+  createdBy   User?              @relation("OrderEvent_createdBy", fields: [createdById], references: [id])
+  createdById String?            @map("createdBy")
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @default(now()) @updatedAt
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([createdById])
+}
+
 enum OrderStatusType {
   pending
   completed
@@ -1461,4 +1560,35 @@ enum SwapPaymentStatusType {
   partially_refunded
   refunded
   requires_action
+}
+
+enum BatchJobTypeType {
+  PRODUCT_IMPORT
+  ORDER_EXPORT
+  INVENTORY_UPDATE
+  PRICE_UPDATE
+}
+
+enum BatchJobStatusType {
+  CREATED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
+enum StockMovementTypeType {
+  RECEIVE
+  REMOVE
+}
+
+enum OrderEventTypeType {
+  STATUS_CHANGE
+  PAYMENT_STATUS_CHANGE
+  FULFILLMENT_STATUS_CHANGE
+  NOTE_ADDED
+  EMAIL_SENT
+  TRACKING_NUMBER_ADDED
+  RETURN_REQUESTED
+  REFUND_PROCESSED
 }

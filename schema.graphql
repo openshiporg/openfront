@@ -4,22 +4,19 @@
 type User {
   id: ID!
   name: String
-  firstName: String
-  lastName: String
   email: String
   password: PasswordState
   role: Role
-  activeCartId: String
   apiKeys(where: ApiKeyWhereInput! = {}, orderBy: [ApiKeyOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ApiKeyWhereUniqueInput): [ApiKey!]
   apiKeysCount(where: ApiKeyWhereInput! = {}): Int
-  metadata: JSON
-  billingAddress: Address
   phone: String
   hasAccount: Boolean
   addresses(where: AddressWhereInput! = {}, orderBy: [AddressOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: AddressWhereUniqueInput): [Address!]
   addressesCount(where: AddressWhereInput! = {}): Int
   orders(where: OrderWhereInput! = {}, orderBy: [OrderOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: OrderWhereUniqueInput): [Order!]
   ordersCount(where: OrderWhereInput! = {}): Int
+  orderEvents(where: OrderEventWhereInput! = {}, orderBy: [OrderEventOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: OrderEventWhereUniqueInput): [OrderEvent!]
+  orderEventsCount(where: OrderEventWhereInput! = {}): Int
   carts(where: CartWhereInput! = {}, orderBy: [CartOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: CartWhereUniqueInput): [Cart!]
   cartsCount(where: CartWhereInput! = {}): Int
   customerGroups(where: CustomerGroupWhereInput! = {}, orderBy: [CustomerGroupOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: CustomerGroupWhereUniqueInput): [CustomerGroup!]
@@ -28,6 +25,16 @@ type User {
   notificationsCount(where: NotificationWhereInput! = {}): Int
   payments(where: PaymentWhereInput! = {}, orderBy: [PaymentOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PaymentWhereUniqueInput): [Payment!]
   paymentsCount(where: PaymentWhereInput! = {}): Int
+  batchJobs(where: BatchJobWhereInput! = {}, orderBy: [BatchJobOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: BatchJobWhereUniqueInput): [BatchJob!]
+  batchJobsCount(where: BatchJobWhereInput! = {}): Int
+  team: Team
+  teamLead(where: TeamWhereInput! = {}, orderBy: [TeamOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: TeamWhereUniqueInput): [Team!]
+  teamLeadCount(where: TeamWhereInput! = {}): Int
+  userField: UserField
+  firstName: String
+  lastName: String
+  activeCartId: String
+  billingAddress: Address
   createdAt: DateTime
   updatedAt: DateTime
   passwordResetToken: PasswordState
@@ -60,10 +67,15 @@ input UserWhereInput {
   hasAccount: BooleanFilter
   addresses: AddressManyRelationFilter
   orders: OrderManyRelationFilter
+  orderEvents: OrderEventManyRelationFilter
   carts: CartManyRelationFilter
   customerGroups: CustomerGroupManyRelationFilter
   notifications: NotificationManyRelationFilter
   payments: PaymentManyRelationFilter
+  batchJobs: BatchJobManyRelationFilter
+  team: TeamWhereInput
+  teamLead: TeamManyRelationFilter
+  userField: UserFieldWhereInput
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
   passwordResetToken: PasswordFilter
@@ -143,6 +155,12 @@ input OrderManyRelationFilter {
   none: OrderWhereInput
 }
 
+input OrderEventManyRelationFilter {
+  every: OrderEventWhereInput
+  some: OrderEventWhereInput
+  none: OrderEventWhereInput
+}
+
 input CartManyRelationFilter {
   every: CartWhereInput
   some: CartWhereInput
@@ -165,6 +183,18 @@ input PaymentManyRelationFilter {
   every: PaymentWhereInput
   some: PaymentWhereInput
   none: PaymentWhereInput
+}
+
+input BatchJobManyRelationFilter {
+  every: BatchJobWhereInput
+  some: BatchJobWhereInput
+  none: BatchJobWhereInput
+}
+
+input TeamManyRelationFilter {
+  every: TeamWhereInput
+  some: TeamWhereInput
+  none: TeamWhereInput
 }
 
 input DateTimeFilter {
@@ -212,15 +242,19 @@ input UserUpdateInput {
   password: String
   role: RoleRelateToOneForUpdateInput
   apiKeys: ApiKeyRelateToManyForUpdateInput
-  metadata: JSON
   phone: String
   hasAccount: Boolean
   addresses: AddressRelateToManyForUpdateInput
   orders: OrderRelateToManyForUpdateInput
+  orderEvents: OrderEventRelateToManyForUpdateInput
   carts: CartRelateToManyForUpdateInput
   customerGroups: CustomerGroupRelateToManyForUpdateInput
   notifications: NotificationRelateToManyForUpdateInput
   payments: PaymentRelateToManyForUpdateInput
+  batchJobs: BatchJobRelateToManyForUpdateInput
+  team: TeamRelateToOneForUpdateInput
+  teamLead: TeamRelateToManyForUpdateInput
+  userField: UserFieldRelateToOneForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
   passwordResetToken: String
@@ -255,6 +289,13 @@ input OrderRelateToManyForUpdateInput {
   connect: [OrderWhereUniqueInput!]
 }
 
+input OrderEventRelateToManyForUpdateInput {
+  disconnect: [OrderEventWhereUniqueInput!]
+  set: [OrderEventWhereUniqueInput!]
+  create: [OrderEventCreateInput!]
+  connect: [OrderEventWhereUniqueInput!]
+}
+
 input CartRelateToManyForUpdateInput {
   disconnect: [CartWhereUniqueInput!]
   set: [CartWhereUniqueInput!]
@@ -283,6 +324,32 @@ input PaymentRelateToManyForUpdateInput {
   connect: [PaymentWhereUniqueInput!]
 }
 
+input BatchJobRelateToManyForUpdateInput {
+  disconnect: [BatchJobWhereUniqueInput!]
+  set: [BatchJobWhereUniqueInput!]
+  create: [BatchJobCreateInput!]
+  connect: [BatchJobWhereUniqueInput!]
+}
+
+input TeamRelateToOneForUpdateInput {
+  create: TeamCreateInput
+  connect: TeamWhereUniqueInput
+  disconnect: Boolean
+}
+
+input TeamRelateToManyForUpdateInput {
+  disconnect: [TeamWhereUniqueInput!]
+  set: [TeamWhereUniqueInput!]
+  create: [TeamCreateInput!]
+  connect: [TeamWhereUniqueInput!]
+}
+
+input UserFieldRelateToOneForUpdateInput {
+  create: UserFieldCreateInput
+  connect: UserFieldWhereUniqueInput
+  disconnect: Boolean
+}
+
 input UserUpdateArgs {
   where: UserWhereUniqueInput!
   data: UserUpdateInput!
@@ -294,15 +361,19 @@ input UserCreateInput {
   password: String
   role: RoleRelateToOneForCreateInput
   apiKeys: ApiKeyRelateToManyForCreateInput
-  metadata: JSON
   phone: String
   hasAccount: Boolean
   addresses: AddressRelateToManyForCreateInput
   orders: OrderRelateToManyForCreateInput
+  orderEvents: OrderEventRelateToManyForCreateInput
   carts: CartRelateToManyForCreateInput
   customerGroups: CustomerGroupRelateToManyForCreateInput
   notifications: NotificationRelateToManyForCreateInput
   payments: PaymentRelateToManyForCreateInput
+  batchJobs: BatchJobRelateToManyForCreateInput
+  team: TeamRelateToOneForCreateInput
+  teamLead: TeamRelateToManyForCreateInput
+  userField: UserFieldRelateToOneForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
   passwordResetToken: String
@@ -330,6 +401,11 @@ input OrderRelateToManyForCreateInput {
   connect: [OrderWhereUniqueInput!]
 }
 
+input OrderEventRelateToManyForCreateInput {
+  create: [OrderEventCreateInput!]
+  connect: [OrderEventWhereUniqueInput!]
+}
+
 input CartRelateToManyForCreateInput {
   create: [CartCreateInput!]
   connect: [CartWhereUniqueInput!]
@@ -348,6 +424,110 @@ input NotificationRelateToManyForCreateInput {
 input PaymentRelateToManyForCreateInput {
   create: [PaymentCreateInput!]
   connect: [PaymentWhereUniqueInput!]
+}
+
+input BatchJobRelateToManyForCreateInput {
+  create: [BatchJobCreateInput!]
+  connect: [BatchJobWhereUniqueInput!]
+}
+
+input TeamRelateToOneForCreateInput {
+  create: TeamCreateInput
+  connect: TeamWhereUniqueInput
+}
+
+input TeamRelateToManyForCreateInput {
+  create: [TeamCreateInput!]
+  connect: [TeamWhereUniqueInput!]
+}
+
+input UserFieldRelateToOneForCreateInput {
+  create: UserFieldCreateInput
+  connect: UserFieldWhereUniqueInput
+}
+
+type UserField {
+  id: ID!
+  user: User
+  lastLoginIp: String
+  lastLoginUserAgent: String
+  loginHistory: JSON
+  preferences: JSON
+  notes: String
+  lastPasswordChange: DateTime
+  failedLoginAttempts: JSON
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input UserFieldWhereUniqueInput {
+  id: ID
+}
+
+input UserFieldWhereInput {
+  AND: [UserFieldWhereInput!]
+  OR: [UserFieldWhereInput!]
+  NOT: [UserFieldWhereInput!]
+  id: IDFilter
+  user: UserWhereInput
+  lastLoginIp: StringFilter
+  lastLoginUserAgent: StringFilter
+  notes: StringFilter
+  lastPasswordChange: DateTimeNullableFilter
+  createdAt: DateTimeFilter
+  updatedAt: DateTimeFilter
+}
+
+input UserFieldOrderByInput {
+  id: OrderDirection
+  lastLoginIp: OrderDirection
+  lastLoginUserAgent: OrderDirection
+  notes: OrderDirection
+  lastPasswordChange: OrderDirection
+  createdAt: OrderDirection
+  updatedAt: OrderDirection
+}
+
+input UserFieldUpdateInput {
+  user: UserRelateToOneForUpdateInput
+  lastLoginIp: String
+  lastLoginUserAgent: String
+  loginHistory: JSON
+  preferences: JSON
+  notes: String
+  lastPasswordChange: DateTime
+  failedLoginAttempts: JSON
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input UserRelateToOneForUpdateInput {
+  create: UserCreateInput
+  connect: UserWhereUniqueInput
+  disconnect: Boolean
+}
+
+input UserFieldUpdateArgs {
+  where: UserFieldWhereUniqueInput!
+  data: UserFieldUpdateInput!
+}
+
+input UserFieldCreateInput {
+  user: UserRelateToOneForCreateInput
+  lastLoginIp: String
+  lastLoginUserAgent: String
+  loginHistory: JSON
+  preferences: JSON
+  notes: String
+  lastPasswordChange: DateTime
+  failedLoginAttempts: JSON
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input UserRelateToOneForCreateInput {
+  create: UserCreateInput
+  connect: UserWhereUniqueInput
 }
 
 type Role {
@@ -602,6 +782,8 @@ type Order {
   discount: String
   total: String
   rawTotal: Int
+  events(where: OrderEventWhereInput! = {}, orderBy: [OrderEventOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: OrderEventWhereUniqueInput): [OrderEvent!]
+  eventsCount(where: OrderEventWhereInput! = {}): Int
 }
 
 enum OrderStatusType {
@@ -673,6 +855,7 @@ input OrderWhereInput {
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
   secretKey: StringFilter
+  events: OrderEventManyRelationFilter
 }
 
 input OrderStatusTypeNullableFilter {
@@ -821,6 +1004,7 @@ input OrderUpdateInput {
   createdAt: DateTime
   updatedAt: DateTime
   secretKey: String
+  events: OrderEventRelateToManyForUpdateInput
 }
 
 input AddressRelateToOneForUpdateInput {
@@ -844,12 +1028,6 @@ input DraftOrderRelateToOneForUpdateInput {
 input CartRelateToOneForUpdateInput {
   create: CartCreateInput
   connect: CartWhereUniqueInput
-  disconnect: Boolean
-}
-
-input UserRelateToOneForUpdateInput {
-  create: UserCreateInput
-  connect: UserWhereUniqueInput
   disconnect: Boolean
 }
 
@@ -959,6 +1137,7 @@ input OrderCreateInput {
   createdAt: DateTime
   updatedAt: DateTime
   secretKey: String
+  events: OrderEventRelateToManyForCreateInput
 }
 
 input AddressRelateToOneForCreateInput {
@@ -979,11 +1158,6 @@ input DraftOrderRelateToOneForCreateInput {
 input CartRelateToOneForCreateInput {
   create: CartCreateInput
   connect: CartWhereUniqueInput
-}
-
-input UserRelateToOneForCreateInput {
-  create: UserCreateInput
-  connect: UserWhereUniqueInput
 }
 
 input RegionRelateToOneForCreateInput {
@@ -1038,13 +1212,6 @@ input SwapRelateToManyForCreateInput {
 
 type LineItem {
   id: ID!
-  title: String
-  thumbnail: String
-  description: String
-  originalPrice: String
-  unitPrice: String
-  total: String
-  availableInRegion: String
   quantity: Int
   fulfilledQuantity: Int
   returnedQuantity: Int
@@ -1070,6 +1237,13 @@ type LineItem {
   lineItemTaxLinesCount(where: LineItemTaxLineWhereInput! = {}): Int
   returnItems(where: ReturnItemWhereInput! = {}, orderBy: [ReturnItemOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ReturnItemWhereUniqueInput): [ReturnItem!]
   returnItemsCount(where: ReturnItemWhereInput! = {}): Int
+  title: String
+  thumbnail: String
+  description: String
+  originalPrice: String
+  unitPrice: String
+  total: String
+  availableInRegion: String
   percentageOff: Int
   createdAt: DateTime
   updatedAt: DateTime
@@ -2258,6 +2432,9 @@ type ProductVariant {
   pricesCount(where: MoneyAmountWhereInput! = {}): Int
   productOptionValues(where: ProductOptionValueWhereInput! = {}, orderBy: [ProductOptionValueOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ProductOptionValueWhereUniqueInput): [ProductOptionValue!]
   productOptionValuesCount(where: ProductOptionValueWhereInput! = {}): Int
+  location: Location
+  stockMovements(where: StockMovementWhereInput! = {}, orderBy: [StockMovementOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: StockMovementWhereUniqueInput): [StockMovement!]
+  stockMovementsCount(where: StockMovementWhereInput! = {}): Int
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -2293,6 +2470,8 @@ input ProductVariantWhereInput {
   lineItems: LineItemManyRelationFilter
   prices: MoneyAmountManyRelationFilter
   productOptionValues: ProductOptionValueManyRelationFilter
+  location: LocationWhereInput
+  stockMovements: StockMovementManyRelationFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
@@ -2301,6 +2480,12 @@ input MoneyAmountManyRelationFilter {
   every: MoneyAmountWhereInput
   some: MoneyAmountWhereInput
   none: MoneyAmountWhereInput
+}
+
+input StockMovementManyRelationFilter {
+  every: StockMovementWhereInput
+  some: StockMovementWhereInput
+  none: StockMovementWhereInput
 }
 
 input ProductVariantOrderByInput {
@@ -2350,6 +2535,8 @@ input ProductVariantUpdateInput {
   lineItems: LineItemRelateToManyForUpdateInput
   prices: MoneyAmountRelateToManyForUpdateInput
   productOptionValues: ProductOptionValueRelateToManyForUpdateInput
+  location: LocationRelateToOneForUpdateInput
+  stockMovements: StockMovementRelateToManyForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -2359,6 +2546,19 @@ input MoneyAmountRelateToManyForUpdateInput {
   set: [MoneyAmountWhereUniqueInput!]
   create: [MoneyAmountCreateInput!]
   connect: [MoneyAmountWhereUniqueInput!]
+}
+
+input LocationRelateToOneForUpdateInput {
+  create: LocationCreateInput
+  connect: LocationWhereUniqueInput
+  disconnect: Boolean
+}
+
+input StockMovementRelateToManyForUpdateInput {
+  disconnect: [StockMovementWhereUniqueInput!]
+  set: [StockMovementWhereUniqueInput!]
+  create: [StockMovementCreateInput!]
+  connect: [StockMovementWhereUniqueInput!]
 }
 
 input ProductVariantUpdateArgs {
@@ -2390,6 +2590,8 @@ input ProductVariantCreateInput {
   lineItems: LineItemRelateToManyForCreateInput
   prices: MoneyAmountRelateToManyForCreateInput
   productOptionValues: ProductOptionValueRelateToManyForCreateInput
+  location: LocationRelateToOneForCreateInput
+  stockMovements: StockMovementRelateToManyForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -2397,6 +2599,16 @@ input ProductVariantCreateInput {
 input MoneyAmountRelateToManyForCreateInput {
   create: [MoneyAmountCreateInput!]
   connect: [MoneyAmountWhereUniqueInput!]
+}
+
+input LocationRelateToOneForCreateInput {
+  create: LocationCreateInput
+  connect: LocationWhereUniqueInput
+}
+
+input StockMovementRelateToManyForCreateInput {
+  create: [StockMovementCreateInput!]
+  connect: [StockMovementWhereUniqueInput!]
 }
 
 type Payment {
@@ -2736,10 +2948,7 @@ type Cart {
   context: JSON
   paymentAuthorizedAt: DateTime
   abandonedEmailSent: Boolean
-  abandonedFor: Int
   user: User
-  status: CartStatus
-  isActive: Boolean
   region: Region
   addresses(where: AddressWhereInput! = {}, orderBy: [AddressOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: AddressWhereUniqueInput): [Address!]
   addressesCount(where: AddressWhereInput! = {}): Int
@@ -2760,6 +2969,9 @@ type Cart {
   paymentCollection: PaymentCollection
   billingAddress: Address
   shippingAddress: Address
+  abandonedFor: Int
+  status: CartStatus
+  isActive: Boolean
   subtotal: String
   total: String
   rawTotal: Int
@@ -3476,7 +3688,6 @@ type Currency {
   symbol: String
   symbolNative: String
   name: String
-  noDivisionCurrency: Boolean
   moneyAmounts(where: MoneyAmountWhereInput! = {}, orderBy: [MoneyAmountOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: MoneyAmountWhereUniqueInput): [MoneyAmount!]
   moneyAmountsCount(where: MoneyAmountWhereInput! = {}): Int
   orders(where: OrderWhereInput! = {}, orderBy: [OrderOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: OrderWhereUniqueInput): [Order!]
@@ -3487,6 +3698,7 @@ type Currency {
   regionsCount(where: RegionWhereInput! = {}): Int
   stores(where: StoreWhereInput! = {}, orderBy: [StoreOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: StoreWhereUniqueInput): [Store!]
   storesCount(where: StoreWhereInput! = {}): Int
+  noDivisionCurrency: Boolean
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -4195,7 +4407,6 @@ input DraftOrderCreateInput {
 
 type Fulfillment {
   id: ID!
-  trackingNumbers: JSON
   data: JSON
   shippedAt: DateTime
   canceledAt: DateTime
@@ -4254,7 +4465,6 @@ input FulfillmentOrderByInput {
 }
 
 input FulfillmentUpdateInput {
-  trackingNumbers: JSON
   data: JSON
   shippedAt: DateTime
   canceledAt: DateTime
@@ -4290,7 +4500,6 @@ input FulfillmentUpdateArgs {
 }
 
 input FulfillmentCreateInput {
-  trackingNumbers: JSON
   data: JSON
   shippedAt: DateTime
   canceledAt: DateTime
@@ -4931,7 +5140,6 @@ input LineItemTaxLineCreateInput {
 
 type MoneyAmount {
   id: ID!
-  displayPrice: String
   amount: Int
   minQuantity: Int
   maxQuantity: Int
@@ -4942,6 +5150,7 @@ type MoneyAmount {
   priceSet: PriceSet
   priceRules(where: PriceRuleWhereInput! = {}, orderBy: [PriceRuleOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PriceRuleWhereUniqueInput): [PriceRule!]
   priceRulesCount(where: PriceRuleWhereInput! = {}): Int
+  displayPrice: String
   calculatedPrice: CalculatedPrice
   createdAt: DateTime
   updatedAt: DateTime
@@ -7496,6 +7705,388 @@ input TrackingLinkCreateInput {
   updatedAt: DateTime
 }
 
+type BatchJob {
+  id: ID!
+  type: BatchJobTypeType
+  status: BatchJobStatusType
+  context: JSON
+  result: JSON
+  error: String
+  progress: Int
+  createdBy: User
+  completedAt: DateTime
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+enum BatchJobTypeType {
+  PRODUCT_IMPORT
+  ORDER_EXPORT
+  INVENTORY_UPDATE
+  PRICE_UPDATE
+}
+
+enum BatchJobStatusType {
+  CREATED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
+input BatchJobWhereUniqueInput {
+  id: ID
+}
+
+input BatchJobWhereInput {
+  AND: [BatchJobWhereInput!]
+  OR: [BatchJobWhereInput!]
+  NOT: [BatchJobWhereInput!]
+  id: IDFilter
+  type: BatchJobTypeTypeNullableFilter
+  status: BatchJobStatusTypeNullableFilter
+  error: StringFilter
+  progress: IntNullableFilter
+  createdBy: UserWhereInput
+  completedAt: DateTimeNullableFilter
+  createdAt: DateTimeFilter
+  updatedAt: DateTimeFilter
+}
+
+input BatchJobTypeTypeNullableFilter {
+  equals: BatchJobTypeType
+  in: [BatchJobTypeType!]
+  notIn: [BatchJobTypeType!]
+  not: BatchJobTypeTypeNullableFilter
+}
+
+input BatchJobStatusTypeNullableFilter {
+  equals: BatchJobStatusType
+  in: [BatchJobStatusType!]
+  notIn: [BatchJobStatusType!]
+  not: BatchJobStatusTypeNullableFilter
+}
+
+input BatchJobOrderByInput {
+  id: OrderDirection
+  type: OrderDirection
+  status: OrderDirection
+  error: OrderDirection
+  progress: OrderDirection
+  completedAt: OrderDirection
+  createdAt: OrderDirection
+  updatedAt: OrderDirection
+}
+
+input BatchJobUpdateInput {
+  type: BatchJobTypeType
+  status: BatchJobStatusType
+  context: JSON
+  result: JSON
+  error: String
+  progress: Int
+  createdBy: UserRelateToOneForUpdateInput
+  completedAt: DateTime
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input BatchJobUpdateArgs {
+  where: BatchJobWhereUniqueInput!
+  data: BatchJobUpdateInput!
+}
+
+input BatchJobCreateInput {
+  type: BatchJobTypeType
+  status: BatchJobStatusType
+  context: JSON
+  result: JSON
+  error: String
+  progress: Int
+  createdBy: UserRelateToOneForCreateInput
+  completedAt: DateTime
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+type Team {
+  id: ID!
+  name: String
+  description: String
+  members(where: UserWhereInput! = {}, orderBy: [UserOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: UserWhereUniqueInput): [User!]
+  membersCount(where: UserWhereInput! = {}): Int
+  leader: User
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input TeamWhereUniqueInput {
+  id: ID
+}
+
+input TeamWhereInput {
+  AND: [TeamWhereInput!]
+  OR: [TeamWhereInput!]
+  NOT: [TeamWhereInput!]
+  id: IDFilter
+  name: StringFilter
+  description: StringFilter
+  members: UserManyRelationFilter
+  leader: UserWhereInput
+  createdAt: DateTimeFilter
+  updatedAt: DateTimeFilter
+}
+
+input TeamOrderByInput {
+  id: OrderDirection
+  name: OrderDirection
+  description: OrderDirection
+  createdAt: OrderDirection
+  updatedAt: OrderDirection
+}
+
+input TeamUpdateInput {
+  name: String
+  description: String
+  members: UserRelateToManyForUpdateInput
+  leader: UserRelateToOneForUpdateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input TeamUpdateArgs {
+  where: TeamWhereUniqueInput!
+  data: TeamUpdateInput!
+}
+
+input TeamCreateInput {
+  name: String
+  description: String
+  members: UserRelateToManyForCreateInput
+  leader: UserRelateToOneForCreateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+type Location {
+  id: ID!
+  name: String
+  description: String
+  address: String
+  variants(where: ProductVariantWhereInput! = {}, orderBy: [ProductVariantOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ProductVariantWhereUniqueInput): [ProductVariant!]
+  variantsCount(where: ProductVariantWhereInput! = {}): Int
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input LocationWhereUniqueInput {
+  id: ID
+}
+
+input LocationWhereInput {
+  AND: [LocationWhereInput!]
+  OR: [LocationWhereInput!]
+  NOT: [LocationWhereInput!]
+  id: IDFilter
+  name: StringFilter
+  description: StringFilter
+  address: StringFilter
+  variants: ProductVariantManyRelationFilter
+  createdAt: DateTimeFilter
+  updatedAt: DateTimeFilter
+}
+
+input LocationOrderByInput {
+  id: OrderDirection
+  name: OrderDirection
+  description: OrderDirection
+  address: OrderDirection
+  createdAt: OrderDirection
+  updatedAt: OrderDirection
+}
+
+input LocationUpdateInput {
+  name: String
+  description: String
+  address: String
+  variants: ProductVariantRelateToManyForUpdateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input LocationUpdateArgs {
+  where: LocationWhereUniqueInput!
+  data: LocationUpdateInput!
+}
+
+input LocationCreateInput {
+  name: String
+  description: String
+  address: String
+  variants: ProductVariantRelateToManyForCreateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+type StockMovement {
+  id: ID!
+  type: StockMovementTypeType
+  quantity: Int
+  reason: String
+  note: String
+  variant: ProductVariant
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+enum StockMovementTypeType {
+  RECEIVE
+  REMOVE
+}
+
+input StockMovementWhereUniqueInput {
+  id: ID
+}
+
+input StockMovementWhereInput {
+  AND: [StockMovementWhereInput!]
+  OR: [StockMovementWhereInput!]
+  NOT: [StockMovementWhereInput!]
+  id: IDFilter
+  type: StockMovementTypeTypeNullableFilter
+  quantity: IntFilter
+  reason: StringFilter
+  note: StringFilter
+  variant: ProductVariantWhereInput
+  createdAt: DateTimeFilter
+  updatedAt: DateTimeFilter
+}
+
+input StockMovementTypeTypeNullableFilter {
+  equals: StockMovementTypeType
+  in: [StockMovementTypeType!]
+  notIn: [StockMovementTypeType!]
+  not: StockMovementTypeTypeNullableFilter
+}
+
+input StockMovementOrderByInput {
+  id: OrderDirection
+  type: OrderDirection
+  quantity: OrderDirection
+  reason: OrderDirection
+  note: OrderDirection
+  createdAt: OrderDirection
+  updatedAt: OrderDirection
+}
+
+input StockMovementUpdateInput {
+  type: StockMovementTypeType
+  quantity: Int
+  reason: String
+  note: String
+  variant: ProductVariantRelateToOneForUpdateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input StockMovementUpdateArgs {
+  where: StockMovementWhereUniqueInput!
+  data: StockMovementUpdateInput!
+}
+
+input StockMovementCreateInput {
+  type: StockMovementTypeType
+  quantity: Int
+  reason: String
+  note: String
+  variant: ProductVariantRelateToOneForCreateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+type OrderEvent {
+  id: ID!
+  order: Order
+  user: User
+  type: OrderEventTypeType
+  data: JSON
+  time: DateTime
+  createdBy: User
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+enum OrderEventTypeType {
+  STATUS_CHANGE
+  PAYMENT_STATUS_CHANGE
+  FULFILLMENT_STATUS_CHANGE
+  NOTE_ADDED
+  EMAIL_SENT
+  TRACKING_NUMBER_ADDED
+  RETURN_REQUESTED
+  REFUND_PROCESSED
+}
+
+input OrderEventWhereUniqueInput {
+  id: ID
+}
+
+input OrderEventWhereInput {
+  AND: [OrderEventWhereInput!]
+  OR: [OrderEventWhereInput!]
+  NOT: [OrderEventWhereInput!]
+  id: IDFilter
+  order: OrderWhereInput
+  user: UserWhereInput
+  type: OrderEventTypeTypeNullableFilter
+  time: DateTimeNullableFilter
+  createdBy: UserWhereInput
+  createdAt: DateTimeFilter
+  updatedAt: DateTimeFilter
+}
+
+input OrderEventTypeTypeNullableFilter {
+  equals: OrderEventTypeType
+  in: [OrderEventTypeType!]
+  notIn: [OrderEventTypeType!]
+  not: OrderEventTypeTypeNullableFilter
+}
+
+input OrderEventOrderByInput {
+  id: OrderDirection
+  type: OrderDirection
+  time: OrderDirection
+  createdAt: OrderDirection
+  updatedAt: OrderDirection
+}
+
+input OrderEventUpdateInput {
+  order: OrderRelateToOneForUpdateInput
+  user: UserRelateToOneForUpdateInput
+  type: OrderEventTypeType
+  data: JSON
+  time: DateTime
+  createdBy: UserRelateToOneForUpdateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input OrderEventUpdateArgs {
+  where: OrderEventWhereUniqueInput!
+  data: OrderEventUpdateInput!
+}
+
+input OrderEventCreateInput {
+  order: OrderRelateToOneForCreateInput
+  user: UserRelateToOneForCreateInput
+  type: OrderEventTypeType
+  data: JSON
+  time: DateTime
+  createdBy: UserRelateToOneForCreateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
 """
 The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
 """
@@ -7508,6 +8099,12 @@ type Mutation {
   updateUsers(data: [UserUpdateArgs!]!): [User]
   deleteUser(where: UserWhereUniqueInput!): User
   deleteUsers(where: [UserWhereUniqueInput!]!): [User]
+  createUserField(data: UserFieldCreateInput!): UserField
+  createUserFields(data: [UserFieldCreateInput!]!): [UserField]
+  updateUserField(where: UserFieldWhereUniqueInput!, data: UserFieldUpdateInput!): UserField
+  updateUserFields(data: [UserFieldUpdateArgs!]!): [UserField]
+  deleteUserField(where: UserFieldWhereUniqueInput!): UserField
+  deleteUserFields(where: [UserFieldWhereUniqueInput!]!): [UserField]
   createRole(data: RoleCreateInput!): Role
   createRoles(data: [RoleCreateInput!]!): [Role]
   updateRole(where: RoleWhereUniqueInput!, data: RoleUpdateInput!): Role
@@ -7904,6 +8501,36 @@ type Mutation {
   updateTrackingLinks(data: [TrackingLinkUpdateArgs!]!): [TrackingLink]
   deleteTrackingLink(where: TrackingLinkWhereUniqueInput!): TrackingLink
   deleteTrackingLinks(where: [TrackingLinkWhereUniqueInput!]!): [TrackingLink]
+  createBatchJob(data: BatchJobCreateInput!): BatchJob
+  createBatchJobs(data: [BatchJobCreateInput!]!): [BatchJob]
+  updateBatchJob(where: BatchJobWhereUniqueInput!, data: BatchJobUpdateInput!): BatchJob
+  updateBatchJobs(data: [BatchJobUpdateArgs!]!): [BatchJob]
+  deleteBatchJob(where: BatchJobWhereUniqueInput!): BatchJob
+  deleteBatchJobs(where: [BatchJobWhereUniqueInput!]!): [BatchJob]
+  createTeam(data: TeamCreateInput!): Team
+  createTeams(data: [TeamCreateInput!]!): [Team]
+  updateTeam(where: TeamWhereUniqueInput!, data: TeamUpdateInput!): Team
+  updateTeams(data: [TeamUpdateArgs!]!): [Team]
+  deleteTeam(where: TeamWhereUniqueInput!): Team
+  deleteTeams(where: [TeamWhereUniqueInput!]!): [Team]
+  createLocation(data: LocationCreateInput!): Location
+  createLocations(data: [LocationCreateInput!]!): [Location]
+  updateLocation(where: LocationWhereUniqueInput!, data: LocationUpdateInput!): Location
+  updateLocations(data: [LocationUpdateArgs!]!): [Location]
+  deleteLocation(where: LocationWhereUniqueInput!): Location
+  deleteLocations(where: [LocationWhereUniqueInput!]!): [Location]
+  createStockMovement(data: StockMovementCreateInput!): StockMovement
+  createStockMovements(data: [StockMovementCreateInput!]!): [StockMovement]
+  updateStockMovement(where: StockMovementWhereUniqueInput!, data: StockMovementUpdateInput!): StockMovement
+  updateStockMovements(data: [StockMovementUpdateArgs!]!): [StockMovement]
+  deleteStockMovement(where: StockMovementWhereUniqueInput!): StockMovement
+  deleteStockMovements(where: [StockMovementWhereUniqueInput!]!): [StockMovement]
+  createOrderEvent(data: OrderEventCreateInput!): OrderEvent
+  createOrderEvents(data: [OrderEventCreateInput!]!): [OrderEvent]
+  updateOrderEvent(where: OrderEventWhereUniqueInput!, data: OrderEventUpdateInput!): OrderEvent
+  updateOrderEvents(data: [OrderEventUpdateArgs!]!): [OrderEvent]
+  deleteOrderEvent(where: OrderEventWhereUniqueInput!): OrderEvent
+  deleteOrderEvents(where: [OrderEventWhereUniqueInput!]!): [OrderEvent]
   endSession: Boolean!
   authenticateUserWithPassword(email: String!, password: String!): UserAuthenticationWithPasswordResult
   createInitialUser(data: CreateInitialUserInput!): UserAuthenticationWithPasswordSuccess!
@@ -7926,6 +8553,8 @@ type Mutation {
   initiatePaymentSession(cartId: ID!, paymentProviderId: String!): PaymentSession
   handleStripeWebhook(event: JSON!, headers: JSON!): WebhookResult!
   handlePayPalWebhook(event: JSON!, headers: JSON!): WebhookResult!
+  getAnalytics: JSON
+  importInventory: Boolean
 }
 
 union UserAuthenticationWithPasswordResult = UserAuthenticationWithPasswordSuccess | UserAuthenticationWithPasswordFailure
@@ -7960,6 +8589,9 @@ type Query {
   users(where: UserWhereInput! = {}, orderBy: [UserOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: UserWhereUniqueInput): [User!]
   user(where: UserWhereUniqueInput!): User
   usersCount(where: UserWhereInput! = {}): Int
+  userFields(where: UserFieldWhereInput! = {}, orderBy: [UserFieldOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: UserFieldWhereUniqueInput): [UserField!]
+  userField(where: UserFieldWhereUniqueInput!): UserField
+  userFieldsCount(where: UserFieldWhereInput! = {}): Int
   roles(where: RoleWhereInput! = {}, orderBy: [RoleOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: RoleWhereUniqueInput): [Role!]
   role(where: RoleWhereUniqueInput!): Role
   rolesCount(where: RoleWhereInput! = {}): Int
@@ -8158,6 +8790,21 @@ type Query {
   trackingLinks(where: TrackingLinkWhereInput! = {}, orderBy: [TrackingLinkOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: TrackingLinkWhereUniqueInput): [TrackingLink!]
   trackingLink(where: TrackingLinkWhereUniqueInput!): TrackingLink
   trackingLinksCount(where: TrackingLinkWhereInput! = {}): Int
+  batchJobs(where: BatchJobWhereInput! = {}, orderBy: [BatchJobOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: BatchJobWhereUniqueInput): [BatchJob!]
+  batchJob(where: BatchJobWhereUniqueInput!): BatchJob
+  batchJobsCount(where: BatchJobWhereInput! = {}): Int
+  teams(where: TeamWhereInput! = {}, orderBy: [TeamOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: TeamWhereUniqueInput): [Team!]
+  team(where: TeamWhereUniqueInput!): Team
+  teamsCount(where: TeamWhereInput! = {}): Int
+  locations(where: LocationWhereInput! = {}, orderBy: [LocationOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: LocationWhereUniqueInput): [Location!]
+  location(where: LocationWhereUniqueInput!): Location
+  locationsCount(where: LocationWhereInput! = {}): Int
+  stockMovements(where: StockMovementWhereInput! = {}, orderBy: [StockMovementOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: StockMovementWhereUniqueInput): [StockMovement!]
+  stockMovement(where: StockMovementWhereUniqueInput!): StockMovement
+  stockMovementsCount(where: StockMovementWhereInput! = {}): Int
+  orderEvents(where: OrderEventWhereInput! = {}, orderBy: [OrderEventOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: OrderEventWhereUniqueInput): [OrderEvent!]
+  orderEvent(where: OrderEventWhereUniqueInput!): OrderEvent
+  orderEventsCount(where: OrderEventWhereInput! = {}): Int
   keystone: KeystoneMeta!
   authenticatedItem: AuthenticatedItem
   validateUserPasswordResetToken(email: String!, token: String!): ValidateUserPasswordResetTokenResult
@@ -8168,6 +8815,7 @@ type Query {
   activeCartRegion(countryCode: String!): Region
   getCustomerOrder(orderId: ID!, secretKey: String): JSON
   getCustomerOrders(limit: Int, offset: Int): JSON
+  getAnalytics(timeframe: String): JSON
 }
 
 union AuthenticatedItem = User

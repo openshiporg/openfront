@@ -41,7 +41,7 @@
       "@svg": [
         "svg"
       ],
-      "@ui/*": ["keystone/themes/Tailwind/atlas/primitives/default/ui/*"]
+      "@ui/*": ["keystone/themes/Tailwind/orion/primitives/default/ui/*"]
     }
   },
   "include": [

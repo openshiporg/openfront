@@ -32,7 +32,7 @@ async function seedStore() {
 
 function ListCard({ list, count, hideCreate }) {
   return (
-    <div className="shadow-xs flex items-center justify-between rounded-lg bg-zinc-50 border py-2 pl-3 pr-2 dark:border-white/5 dark:bg-black">
+    <div className="shadow-xs flex items-center justify-between rounded-lg bg-zinc-50 border py-2 pl-3 pr-2 dark:bg-black">
       <div className="w-full self-end">
         <div className="text-sm text-zinc-500 dark:text-zinc-400">
           {list.isSingleton ? null : count.type === "success" ? (

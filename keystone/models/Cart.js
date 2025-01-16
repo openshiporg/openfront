@@ -1,4 +1,4 @@
-import { graphql, list } from "@keystone-6/core";
+import { graphql, group, list } from "@keystone-6/core";
 import { allOperations, allowAll, denyAll } from "@keystone-6/core/access";
 import {
   json,
@@ -22,7 +22,7 @@ const formatCurrency = (amount, currencyCode) => {
 // Shared calculation functions
 async function calculateCartSubtotal(cart, context) {
   const sudoContext = context.sudo();
-  
+
   if (!cart?.lineItems?.length) return 0;
 
   let subtotal = 0;
@@ -31,7 +31,7 @@ async function calculateCartSubtotal(cart, context) {
       where: {
         productVariant: { id: { equals: lineItem.productVariant.id } },
         region: { id: { equals: cart.region.id } },
-        currency: { code: { equals: cart.region?.currency?.code } }
+        currency: { code: { equals: cart.region?.currency?.code } },
       },
       query: "calculatedPrice { calculatedAmount }",
     });
@@ -45,7 +45,7 @@ async function calculateCartSubtotal(cart, context) {
 
 async function calculateCartDiscount(cart, context) {
   const sudoContext = context.sudo();
-  
+
   if (!cart?.discounts?.length) return 0;
 
   const subtotal = await calculateCartSubtotal(cart, context);
@@ -59,13 +59,16 @@ async function calculateCartDiscount(cart, context) {
         discountAmount += subtotal * (discount.discountRule.value / 100);
         break;
       case "fixed":
-        discountAmount += discount.discountRule.value * (cart.region?.currency?.noDivisionCurrency ? 1 : 100);
+        discountAmount +=
+          discount.discountRule.value *
+          (cart.region?.currency?.noDivisionCurrency ? 1 : 100);
         break;
       case "free_shipping":
-        discountAmount += cart.shippingMethods?.reduce(
-          (total, method) => total + (method.price || 0),
-          0
-        ) || 0;
+        discountAmount +=
+          cart.shippingMethods?.reduce(
+            (total, method) => total + (method.price || 0),
+            0
+          ) || 0;
         break;
     }
   }
@@ -75,7 +78,10 @@ async function calculateCartDiscount(cart, context) {
 
 async function calculateCartShipping(cart) {
   if (!cart?.shippingMethods?.length) return 0;
-  return cart.shippingMethods.reduce((total, method) => total + (method.price || 0), 0);
+  return cart.shippingMethods.reduce(
+    (total, method) => total + (method.price || 0),
+    0
+  );
 }
 
 async function calculateCartTax(cart, context) {
@@ -90,7 +96,7 @@ async function calculateCartTotal(cart, context) {
     calculateCartSubtotal(cart, context),
     calculateCartDiscount(cart, context),
     calculateCartShipping(cart),
-    calculateCartTax(cart, context)
+    calculateCartTax(cart, context),
   ]);
 
   return subtotal - discount + shipping + tax;
@@ -101,14 +107,14 @@ async function findCheapestShippingOption(regionId, context) {
   const shippingOptions = await sudoContext.query.ShippingOption.findMany({
     where: {
       region: { id: { equals: regionId } },
-      isReturn: { equals: false }
+      isReturn: { equals: false },
     },
     query: `
       id
       amount
       name
     `,
-    orderBy: { amount: 'asc' }
+    orderBy: { amount: "asc" },
   });
 
   return shippingOptions[0];
@@ -152,15 +158,15 @@ export const Cart = list({
             shippingMethods {
               id
             }
-          `
+          `,
         });
 
         // Delete existing shipping methods
         if (cart?.shippingMethods?.length > 0) {
           await Promise.all(
-            cart.shippingMethods.map(method => 
+            cart.shippingMethods.map((method) =>
               sudoContext.db.ShippingMethod.deleteOne({
-                where: { id: method.id }
+                where: { id: method.id },
               })
             )
           );
@@ -171,13 +177,16 @@ export const Cart = list({
           where: { id: item.id },
           data: {
             paymentCollection: {
-              disconnect: true
-            }
-          }
+              disconnect: true,
+            },
+          },
         });
 
         // Connect cheapest shipping option for new region
-        const cheapestShippingOption = await findCheapestShippingOption(item.regionId, context);
+        const cheapestShippingOption = await findCheapestShippingOption(
+          item.regionId,
+          context
+        );
         if (cheapestShippingOption) {
           await sudoContext.db.ShippingMethod.createOne({
             data: {
@@ -185,16 +194,19 @@ export const Cart = list({
               shippingOption: { connect: { id: cheapestShippingOption.id } },
               price: cheapestShippingOption.amount,
               data: {
-                name: cheapestShippingOption.name
-              }
-            }
+                name: cheapestShippingOption.name,
+              },
+            },
           });
         }
       }
 
       // Handle cart creation
       if (operation === "create" && item.regionId) {
-        const cheapestShippingOption = await findCheapestShippingOption(item.regionId, context);
+        const cheapestShippingOption = await findCheapestShippingOption(
+          item.regionId,
+          context
+        );
         if (cheapestShippingOption) {
           await sudoContext.db.ShippingMethod.createOne({
             data: {
@@ -202,13 +214,13 @@ export const Cart = list({
               shippingOption: { connect: { id: cheapestShippingOption.id } },
               price: cheapestShippingOption.amount,
               data: {
-                name: cheapestShippingOption.name
-              }
-            }
+                name: cheapestShippingOption.name,
+              },
+            },
           });
         }
       }
-    }
+    },
   },
   fields: {
     email: text(),
@@ -229,16 +241,6 @@ export const Cart = list({
     context: json(),
     paymentAuthorizedAt: timestamp(),
     abandonedEmailSent: checkbox({ defaultValue: false }), // Track if abandoned cart email was sent
-    abandonedFor: virtual({
-      field: graphql.field({
-        type: graphql.Int,
-        resolve(item) {
-          if (!item.updatedAt) return 0;
-          const lastActivity = new Date(item.updatedAt).getTime();
-          return Math.floor((Date.now() - lastActivity) / (1000 * 60)); // Returns minutes since last activity
-        },
-      }),
-    }),
     user: relationship({
       ref: "User.carts",
       many: false,
@@ -254,26 +256,6 @@ export const Cart = list({
           return resolvedData.user;
         },
       },
-    }),
-    // Virtual field for cart status
-    status: virtual({
-      field: graphql.field({
-        type: graphql.enum({
-          name: "CartStatus",
-          values: graphql.enumValues(["ACTIVE", "COMPLETED"]),
-        }),
-        resolve(item) {
-          return item.order ? "COMPLETED" : "ACTIVE";
-        },
-      }),
-    }),
-    isActive: virtual({
-      field: graphql.field({
-        type: graphql.Boolean,
-        resolve(item) {
-          return !item.order;
-        },
-      }),
     }),
     // Regular fields
     region: relationship({
@@ -319,575 +301,666 @@ export const Cart = list({
       ref: "PaymentCollection.cart",
     }),
     billingAddress: relationship({
-      ref: 'Address.cartsUsingAsBillingAddress',
+      ref: "Address.cartsUsingAsBillingAddress",
       many: false,
     }),
     shippingAddress: relationship({
-      ref: 'Address.cartsUsingAsShippingAddress',
+      ref: "Address.cartsUsingAsShippingAddress",
       many: false,
     }),
-    subtotal: virtual({
-      field: graphql.field({
-        type: graphql.String,
-        async resolve(item, args, context) {
-          const sudoContext = context.sudo();
 
-          const cart = await sudoContext.query.Cart.findOne({
-            where: { id: item.id },
-            query: `
-              lineItems { 
-                id 
-                quantity
-                productVariant {
-                  id
+    ...group({
+      label: "Virtual Fields",
+      description: "Calculated fields for cart display and totals",
+      fields: {
+        abandonedFor: virtual({
+          field: graphql.field({
+            type: graphql.Int,
+            resolve(item) {
+              if (!item.updatedAt) return 0;
+              const lastActivity = new Date(item.updatedAt).getTime();
+              return Math.floor((Date.now() - lastActivity) / (1000 * 60)); // Returns minutes since last activity
+            },
+          }),
+        }),
+        status: virtual({
+          field: graphql.field({
+            type: graphql.enum({
+              name: "CartStatus",
+              values: graphql.enumValues(["ACTIVE", "COMPLETED"]),
+            }),
+            resolve(item) {
+              return item.order ? "COMPLETED" : "ACTIVE";
+            },
+          }),
+        }),
+        isActive: virtual({
+          field: graphql.field({
+            type: graphql.Boolean,
+            resolve(item) {
+              return !item.order;
+            },
+          }),
+        }),
+        subtotal: virtual({
+          field: graphql.field({
+            type: graphql.String,
+            async resolve(item, args, context) {
+              const sudoContext = context.sudo();
+
+              const cart = await sudoContext.query.Cart.findOne({
+                where: { id: item.id },
+                query: `
+                  lineItems { 
+                    id 
+                    quantity
+                    productVariant {
+                      id
+                    }
+                  } 
+                  region { 
+                    id
+                    currency { 
+                      code 
+                      noDivisionCurrency 
+                    }
+                  }
+                `,
+              });
+
+              if (!cart) return null;
+
+              const subtotal = await calculateCartSubtotal(cart, context);
+              const currencyCode = cart.region?.currency?.code || "USD";
+              const divisor = cart.region?.currency?.noDivisionCurrency
+                ? 1
+                : 100;
+
+              return formatCurrency(subtotal / divisor, currencyCode);
+            },
+          }),
+        }),
+        total: virtual({
+          field: graphql.field({
+            type: graphql.String,
+            async resolve(item, args, context) {
+              const sudoContext = context.sudo();
+
+              const cart = await sudoContext.query.Cart.findOne({
+                where: { id: item.id },
+                query: `
+                  region {
+                    taxRate
+                    currency {
+                      code
+                      noDivisionCurrency
+                    }
+                  }
+                  lineItems {
+                    id
+                    quantity
+                    productVariant {
+                      id
+                    }
+                  }
+                  discounts {
+                    id
+                    discountRule {
+                      type
+                      value
+                    }
+                  }
+                  shippingMethods {
+                    price
+                  }
+                `,
+              });
+
+              const total = await calculateCartTotal(cart, context);
+              const currencyCode = cart.region?.currency?.code || "USD";
+              const divisor = cart.region?.currency?.noDivisionCurrency
+                ? 1
+                : 100;
+
+              return formatCurrency(total / divisor, currencyCode);
+            },
+          }),
+        }),
+        rawTotal: virtual({
+          field: graphql.field({
+            type: graphql.Int,
+            async resolve(item, args, context) {
+              const sudoContext = context.sudo();
+
+              const cart = await sudoContext.query.Cart.findOne({
+                where: { id: item.id },
+                query: `
+                  region {
+                    taxRate
+                    currency {
+                      code
+                      noDivisionCurrency
+                    }
+                  }
+                  lineItems {
+                    id
+                    quantity
+                    productVariant {
+                      id
+                    }
+                  }
+                  discounts {
+                    id
+                    discountRule {
+                      type
+                      value
+                    }
+                  }
+                  shippingMethods {
+                    price
+                  }
+                `,
+              });
+
+              if (!cart) return 0;
+
+              return Math.round(await calculateCartTotal(cart, context));
+            },
+          }),
+        }),
+        discount: virtual({
+          field: graphql.field({
+            type: graphql.String,
+            async resolve(item, args, context) {
+              const sudoContext = context.sudo();
+
+              // Get cart with items and discounts
+              const cart = await sudoContext.query.Cart.findOne({
+                where: { id: item.id },
+                query: `
+                  lineItems { 
+                    id 
+                    quantity 
+                    productVariant {
+                      id
+                    }
+                  }
+                  discounts {
+                    id
+                    discountRule {
+                      type
+                      value
+                      allocation
+                    }
+                  }
+                  region {
+                    id
+                    currency {
+                      code
+                      noDivisionCurrency
+                    }
+                  }
+                  shippingMethods {
+                    price
+                    shippingOption {
+                      id
+                      name
+                    }
+                  }
+                `,
+              });
+
+              if (!cart?.discounts?.length) {
+                return null;
+              }
+
+              // First get subtotal for percentage calculations
+              let subtotal = 0;
+              for (const lineItem of cart.lineItems || []) {
+                const prices = await sudoContext.query.MoneyAmount.findMany({
+                  where: {
+                    productVariant: {
+                      id: { equals: lineItem.productVariant.id },
+                    },
+                    region: { id: { equals: cart.region.id } },
+                    currency: { code: { equals: cart.region?.currency?.code } },
+                  },
+                  query: "calculatedPrice { calculatedAmount }",
+                });
+
+                const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
+                subtotal += price * lineItem.quantity;
+              }
+
+              // Calculate total discount amount
+              let totalDiscountAmount = 0;
+              for (const discount of cart.discounts) {
+                // Skip if no discount rule or type
+                if (!discount.discountRule?.type) continue;
+
+                switch (discount.discountRule.type) {
+                  case "percentage":
+                    totalDiscountAmount +=
+                      subtotal * (discount.discountRule.value / 100);
+                    break;
+                  case "fixed":
+                    totalDiscountAmount +=
+                      discount.discountRule.value *
+                      (cart.region?.currency?.noDivisionCurrency ? 1 : 100);
+                    break;
+                  case "free_shipping":
+                    // Add shipping amount to discount
+                    totalDiscountAmount +=
+                      cart.shippingMethods?.reduce(
+                        (total, method) => total + (method.price || 0),
+                        0
+                      ) || 0;
+                    break;
                 }
-              } 
-              region { 
-                id
-                currency { 
-                  code 
-                  noDivisionCurrency 
+              }
+
+              if (totalDiscountAmount === 0) return null;
+
+              const currencyCode = cart.region?.currency?.code || "USD";
+              const divisor = cart.region?.currency?.noDivisionCurrency
+                ? 1
+                : 100;
+
+              return formatCurrency(
+                totalDiscountAmount / divisor,
+                currencyCode
+              );
+            },
+          }),
+        }),
+        giftCardTotal: virtual({
+          field: graphql.field({
+            type: graphql.String,
+            async resolve(item, args, context) {
+              const sudoContext = context.sudo();
+
+              const cart = await sudoContext.query.Cart.findOne({
+                where: { id: item.id },
+                query: `
+                  giftCards {
+                    id
+                    balance
+                    value
+                  }
+                  region {
+                    currency {
+                      code
+                      noDivisionCurrency
+                    }
+                  }
+                `,
+              });
+
+              if (!cart?.giftCards?.length) {
+                return null;
+              }
+
+              const total = cart.giftCards.reduce((sum, card) => {
+                // Use the lower of balance or value
+                const usableAmount = Math.min(
+                  card.balance,
+                  card.value || card.balance
+                );
+                return sum + usableAmount;
+              }, 0);
+
+              if (total === 0) return null;
+
+              const currencyCode = cart.region?.currency?.code || "USD";
+              const divisor = cart.region?.currency?.noDivisionCurrency
+                ? 1
+                : 100;
+
+              return formatCurrency(total / divisor, currencyCode);
+            },
+          }),
+        }),
+        tax: virtual({
+          field: graphql.field({
+            type: graphql.String,
+            async resolve(item, args, context) {
+              const sudoContext = context.sudo();
+
+              const cart = await sudoContext.query.Cart.findOne({
+                where: { id: item.id },
+                query: `
+                  region {
+                    taxRate
+                    currency {
+                      code
+                      noDivisionCurrency
+                    }
+                  }
+                  lineItems {
+                    id
+                    quantity
+                    productVariant {
+                      id
+                    }
+                  }
+                  discounts {
+                    id
+                    discountRule {
+                      type
+                      value
+                    }
+                  }
+                `,
+              });
+
+              const tax = await calculateCartTax(cart, context);
+              const currencyCode = cart.region?.currency?.code || "USD";
+              const divisor = cart.region?.currency?.noDivisionCurrency
+                ? 1
+                : 100;
+
+              return formatCurrency(tax / divisor, currencyCode);
+            },
+          }),
+        }),
+        shipping: virtual({
+          field: graphql.field({
+            type: graphql.String,
+            async resolve(item, args, context) {
+              const sudoContext = context.sudo();
+
+              const cart = await sudoContext.query.Cart.findOne({
+                where: { id: item.id },
+                query: `
+                  shippingMethods {
+                    price
+                  }
+                  region {
+                    id
+                    currency {
+                      code
+                      noDivisionCurrency
+                    }
+                  }
+                `,
+              });
+
+              // If cart has shipping methods, use their sum
+              if (cart?.shippingMethods?.length > 0) {
+                const shipping = await calculateCartShipping(cart);
+                const currencyCode = cart.region?.currency?.code || "USD";
+                const divisor = cart.region?.currency?.noDivisionCurrency
+                  ? 1
+                  : 100;
+                return shipping > 0
+                  ? formatCurrency(shipping / divisor, currencyCode)
+                  : null;
+              }
+
+              // If no shipping methods, find the cheapest available option
+              if (cart?.region?.id) {
+                const shippingOptions =
+                  await sudoContext.query.ShippingOption.findMany({
+                    where: {
+                      region: { id: { equals: cart.region.id } },
+                      isReturn: { equals: false },
+                    },
+                    query: `
+                    amount
+                    priceType
+                    calculatedAmount
+                  `,
+                    orderBy: { amount: "asc" },
+                  });
+
+                if (shippingOptions?.length > 0) {
+                  const currencyCode = cart.region?.currency?.code || "USD";
+                  const divisor = cart.region?.currency?.noDivisionCurrency
+                    ? 1
+                    : 100;
+                  return formatCurrency(
+                    shippingOptions[0].amount / divisor,
+                    currencyCode
+                  );
                 }
               }
-            `,
-          });
 
-          if (!cart) return null;
+              // Return null if no options available
+              return null;
+            },
+          }),
+        }),
+        cheapestShipping: virtual({
+          field: graphql.field({
+            type: graphql.String,
+            async resolve(item, args, context) {
+              const sudoContext = context.sudo();
 
-          const subtotal = await calculateCartSubtotal(cart, context);
-          const currencyCode = cart.region?.currency?.code || "USD";
-          const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
+              // First check if cart has actual shipping methods
+              const cart = await sudoContext.query.Cart.findOne({
+                where: { id: item.id },
+                query: `
+                  shippingMethods {
+                    price
+                  }
+                  region {
+                    id
+                    currency {
+                      code
+                      noDivisionCurrency
+                    }
+                  }
+                `,
+              });
 
-          return formatCurrency(subtotal / divisor, currencyCode);
-        },
-      }),
-    }),
-    total: virtual({
-      field: graphql.field({
-        type: graphql.String,
-        async resolve(item, args, context) {
-          const sudoContext = context.sudo();
-
-          const cart = await sudoContext.query.Cart.findOne({
-            where: { id: item.id },
-            query: `
-              region {
-                taxRate
-                currency {
-                  code
-                  noDivisionCurrency
-                }
-              }
-              lineItems {
-                id
-                quantity
-                productVariant {
-                  id
-                }
-              }
-              discounts {
-                id
-                discountRule {
-                  type
-                  value
-                }
-              }
-              shippingMethods {
-                price
-              }
-            `,
-          });
-
-          const total = await calculateCartTotal(cart, context);
-          const currencyCode = cart.region?.currency?.code || "USD";
-          const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
-
-          return formatCurrency(total / divisor, currencyCode);
-        },
-      }),
-    }),
-    rawTotal: virtual({
-      field: graphql.field({
-        type: graphql.Int,
-        async resolve(item, args, context) {
-          const sudoContext = context.sudo();
-
-          const cart = await sudoContext.query.Cart.findOne({
-            where: { id: item.id },
-            query: `
-              region {
-                taxRate
-                currency {
-                  code
-                  noDivisionCurrency
-                }
-              }
-              lineItems {
-                id
-                quantity
-                productVariant {
-                  id
-                }
-              }
-              discounts {
-                id
-                discountRule {
-                  type
-                  value
-                }
-              }
-              shippingMethods {
-                price
-              }
-            `,
-          });
-
-          if (!cart) return 0;
-
-          return Math.round(await calculateCartTotal(cart, context));
-        },
-      }),
-    }),
-    discount: virtual({
-      field: graphql.field({
-        type: graphql.String,
-        async resolve(item, args, context) {
-          const sudoContext = context.sudo();
-
-          // Get cart with items and discounts
-          const cart = await sudoContext.query.Cart.findOne({
-            where: { id: item.id },
-            query: `
-              lineItems { 
-                id 
-                quantity 
-                productVariant {
-                  id
-                }
-              }
-              discounts {
-                id
-                discountRule {
-                  type
-                  value
-                  allocation
-                }
-              }
-              region {
-                id
-                currency {
-                  code
-                  noDivisionCurrency
-                }
-              }
-              shippingMethods {
-                price
-                shippingOption {
-                  id
-                  name
-                }
-              }
-            `,
-          });
-
-          if (!cart?.discounts?.length) {
-            return null;
-          }
-
-          // First get subtotal for percentage calculations
-          let subtotal = 0;
-          for (const lineItem of cart.lineItems || []) {
-            const prices = await sudoContext.query.MoneyAmount.findMany({
-              where: {
-                productVariant: { id: { equals: lineItem.productVariant.id } },
-                region: { id: { equals: cart.region.id } },
-                currency: { code: { equals: cart.region?.currency?.code } }
-              },
-              query: "calculatedPrice { calculatedAmount }",
-            });
-
-            const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
-            subtotal += price * lineItem.quantity;
-          }
-
-          // Calculate total discount amount
-          let totalDiscountAmount = 0;
-          for (const discount of cart.discounts) {
-            // Skip if no discount rule or type
-            if (!discount.discountRule?.type) continue;
-
-            switch (discount.discountRule.type) {
-              case "percentage":
-                totalDiscountAmount += subtotal * (discount.discountRule.value / 100);
-                break;
-              case "fixed":
-                totalDiscountAmount += discount.discountRule.value * (cart.region?.currency?.noDivisionCurrency ? 1 : 100);
-                break;
-              case "free_shipping":
-                // Add shipping amount to discount
-                totalDiscountAmount += cart.shippingMethods?.reduce(
+              // If cart has shipping methods, use their sum
+              if (cart?.shippingMethods?.length > 0) {
+                const shippingAmount = cart.shippingMethods.reduce(
                   (total, method) => total + (method.price || 0),
                   0
-                ) || 0;
-                break;
-            }
-          }
+                );
+                const currencyCode = cart.region?.currency?.code || "USD";
+                const divisor = cart.region?.currency?.noDivisionCurrency
+                  ? 1
+                  : 100;
 
-          if (totalDiscountAmount === 0) return null;
-
-          const currencyCode = cart.region?.currency?.code || "USD";
-          const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
-
-          return formatCurrency(totalDiscountAmount / divisor, currencyCode);
-        },
-      }),
-    }),
-    giftCardTotal: virtual({
-      field: graphql.field({
-        type: graphql.String,
-        async resolve(item, args, context) {
-          const sudoContext = context.sudo();
-
-          const cart = await sudoContext.query.Cart.findOne({
-            where: { id: item.id },
-            query: `
-              giftCards {
-                id
-                balance
-                value
+                return formatCurrency(shippingAmount / divisor, currencyCode);
               }
-              region {
-                currency {
-                  code
-                  noDivisionCurrency
+
+              // If no shipping methods, find the cheapest available option
+              if (cart?.region?.id) {
+                const shippingOptions =
+                  await sudoContext.query.ShippingOption.findMany({
+                    where: {
+                      region: { id: { equals: cart.region.id } },
+                      isReturn: { equals: false },
+                    },
+                    query: `
+                    amount
+                    priceType
+                    calculatedAmount
+                  `,
+                    orderBy: { amount: "asc" },
+                  });
+
+                if (shippingOptions?.length > 0) {
+                  const currencyCode = cart.region?.currency?.code || "USD";
+                  const divisor = cart.region?.currency?.noDivisionCurrency
+                    ? 1
+                    : 100;
+                  return formatCurrency(
+                    shippingOptions[0].amount / divisor,
+                    currencyCode
+                  );
                 }
               }
-            `,
-          });
 
-          if (!cart?.giftCards?.length) {
-            return null;
-          }
+              // Return null if no options available
+              return null;
+            },
+          }),
+        }),
+        discountsById: virtual({
+          field: graphql.field({
+            type: graphql.JSON,
+            async resolve(item, args, context) {
+              const sudoContext = context.sudo();
 
-          const total = cart.giftCards.reduce((sum, card) => {
-            // Use the lower of balance or value
-            const usableAmount = Math.min(
-              card.balance,
-              card.value || card.balance
-            );
-            return sum + usableAmount;
-          }, 0);
+              const cart = await sudoContext.query.Cart.findOne({
+                where: { id: item.id },
+                query: `
+                  lineItems { 
+                    id 
+                    quantity 
+                    productVariant {
+                      id
+                    }
+                  }
+                  discounts {
+                    id
+                    discountRule {
+                      type
+                      value
+                      allocation
+                    }
+                  }
+                  region {
+                    id
+                    currency {
+                      code
+                      noDivisionCurrency
+                    }
+                  }
+                  shippingMethods {
+                    price
+                    shippingOption {
+                      id
+                      name
+                    }
+                  }
+                `,
+              });
 
-          if (total === 0) return null;
-
-          const currencyCode = cart.region?.currency?.code || "USD";
-          const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
-
-          return formatCurrency(total / divisor, currencyCode);
-        },
-      }),
-    }),
-    tax: virtual({
-      field: graphql.field({
-        type: graphql.String,
-        async resolve(item, args, context) {
-          const sudoContext = context.sudo();
-
-          const cart = await sudoContext.query.Cart.findOne({
-            where: { id: item.id },
-            query: `
-              region {
-                taxRate
-                currency {
-                  code
-                  noDivisionCurrency
-                }
+              if (!cart?.discounts?.length) {
+                return {};
               }
-              lineItems {
-                id
-                quantity
-                productVariant {
-                  id
-                }
-              }
-              discounts {
-                id
-                discountRule {
-                  type
-                  value
-                }
-              }
-            `,
-          });
 
-          const tax = await calculateCartTax(cart, context);
-          const currencyCode = cart.region?.currency?.code || "USD";
-          const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
-
-          return formatCurrency(tax / divisor, currencyCode);
-        },
-      }),
-    }),
-    shipping: virtual({
-      field: graphql.field({
-        type: graphql.String,
-        async resolve(item, args, context) {
-          const sudoContext = context.sudo();
-          
-          const cart = await sudoContext.query.Cart.findOne({
-            where: { id: item.id },
-            query: `
-              shippingMethods {
-                price
-              }
-              region {
-                id
-                currency {
-                  code
-                  noDivisionCurrency
-                }
-              }
-            `
-          });
-
-          // If cart has shipping methods, use their sum
-          if (cart?.shippingMethods?.length > 0) {
-            const shipping = await calculateCartShipping(cart);
-            const currencyCode = cart.region?.currency?.code || "USD";
-            const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
-            return shipping > 0 ? formatCurrency(shipping / divisor, currencyCode) : null;
-          }
-
-          // If no shipping methods, find the cheapest available option
-          if (cart?.region?.id) {
-            const shippingOptions = await sudoContext.query.ShippingOption.findMany({
-              where: {
-                region: { id: { equals: cart.region.id } },
-                isReturn: { equals: false }
-              },
-              query: `
-                amount
-                priceType
-                calculatedAmount
-              `,
-              orderBy: { amount: 'asc' }
-            });
-
-            if (shippingOptions?.length > 0) {
               const currencyCode = cart.region?.currency?.code || "USD";
-              const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
-              return formatCurrency(shippingOptions[0].amount / divisor, currencyCode);
-            }
-          }
+              const divisor = cart.region?.currency?.noDivisionCurrency
+                ? 1
+                : 100;
 
-          // Return null if no options available
-          return null;
-        }
-      })
-    }),
-    cheapestShipping: virtual({
-      field: graphql.field({
-        type: graphql.String,
-        async resolve(item, args, context) {
-          const sudoContext = context.sudo();
-          
-          // First check if cart has actual shipping methods
-          const cart = await sudoContext.query.Cart.findOne({
-            where: { id: item.id },
-            query: `
-              shippingMethods {
-                price
+              // Calculate subtotal for percentage calculations
+              let subtotal = 0;
+              for (const lineItem of cart.lineItems || []) {
+                const prices = await sudoContext.query.MoneyAmount.findMany({
+                  where: {
+                    productVariant: {
+                      id: { equals: lineItem.productVariant.id },
+                    },
+                    region: { id: { equals: cart.region.id } },
+                    currency: { code: { equals: currencyCode } },
+                  },
+                  query: "calculatedPrice { calculatedAmount }",
+                });
+
+                const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
+                subtotal += price * lineItem.quantity;
               }
-              region {
-                id
-                currency {
-                  code
-                  noDivisionCurrency
+
+              // Calculate amounts for all discounts
+              const discountAmounts = {};
+              for (const discount of cart.discounts) {
+                // Skip if no discount rule or type
+                if (!discount.discountRule?.type) continue;
+
+                let amount = 0;
+
+                switch (discount.discountRule.type) {
+                  case "percentage":
+                    amount = subtotal * (discount.discountRule.value / 100);
+                    break;
+                  case "fixed":
+                    amount =
+                      discount.discountRule.value *
+                      (cart.region?.currency?.noDivisionCurrency ? 1 : 100);
+                    break;
+                  case "free_shipping":
+                    amount =
+                      cart.shippingMethods?.reduce(
+                        (total, method) => total + (method.price || 0),
+                        0
+                      ) || 0;
+                    break;
+                }
+
+                if (amount > 0) {
+                  discountAmounts[discount.id] = formatCurrency(
+                    amount / divisor,
+                    currencyCode
+                  );
                 }
               }
-            `
-          });
 
-          // If cart has shipping methods, use their sum
-          if (cart?.shippingMethods?.length > 0) {
-            const shippingAmount = cart.shippingMethods.reduce((total, method) => total + (method.price || 0), 0);
-            const currencyCode = cart.region?.currency?.code || "USD";
-            const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
+              return discountAmounts;
+            },
+          }),
+        }),
+        checkoutStep: virtual({
+          field: graphql.field({
+            type: graphql.String,
+            async resolve(item, args, context) {
+              const sudoContext = context.sudo();
 
-            return formatCurrency(shippingAmount / divisor, currencyCode);
-          }
-
-          // If no shipping methods, find the cheapest available option
-          if (cart?.region?.id) {
-            const shippingOptions = await sudoContext.query.ShippingOption.findMany({
-              where: {
-                region: { id: { equals: cart.region.id } },
-                isReturn: { equals: false }
-              },
-              query: `
-                amount
-                priceType
-                calculatedAmount
-              `,
-              orderBy: { amount: 'asc' }
-            });
-
-            if (shippingOptions?.length > 0) {
-              const currencyCode = cart.region?.currency?.code || "USD";
-              const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
-              return formatCurrency(shippingOptions[0].amount / divisor, currencyCode);
-            }
-          }
-
-          // Return null if no options available
-          return null;
-        }
-      })
-    }),
-    discountsById: virtual({
-      field: graphql.field({
-        type: graphql.JSON,
-        async resolve(item, args, context) {
-          const sudoContext = context.sudo();
-
-          const cart = await sudoContext.query.Cart.findOne({
-            where: { id: item.id },
-            query: `
-              lineItems { 
-                id 
-                quantity 
-                productVariant {
+              const cart = await sudoContext.query.Cart.findOne({
+                where: { id: item.id },
+                query: `
                   id
-                }
+                  email
+                  billingAddress { id }
+                  shippingAddress { id }
+                  shippingMethods {
+                    id
+                  }
+                  paymentCollection {
+                    id
+                    paymentSessions {
+                      id
+                      isSelected
+                    }
+                  }
+                  lineItems {
+                    id
+                  }
+                `,
+              });
+
+              // No cart or no items
+              if (!cart || !cart.lineItems?.length) return "cart";
+
+              // No addresses - check both billing and shipping
+              if (!cart.billingAddress?.id || !cart.shippingAddress?.id)
+                return "address";
+
+              // No shipping method
+              if (!cart.shippingMethods?.length) return "delivery";
+
+              // No payment collection or no selected payment session
+              if (
+                !cart.paymentCollection?.id ||
+                !cart.paymentCollection?.paymentSessions?.some(
+                  (s) => s.isSelected
+                )
+              ) {
+                return "payment";
               }
-              discounts {
-                id
-                discountRule {
-                  type
-                  value
-                  allocation
-                }
-              }
-              region {
-                id
-                currency {
-                  code
-                  noDivisionCurrency
-                }
-              }
-              shippingMethods {
-                price
-                shippingOption {
-                  id
-                  name
-                }
-              }
-            `,
-          });
 
-          if (!cart?.discounts?.length) {
-            return {};
-          }
-
-          const currencyCode = cart.region?.currency?.code || "USD";
-          const divisor = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
-
-          // Calculate subtotal for percentage calculations
-          let subtotal = 0;
-          for (const lineItem of cart.lineItems || []) {
-            const prices = await sudoContext.query.MoneyAmount.findMany({
-              where: {
-                productVariant: { id: { equals: lineItem.productVariant.id } },
-                region: { id: { equals: cart.region.id } },
-                currency: { code: { equals: currencyCode } }
-              },
-              query: "calculatedPrice { calculatedAmount }",
-            });
-
-            const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
-            subtotal += price * lineItem.quantity;
-          }
-
-          // Calculate amounts for all discounts
-          const discountAmounts = {};
-          for (const discount of cart.discounts) {
-            // Skip if no discount rule or type
-            if (!discount.discountRule?.type) continue;
-
-            let amount = 0;
-            
-            switch (discount.discountRule.type) {
-              case "percentage":
-                amount = subtotal * (discount.discountRule.value / 100);
-                break;
-              case "fixed":
-                amount = discount.discountRule.value * (cart.region?.currency?.noDivisionCurrency ? 1 : 100);
-                break;
-              case "free_shipping":
-                amount = cart.shippingMethods?.reduce(
-                  (total, method) => total + (method.price || 0),
-                  0
-                ) || 0;
-                break;
-            }
-
-            if (amount > 0) {
-              discountAmounts[discount.id] = formatCurrency(amount / divisor, currencyCode);
-            }
-          }
-
-          return discountAmounts;
-        },
-      }),
-    }),
-    checkoutStep: virtual({
-      field: graphql.field({
-        type: graphql.String,
-        async resolve(item, args, context) {
-          const sudoContext = context.sudo();
-          
-          const cart = await sudoContext.query.Cart.findOne({
-            where: { id: item.id },
-            query: `
-              id
-              email
-              billingAddress { id }
-              shippingAddress { id }
-              shippingMethods {
-                id
-              }
-              paymentCollection {
-                id
-                paymentSessions {
-                  id
-                  isSelected
-                }
-              }
-              lineItems {
-                id
-              }
-            `
-          });
-
-          // No cart or no items
-          if (!cart || !cart.lineItems?.length) return "cart";
-
-          // No addresses - check both billing and shipping
-          if (!cart.billingAddress?.id || !cart.shippingAddress?.id) return "address";
-
-          // No shipping method
-          if (!cart.shippingMethods?.length) return "delivery";
-
-          // No payment collection or no selected payment session
-          if (!cart.paymentCollection?.id || 
-              !cart.paymentCollection?.paymentSessions?.some(s => s.isSelected)) {
-            return "payment";
-          }
-
-          // All steps completed
-          return "review";
-        }
-      })
+              // All steps completed
+              return "review";
+            },
+          }),
+        }),
+      },
     }),
     ...trackingFields,
   },

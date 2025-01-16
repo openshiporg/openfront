@@ -2882,6 +2882,14 @@
   dependencies:
     "@radix-ui/react-slot" "1.1.1"
 
+"@radix-ui/react-progress@^1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@radix-ui/react-progress/-/react-progress-1.1.1.tgz#af923714ba3723be9c510536749d6c530d8670e4"
+  integrity sha512-6diOawA84f/eMxFHcWut0aE1C2kyE9dOyCTQOMRR2C/qPiXz/X0SaiA/RLbapQaXUCmy0/hLMf9meSccD1N0pA==
+  dependencies:
+    "@radix-ui/react-context" "1.1.1"
+    "@radix-ui/react-primitive" "2.0.1"
+
 "@radix-ui/react-radio-group@^1.1.3":
   version "1.2.2"
   resolved "https://registry.yarnpkg.com/@radix-ui/react-radio-group/-/react-radio-group-1.2.2.tgz#a37e9bd9d80b33bb8c1b7af8cf1dc9e5014e52d0"

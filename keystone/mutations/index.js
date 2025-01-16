@@ -23,6 +23,8 @@ import handleStripeWebhook from './handleStripeWebhook';
 import handlePayPalWebhook from './handlePayPalWebhook';
 import getCustomerOrder from "./getCustomerOrder";
 import getCustomerOrders from "./getCustomerOrders";
+import getAnalytics from './getAnalytics';
+import importInventory from './importInventory';
 
 const graphql = String.raw;
 
@@ -42,6 +44,7 @@ export const extendGraphqlSchema = (schema) =>
         activeCartRegion(countryCode: String!): Region
         getCustomerOrder(orderId: ID!, secretKey: String): JSON
         getCustomerOrders(limit: Int, offset: Int): JSON
+        getAnalytics(timeframe: String): JSON
       }
 
       input UserUpdateProfileInput {
@@ -81,6 +84,8 @@ export const extendGraphqlSchema = (schema) =>
         ): PaymentSession
         handleStripeWebhook(event: JSON!, headers: JSON!): WebhookResult!
         handlePayPalWebhook(event: JSON!, headers: JSON!): WebhookResult!
+        getAnalytics: JSON
+        importInventory: Boolean
       }
     `,
     resolvers: {
@@ -92,6 +97,7 @@ export const extendGraphqlSchema = (schema) =>
         activeCartRegion,
         getCustomerOrder,
         getCustomerOrders,
+        getAnalytics,
       },
       Mutation: {
         updateActiveUserPassword,
@@ -111,6 +117,8 @@ export const extendGraphqlSchema = (schema) =>
         initiatePaymentSession,
         handleStripeWebhook,
         handlePayPalWebhook,
+        getAnalytics,
+        importInventory,
       }
     },
   });

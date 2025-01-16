@@ -1,9 +1,9 @@
-import { graphql, list } from "@keystone-6/core";
+import { graphql, group, list } from "@keystone-6/core";
 import { text, relationship, virtual } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
 
-const NO_DIVISION_CURRENCIES = ['jpy', 'krw', 'vnd'];
+const NO_DIVISION_CURRENCIES = ["jpy", "krw", "vnd"];
 
 export const Currency = list({
   access: {
@@ -28,14 +28,6 @@ export const Currency = list({
     name: text({
       validation: { isRequired: true },
     }),
-    noDivisionCurrency: virtual({
-      field: graphql.field({
-        type: graphql.Boolean,
-        resolve(item) {
-          return NO_DIVISION_CURRENCIES.includes(item.code.toLowerCase());
-        },
-      }),
-    }),
     moneyAmounts: relationship({
       ref: "MoneyAmount.currency",
       many: true,
@@ -55,6 +47,20 @@ export const Currency = list({
     stores: relationship({
       ref: "Store.currencies",
       many: true,
+    }),
+    ...group({
+      label: "Virtual Fields",
+      description: "Virtual fields for currency",
+      fields: {
+        noDivisionCurrency: virtual({
+          field: graphql.field({
+            type: graphql.Boolean,
+            resolve(item) {
+              return NO_DIVISION_CURRENCIES.includes(item.code.toLowerCase());
+            },
+          }),
+        }),
+      },
     }),
     ...trackingFields,
   },
