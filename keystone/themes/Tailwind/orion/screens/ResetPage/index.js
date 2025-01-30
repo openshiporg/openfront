@@ -4,9 +4,6 @@ import { useRouter } from "next/navigation";
 import { useReinitContext, useRawKeystone } from "@keystone/keystoneProvider";
 import { useRedirect } from "@keystone/utils/useRedirect";
 import { basePath } from "@keystone/index"; // Import basePath
-import { RiLoader2Fill } from "@remixicon/react";
-import { buttonVariants } from "../../primitives/default/ui/button";
-import { cn } from "@keystone/utils/cn";
 
 import {
   Card,
@@ -151,22 +148,14 @@ export function ResetPage() {
               </div>
             </CardContent>
             <CardFooter className="flex flex-col justify-between">
-              <button
+              <Button
+                variant="secondary"
+                className="w-full text-md tracking-wide h-11 md:h-12 font-semibold text-white uppercase transition-all duration-200 ease-in-out bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 dark:from-orange-700 dark:to-orange-800 dark:hover:from-orange-800 dark:hover:to-orange-900 dark:text-gray-100"
+                isLoading={loading}
                 type="submit"
-                className={cn(
-                  buttonVariants({ variant: "secondary" }),
-                  "w-full text-md tracking-wide h-11 md:h-12 font-semibold text-white uppercase bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800 dark:from-orange-700 dark:to-orange-800 dark:hover:from-orange-800 dark:hover:to-orange-900 dark:text-gray-100 disabled:opacity-50 disabled:hover:from-orange-600 disabled:hover:to-orange-700 dark:disabled:hover:from-orange-700 dark:disabled:hover:to-orange-800",
-                  {
-                    "opacity-50": loading
-                  }
-                )}
-                disabled={loading}
               >
-                {loading && (
-                  <RiLoader2Fill className="size-4 shrink-0 animate-spin" />
-                )}
                 {mode === "reset" ? "RESET PASSWORD" : "SEND RESET LINK"}
-              </button>
+              </Button>
             </CardFooter>
           </Card>
         </form>

@@ -34,7 +34,11 @@ export async function getUser() {
                 city
                 province
                 postalCode
-                countryCode
+                country {
+                  id
+                  iso2
+                  name
+                }
                 phone
               }
               addresses(orderBy: [{ isBilling: desc }]) {
@@ -47,7 +51,11 @@ export async function getUser() {
                 city
                 province
                 postalCode
-                countryCode
+                country {
+                  id
+                  iso2
+                  name
+                }
                 phone
                 isBilling
               }
@@ -97,7 +105,7 @@ export async function authenticate({ email, password }) {
 
 export const getUserWithOrders = cache(async function () {
   const headers = getAuthHeaders();
-  const { authenticatedItem } = await openfrontClient.request(
+  const { authenticatedItem, orders } = await openfrontClient.request(
     gql`
       query GetUserAndOrders {
         authenticatedItem {
@@ -116,7 +124,10 @@ export const getUserWithOrders = cache(async function () {
               city
               province
               postalCode
-              countryCode
+              country {
+                id
+                iso2
+              }
               phone
             }
             addresses {
@@ -129,42 +140,22 @@ export const getUserWithOrders = cache(async function () {
               city
               province
               postalCode
-              countryCode
-              phone
-            }
-            orders {
-              id
-              total
-              status
-              createdAt
-              displayId
-              shippingAddress {
-                firstName
-                lastName
-                address1
-                city
-                postalCode
-                countryCode
-              }
-              paymentStatus
-              fulfillmentStatus
-              lineItems {
+              country {
                 id
-                title
-                quantity
-                unitPrice
-                total
+                iso2
               }
+              phone
             }
           }
         }
+        orders: getCustomerOrders
       }
     `,
     {},
     headers
   );
 
-  return authenticatedItem;
+  return { ...authenticatedItem, orders };
 });
 
 export async function createCustomer(data) {
@@ -321,7 +312,10 @@ export const getUserAddresses = cache(async function () {
               city
               province
               postalCode
-              countryCode
+              country {
+                id
+                iso2
+              }
               phone
             }
             addresses {
@@ -334,7 +328,10 @@ export const getUserAddresses = cache(async function () {
               city
               province
               postalCode
-              countryCode
+              country {
+                id
+                iso2
+              }
               phone
             }
           }
@@ -524,54 +521,6 @@ export async function signOut(countryCode) {
     redirect(`/${countryCode}/account`);
   } catch (error) {
     console.error("Error signing out:", error);
-  }
-}
-
-export async function updateCustomerBillingAddress(prevState, formData) {
-  try {
-    const headers = getAuthHeaders();
-
-    await openfrontClient.request(
-      gql`
-        mutation UpdateBillingAddress($address: BillingAddressInput!) {
-          updateActiveUserBillingAddress(address: $address) {
-            id
-            addresses {
-              id
-              firstName
-              lastName
-              company
-              address1
-              address2
-              city
-              province
-              postalCode
-              countryCode
-              phone
-              metadata
-            }
-          }
-        }
-      `,
-      {
-        address: {
-          firstName: formData.get("billingAddress.firstName"),
-          lastName: formData.get("billingAddress.lastName"),
-          company: formData.get("billingAddress.company"),
-          address1: formData.get("billingAddress.address1"),
-          address2: formData.get("billingAddress.address2"),
-          city: formData.get("billingAddress.city"),
-          province: formData.get("billingAddress.province"),
-          postalCode: formData.get("billingAddress.postalCode"),
-          countryCode: formData.get("billingAddress.countryCode"),
-        },
-      },
-      headers
-    );
-    revalidateTag("customer");
-    return { success: true, error: null };
-  } catch (error) {
-    return { success: false, error: error.toString() };
   }
 }
 

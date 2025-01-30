@@ -12,6 +12,7 @@ import {
   XCircleIcon,
   MessageSquareIcon,
 } from "@heroicons/react/24/outline";
+import { Button } from "@ui/button";
 
 const getEventIcon = (type) => {
   switch (type) {
@@ -52,8 +53,8 @@ const getEventDescription = (event) => {
     case 'EMAIL_SENT':
       return `Email sent to customer: ${data.template}`;
     case 'TRACKING_NUMBER_ADDED':
-      return `${actor} added tracking ${data.trackingLinks.length > 1 ? 'numbers' : 'number'}: ${
-        data.trackingLinks.map(link => link.number).join(', ')
+      return `${actor} added tracking ${data.shippingLabels.length > 1 ? 'numbers' : 'number'}: ${
+        data.shippingLabels.map(label => label.number).join(', ')
       }`;
     case 'RETURN_REQUESTED':
       return `Return requested for order`;
@@ -127,20 +128,19 @@ export function OrderTimeline({ events }) {
                 </div>
                 <div className="text-slate-500 dark:text-slate-400">
                   {getEventDescription(event)}
-                  {event.type === 'TRACKING_NUMBER_ADDED' && event.data.trackingLinks?.some(link => link.url) && (
-                    <div className="mt-2 flex gap-2">
-                      {event.data.trackingLinks.map((link, i) => (
-                        link.url && (
-                          <a
-                            key={i}
-                            href={link.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                          >
-                            Track Package {event.data.trackingLinks.length > 1 ? `#${i + 1}` : ''}
+                  {event.type === 'TRACKING_NUMBER_ADDED' && event.data.shippingLabels?.some(label => label.url) && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {event.data.shippingLabels.map((label, i) => (
+                        <Button
+                          key={i}
+                          variant="outline"
+                          size="sm"
+                          asChild
+                        >
+                          <a href={label.url} target="_blank" rel="noopener noreferrer">
+                            Track Package {event.data.shippingLabels.length > 1 ? `#${i + 1}` : ''}
                           </a>
-                        )
+                        </Button>
                       ))}
                     </div>
                   )}

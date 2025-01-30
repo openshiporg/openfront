@@ -1,5 +1,4 @@
 import { list } from "@keystone-6/core";
-import { denyAll } from "@keystone-6/core/access";
 import { integer, relationship } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
@@ -21,12 +20,19 @@ export const FulfillmentItem = list({
         isRequired: true,
       },
     }),
+
     fulfillment: relationship({
       ref: "Fulfillment.fulfillmentItems",
+      many: false,
+      validation: { isRequired: true },
     }),
+
     lineItem: relationship({
       ref: "LineItem.fulfillmentItems",
+      many: false,
+      validation: { isRequired: true },
     }),
+
     ...trackingFields,
   },
 });

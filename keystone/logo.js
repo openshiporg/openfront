@@ -10,22 +10,20 @@ const outfit = Outfit({
 
 export const LogoIcon = ({ className }) => {
   return (
-    <div className="basis-4 flex items-center justify-center">
       <Triangle
         className={cn(
-          "fill-indigo-200 stroke-indigo-400 dark:stroke-indigo-600 dark:fill-indigo-950 w-full h-full",
+          "fill-indigo-200 stroke-indigo-400 dark:stroke-indigo-600 dark:fill-indigo-950",
           className
         )}
       />
-    </div>
   );
 };
 
 export const Logo = ({ className }) => {
   return (
-    <div className={cn("flex items-center gap-2 text-zinc-700 dark:text-white", outfit.className, className)}>
+    <div className={cn(outfit.className, className)}>
       <LogoIcon />
-      <h1 className="tracking-[0.02em] mb-1 font-medium text-2xl text-center">
+      <h1 className="tracking-[0.02em] mb-1 font-medium text-xl text-zinc-700 dark:text-white">
         open<span className="font-light">front</span>
       </h1>
     </div>

@@ -288,7 +288,6 @@ export async function createPaymentSessions(cartId) {
           id
           paymentSessions {
             id
-            status
             paymentProvider {
               id
               code
@@ -308,7 +307,6 @@ export async function setPaymentSession({ cartId, providerId }) {
         id
         paymentSessions {
           id
-          status
         }
       }
     }
@@ -830,6 +828,38 @@ export async function submitGiftCard(code) {
   }
 }
 
+const UPDATE_CART_MUTATION = gql`
+  mutation UpdateActiveCart($cartId: ID!, $data: CartUpdateInput!) {
+    updateActiveCart(cartId: $cartId, data: $data) {
+      id
+      shippingAddress {
+        id
+        firstName
+        lastName
+        address1
+        city
+        country {
+          id
+          iso2
+          displayName
+        }
+      }
+      billingAddress {
+        id
+        firstName
+        lastName
+        address1
+        city
+        country {
+          id
+          iso2
+          displayName
+        }
+      }
+    }
+  }
+`;
+
 export async function setAddresses(currentState, formData) {
   if (!formData) return "No form data received";
 
@@ -865,9 +895,13 @@ export async function setAddresses(currentState, formData) {
       company: formData.get("shippingAddress.company"),
       postalCode: formData.get("shippingAddress.postalCode"),
       city: formData.get("shippingAddress.city"),
-      countryCode: formData.get("shippingAddress.countryCode"),
       province: formData.get("shippingAddress.province"),
       phone: formData.get("shippingAddress.phone"),
+      country: {
+        connect: {
+          iso2: formData.get("shippingAddress.countryCode")
+        }
+      }
     };
 
     // Create shipping address first
@@ -878,6 +912,11 @@ export async function setAddresses(currentState, formData) {
             mutation CreateAddress($data: AddressCreateInput!) {
               createAddress(data: $data) {
                 id
+                country {
+                  id
+                  iso2
+                  displayName
+                }
               }
             }
           `,
@@ -904,9 +943,13 @@ export async function setAddresses(currentState, formData) {
           company: formData.get("billingAddress.company"),
           postalCode: formData.get("billingAddress.postalCode"),
           city: formData.get("billingAddress.city"),
-          countryCode: formData.get("billingAddress.countryCode"),
           province: formData.get("billingAddress.province"),
           phone: formData.get("billingAddress.phone"),
+          country: {
+            connect: {
+              iso2: formData.get("billingAddress.countryCode")
+            }
+          }
         };
 
         const { createAddress: newBillingAddress } =
@@ -915,6 +958,11 @@ export async function setAddresses(currentState, formData) {
               mutation CreateAddress($data: AddressCreateInput!) {
                 createAddress(data: $data) {
                   id
+                  country {
+                    id
+                    iso2
+                    displayName
+                  }
                 }
               }
             `,
@@ -936,29 +984,7 @@ export async function setAddresses(currentState, formData) {
 
   try {
     await openfrontClient.request(
-      gql`
-        mutation UpdateActiveCart($cartId: ID!, $data: CartUpdateInput!) {
-          updateActiveCart(cartId: $cartId, data: $data) {
-            id
-            shippingAddress {
-              id
-              firstName
-              lastName
-              address1
-              city
-              countryCode
-            }
-            billingAddress {
-              id
-              firstName
-              lastName
-              address1
-              city
-              countryCode
-            }
-          }
-        }
-      `,
+      UPDATE_CART_MUTATION,
       {
         cartId,
         data,
@@ -1045,15 +1071,14 @@ export async function placeOrder() {
         cartId,
       }
     );
-
+    
     if (completeActiveCart?.id) {
       // Remove cart cookie after successful order
       removeCartId();
       revalidateTag("cart");
 
       // Redirect to order confirmation page with lowercase countryCode
-      const countryCode =
-        completeActiveCart.shippingAddress?.countryCode?.toLowerCase();
+      const countryCode = completeActiveCart.shippingAddress?.country?.iso2?.toLowerCase();
       if (!countryCode) {
         throw new Error("No country code found in completed order");
       }

@@ -85,10 +85,8 @@ async function activeCart(root, { cartId }, context) {
       }
       paymentCollection {
         id
-        status
         paymentSessions {
           id
-          status
           data
           isSelected
           paymentProvider {
@@ -108,7 +106,10 @@ async function activeCart(root, { cartId }, context) {
         city
         province
         postalCode
-        countryCode
+        country {
+          id
+          iso2
+        }
         phone
       }
       shippingAddress {
@@ -121,7 +122,10 @@ async function activeCart(root, { cartId }, context) {
         city
         province
         postalCode
-        countryCode
+        country {
+          id
+          iso2
+        }
         phone
       }
       billingAddress {
@@ -134,7 +138,10 @@ async function activeCart(root, { cartId }, context) {
         city
         province
         postalCode
-        countryCode
+        country {
+          id
+          iso2
+        }
         phone
       }
     `,

@@ -28,8 +28,10 @@ export const OrderEvent = list({
     type: select({
       type: 'enum',
       options: [
+        { label: 'Order Placed', value: 'ORDER_PLACED' },
         { label: 'Status Change', value: 'STATUS_CHANGE' },
         { label: 'Payment Status Change', value: 'PAYMENT_STATUS_CHANGE' },
+        { label: 'Payment Captured', value: 'PAYMENT_CAPTURED' },
         { label: 'Fulfillment Status Change', value: 'FULFILLMENT_STATUS_CHANGE' },
         { label: 'Note Added', value: 'NOTE_ADDED' },
         { label: 'Email Sent', value: 'EMAIL_SENT' },

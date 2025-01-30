@@ -4,13 +4,14 @@ import {
   checkbox,
   integer,
   json,
-  select,
   text,
   timestamp,
   relationship,
+  virtual,
 } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
+import { graphql } from "@keystone-6/core";
 
 export const PaymentSession = list({
   access: {
@@ -33,18 +34,35 @@ export const PaymentSession = list({
     amount: integer({
       validation: { isRequired: true },
     }),
-    status: select({
-      type: "enum",
-      options: [
-        { label: "Pending", value: "pending" },
-        { label: "Processing", value: "processing" },
-        { label: "Authorized", value: "authorized" },
-        { label: "Requires more", value: "requires_more" },
-        { label: "Error", value: "error" },
-        { label: "Canceled", value: "canceled" },
-      ],
-      defaultValue: "pending",
-      validation: { isRequired: true },
+    formattedAmount: virtual({
+      field: graphql.field({
+        type: graphql.String,
+        async resolve(item, args, context) {
+          const { paymentCollection } = await context.query.PaymentSession.findOne({
+            where: { id: item.id },
+            query: `
+              paymentCollection {
+                cart {
+                  order {
+                    currency {
+                      code
+                      symbol
+                    }
+                  }
+                }
+              }
+            `
+          });
+
+          if (!paymentCollection?.cart?.order?.currency) {
+            return `${item.amount / 100}`;
+          }
+
+          const { symbol } = paymentCollection.cart.order.currency;
+          const amount = item.amount / 100;
+          return `${symbol}${amount.toFixed(2)}`;
+        }
+      })
     }),
     data: json({
       defaultValue: {},
@@ -56,8 +74,8 @@ export const PaymentSession = list({
       ref: "PaymentCollection.paymentSessions",
     }),
     paymentProvider: relationship({
-      ref: "PaymentProvider.paymentSessions",
-      validation: { isRequired: true },
+      ref: "PaymentProvider.sessions",
+      many: false,
     }),
     paymentAuthorizedAt: timestamp(),
     ...trackingFields,

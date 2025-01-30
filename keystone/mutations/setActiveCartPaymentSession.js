@@ -10,7 +10,6 @@ async function setActiveCartPaymentSession(root, { cartId, providerId }, context
         id
         paymentSessions {
           id
-          status
           paymentProvider {
             id
           }

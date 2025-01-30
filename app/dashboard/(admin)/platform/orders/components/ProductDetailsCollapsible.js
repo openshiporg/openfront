@@ -20,9 +20,6 @@ export const LINE_ITEMS_QUERY = gql`
     ) {
       id
       quantity
-      fulfilledQuantity
-      returnedQuantity
-      shippedQuantity
       metadata
       isReturn
       isGiftcard
@@ -124,7 +121,7 @@ export const ProductDetailsCollapsible = ({
               />
             )}
             {loading ? (
-              Array.from({ length: itemsPerPage }).map((_, index) => (
+              Array.from({ length: 1 }).map((_, index) => (
                 <div key={`skeleton-${index}`}>{renderSkeletonItem()}</div>
               ))
             ) : error ? (

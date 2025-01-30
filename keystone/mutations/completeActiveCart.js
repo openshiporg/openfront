@@ -1,7 +1,7 @@
 async function completeActiveCart(root, { cartId }, context) {
   const sudoContext = context.sudo();
 
-  // Get cart with all needed data and total
+  // Get cart with payment session and collection
   const cart = await sudoContext.query.Cart.findOne({
     where: { id: cartId },
     query: `
@@ -15,138 +15,90 @@ async function completeActiveCart(root, { cartId }, context) {
           code
         }
       }
-      paymentCollection {
+      billingAddress {
         id
-        status
-        amount
-        paymentSessions {
-          id
-          status
-          isSelected
-          paymentProvider {
-            id
-            code
-          }
-          data
-        }
       }
-      shippingMethods {
+      shippingAddress {
         id
-        price
-      }
-      lineItems {
-        id
-        title
-        quantity
-        unitPrice
-        productVariant {
-          id
-        }
       }
       discounts {
         id
       }
-      billingAddress {
-        id
-        countryCode
-      }
-      shippingAddress {
-        id
-        countryCode
-      }
-      user {
+      shippingMethods {
         id
       }
-    `
+      lineItems {
+        id
+      }
+      paymentCollection {
+        id
+        amount
+        paymentSessions(where: { isSelected: { equals: true }}) {
+          id
+          amount
+          data
+          paymentProvider {
+            id
+          }
+        }
+      }
+    `,
   });
 
   if (!cart) {
     throw new Error("Cart not found");
   }
 
-  // Validate cart has required data
-  if (!cart.email) throw new Error("Email is required");
-  if (!cart.region) throw new Error("Region is required");
-  if (!cart.shippingMethods?.length) throw new Error("Shipping method is required");
-  if (!cart.lineItems?.length) throw new Error("Cart is empty");
-  if (!cart.billingAddress) throw new Error("Billing address is required");
-  if (!cart.shippingAddress) throw new Error("Shipping address is required");
-  
-  // Check payment collection and session status
-  if (!cart.paymentCollection) {
-    throw new Error("Payment collection is required");
-  }
-
-  const selectedSession = cart.paymentCollection.paymentSessions?.find(s => s.isSelected);
+  const selectedSession = cart.paymentCollection?.paymentSessions?.[0];
   if (!selectedSession) {
-    throw new Error("Payment method is required");
+    throw new Error("No payment session selected");
   }
 
-  if (selectedSession.status === 'error') {
-    throw new Error("Payment session has error status");
-  }
-
-  // Create order with all necessary data
-  const orderData = {
-    cart: { connect: { id: cartId } },
-    email: cart.email,
-    region: { connect: { id: cart.region.id } },
-    currency: { connect: { code: cart.region.currency.code } },
-    billingAddress: { connect: { id: cart.billingAddress.id } },
-    shippingAddress: { connect: { id: cart.shippingAddress.id } },
-    discounts: { connect: cart.discounts.map(d => ({ id: d.id })) },
-    shippingMethods: { connect: cart.shippingMethods.map(sm => ({ id: sm.id })) },
-    lineItems: { connect: cart.lineItems.map(li => ({ id: li.id })) },
-    status: "pending",
-    paymentStatus: selectedSession.status === 'authorized' ? 'captured' : 'awaiting',
-    fulfillmentStatus: "not_fulfilled",
-    displayId: Math.floor(Date.now() / 1000), // Unix timestamp as display ID
-    taxRate: cart.region.taxRate || 0,
-  };
-
-  // Connect user if available
-  if (cart.user?.id) {
-    orderData.user = { connect: { id: cart.user.id } };
-  }
-
+  // Create order (payment status will be set by Payment hooks)
   const order = await sudoContext.query.Order.createOne({
-    data: orderData
-  });
-
-  // Create payment record
-  const payment = await sudoContext.query.Payment.createOne({
     data: {
-      amount: cart.rawTotal,
-      currencyCode: cart.region.currency.code,
-      order: { connect: { id: order.id } },
-      paymentCollection: { connect: { id: cart.paymentCollection.id } },
-      data: selectedSession.data,
-      status: selectedSession.status === 'authorized' ? 'captured' : 'pending',
-      capturedAt: selectedSession.status === 'authorized' ? new Date().toISOString() : null,
+      cart: { connect: { id: cartId } },
+      email: cart.email,
+      region: { connect: { id: cart.region.id } },
+      currency: { connect: { code: cart.region.currency.code } },
+      billingAddress: { connect: { id: cart.billingAddress.id } },
+      shippingAddress: { connect: { id: cart.shippingAddress.id } },
+      discounts: { connect: cart.discounts.map(d => ({ id: d.id })) },
+      shippingMethods: { connect: cart.shippingMethods.map(sm => ({ id: sm.id })) },
+      lineItems: { connect: cart.lineItems.map(li => ({ id: li.id })) },
+      status: "pending",
+      displayId: Math.floor(Date.now() / 1000),
+      taxRate: cart.region.taxRate || 0,
+      events: {
+        create: {
+          type: "ORDER_PLACED",
+          data: {
+            cartId,
+          },
+        },
+      },
     },
   });
 
-  // If payment is authorized, create a capture record
-  if (selectedSession.status === 'authorized') {
-    await sudoContext.query.Capture.createOne({
-      data: {
-        amount: cart.rawTotal,
-        payment: { connect: { id: payment.id } },
-        metadata: {
-          provider: selectedSession.paymentProvider.code,
-          sessionId: selectedSession.id,
-        },
-        createdBy: 'system',
-      },
-    });
-  }
+  // Create payment record (which will trigger hooks to update order status)
+  await sudoContext.query.Payment.createOne({
+    data: {
+      status: "captured",
+      amount: cart.rawTotal,
+      currencyCode: cart.region.currency.code,
+      data: selectedSession.data,
+      capturedAt: new Date().toISOString(),
+      paymentCollection: { connect: { id: cart.paymentCollection.id } },
+      order: { connect: { id: order.id } },
+    },
+  });
 
-  // Update cart status
+  // Update cart with order reference
   await sudoContext.query.Cart.updateOne({
     where: { id: cartId },
-    data: { 
-      order: { connect: { id: order.id } }
-    }
+    data: {
+      order: { connect: { id: order.id } },
+    },
   });
 
   // Get the created order with all necessary fields
@@ -155,7 +107,6 @@ async function completeActiveCart(root, { cartId }, context) {
     query: `
       id
       status
-      paymentStatus
       displayId
       secretKey
       subtotal
@@ -163,6 +114,7 @@ async function completeActiveCart(root, { cartId }, context) {
       shipping
       discount
       tax
+      paymentDetails
       shippingAddress {
         id
         firstName
@@ -173,7 +125,10 @@ async function completeActiveCart(root, { cartId }, context) {
         city
         province
         postalCode
-        countryCode
+        country {
+          id
+          iso2
+        }
         phone
       }
     `

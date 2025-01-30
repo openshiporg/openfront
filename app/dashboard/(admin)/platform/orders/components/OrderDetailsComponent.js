@@ -16,25 +16,26 @@ import { Button } from "@ui/button";
 import { RiLoader2Fill } from "@remixicon/react";
 import { ProductDetailsCollapsible } from "./ProductDetailsCollapsible";
 import { PencilSquareIcon, TrashIcon } from "@heroicons/react/16/solid";
-import { ChevronDown, MoreVertical } from "lucide-react";
+import { ChevronDown, MoreVertical, PenSquare, Trash2 } from "lucide-react";
 import { DeleteButton } from "@keystone/themes/Tailwind/orion/components/EditItemDrawer";
 import { useList } from "@keystone/keystoneProvider";
 import { AdminLink } from "@keystone/themes/Tailwind/orion/components/AdminLink";
+import { useDrawer } from "@keystone/themes/Tailwind/orion/components/Modals/drawer-context";
+import { ArrowRight } from "lucide-react";
 
 export const OrderDetailsComponent = ({
   order,
-  openEditDrawer,
   loadingActions,
   removeEditItemButton,
   renderButtons,
 }) => {
   const list = useList("Order");
-
+  const { openEditDrawer } = useDrawer();
   const orderButtons = [
     {
       buttonText: "EDIT ORDER",
       color: "blue",
-      icon: <PencilSquareIcon className="w-4 h-4" />,
+      icon: <PenSquare className="w-4 h-4" />,
       onClick: () => openEditDrawer(order.id, "Order"),
     },
   ];
@@ -55,24 +56,38 @@ export const OrderDetailsComponent = ({
   return (
     <Accordion type="single" collapsible className="w-full">
       <AccordionItem value={order.id} className="border-0">
-        <div className="px-4 py-2 flex justify-between w-full border-b">
-          <div className="flex flex-col items-start text-left gap-1.5">
-            <div className="flex items-center space-x-4">
+        <div className="px-4 py-3 sm:py-4 flex flex-col sm:flex-row justify-between w-full border-b">
+          <div className="flex flex-col items-start text-left gap-2 sm:gap-1.5">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               <AdminLink
                 href={`/platform/orders/${order.id}`}
                 className="uppercase font-medium text-sm hover:text-blue-600 dark:hover:text-blue-400"
               >
                 #{order.displayId}
               </AdminLink>
-              <span className="text-xs font-medium opacity-65">
-                {new Date(order.createdAt).toLocaleString()}
-              </span>
-              <span className="text-xs font-medium text-muted-foreground">
-                {order.email}
+              <span className="text-xs font-medium">
+                <span className="text-muted-foreground/75">
+                  {new Date(order.createdAt).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                </span>
+                <span className="mx-1.5">‧</span>
+                <AdminLink
+                  href={`/platform/users/${order.user.id}`}
+                  className="text-muted-foreground hover:text-blue-600 dark:hover:text-blue-400 group inline-flex items-center gap-1"
+                >
+                  {order.user.name}
+                  <ArrowRight className="h-3 w-3 opacity-0 -translate-x-2 transition-all group-hover:opacity-100 group-hover:translate-x-0" />
+                </AdminLink>
               </span>
             </div>
+
             {order.shippingAddress && (
-              <div className="text-sm opacity-75">
+              <div className="text-xs sm:text-sm text-muted-foreground mt-1">
                 <p>
                   {order.shippingAddress.firstName}{" "}
                   {order.shippingAddress.lastName}
@@ -91,8 +106,8 @@ export const OrderDetailsComponent = ({
               </div>
             )}
           </div>
-          <div className="flex flex-col justify-between items-end">
-            <div className="flex items-center justify-end space-x-2">
+          <div className="flex flex-col sm:items-end mt-4 sm:mt-0">
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
               <Badge
                 color={
                   order.status === "pending"
@@ -169,7 +184,7 @@ export const OrderDetailsComponent = ({
           <div className="divide-y">
             <ProductDetailsCollapsible
               orderId={order.id}
-              title="Line Items"
+              title="Line Item"
               openEditDrawer={openEditDrawer}
               totalItems={order.lineItems?.length || 0}
             />

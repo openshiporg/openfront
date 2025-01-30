@@ -1,8 +1,8 @@
 "use server";
 
 import Upload from "graphql-upload/Upload.js";
-import fs from 'fs';
-import path from 'path';
+import fs from "fs";
+import path from "path";
 import seedData from "../../storefront/lib/seed/seed-data.json";
 
 const createProductInput = (productData) => {
@@ -72,8 +72,8 @@ const prepareToUpload = (filePath) => {
   const stream = fs.createReadStream(filePath);
   const createReadStream = () => stream;
 
-  const mimetype = 'image/jpeg';
-  const encoding = 'utf-8';
+  const mimetype = "image/jpeg";
+  const encoding = "utf-8";
 
   const image = {
     createReadStream,
@@ -103,22 +103,27 @@ async function seedStorefront(root, args, context) {
   try {
     // Create store and currencies
     const { store, currencies } = seedData;
-    const { data: { createStore } } = await context.graphql.raw({
+    const {
+      data: { createStore },
+    } = await context.graphql.raw({
       query: `mutation CreateStore($data: StoreCreateInput!) {
         createStore(data: $data) {
           id
         }
       }`,
       variables: {
-        data: { ...store, currencies: { create: currencies } }
-      }
+        data: { ...store, currencies: { create: currencies } },
+      },
     });
     console.log(`Store created with ID: ${createStore.id}`);
 
     // Create payment providers
     const providerMap = new Map();
     for (const provider of seedData.paymentProviders) {
-      const { data: { createPaymentProvider } } = await context.graphql.raw({
+      const functionName = provider.code.split('_')[2]; // Get 'stripe', 'paypal', or 'default'
+      const {
+        data: { createPaymentProvider },
+      } = await context.graphql.raw({
         query: `mutation CreatePaymentProvider($data: PaymentProviderCreateInput!) {
           createPaymentProvider(data: $data) {
             id
@@ -126,23 +131,38 @@ async function seedStorefront(root, args, context) {
           }
         }`,
         variables: {
-          data: provider
-        }
+          data: {
+            ...provider,
+            createPaymentFunction: functionName,
+            capturePaymentFunction: functionName,
+            refundPaymentFunction: functionName,
+            getPaymentStatusFunction: functionName,
+            generatePaymentLinkFunction: functionName,
+          },
+        },
       });
       providerMap.set(provider.code, createPaymentProvider.id);
     }
 
     // Create fulfillment provider
-    const { data: { createFulfillmentProvider } } = await context.graphql.raw({
+    const {
+      data: { createFulfillmentProvider },
+    } = await context.graphql.raw({
       query: `mutation CreateFulfillmentProvider($data: FulfillmentProviderCreateInput!) {
         createFulfillmentProvider(data: $data) {
           id
+          code
         }
       }`,
       variables: {
-        data: { code: "manual" }
-      }
+        data: { 
+          name: "Manual Fulfillment",
+          code: "fp_manual",
+          isInstalled: true,
+        },
+      },
     });
+    console.log(`Manual fulfillment provider created with ID: ${createFulfillmentProvider.id}`);
 
     // Create countries
     for (const country of seedData.countries) {
@@ -153,25 +173,26 @@ async function seedStorefront(root, args, context) {
           }
         }`,
         variables: {
-          data: country
-        }
+          data: country,
+        },
       });
     }
 
-    // Create regions
+    // Create regions with proper fulfillment provider connection
     const createdRegions = [];
     for (const region of seedData.regions) {
       const {
         id,
         currency_code,
         countries,
-        fulfillment_providers,
         payment_providers,
         tax_rate,
         name,
       } = region;
 
-      const { data: { createRegion } } = await context.graphql.raw({
+      const {
+        data: { createRegion },
+      } = await context.graphql.raw({
         query: `mutation CreateRegion($data: RegionCreateInput!) {
           createRegion(data: $data) {
             id
@@ -184,16 +205,18 @@ async function seedStorefront(root, args, context) {
             taxRate: tax_rate,
             currency: { connect: { code: currency_code } },
             paymentProviders: {
-              connect: payment_providers.map((code) => ({ id: providerMap.get(code) })),
+              connect: payment_providers.map((code) => ({
+                id: providerMap.get(code),
+              })),
             },
             fulfillmentProviders: {
-              connect: fulfillment_providers.map((code) => ({ code })),
+              connect: [{ code: "fp_manual" }],
             },
             countries: {
               connect: countries.map((iso2) => ({ iso2 })),
             },
-          }
-        }
+          },
+        },
       });
       createdRegions.push({ id: createRegion.id });
     }
@@ -225,15 +248,17 @@ async function seedStorefront(root, args, context) {
             isReturn: is_return !== undefined ? is_return : false,
             region: { connect: { code: region_id } },
             fulfillmentProvider: { connect: { code: provider_id } },
-          }
-        }
+          },
+        },
       });
     }
 
     // Create collections
     const collectionIds = {};
     for (const collection of seedData.collections) {
-      const { data: { createProductCollection } } = await context.graphql.raw({
+      const {
+        data: { createProductCollection },
+      } = await context.graphql.raw({
         query: `mutation CreateCollection($data: ProductCollectionCreateInput!) {
           createProductCollection(data: $data) {
             id
@@ -241,11 +266,11 @@ async function seedStorefront(root, args, context) {
           }
         }`,
         variables: {
-          data: { 
-            title: collection.title, 
-            handle: collection.handle 
-          }
-        }
+          data: {
+            title: collection.title,
+            handle: collection.handle,
+          },
+        },
       });
       collectionIds[collection.handle] = createProductCollection.id;
     }
@@ -253,7 +278,9 @@ async function seedStorefront(root, args, context) {
     // Create categories
     const categoryIds = {};
     for (const category of seedData.categories) {
-      const { data: { createProductCategory } } = await context.graphql.raw({
+      const {
+        data: { createProductCategory },
+      } = await context.graphql.raw({
         query: `mutation CreateProductCategory($data: ProductCategoryCreateInput!) {
           createProductCategory(data: $data) {
             id
@@ -264,9 +291,9 @@ async function seedStorefront(root, args, context) {
           data: {
             title: category.name,
             handle: category.id,
-            isActive: true
-          }
-        }
+            isActive: true,
+          },
+        },
       });
       categoryIds[category.handle] = createProductCategory.id;
     }
@@ -284,11 +311,13 @@ async function seedStorefront(root, args, context) {
         options,
         variants,
         collections: productCollections,
-        status = "published" // Set default status to published
+        status = "published", // Set default status to published
       } = product;
 
       // Create product
-      const { data: { createProduct } } = await context.graphql.raw({
+      const {
+        data: { createProduct },
+      } = await context.graphql.raw({
         query: `mutation CreateProduct($data: ProductCreateInput!) {
           createProduct(data: $data) {
             id
@@ -318,35 +347,33 @@ async function seedStorefront(root, args, context) {
                 },
               })),
             },
-            productCategories: { 
+            productCategories: {
               connect: categories.map((category) => ({
-                handle: category.id
-              }))
+                handle: category.id,
+              })),
             },
             productCollections: {
               connect: productCollections
                 ? productCollections.map((collection) => ({
-                    handle: collection
+                    handle: collection,
                   }))
                 : [],
             },
-          }
-        }
+          },
+        },
       });
 
       // Create variants
-      const allOptionValues = createProduct.productOptions.reduce((acc, option) => {
-        return acc.concat(option.productOptionValues);
-      }, []);
+      const allOptionValues = createProduct.productOptions.reduce(
+        (acc, option) => {
+          return acc.concat(option.productOptionValues);
+        },
+        []
+      );
 
       for (const variant of variants) {
-        const {
-          title,
-          prices,
-          options,
-          inventory_quantity,
-          manage_inventory,
-        } = variant;
+        const { title, prices, options, inventory_quantity, manage_inventory } =
+          variant;
 
         const optionValues = options.map((option) => option.value);
         const matchingIds = allOptionValues
@@ -360,36 +387,44 @@ async function seedStorefront(root, args, context) {
             }
           }`,
           variables: {
-            data: [{
-              title,
-              inventoryQuantity: inventory_quantity,
-              manageInventory: manage_inventory,
-              prices: {
-                create: prices.map(({ currency_code, amount }) => {
-                  const region = seedData.regions.find(
-                    (region) => region.currency_code === currency_code
-                  );
-                  return {
-                    amount,
-                    currency: { connect: { code: currency_code } },
-                    region: { connect: { code: region?.id } },
-                  };
-                }),
+            data: [
+              {
+                title,
+                inventoryQuantity: inventory_quantity,
+                manageInventory: manage_inventory,
+                prices: {
+                  create: prices.map(({ currency_code, amount }) => {
+                    const region = seedData.regions.find(
+                      (region) => region.currency_code === currency_code
+                    );
+                    return {
+                      amount,
+                      currency: { connect: { code: currency_code } },
+                      region: { connect: { code: region?.id } },
+                    };
+                  }),
+                },
+                productOptionValues: {
+                  connect: matchingIds,
+                },
+                product: {
+                  connect: { id: createProduct.id },
+                },
               },
-              productOptionValues: {
-                connect: matchingIds,
-              },
-              product: {
-                connect: { id: createProduct.id },
-              },
-            }]
-          }
+            ],
+          },
         });
       }
 
       // Create product images
       const filename = `${handle}.jpeg`;
-      const imagesDir = path.join(process.cwd(), 'storefront', 'lib', 'seed', 'images');
+      const imagesDir = path.join(
+        process.cwd(),
+        "storefront",
+        "lib",
+        "seed",
+        "images"
+      );
       const imagePath = path.join(imagesDir, filename);
 
       if (fs.existsSync(imagePath)) {
@@ -412,13 +447,13 @@ async function seedStorefront(root, args, context) {
           variables: {
             data: {
               image: {
-                upload
+                upload,
               },
               products: {
                 connect: [{ id: createProduct.id }],
               },
             },
-          }
+          },
         });
       }
     }
@@ -431,4 +466,4 @@ async function seedStorefront(root, args, context) {
   }
 }
 
-export default seedStorefront; 
+export default seedStorefront;

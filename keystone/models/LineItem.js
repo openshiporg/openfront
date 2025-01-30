@@ -59,9 +59,6 @@ export const LineItem = list({
     quantity: integer({
       validation: { isRequired: true },
     }),
-    fulfilledQuantity: integer(),
-    returnedQuantity: integer(),
-    shippedQuantity: integer(),
     metadata: json(),
     isReturn: checkbox(),
     isGiftcard: checkbox(),
@@ -182,6 +179,10 @@ export const LineItem = list({
                 query: `cart { region { id taxRate currency { code noDivisionCurrency } } }`,
               });
 
+              if (!cart) {
+                return "No cart associated";
+              }
+
               const prices = await sudoContext.query.MoneyAmount.findMany({
                 where: {
                   productVariant: {
@@ -201,7 +202,7 @@ export const LineItem = list({
               const currencyCode =
                 cart?.region?.currency?.code || price?.currencyCode;
               if (!price || !currencyCode) {
-                throw new Error("No price or currency information available");
+                return "No price available";
               }
 
               const amount = price.originalAmount;
@@ -235,6 +236,10 @@ export const LineItem = list({
                 `,
               });
 
+              if (!cart) {
+                return "No cart associated";
+              }
+
               const prices = await sudoContext.query.MoneyAmount.findMany({
                 where: {
                   productVariant: {
@@ -254,7 +259,7 @@ export const LineItem = list({
               const currencyCode =
                 cart?.region?.currency?.code || price?.currencyCode;
               if (!price || !currencyCode) {
-                throw new Error("No price or currency information available");
+                return "No price available";
               }
 
               const amount = price.calculatedAmount;
@@ -290,6 +295,10 @@ export const LineItem = list({
                 `,
                 });
 
+              if (!cart) {
+                return "No cart associated";
+              }
+
               const prices = await sudoContext.query.MoneyAmount.findMany({
                 where: {
                   productVariant: {
@@ -309,7 +318,7 @@ export const LineItem = list({
               const currencyCode =
                 cart?.region?.currency?.code || price?.currencyCode;
               if (!price || !currencyCode) {
-                throw new Error("No price or currency information available");
+                return "No price available";
               }
 
               const amount = price.calculatedAmount;
@@ -340,6 +349,10 @@ export const LineItem = list({
                 `,
               });
 
+              if (!cart) {
+                return "no_cart";
+              }
+
               const prices = await sudoContext.query.MoneyAmount.findMany({
                 where: {
                   productVariant: {
@@ -365,6 +378,10 @@ export const LineItem = list({
                   where: { id: item.id },
                   query: `cart { region { id } } quantity`,
                 });
+                
+              if (!cart) {
+                return 0;
+              }
 
               const prices = await sudoContext.query.MoneyAmount.findMany({
                 where: {

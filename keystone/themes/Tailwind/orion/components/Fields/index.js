@@ -104,6 +104,7 @@ export function Fields({
       if (renderedFieldsInGroup.every((field) => field === null)) {
         continue;
       }
+
       rendered.push(
         <FieldGroup
           key={group.label}
@@ -135,8 +136,23 @@ export function Fields({
 function FieldGroup(props) {
   const descriptionId = useId();
   const labelId = useId();
-
+  
   const divider = <Separator orientation="vertical" />;
+
+  // Count actual fields (excluding virtual fields in create view)
+  // which will have Symbol(create view virtual field value) as a value
+  const actualFieldCount = props.children.filter(
+    (item) =>
+      item !== undefined &&
+      !(typeof item.props?.value === 'symbol' && 
+        item.props?.value.toString() === 'Symbol(create view virtual field value)')
+  ).length;
+
+  // Don't render the group if there are no actual fields
+  if (actualFieldCount === 0) {
+    return null;
+  }
+
   return (
     <div
       role="group"
@@ -145,16 +161,17 @@ function FieldGroup(props) {
     >
       <details open={!props.collapsed} className="group">
         <summary className="list-none outline-none [&::-webkit-details-marker]:hidden cursor-pointer">
-          <div className="flex gap-1.5 items-center">
-            <div
-              className={cn(
-                buttonVariants({ variant: "outline", size: "icon" }),
-                "self-start transition-transform group-open:rotate-90 [&_svg]:size-3 h-6 w-6"
-              )}
-            >
-              <ChevronRight />
-            </div>
-
+          <div className="flex gap-1.5">
+            <span>
+              <div
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "icon" }),
+                  "border self-start transition-transform group-open:rotate-90 [&_svg]:size-3 h-6 w-6"
+                )}
+              >
+                <ChevronRight />
+              </div>
+            </span>
             {divider}
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
@@ -162,12 +179,7 @@ function FieldGroup(props) {
                   {props.label}
                 </text>
                 <Badge className="text-[.7rem] py-0.5 uppercase tracking-wide font-medium">
-                  {props.children.filter((item) => item !== undefined).length}{" "}
-                  FIELD
-                  {props.children.filter((item) => item !== undefined).length >
-                  1
-                    ? "S"
-                    : ""}
+                  {actualFieldCount} FIELD{actualFieldCount !== 1 && "S"}
                 </Badge>
               </div>
               {props.description !== null && (

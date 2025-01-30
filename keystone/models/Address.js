@@ -1,5 +1,5 @@
-import { list } from "@keystone-6/core";
-import { json, text, relationship, checkbox } from "@keystone-6/core/fields";
+import { list, graphql } from "@keystone-6/core";
+import { json, text, relationship, checkbox, virtual } from "@keystone-6/core/fields";
 import { permissions, isSignedIn } from "../access";
 import { trackingFields } from "./trackingFields";
 
@@ -29,13 +29,56 @@ export const Address = list({
     }
   },
   fields: {
+    label: virtual({
+      field: graphql.field({
+        type: graphql.String,
+        resolve(item) {
+          const parts = [];
+          
+          // Company or Name
+          if (item.company) {
+            parts.push(item.company);
+          }
+          if (item.firstName || item.lastName) {
+            parts.push(`${item.firstName || ''} ${item.lastName || ''}`.trim());
+          }
+          
+          // Address lines
+          if (item.address1) {
+            parts.push(item.address1);
+          }
+          if (item.address2) {
+            parts.push(item.address2);
+          }
+          
+          // City, Province Postal
+          const cityProvince = [];
+          if (item.city) cityProvince.push(item.city);
+          if (item.province) cityProvince.push(item.province);
+          if (cityProvince.length > 0) {
+            parts.push(cityProvince.join(', ') + (item.postalCode ? ` ${item.postalCode}` : ''));
+          } else if (item.postalCode) {
+            parts.push(item.postalCode);
+          }
+          
+          return parts.join(' • ');
+        }
+      }),
+      ui: {
+        listView: {
+          fieldMode: 'read',
+        },
+        itemView: {
+          fieldMode: 'read',
+        },
+      },
+    }),
     company: text(),
     firstName: text(),
     lastName: text(),
     address1: text(),
     address2: text(),
     city: text(),
-    countryCode: text(),
     province: text(),
     postalCode: text(),
     phone: text(),
@@ -44,6 +87,7 @@ export const Address = list({
     country: relationship({
       ref: "Country.addresses",
       many: false,
+      validation: { isRequired: true }
     }),
     user: relationship({
       ref: "User.addresses",
@@ -60,6 +104,10 @@ export const Address = list({
           return resolvedData.user;
         },
       },
+    }),
+    shippingProviders: relationship({
+      ref: 'ShippingProvider.fromAddress',
+      many: true,
     }),
     cart: relationship({
       ref: "Cart.addresses",
@@ -90,5 +138,8 @@ export const Address = list({
       many: true,
     }),
     ...trackingFields,
+  },
+  ui: {
+    labelField: 'label',
   },
 });

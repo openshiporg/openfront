@@ -17,15 +17,30 @@ const ShippingDetails = ({ order }) => {
           <Text className="txt-medium text-ui-fg-subtle">
             {order.shippingAddress.firstName} {order.shippingAddress.lastName}
           </Text>
+          {order.shippingAddress.company && (
+            <Text className="txt-medium text-ui-fg-subtle">
+              {order.shippingAddress.company}
+            </Text>
+          )}
           <Text className="txt-medium text-ui-fg-subtle">
-            {order.shippingAddress.address1} {order.shippingAddress.address2}
+            {order.shippingAddress.address1}
+            {order.shippingAddress.address2 && (
+              <span>, {order.shippingAddress.address2}</span>
+            )}
           </Text>
           <Text className="txt-medium text-ui-fg-subtle">
-            {order.shippingAddress.postalCode}, {order.shippingAddress.city}
+            {order.shippingAddress.city}
+            {order.shippingAddress.province && `, ${order.shippingAddress.province} `}
+            {order.shippingAddress.postalCode}
           </Text>
           <Text className="txt-medium text-ui-fg-subtle">
-            {order.shippingAddress.countryCode?.toUpperCase()}
+            {order.shippingAddress.country?.name}
           </Text>
+          {order.shippingAddress.phone && (
+            <Text className="txt-medium text-ui-fg-subtle">
+              {order.shippingAddress.phone}
+            </Text>
+          )}
         </div>
 
         <div className="flex flex-col w-1/3 ">
@@ -46,3 +61,4 @@ const ShippingDetails = ({ order }) => {
 };
 
 export default ShippingDetails;
+

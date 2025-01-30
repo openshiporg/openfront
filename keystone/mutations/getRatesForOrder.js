@@ -1,0 +1,158 @@
+"use server";
+
+import { getRates } from "../utils/shippingProviderAdapter";
+import { permissions } from "../access";
+
+async function getRatesForOrder(root, { orderId, providerId, dimensions }, context) {
+  // Check access permissions first
+  const hasAccess =
+    permissions.canReadOrders({ session: context.session }) ||
+    permissions.canManageOrders({ session: context.session });
+
+  if (!hasAccess) {
+    throw new Error(
+      "Access denied: You do not have permission to get shipping rates"
+    );
+  }
+
+  const sudoContext = context.sudo();
+
+  try {
+    // Get order and provider details
+    const [order, provider] = await Promise.all([
+      sudoContext.query.Order.findOne({
+        where: { id: orderId },
+        query: `
+          id
+          shippingAddress {
+            firstName
+            lastName
+            company
+            address1
+            address2
+            city
+            province
+            postalCode
+            country {
+              iso2
+            }
+            phone
+          }
+          lineItems {
+            id
+            quantity
+            productVariant {
+              id
+              weight
+              width
+              height
+              length
+            }
+          }
+        `,
+      }),
+      sudoContext.query.ShippingProvider.findOne({
+        where: { id: providerId },
+        query: `
+          id
+          name
+          accessToken
+          getRatesFunction
+          isActive
+          fromAddress {
+            firstName
+            lastName
+            company
+            address1
+            address2
+            city
+            province
+            postalCode
+            country {
+              iso2
+            }
+            phone
+          }
+        `,
+      }),
+    ]);
+
+    if (!order) {
+      throw new Error(`Order not found: ${orderId}`);
+    }
+
+    if (!provider) {
+      throw new Error(`Shipping provider not found: ${providerId}`);
+    }
+
+    if (!provider.isActive) {
+      throw new Error(`Shipping provider ${provider.id} is not active`);
+    }
+
+    if (!provider.accessToken) {
+      throw new Error(`Shipping provider ${provider.id} has no access token configured`);
+    }
+
+    // If dimensions aren't provided, try to get them from line items
+    let packageDimensions = dimensions;
+    if (!packageDimensions) {
+      // Calculate from line items
+      let maxLength = 0;
+      let maxWidth = 0;
+      let maxHeight = 0;
+      let totalWeight = 0;
+      let hasDimensions = false;
+
+      order.lineItems.forEach(item => {
+        const variant = item.productVariant;
+        if (variant) {
+          if (variant.length && variant.width && variant.height && variant.weight) {
+            hasDimensions = true;
+            maxLength = Math.max(maxLength, variant.length);
+            maxWidth = Math.max(maxWidth, variant.width);
+            maxHeight = Math.max(maxHeight, variant.height);
+            totalWeight += variant.weight * item.quantity;
+          }
+        }
+      });
+
+      if (!hasDimensions) {
+        throw new Error("No dimensions found for line items. Dimensions must be provided to get shipping rates.");
+      }
+
+      packageDimensions = {
+        length: maxLength,
+        width: maxWidth,
+        height: maxHeight,
+        weight: totalWeight,
+        unit: "cm", // Default unit
+        weightUnit: "kg" // Default weight unit
+      };
+    }
+
+    // Use the adapter to get rates
+    const rates = await getRates({ 
+      provider: {
+        ...provider,
+        accessToken: provider.accessToken
+      }, 
+      order,
+      dimensions: packageDimensions
+    });
+
+    // Return rates without dimensions
+    return rates.map(rate => ({
+      id: rate.id,
+      provider: provider.name,
+      service: rate.service,
+      carrier: rate.carrier,
+      price: rate.price,
+      estimatedDays: rate.estimatedDays,
+    }));
+  } catch (error) {
+    console.error("Getting shipping rates failed:", error);
+    throw error;
+  }
+}
+
+export default getRatesForOrder;

@@ -16,12 +16,14 @@ async function getCustomerOrders(root, { limit = 10, offset = 0 }, context) {
       id
       displayId
       status
-      paymentStatus
       fulfillmentStatus
       total
       createdAt
       shippingAddress {
-        countryCode
+        country {
+          id
+          iso2
+        }
       }
       lineItems {
         id

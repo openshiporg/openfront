@@ -7,11 +7,11 @@ import {
   makeDataGetter,
   useInvalidFields,
   serializeValueToObjByFieldKey,
-  Fields,
 } from "@keystone-6/core/admin-ui/utils";
 import { Button } from "../../primitives/default/ui/button";
 import { GraphQLErrorNotice } from "../GraphQLErrorNotice";
 import { useToasts } from "../Toast";
+import { Fields } from "../Fields";
 
 export function InlineCreate({
   list,
@@ -98,7 +98,7 @@ export function InlineCreate({
 
   return (
     <form onSubmit={onSubmit}>
-      <div className="space-y-10">
+      <div className="space-y-4">
         {error && (
           <GraphQLErrorNotice
             networkError={error?.networkError}
@@ -112,11 +112,11 @@ export function InlineCreate({
           onChange={setValue}
           value={value}
         />
-        <div className="flex space-x-2">
+        <div className="flex gap-1 flex-wrap">
           <Button isLoading={loading} size="sm" type="submit">
             Create {list.singular}
           </Button>
-          <Button size="sm" onClick={onCancel}>
+          <Button variant="outline" size="sm" onClick={onCancel}>
             Cancel
           </Button>
         </div>

@@ -77,7 +77,7 @@ const AddressSelect = ({ addresses, cart, onSelect }) => {
                         </span>
                         <span>
                           {address.province && `${address.province}, `}
-                          {address.countryCode?.toUpperCase()}
+                          {address.country?.iso2?.toUpperCase()}
                         </span>
                       </div>
                     </div>

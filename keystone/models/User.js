@@ -211,7 +211,10 @@ export const User = list({
                 city
                 province
                 postalCode
-                countryCode
+                country {
+                  id
+                  iso2
+                }
                 phone
             }`,
           },

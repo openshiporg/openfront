@@ -91,6 +91,10 @@ export const Region = list({
       ref: "TaxRate.region",
       many: true,
     }),
+    shippingProviders: relationship({
+      ref: "ShippingProvider.regions",
+      many: true,
+    }),
     ...trackingFields
   },
 });

@@ -20,7 +20,7 @@ const ShippingAddress = ({
     "shippingAddress.company": cart?.shippingAddress?.company || "",
     "shippingAddress.postalCode": cart?.shippingAddress?.postalCode || "",
     "shippingAddress.city": cart?.shippingAddress?.city || "",
-    "shippingAddress.countryCode": cart?.shippingAddress?.countryCode || countryCode || "",
+    "shippingAddress.countryCode": cart?.shippingAddress?.country?.iso2 || countryCode || "",
     "shippingAddress.province": cart?.shippingAddress?.province || "",
     email: cart?.email || customer?.email || "",
     "shippingAddress.phone": cart?.shippingAddress?.phone || customer?.phone || "",
@@ -31,7 +31,7 @@ const ShippingAddress = ({
   const countriesInRegion = useMemo(() => cart?.region?.countries?.map((c) => c.iso2), [cart?.region]);
 
   const addressesInRegion = useMemo(() =>
-    customer?.addresses?.filter((a) => a.countryCode && countriesInRegion?.includes(a.countryCode)), 
+    customer?.addresses?.filter((a) => a.country?.iso2 && countriesInRegion?.includes(a.country.iso2)), 
     [customer?.addresses, countriesInRegion]
   );
 
@@ -43,7 +43,7 @@ const ShippingAddress = ({
       "shippingAddress.company": cart?.shippingAddress?.company || "",
       "shippingAddress.postalCode": cart?.shippingAddress?.postalCode || "",
       "shippingAddress.city": cart?.shippingAddress?.city || "",
-      "shippingAddress.countryCode": cart?.shippingAddress?.countryCode || countryCode || "",
+      "shippingAddress.countryCode": cart?.shippingAddress?.country?.iso2 || countryCode || "",
       "shippingAddress.province": cart?.shippingAddress?.province || "",
       email: cart?.email || customer?.email || "",
       "shippingAddress.phone": cart?.shippingAddress?.phone || customer?.phone || "",
@@ -71,7 +71,7 @@ const ShippingAddress = ({
       "shippingAddress.company": address.company || "",
       "shippingAddress.postalCode": address.postalCode || "",
       "shippingAddress.city": address.city || "",
-      "shippingAddress.countryCode": address.countryCode || countryCode || "",
+      "shippingAddress.countryCode": address.country?.iso2 || countryCode || "",
       "shippingAddress.province": address.province || "",
       "shippingAddress.phone": address.phone || prev["shippingAddress.phone"],
     }));

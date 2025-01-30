@@ -26,12 +26,11 @@ async function initiatePaymentSession(
       }
       paymentCollection {
         id
-        status
         amount
         paymentSessions {
           id
-          status
           isSelected
+          isInitiated
           paymentProvider {
             id
             code
@@ -62,7 +61,6 @@ async function initiatePaymentSession(
     cart.paymentCollection = await sudoContext.query.PaymentCollection.createOne({
       data: {
         cart: { connect: { id: cart.id } },
-        status: "pending",
         amount: cart.rawTotal,
         description: "default",
       },
@@ -72,11 +70,11 @@ async function initiatePaymentSession(
 
   // Check for existing session with same provider
   const existingSession = cart.paymentCollection?.paymentSessions?.find(
-    s => s.paymentProvider.code === paymentProviderId
+    s => s.paymentProvider.code === paymentProviderId && !s.isInitiated
   );
 
-  // If we have an existing session and it's not errored, just select it
-  if (existingSession && existingSession.status !== "error") {
+  // If we have an existing session that hasn't been initiated, just select it
+  if (existingSession) {
     // Unselect all other sessions first
     const otherSessions = cart.paymentCollection.paymentSessions.filter(
       s => s.id !== existingSession.id && s.isSelected
@@ -202,15 +200,15 @@ async function initiatePaymentSession(
         paymentCollection: { connect: { id: cart.paymentCollection.id } },
         paymentProvider: { connect: { id: provider.id } },
         amount: cart.rawTotal,
-        status: "pending",
+        isSelected: true,
+        isInitiated: false,
         data: sessionData,
-        isSelected: true, // Make it selected immediately
       },
       query: `
         id
-        status
         data
         amount
+        isInitiated
       `,
     });
 

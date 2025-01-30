@@ -18,7 +18,6 @@ async function createActiveCartPaymentSessions(root, { cartId }, context) {
         id
         paymentSessions {
           id
-          status
           paymentProvider {
             id
           }

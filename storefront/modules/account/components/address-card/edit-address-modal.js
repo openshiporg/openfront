@@ -88,15 +88,12 @@ const EditAddress = ({ region, address, isActive = false }) => {
               {address.address2 && <span>, {address.address2}</span>}
             </span>
             <span>
-              {address.postalCode}, {address.city}
+              {address.city}
+              {address.province && `, ${address.province} `}
+              {address.postalCode}
             </span>
-            <span>
-              {address.province && `${address.province}, `}
-              {address.countryCode?.toUpperCase()}
-            </span>
-            <span>
-              {address.phone}
-            </span>
+            <span>{address.country?.name}</span>
+            <span>{address.phone}</span>
           </Text>
         </div>
         <div className="flex items-center gap-x-4">
@@ -186,7 +183,7 @@ const EditAddress = ({ region, address, isActive = false }) => {
                 region={region}
                 required
                 autoComplete="country"
-                defaultValue={address.countryCode}
+                defaultValue={address.country?.iso2}
               />
               <Input
                 label="Phone"

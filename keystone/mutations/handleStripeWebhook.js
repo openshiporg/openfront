@@ -62,8 +62,7 @@ async function handleStripeWebhook(root, { event, headers }, context) {
         await sudoContext.query.Order.updateOne({
           where: { id: paymentIntent.metadata.orderId },
           data: {
-            status: 'confirmed',
-            paymentStatus: 'captured',
+            status: 'completed',
           },
         });
       }
@@ -90,8 +89,7 @@ async function handleStripeWebhook(root, { event, headers }, context) {
         await sudoContext.query.Order.updateOne({
           where: { id: paymentIntent.metadata.orderId },
           data: {
-            status: 'failed',
-            paymentStatus: 'failed',
+            status: 'requires_action',
           },
         });
       }

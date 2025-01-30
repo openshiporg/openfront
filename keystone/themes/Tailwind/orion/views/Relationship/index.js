@@ -103,7 +103,7 @@ export const Field = ({
         {field.description}
       </FieldDescription>
       <Fragment>
-        <div className="space-y-4">
+        <div className="space-y-2">
           <RelationshipSelect
             controlShouldRenderValue
             aria-describedby={
@@ -144,7 +144,7 @@ export const Field = ({
             }
           />
           {!field.hideButtons && (
-            <div className="flex space-x-2">
+            <div className="flex gap-1 flex-wrap">
               {onChange !== undefined &&
                 !field.hideCreate &&
                 onChange !== undefined && (
@@ -417,7 +417,6 @@ export const controller = (config) => {
             onChange(newItems.map((item) => item.id).join(","));
           },
         };
-        console.log({ refLabelField, refSearchFields, value });
         return (
           <RelationshipSelect
             controlShouldRenderValue

@@ -4,10 +4,12 @@ import {
   checkbox, 
   relationship, 
   text,
-  json 
+  json,
+  virtual 
 } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
+import { graphql } from "@keystone-6/core";
 
 export const PaymentProvider = list({
   access: {
@@ -37,14 +39,48 @@ export const PaymentProvider = list({
     isInstalled: checkbox({
       defaultValue: true,
     }),
+    credentials: json({
+      defaultValue: {},
+    }),
     metadata: json({
       defaultValue: {},
+    }),
+    // Adapter function fields
+    createPaymentFunction: text({
+      validation: { isRequired: true },
+      ui: {
+        description: "Name of the adapter function to create payments",
+      }
+    }),
+    capturePaymentFunction: text({
+      validation: { isRequired: true },
+      ui: {
+        description: "Name of the adapter function to capture payments",
+      }
+    }),
+    refundPaymentFunction: text({
+      validation: { isRequired: true },
+      ui: {
+        description: "Name of the adapter function to refund payments",
+      }
+    }),
+    getPaymentStatusFunction: text({
+      validation: { isRequired: true },
+      ui: {
+        description: "Name of the adapter function to check payment status",
+      }
+    }),
+    generatePaymentLinkFunction: text({
+      validation: { isRequired: true },
+      ui: {
+        description: "Name of the adapter function to generate payment dashboard links",
+      }
     }),
     regions: relationship({
       ref: "Region.paymentProviders",
       many: true,
     }),
-    paymentSessions: relationship({
+    sessions: relationship({
       ref: "PaymentSession.paymentProvider",
       many: true,
     }),

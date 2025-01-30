@@ -27,14 +27,16 @@ const OrderDetails = ({ order, showStatus }) => {
         {showStatus && (
           <>
             <Text>
-              Order status:{" "}
+              Fulfillment status:{" "}
               <span className="text-ui-fg-subtle">
-                {order.fulfillmentStatus}
+                {formatStatus(order.fulfillmentStatus?.status || "not_fulfilled")}
               </span>
             </Text>
             <Text>
               Payment status:{" "}
-              <span className="text-ui-fg-subtle">{order.paymentStatus}</span>
+              <span className="text-ui-fg-subtle">
+                {formatStatus(order.paymentDetails?.[0]?.status || "not_paid")}
+              </span>
             </Text>
           </>
         )}

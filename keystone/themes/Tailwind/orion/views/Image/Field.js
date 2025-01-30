@@ -96,7 +96,7 @@ function ImgView({ errorMessage, value, onChange, field, inputRef }) {
     value.kind === "from-server" ? value.data.src : imagePathFromUpload;
 
   return (
-    <div className="flex space-x-2 items-end">
+    <div className="flex gap-1 flex-wrap items-end">
       <ImageWrapper url={value.kind === "from-server" ? imageSrc : undefined}>
         {errorMessage ||
         (value.kind !== "from-server" && value.kind !== "upload") ? (
@@ -143,7 +143,7 @@ function ImgView({ errorMessage, value, onChange, field, inputRef }) {
                     })}
               />
             ) : null}
-            <div className="flex space-x-2 items-center">
+            <div className="flex gap-1 flex-wrap items-center">
               <Button
                 variant="secondary"
                 onClick={() => {
@@ -177,7 +177,7 @@ function ImgView({ errorMessage, value, onChange, field, inputRef }) {
           </div>
         )
       ) : (
-        <div className="flex space-x-2 items-center">
+        <div className="flex gap-1 flex-wrap items-center">
           <Button
             disabled={onChange === undefined}
             variant="secondary"

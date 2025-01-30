@@ -63,7 +63,6 @@ import { Store } from "./Store";
 import { Swap } from "./Swap";
 import { TaxProvider } from "./TaxProvider";
 import { TaxRate } from "./TaxRate";
-import { TrackingLink } from "./TrackingLink";
 import { RuleType } from "./RuleType";
 import { Capture } from "./Capture";
 import { BatchJob } from './BatchJob';
@@ -71,6 +70,8 @@ import { Team } from './Team';
 import { Location } from './Location';
 import { StockMovement } from './StockMovement';
 import { OrderEvent } from './OrderEvent';
+import { ShippingProvider } from './ShippingProvider';
+import { ShippingLabel } from './ShippingLabel';
 
 export const models = {
   User,
@@ -140,10 +141,11 @@ export const models = {
   Swap,
   TaxProvider,
   TaxRate,
-  TrackingLink,
   BatchJob,
   Team,
   Location,
   StockMovement,
   OrderEvent,
+  ShippingProvider,
+  ShippingLabel,
 };

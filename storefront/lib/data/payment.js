@@ -33,7 +33,6 @@ export const initiatePaymentSession = async (cartId, paymentProviderId) => {
         paymentProviderId: $paymentProviderId
       ) {
         id
-        status
         data
         amount
       }

@@ -36,3 +36,4 @@ yarn-error.log*
 
 # keystone
 .keystone
+.aider*

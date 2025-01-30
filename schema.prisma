@@ -95,44 +95,44 @@ model Role {
 }
 
 model Order {
-  id                   String                     @id @default(cuid())
-  status               OrderStatusType            @default(pending)
-  fulfillmentStatus    OrderFulfillmentStatusType @default(not_fulfilled)
-  paymentStatus        OrderPaymentStatusType     @default(not_paid)
+  id                   String                @id @default(cuid())
+  status               OrderStatusType       @default(pending)
   displayId            Int
-  email                String                     @default("")
+  email                String                @default("")
   taxRate              Float?
   canceledAt           DateTime?
   metadata             Json?
-  idempotencyKey       String                     @default("")
-  noNotification       Boolean                    @default(false)
-  externalId           String                     @default("")
-  shippingAddress      Address?                   @relation("Order_shippingAddress", fields: [shippingAddressId], references: [id])
-  shippingAddressId    String?                    @map("shippingAddress")
-  billingAddress       Address?                   @relation("Order_billingAddress", fields: [billingAddressId], references: [id])
-  billingAddressId     String?                    @map("billingAddress")
-  currency             Currency?                  @relation("Order_currency", fields: [currencyId], references: [id])
-  currencyId           String?                    @map("currency")
-  draftOrder           DraftOrder?                @relation("DraftOrder_order")
-  cart                 Cart?                      @relation("Cart_order")
-  user                 User?                      @relation("Order_user", fields: [userId], references: [id])
-  userId               String?                    @map("user")
-  region               Region?                    @relation("Order_region", fields: [regionId], references: [id])
-  regionId             String?                    @map("region")
-  claimOrders          ClaimOrder[]               @relation("ClaimOrder_order")
-  fulfillments         Fulfillment[]              @relation("Fulfillment_order")
-  giftCards            GiftCard[]                 @relation("GiftCard_order")
-  giftCardTransactions GiftCardTransaction[]      @relation("GiftCardTransaction_order")
-  lineItems            LineItem[]                 @relation("LineItem_order")
-  discounts            Discount[]                 @relation("Discount_orders")
-  payments             Payment[]                  @relation("Payment_order")
-  returns              Return[]                   @relation("Return_order")
-  shippingMethods      ShippingMethod[]           @relation("ShippingMethod_order")
-  swaps                Swap[]                     @relation("Swap_order")
-  createdAt            DateTime                   @default(now())
-  updatedAt            DateTime                   @default(now()) @updatedAt
-  secretKey            String                     @default("")
-  events               OrderEvent[]               @relation("OrderEvent_order")
+  idempotencyKey       String                @default("")
+  noNotification       Boolean               @default(false)
+  externalId           String                @default("")
+  shippingAddress      Address?              @relation("Order_shippingAddress", fields: [shippingAddressId], references: [id])
+  shippingAddressId    String?               @map("shippingAddress")
+  billingAddress       Address?              @relation("Order_billingAddress", fields: [billingAddressId], references: [id])
+  billingAddressId     String?               @map("billingAddress")
+  currency             Currency?             @relation("Order_currency", fields: [currencyId], references: [id])
+  currencyId           String?               @map("currency")
+  draftOrder           DraftOrder?           @relation("DraftOrder_order")
+  cart                 Cart?                 @relation("Cart_order")
+  user                 User?                 @relation("Order_user", fields: [userId], references: [id])
+  userId               String?               @map("user")
+  region               Region?               @relation("Order_region", fields: [regionId], references: [id])
+  regionId             String?               @map("region")
+  claimOrders          ClaimOrder[]          @relation("ClaimOrder_order")
+  fulfillments         Fulfillment[]         @relation("Fulfillment_order")
+  giftCards            GiftCard[]            @relation("GiftCard_order")
+  giftCardTransactions GiftCardTransaction[] @relation("GiftCardTransaction_order")
+  lineItems            LineItem[]            @relation("LineItem_order")
+  discounts            Discount[]            @relation("Discount_orders")
+  payments             Payment[]             @relation("Payment_order")
+  returns              Return[]              @relation("Return_order")
+  shippingMethods      ShippingMethod[]      @relation("ShippingMethod_order")
+  swaps                Swap[]                @relation("Swap_order")
+  secretKey            String                @default("")
+  events               OrderEvent[]          @relation("OrderEvent_order")
+  note                 String                @default("")
+  shippingLabels       ShippingLabel[]       @relation("ShippingLabel_order")
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @default(now()) @updatedAt
 
   @@index([shippingAddressId])
   @@index([billingAddressId])
@@ -144,9 +144,6 @@ model Order {
 model LineItem {
   id                  String               @id @default(cuid())
   quantity            Int
-  fulfilledQuantity   Int?
-  returnedQuantity    Int?
-  shippedQuantity     Int?
   metadata            Json?
   isReturn            Boolean              @default(false)
   isGiftcard          Boolean              @default(false)
@@ -377,33 +374,33 @@ model Payment {
 }
 
 model Address {
-  id                           String       @id @default(cuid())
-  company                      String       @default("")
-  firstName                    String       @default("")
-  lastName                     String       @default("")
-  address1                     String       @default("")
-  address2                     String       @default("")
-  city                         String       @default("")
-  countryCode                  String       @default("")
-  province                     String       @default("")
-  postalCode                   String       @default("")
-  phone                        String       @default("")
-  isBilling                    Boolean      @default(false)
+  id                           String             @id @default(cuid())
+  company                      String             @default("")
+  firstName                    String             @default("")
+  lastName                     String             @default("")
+  address1                     String             @default("")
+  address2                     String             @default("")
+  city                         String             @default("")
+  province                     String             @default("")
+  postalCode                   String             @default("")
+  phone                        String             @default("")
+  isBilling                    Boolean            @default(false)
   metadata                     Json?
-  country                      Country?     @relation("Address_country", fields: [countryId], references: [id])
-  countryId                    String?      @map("country")
-  user                         User?        @relation("Address_user", fields: [userId], references: [id])
-  userId                       String?      @map("user")
-  cart                         Cart?        @relation("Address_cart", fields: [cartId], references: [id])
-  cartId                       String?      @map("cart")
-  claimOrders                  ClaimOrder[] @relation("ClaimOrder_address")
-  ordersUsingAsBillingAddress  Order[]      @relation("Order_billingAddress")
-  ordersUsingAsShippingAddress Order[]      @relation("Order_shippingAddress")
-  cartsUsingAsBillingAddress   Cart[]       @relation("Cart_billingAddress")
-  cartsUsingAsShippingAddress  Cart[]       @relation("Cart_shippingAddress")
-  swaps                        Swap[]       @relation("Swap_address")
-  createdAt                    DateTime     @default(now())
-  updatedAt                    DateTime     @default(now()) @updatedAt
+  country                      Country?           @relation("Address_country", fields: [countryId], references: [id])
+  countryId                    String?            @map("country")
+  user                         User?              @relation("Address_user", fields: [userId], references: [id])
+  userId                       String?            @map("user")
+  shippingProviders            ShippingProvider[] @relation("ShippingProvider_fromAddress")
+  cart                         Cart?              @relation("Address_cart", fields: [cartId], references: [id])
+  cartId                       String?            @map("cart")
+  claimOrders                  ClaimOrder[]       @relation("ClaimOrder_address")
+  ordersUsingAsBillingAddress  Order[]            @relation("Order_billingAddress")
+  ordersUsingAsShippingAddress Order[]            @relation("Order_shippingAddress")
+  cartsUsingAsBillingAddress   Cart[]             @relation("Cart_billingAddress")
+  cartsUsingAsShippingAddress  Cart[]             @relation("Cart_shippingAddress")
+  swaps                        Swap[]             @relation("Swap_address")
+  createdAt                    DateTime           @default(now())
+  updatedAt                    DateTime           @default(now()) @updatedAt
 
   @@index([countryId])
   @@index([userId])
@@ -669,29 +666,29 @@ model DraftOrder {
 
 model Fulfillment {
   id                    String               @id @default(cuid())
-  data                  Json?
   shippedAt             DateTime?
   canceledAt            DateTime?
+  data                  Json?
   metadata              Json?
   idempotencyKey        String               @default("")
   noNotification        Boolean              @default(false)
+  order                 Order?               @relation("Fulfillment_order", fields: [orderId], references: [id])
+  orderId               String?              @map("order")
+  claimOrder            ClaimOrder?          @relation("Fulfillment_claimOrder", fields: [claimOrderId], references: [id])
+  claimOrderId          String?              @map("claimOrder")
   swap                  Swap?                @relation("Fulfillment_swap", fields: [swapId], references: [id])
   swapId                String?              @map("swap")
   fulfillmentProvider   FulfillmentProvider? @relation("Fulfillment_fulfillmentProvider", fields: [fulfillmentProviderId], references: [id])
   fulfillmentProviderId String?              @map("fulfillmentProvider")
-  claimOrder            ClaimOrder?          @relation("Fulfillment_claimOrder", fields: [claimOrderId], references: [id])
-  claimOrderId          String?              @map("claimOrder")
-  order                 Order?               @relation("Fulfillment_order", fields: [orderId], references: [id])
-  orderId               String?              @map("order")
   fulfillmentItems      FulfillmentItem[]    @relation("FulfillmentItem_fulfillment")
-  trackingLinks         TrackingLink[]       @relation("TrackingLink_fulfillment")
+  shippingLabels        ShippingLabel[]      @relation("ShippingLabel_fulfillment")
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @default(now()) @updatedAt
 
+  @@index([orderId])
+  @@index([claimOrderId])
   @@index([swapId])
   @@index([fulfillmentProviderId])
-  @@index([claimOrderId])
-  @@index([orderId])
 }
 
 model FulfillmentItem {
@@ -709,14 +706,18 @@ model FulfillmentItem {
 }
 
 model FulfillmentProvider {
-  id              String           @id @default(cuid())
-  code            String           @unique @default("")
-  isInstalled     Boolean          @default(true)
-  fulfillments    Fulfillment[]    @relation("Fulfillment_fulfillmentProvider")
-  regions         Region[]         @relation("FulfillmentProvider_regions")
-  shippingOptions ShippingOption[] @relation("ShippingOption_fulfillmentProvider")
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @default(now()) @updatedAt
+  id                String             @id @default(cuid())
+  name              String             @default("")
+  code              String             @unique @default("")
+  isInstalled       Boolean            @default(true)
+  credentials       Json?
+  metadata          Json?
+  fulfillments      Fulfillment[]      @relation("Fulfillment_fulfillmentProvider")
+  regions           Region[]           @relation("FulfillmentProvider_regions")
+  shippingOptions   ShippingOption[]   @relation("ShippingOption_fulfillmentProvider")
+  shippingProviders ShippingProvider[] @relation("ShippingProvider_fulfillmentProvider")
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @default(now()) @updatedAt
 }
 
 model GiftCard {
@@ -890,20 +891,25 @@ model OAuth {
 }
 
 model PaymentProvider {
-  id              String           @id @default(cuid())
-  name            String           @default("")
-  code            String           @unique @default("")
-  isInstalled     Boolean          @default(true)
-  metadata        Json?            @default("{}")
-  regions         Region[]         @relation("PaymentProvider_regions")
-  paymentSessions PaymentSession[] @relation("PaymentSession_paymentProvider")
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @default(now()) @updatedAt
+  id                          String           @id @default(cuid())
+  name                        String           @default("")
+  code                        String           @unique @default("")
+  isInstalled                 Boolean          @default(true)
+  credentials                 Json?            @default("{}")
+  metadata                    Json?            @default("{}")
+  createPaymentFunction       String           @default("")
+  capturePaymentFunction      String           @default("")
+  refundPaymentFunction       String           @default("")
+  getPaymentStatusFunction    String           @default("")
+  generatePaymentLinkFunction String           @default("")
+  regions                     Region[]         @relation("PaymentProvider_regions")
+  sessions                    PaymentSession[] @relation("PaymentSession_paymentProvider")
+  createdAt                   DateTime         @default(now())
+  updatedAt                   DateTime         @default(now()) @updatedAt
 }
 
 model PaymentCollection {
   id               String                            @id @default(cuid())
-  status           PaymentCollectionStatusType       @default(not_paid)
   description      PaymentCollectionDescriptionType? @default(default)
   amount           Int
   authorizedAmount Int?                              @default(0)
@@ -917,20 +923,19 @@ model PaymentCollection {
 }
 
 model PaymentSession {
-  id                  String                   @id @default(cuid())
-  isSelected          Boolean                  @default(false)
-  isInitiated         Boolean                  @default(false)
+  id                  String             @id @default(cuid())
+  isSelected          Boolean            @default(false)
+  isInitiated         Boolean            @default(false)
   amount              Int
-  status              PaymentSessionStatusType @default(pending)
-  data                Json?                    @default("{}")
-  idempotencyKey      String                   @default("")
-  paymentCollection   PaymentCollection?       @relation("PaymentSession_paymentCollection", fields: [paymentCollectionId], references: [id])
-  paymentCollectionId String?                  @map("paymentCollection")
-  paymentProvider     PaymentProvider?         @relation("PaymentSession_paymentProvider", fields: [paymentProviderId], references: [id])
-  paymentProviderId   String?                  @map("paymentProvider")
+  data                Json?              @default("{}")
+  idempotencyKey      String             @default("")
+  paymentCollection   PaymentCollection? @relation("PaymentSession_paymentCollection", fields: [paymentCollectionId], references: [id])
+  paymentCollectionId String?            @map("paymentCollection")
+  paymentProvider     PaymentProvider?   @relation("PaymentSession_paymentProvider", fields: [paymentProviderId], references: [id])
+  paymentProviderId   String?            @map("paymentProvider")
   paymentAuthorizedAt DateTime?
-  createdAt           DateTime                 @default(now())
-  updatedAt           DateTime                 @default(now()) @updatedAt
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @default(now()) @updatedAt
 
   @@index([idempotencyKey])
   @@index([paymentCollectionId])
@@ -1036,6 +1041,7 @@ model Region {
   paymentProviders     PaymentProvider[]     @relation("PaymentProvider_regions")
   shippingOptions      ShippingOption[]      @relation("ShippingOption_region")
   taxRates             TaxRate[]             @relation("TaxRate_region")
+  shippingProviders    ShippingProvider[]    @relation("Region_shippingProviders")
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @default(now()) @updatedAt
 
@@ -1267,20 +1273,6 @@ model TaxRate {
   @@index([regionId])
 }
 
-model TrackingLink {
-  id             String       @id @default(cuid())
-  url            String       @default("")
-  trackingNumber String       @default("")
-  metadata       Json?
-  idempotencyKey String       @default("")
-  fulfillment    Fulfillment? @relation("TrackingLink_fulfillment", fields: [fulfillmentId], references: [id])
-  fulfillmentId  String?      @map("fulfillment")
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @default(now()) @updatedAt
-
-  @@index([fulfillmentId])
-}
-
 model BatchJob {
   id          String             @id @default(cuid())
   type        BatchJobTypeType
@@ -1354,32 +1346,59 @@ model OrderEvent {
   @@index([createdById])
 }
 
+model ShippingProvider {
+  id                      String               @id @default(cuid())
+  name                    String               @default("")
+  isActive                Boolean              @default(false)
+  accessToken             String               @default("")
+  createLabelFunction     String               @default("")
+  getRatesFunction        String               @default("")
+  validateAddressFunction String               @default("")
+  trackShipmentFunction   String               @default("")
+  cancelLabelFunction     String               @default("")
+  metadata                Json?
+  regions                 Region[]             @relation("Region_shippingProviders")
+  labels                  ShippingLabel[]      @relation("ShippingLabel_provider")
+  fulfillmentProvider     FulfillmentProvider? @relation("ShippingProvider_fulfillmentProvider", fields: [fulfillmentProviderId], references: [id])
+  fulfillmentProviderId   String?              @map("fulfillmentProvider")
+  fromAddress             Address?             @relation("ShippingProvider_fromAddress", fields: [fromAddressId], references: [id])
+  fromAddressId           String?              @map("fromAddress")
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @default(now()) @updatedAt
+
+  @@index([fulfillmentProviderId])
+  @@index([fromAddressId])
+}
+
+model ShippingLabel {
+  id             String                  @id @default(cuid())
+  status         ShippingLabelStatusType @default(created)
+  labelUrl       String                  @default("")
+  carrier        String                  @default("")
+  service        String                  @default("")
+  rate           Json?
+  trackingNumber String                  @default("")
+  trackingUrl    String                  @default("")
+  order          Order?                  @relation("ShippingLabel_order", fields: [orderId], references: [id])
+  orderId        String?                 @map("order")
+  provider       ShippingProvider?       @relation("ShippingLabel_provider", fields: [providerId], references: [id])
+  providerId     String?                 @map("provider")
+  fulfillment    Fulfillment?            @relation("ShippingLabel_fulfillment", fields: [fulfillmentId], references: [id])
+  fulfillmentId  String?                 @map("fulfillment")
+  data           Json?
+  metadata       Json?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @default(now()) @updatedAt
+
+  @@index([orderId])
+  @@index([providerId])
+  @@index([fulfillmentId])
+}
+
 enum OrderStatusType {
   pending
   completed
   archived
-  canceled
-  requires_action
-}
-
-enum OrderFulfillmentStatusType {
-  not_fulfilled
-  partially_fulfilled
-  fulfilled
-  partially_shipped
-  shipped
-  partially_returned
-  returned
-  canceled
-  requires_action
-}
-
-enum OrderPaymentStatusType {
-  not_paid
-  awaiting
-  captured
-  partially_refunded
-  refunded
   canceled
   requires_action
 }
@@ -1472,26 +1491,9 @@ enum InviteRoleType {
   developer
 }
 
-enum PaymentCollectionStatusType {
-  not_paid
-  pending
-  partially_paid
-  paid
-  canceled
-}
-
 enum PaymentCollectionDescriptionType {
   default
   refund
-}
-
-enum PaymentSessionStatusType {
-  pending
-  processing
-  authorized
-  requires_more
-  error
-  canceled
 }
 
 enum PriceListTypeType {
@@ -1583,12 +1585,20 @@ enum StockMovementTypeType {
 }
 
 enum OrderEventTypeType {
+  ORDER_PLACED
   STATUS_CHANGE
   PAYMENT_STATUS_CHANGE
+  PAYMENT_CAPTURED
   FULFILLMENT_STATUS_CHANGE
   NOTE_ADDED
   EMAIL_SENT
   TRACKING_NUMBER_ADDED
   RETURN_REQUESTED
   REFUND_PROCESSED
+}
+
+enum ShippingLabelStatusType {
+  created
+  purchased
+  failed
 }

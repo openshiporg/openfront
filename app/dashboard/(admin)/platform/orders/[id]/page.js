@@ -4,17 +4,53 @@ import React, { Fragment, useCallback, useMemo, useState } from "react";
 import { gql, useQuery } from "@keystone-6/core/admin-ui/apollo";
 import { makeDataGetter } from "@keystone-6/core/admin-ui/utils";
 import { useList } from "@keystone/keystoneProvider";
-import { AlertTriangle, ArrowRight, Pen, PencilIcon } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle,
+  Circle,
+  Clock,
+  Copy,
+  MoreHorizontal,
+  Printer,
+  PencilIcon,
+} from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@ui/alert";
 import { Button } from "@ui/button";
 import { Progress } from "@ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter, DialogClose } from "@ui/dialog";
-import { LoadingIcon } from "@keystone/themes/Tailwind/orion/components/LoadingIcon";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@ui/dialog";
 import { GraphQLErrorNotice } from "@keystone/themes/Tailwind/orion/components/GraphQLErrorNotice";
 import { Fields } from "./components/Fields";
-import { useCreateItem } from "@keystone/keystoneProvider";
 import { useUpdateItem } from "@keystone/themes/Tailwind/orion/components/EditItemDrawer";
-import { deserializeValue, useChangedFieldsAndDataForUpdate, useInvalidFields } from "@keystone-6/core/admin-ui/utils";
+import {
+  deserializeValue,
+  useChangedFieldsAndDataForUpdate,
+  useInvalidFields,
+} from "@keystone-6/core/admin-ui/utils";
+import Link from "next/link";
+import Image from "next/image";
+import { Separator } from "@ui/separator";
+import { Checkbox } from "@ui/checkbox";
+import { Badge } from "@ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@ui/dropdown-menu";
+import { useCreateItem } from "@keystone/utils/useCreateItem";
+import { PageBreadcrumbs } from "@keystone/themes/Tailwind/orion/components/PageBreadcrumbs";
 
 export function getFilteredProps(props, modifications, defaultCollapse) {
   const fieldKeysToShow = modifications.map((mod) => mod.key);
@@ -81,20 +117,26 @@ export function getFilteredProps(props, modifications, defaultCollapse) {
 
 function getProgressValue(status) {
   switch (status) {
-    case 'pending':
+    case "pending":
       return 25;
-    case 'processing':
+    case "processing":
       return 50;
-    case 'shipped':
+    case "shipped":
       return 75;
-    case 'completed':
+    case "completed":
       return 100;
     default:
       return 0;
   }
 }
 
-function EditDialog({ title, listKey = "Order", id, modifications }) {
+export function EditDialog({
+  title,
+  listKey = "Order",
+  id,
+  modifications,
+  children,
+}) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const list = useList(listKey);
   const { handleUpdate, updateLoading, updateError } = useUpdateItem(listKey);
@@ -133,32 +175,32 @@ function EditDialog({ title, listKey = "Order", id, modifications }) {
   const filteredProps = useMemo(() => {
     // Initialize fieldModes for all fields as edit by default
     const initialFieldModes = {};
-    Object.keys(list.fields).forEach(key => {
-      initialFieldModes[key] = 'edit';
+    Object.keys(list.fields).forEach((key) => {
+      initialFieldModes[key] = "edit";
     });
-    
+
     // If no modifications provided, show all fields
     if (!modifications) {
       return {
         fields: list.fields,
         fieldModes: initialFieldModes,
-        groups: list.groups || []
+        groups: list.groups || [],
       };
     }
-    
+
     // Create a filtered version of the fields object
     const filteredFields = {};
-    modifications.forEach(mod => {
+    modifications.forEach((mod) => {
       if (list.fields[mod.key]) {
         filteredFields[mod.key] = list.fields[mod.key];
       }
     });
-    
+
     return getFilteredProps(
       {
         fields: filteredFields,
         fieldModes: initialFieldModes,
-        groups: list.groups || []
+        groups: list.groups || [],
       },
       modifications,
       true
@@ -168,7 +210,7 @@ function EditDialog({ title, listKey = "Order", id, modifications }) {
   // Filter the state value to only include the fields we want to show
   const filteredValue = useMemo(() => {
     const newValue = {};
-    Object.keys(filteredProps.fields).forEach(key => {
+    Object.keys(filteredProps.fields).forEach((key) => {
       if (state.value[key] !== undefined) {
         newValue[key] = state.value[key];
       }
@@ -193,17 +235,23 @@ function EditDialog({ title, listKey = "Order", id, modifications }) {
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="icon" className="[&_svg]:size-3 h-6 w-6">
-          <PencilIcon />
-        </Button>
+        {children || (
+          <Button
+            variant="outline"
+            size="icon"
+            className="[&_svg]:size-3 w-6 h-6"
+          >
+            <PencilIcon />
+          </Button>
+        )}
       </DialogTrigger>
-      <DialogContent className="max-h-[80vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+      <DialogContent className="gap-0 p-0 max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogHeader className="contents space-y-0 text-left">
+          <DialogTitle className="border-b border-border px-6 py-4 text-base">
+            {title}
+          </DialogTitle>
         </DialogHeader>
-        {loading ? (
-          <LoadingIcon label="Loading item data" />
-        ) : (
+        {loading ? null : (
           <>
             {updateError && (
               <GraphQLErrorNotice
@@ -211,7 +259,7 @@ function EditDialog({ title, listKey = "Order", id, modifications }) {
                 errors={updateError?.graphQLErrors}
               />
             )}
-            <div className="flex-1 overflow-y-auto -mx-6 -my-4">
+            <div className="flex-1 overflow-y-auto">
               <div className="px-6 py-4">
                 <Fields
                   fields={filteredProps.fields}
@@ -225,7 +273,7 @@ function EditDialog({ title, listKey = "Order", id, modifications }) {
                       ...prev,
                       value: {
                         ...prev.value,
-                        ...value(filteredValue)
+                        ...value(filteredValue),
                       },
                     }));
                   }}
@@ -234,15 +282,14 @@ function EditDialog({ title, listKey = "Order", id, modifications }) {
             </div>
           </>
         )}
-        <DialogFooter>
+        <DialogFooter className="border-t border-border px-6 py-4 sm:items-center">
           <DialogClose asChild>
-            <Button variant="light">Cancel</Button>
+            <Button variant="outline">Cancel</Button>
           </DialogClose>
-          <Button 
+          <Button
             onClick={handleSave}
-            // disabled={updateLoading || !changedFields.size}
-            // isLoading={updateLoading}
-            isLoading
+            disabled={updateLoading || !changedFields.size}
+            isLoading={updateLoading}
           >
             Save Changes
           </Button>
@@ -261,10 +308,11 @@ export default function OrderPage({ params }) {
       displayId
       status
       fulfillmentStatus
-      paymentStatus
       total
       subtotal
+      shipping
       tax
+      note
       currency {
         code
         symbol
@@ -275,6 +323,9 @@ export default function OrderPage({ params }) {
       createdAt
       updatedAt
       canceledAt
+      paymentDetails
+      totalPaid
+      formattedTotalPaid
       events {
         id
         type
@@ -294,6 +345,7 @@ export default function OrderPage({ params }) {
         data
         metadata
         createdAt
+        paymentLink
       }
       fulfillments {
         id
@@ -322,8 +374,10 @@ export default function OrderPage({ params }) {
         city
         province
         postalCode
-        countryCode
         phone
+        country {
+          name
+        }
       }
       shippingAddress {
         id
@@ -335,15 +389,14 @@ export default function OrderPage({ params }) {
         city
         province
         postalCode
-        countryCode
         phone
+        country {
+          name
+        }
       }
       lineItems {
         id
         quantity
-        fulfilledQuantity
-        returnedQuantity
-        shippedQuantity
         metadata
         isReturn
         isGiftcard
@@ -407,183 +460,337 @@ export default function OrderPage({ params }) {
   const dataGetter = makeDataGetter(data, error?.graphQLErrors);
   const order = data?.item;
 
-  if (loading) return <LoadingIcon label="Loading order data" />;
+  if (loading) return null;
   if (error?.graphQLErrors.length || error?.networkError) {
-    return <GraphQLErrorNotice errors={error?.graphQLErrors} networkError={error?.networkError} />;
+    return (
+      <GraphQLErrorNotice
+        errors={error?.graphQLErrors}
+        networkError={error?.networkError}
+      />
+    );
   }
   if (!order) {
     return (
       <Alert variant="destructive">
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Not Found</AlertTitle>
-        <AlertDescription>Order not found or you don't have access.</AlertDescription>
+        <AlertDescription>
+          Order not found or you don't have access.
+        </AlertDescription>
       </Alert>
     );
   }
 
+  const unfulfilledItems = order.lineItems.filter(
+    (item) => !item.fulfilledQuantity || item.fulfilledQuantity < item.quantity
+  );
+
   return (
-    <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-semibold mb-1">Order #{order.displayId}</h1>
-          <div className="text-muted-foreground">
-            <span>Created {new Date(order.createdAt).toLocaleDateString()}</span>
+    <>
+      <PageBreadcrumbs
+        items={[
+          {
+            type: "link",
+            label: "Dashboard",
+            href: "/",
+          },
+          {
+            type: "page",
+            label: "Platform",
+            showModelSwitcher: true,
+            switcherType: "platform",
+          },
+          {
+            type: "link",
+            label: "Orders",
+            href: "/platform/orders",
+          },
+          {
+            type: "page",
+            label: `#${order.displayId}`,
+          },
+        ]}
+      />
+      <main className="w-full max-w-4xl mx-auto p-4 md:p-6 flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Button variant="link" className="px-0">
+                <Link
+                  href="/dashboard/platform/orders"
+                  className="flex items-center text-muted-foreground hover:text-foreground"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back
+                </Link>
+              </Button>
+            </div>
+            <h1 className="text-2xl font-semibold">Order Details</h1>
+            <p className="text-sm text-muted-foreground">
+              Order #{order.displayId} •{" "}
+              {new Date(order.createdAt).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+            </p>
           </div>
         </div>
-        <Button className="w-full sm:w-auto">
-          View invoice <ArrowRight className="ml-2 h-4 w-4" />
-        </Button>
-      </div>
 
-      <div className="space-y-8 mb-8">
-        {order.lineItems.map((item) => (
-          <div key={item.id} className="flex flex-col lg:flex-row gap-4 lg:gap-8">
-            <div className="w-full lg:w-[300px] h-[200px] lg:h-[300px] relative bg-muted rounded-lg">
-              {item.thumbnail && (
-                <img 
-                  src={item.thumbnail}
-                  alt={item.title}
-                  className="object-contain w-full h-full rounded-lg"
-                />
-              )}
-            </div>
-            <div className="flex-1 space-y-6">
-              <div>
-                <h2 className="text-xl font-medium">
-                  {item.title}
-                </h2>
-                <div className="mt-1">
-                  <p className="text-lg">
-                    {item.total}
-                    {item.quantity > 1 && (
-                      <span className="text-muted-foreground">
-                        {' '}({item.unitPrice} × {item.quantity})
-                      </span>
-                    )}
-                  </p>
-                  {item.originalPrice && item.percentageOff > 0 && (
-                    <p className="text-sm text-muted-foreground line-through">
-                      Original price: {item.originalPrice}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h3 className="font-medium mb-2">Delivery address</h3>
-                    <p className="text-muted-foreground">
-                      {order.shippingAddress?.firstName} {order.shippingAddress?.lastName}<br />
-                      {order.shippingAddress?.address1}<br />
-                      {order.shippingAddress?.city}, {order.shippingAddress?.province} {order.shippingAddress?.postalCode}
-                    </p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            {unfulfilledItems.length > 0 && (
+              <Card className="bg-muted/40">
+                <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    Items to be fulfilled
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-3 pt-3">
+                  <div className="border bg-background/40 shadow-sm rounded-md">
+                    {unfulfilledItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex flex-col sm:flex-row items-start gap-2 py-2 pl-2 pr-4 [&:not(:last-child)]:border-b border-border"
+                      >
+                        <div className="h-16 w-16 bg-muted rounded-md flex-shrink-0 flex items-center justify-center">
+                          {item.thumbnail ? (
+                            <Image
+                              src={item.thumbnail}
+                              alt={item.title}
+                              width={64}
+                              height={64}
+                              className="rounded-md object-cover"
+                            />
+                          ) : (
+                            <div className="h-16 w-16 bg-muted rounded-md" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium truncate">{item.title}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Reference: {item.productVariant?.sku || "N/A"}
+                          </p>
+                        </div>
+                        <div className="text-right self-start sm:self-center">
+                          <div className="text-sm">
+                            {item.unitPrice} × {item.quantity}
+                          </div>
+                          <div className="font-medium">{item.total}</div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <EditDialog 
-                    title="Edit Shipping Address"
-                    listKey="Order"
-                    id={order.id}
-                    modifications={[{ key: 'shippingAddress' }]}
-                  />
+                  <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-4 pt-4 border-t">
+                    <Link
+                      href={`/dashboard/platform/orders/${order.id}/fulfill`}
+                    >
+                      <Button size="sm">Ship Items</Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <Card className="bg-muted/40">
+              <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  {order.paymentDetails?.[0]?.status === "captured"
+                    ? "Payment Complete"
+                    : "Payment Processing"}
+                  {order.payments?.[0]?.paymentLink && (
+                    <Button variant="link" size="sm" className="ml-2" asChild>
+                      <a
+                        href={order.payments[0].paymentLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        View Transaction
+                      </a>
+                    </Button>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 pt-3">
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Items Subtotal</span>
+                    <span>{order.subtotal}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Shipping</span>
+                    <span>{order.shipping}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tax Total</span>
+                    <span>{order.tax}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between font-medium">
+                    <span>Total</span>
+                    <span>{order.total}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>Total Paid</span>
+                    <span>{order.formattedTotalPaid}</span>
+                  </div>
                 </div>
-                <div>
+              </CardContent>
+            </Card>
+
+            <Card className="overflow-hidden bg-muted/40">
+              <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
+                <CardTitle className="text-base">Activity Log</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Checkbox id="show-comments" />
+                  <label htmlFor="show-comments" className="text-sm">
+                    Include Notes
+                  </label>
+                </div>
+              </CardHeader>
+              <CardContent className="p-3 pt-3">
+                <div className="space-y-4">
+                  {order.events?.map((event) => (
+                    <div key={event.id} className="flex gap-4">
+                      <Clock className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-medium">{event.type}</p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {new Date(event.createdAt).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "long",
+                              day: "numeric",
+                              year: "numeric",
+                            }
+                          )}{" "}
+                          at{" "}
+                          {new Date(event.createdAt).toLocaleTimeString(
+                            "en-US",
+                            {
+                              hour: "numeric",
+                              minute: "2-digit",
+                            }
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="space-y-6">
+            <Card className="bg-muted/40">
+              <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
+                <CardTitle className="text-base">Internal Notes</CardTitle>
+                <EditDialog
+                  title="Update Note"
+                  listKey="Order"
+                  id={order.id}
+                  modifications={[{ key: "note" }]}
+                />
+              </CardHeader>
+              <CardContent className="p-3 pt-3">
+                {order.note ? (
+                  <div className="bg-background border shadow-inner p-3 rounded-md overflow-x-auto">
+                    <p className="text-sm whitespace-pre-wrap">{order.note}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No internal notes recorded
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="bg-muted/40">
+              <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
+                <CardTitle className="text-base">Customer</CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 pt-3">
+                <div className="space-y-4">
+                  {order.user && (
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-medium mb-2">Name</h4>
+                        <Link
+                          href={`#`}
+                          className="text-primary hover:underline text-sm break-all"
+                        >
+                          {order.user.name}
+                        </Link>
+                      </div>
+                    </div>
+                  )}
                   <div className="flex justify-between items-start">
-                    <h3 className="font-medium mb-2">Shipping updates</h3>
-                    <EditDialog 
-                      title="Edit Contact Information"
+                    <div>
+                      <h4 className="font-medium mb-2">Email</h4>
+                      <Link
+                        href={`mailto:${order.email}`}
+                        className="text-primary hover:underline text-sm break-all"
+                      >
+                        {order.email}
+                      </Link>
+                    </div>
+                    <EditDialog
+                      title="Update Contact"
                       listKey="Order"
                       id={order.id}
-                      modifications={[{ key: 'email' }]}
+                      modifications={[{ key: "email" }]}
                     />
                   </div>
-                  <p className="text-muted-foreground">{order.email}</p>
+                  {order.shippingAddress && (
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-medium mb-2">Shipping Address</h4>
+                        <div className="text-sm space-y-1">
+                          <p>
+                            {order.shippingAddress.firstName}{" "}
+                            {order.shippingAddress.lastName}
+                          </p>
+                          <p>{order.shippingAddress.address1}</p>
+                          {order.shippingAddress.address2 && (
+                            <p>{order.shippingAddress.address2}</p>
+                          )}
+                          <p>
+                            {order.shippingAddress.city}
+                            {order.shippingAddress.province &&
+                              `, ${order.shippingAddress.province}`}{" "}
+                            {order.shippingAddress.postalCode}
+                          </p>
+                          <p>{order.shippingAddress.country?.name}</p>
+                          <p>{order.shippingAddress.phone}</p>
+                        </div>
+                      </div>
+                      <EditDialog
+                        title="Update Address"
+                        listKey="Address"
+                        id={order.shippingAddress.id}
+                        modifications={[
+                          { key: "firstName" },
+                          { key: "lastName" },
+                          { key: "company" },
+                          { key: "address1" },
+                          { key: "address2" },
+                          { key: "city" },
+                          { key: "province" },
+                          { key: "postalCode" },
+                          { key: "country" },
+                          { key: "phone" },
+                        ]}
+                      />
+                    </div>
+                  )}
                 </div>
-              </div>
-
-              <div>
-                <p className="text-muted-foreground mb-2">
-                  {item.fulfillmentStatus} {item.shippedAt ? `on ${new Date(item.shippedAt).toLocaleDateString()}` : ''}
-                </p>
-                <div className="space-y-2">
-                  <Progress value={getProgressValue(item.fulfillmentStatus)} className="h-2" />
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium">Order placed</span>
-                    <span className={item.fulfillmentStatus === 'processing' ? "font-medium" : "text-muted-foreground"}>Processing</span>
-                    <span className={item.fulfillmentStatus === 'shipped' ? "font-medium" : "text-muted-foreground"}>Shipped</span>
-                    <span className={item.fulfillmentStatus === 'delivered' ? "font-medium" : "text-muted-foreground"}>Delivered</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pt-8 border-t">
-        <div>
-          <div className="flex justify-between items-start">
-            <h3 className="font-medium mb-4">Billing address</h3>
-            <EditDialog 
-              title="Edit Billing Address"
-              listKey="Address"
-              id={order.billingAddress.id}
-              // modifications={[{ key: 'firstName' }]}
-            />
-          </div>
-          <p className="text-muted-foreground">
-            {order.billingAddress?.firstName} {order.billingAddress?.lastName}<br />
-            {order.billingAddress?.company && <>{order.billingAddress.company}<br /></>}
-            {order.billingAddress?.address1}<br />
-            {order.billingAddress?.address2 && <>{order.billingAddress.address2}<br /></>}
-            {order.billingAddress?.city}, {order.billingAddress?.province} {order.billingAddress?.postalCode}<br />
-            {order.billingAddress?.countryCode}<br />
-            {order.billingAddress?.phone}
-          </p>
-        </div>
-        <div>
-          <div className="flex justify-between items-start">
-            <h3 className="font-medium mb-4">Payment information</h3>
-            <EditDialog 
-              title="Edit Payment Information"
-              listKey="Order"
-              id={order.id}
-              modifications={[{ key: 'payments' }]}
-            />
-          </div>
-          {order.payments?.map(payment => (
-            <div key={payment.id} className="flex items-center">
-              <div className="w-8 h-8 bg-primary rounded mr-3 flex items-center justify-center text-primary-foreground text-xs">
-                {payment.data?.brand || 'CARD'}
-              </div>
-              <div className="text-muted-foreground">
-                <p>Ending with {payment.data?.last4 || '****'}</p>
-                <p>{payment.status}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="md:col-span-2 lg:col-span-1">
-          <h3 className="font-medium mb-4">Order summary</h3>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span>{order.subtotal}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Shipping</span>
-              <span>{order.shipping || '$0.00'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Tax</span>
-              <span>{order.tax}</span>
-            </div>
-            <div className="flex justify-between pt-2 border-t">
-              <span>Order total</span>
-              <span className="text-primary">{order.total}</span>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
-      </div>
-    </div>
+      </main>
+    </>
   );
-} 
+}

@@ -21,18 +21,6 @@ export const PaymentCollection = list({
     },
   },
   fields: {
-    status: select({
-      type: "enum",
-      options: [
-        { label: "Not paid", value: "not_paid" },
-        { label: "Pending", value: "pending" },
-        { label: "Partially paid", value: "partially_paid" },
-        { label: "Paid", value: "paid" },
-        { label: "Canceled", value: "canceled" },
-      ],
-      defaultValue: "not_paid",
-      validation: { isRequired: true },
-    }),
     description: select({
       type: "enum",
       options: [

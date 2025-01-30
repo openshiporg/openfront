@@ -56,7 +56,10 @@ const CLAIM_QUERY = gql`
         city
         province
         postalCode
-        countryCode
+        country {
+          id
+          iso2
+        }
         phone
       }
       shippingMethod {

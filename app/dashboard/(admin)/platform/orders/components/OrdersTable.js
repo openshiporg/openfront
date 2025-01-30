@@ -1,7 +1,6 @@
 import React from "react";
 import { makeDataGetter } from "@keystone-6/core/admin-ui/utils";
 import { OrderDetailsComponent } from "./OrderDetailsComponent";
-import { LoadingIcon } from "@keystone/themes/Tailwind/orion/components/LoadingIcon";
 import { CreateButtonLink } from "@keystone/themes/Tailwind/orion/components/CreateButtonLink";
 import { Button } from "@ui/button";
 import { Triangle, Circle, Square } from "lucide-react";
@@ -22,7 +21,6 @@ export const OrdersTable = ({
   listKey,
   list,
   handleOrderAction,
-  openEditDrawer,
   channels,
   loadingActions,
   query,
@@ -100,7 +98,6 @@ export const OrdersTable = ({
           }}
           shopId={order.shop?.id}
           onOrderAction={handleOrderAction}
-          openEditDrawer={openEditDrawer}
           channels={channels}
           loadingActions={loadingActions}
           renderOrderId={() => (

@@ -6,7 +6,7 @@ import {
   PopoverTrigger,
 } from "../../primitives/default/ui/popover";
 import { Button } from "../../primitives/default/ui/button";
-import { ChevronDownIcon, XIcon } from "lucide-react";
+import { ChevronDownIcon, XIcon, ChevronRightIcon } from "lucide-react";
 import { Separator } from "../../primitives/default/ui/separator";
 import { useList } from "@keystone/keystoneProvider";
 
@@ -54,29 +54,32 @@ function FilterPill({ filter, field }) {
       placement="bottom"
     >
       <PopoverTrigger asChild>
-        <div className="rounded-md inline-flex shadow-XS" role="group">
-          <button
-            type="button"
-            className="text-left px-3 py-[3px] text-xs font-medium text-zinc-500 bg-white border border-zinc-200 border-r-0 rounded-s-md hover:bg-zinc-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-zinc-800 dark:border-zinc-600 dark:text-zinc-200 dark:hover:text-white dark:hover:bg-zinc-600 dark:focus:ring-blue-500 dark:focus:text-white"
-          >
-            {field.label}{" "}
-            <Label
-              label={field.controller.filter.types[filter.type].label}
-              type={filter.type}
-              value={filter.value}
-            />
-          </button>
-
-          <button
-            type="button"
+        <div className="inline-flex rounded-md text-muted-foreground" role="group">
+          <Button
+            variant="outline"
+            size="icon"
+            className="[&_svg]:size-3 w-6 h-full rounded-r-none px-2 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950"
             onClick={(e) => {
               e.stopPropagation();
               onRemove();
             }}
-            className="px-1 text-sm font-medium text-zinc-900 bg-white border border-zinc-200 rounded-e-md hover:bg-zinc-200 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-zinc-900 dark:border-zinc-600 dark:text-white dark:hover:text-white dark:hover:bg-zinc-600 dark:focus:ring-blue-500 dark:focus:text-white"
           >
-            <XIcon size={14} className="stroke-muted-foreground" />
-          </button>
+            <XIcon className="size-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="xs"
+            className="uppercase py-1 flex-wrap rounded-l-none border-l-0 [&_svg]:size-3.5 text-xs px-2"
+          >
+            <span>{field.label}</span>
+            <ChevronRightIcon />
+            <span>{field.controller.filter.types[filter.type].label}</span>
+            <ChevronRightIcon />
+            <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+              {filter.value}
+            </span>
+            <ChevronDownIcon />
+          </Button>
         </div>
       </PopoverTrigger>
       <PopoverContent className="p-0">
@@ -122,11 +125,13 @@ function EditDialog({ filter, field, onClose }) {
         <Filter type={filter.type} value={value} onChange={setValue} />
       </div>
       <Separator />
-      <div className="flex justify-between px-2 pb-2">
-        <Button variant="secondary" onClick={onClose}>
+      <div className="flex justify-between gap-2 px-2 pb-2">
+        <Button variant="outline" size="sm" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="submit">Save</Button>
+        <Button size="sm" type="submit">
+          Save
+        </Button>
       </div>
     </form>
   );

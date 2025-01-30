@@ -36,7 +36,10 @@ const CLAIMS_QUERY = gql`
       shippingAddress {
         address1
         city
-        countryCode
+        country {
+          id
+          iso2
+        }
       }
       shippingMethod {
         id

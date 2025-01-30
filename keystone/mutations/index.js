@@ -1,3 +1,4 @@
+"use server"
 import { mergeSchemas } from "@graphql-tools/schema";
 import redirectToInit from "./redirectToInit";
 import activeCart from "./activeCart";
@@ -25,6 +26,11 @@ import getCustomerOrder from "./getCustomerOrder";
 import getCustomerOrders from "./getCustomerOrders";
 import getAnalytics from './getAnalytics';
 import importInventory from './importInventory';
+import getRatesForOrder from './getRatesForOrder';
+import validateShippingAddress from './validateShippingAddress';
+import trackShipment from './trackShipment';
+import cancelShippingLabel from './cancelShippingLabel';
+import createProviderShippingLabel from './createProviderShippingLabel';
 
 const graphql = String.raw;
 
@@ -45,6 +51,72 @@ export const extendGraphqlSchema = (schema) =>
         getCustomerOrder(orderId: ID!, secretKey: String): JSON
         getCustomerOrders(limit: Int, offset: Int): JSON
         getAnalytics(timeframe: String): JSON
+      }
+
+      type ShippingRate {
+        id: ID!
+        provider: String!
+        service: String!
+        carrier: String!
+        price: String!
+        estimatedDays: String!
+      }
+
+      type ProviderShippingLabel {
+        id: ID!
+        status: String!
+        trackingNumber: String
+        trackingUrl: String
+        labelUrl: String
+        data: JSON
+      }
+
+      type PackageDimensions {
+        length: Float!
+        width: Float!
+        height: Float!
+        weight: Float!
+        unit: String!
+        weightUnit: String!
+      }
+
+      input DimensionsInput {
+        length: Float!
+        width: Float!
+        height: Float!
+        weight: Float!
+        unit: String!
+        weightUnit: String!
+      }
+
+      input LineItemInput {
+        lineItemId: ID!
+        quantity: Int!
+      }
+
+      type AddressValidationResult {
+        isValid: Boolean!
+        normalizedAddress: JSON
+        errors: [String!]
+      }
+
+      type TrackingEvent {
+        status: String!
+        location: String
+        timestamp: String!
+        message: String
+      }
+
+      type ShipmentTrackingResult {
+        status: String!
+        estimatedDeliveryDate: String
+        trackingEvents: [TrackingEvent!]!
+      }
+
+      type LabelCancellationResult {
+        success: Boolean!
+        refundStatus: String
+        error: String
       }
 
       input UserUpdateProfileInput {
@@ -86,6 +158,17 @@ export const extendGraphqlSchema = (schema) =>
         handlePayPalWebhook(event: JSON!, headers: JSON!): WebhookResult!
         getAnalytics: JSON
         importInventory: Boolean
+        getRatesForOrder(orderId: ID!, providerId: ID!, dimensions: DimensionsInput): [ShippingRate!]!
+        validateShippingAddress(providerId: ID!, address: JSON!): AddressValidationResult!
+        trackShipment(providerId: ID!, trackingNumber: String!): ShipmentTrackingResult!
+        cancelShippingLabel(providerId: ID!, labelId: ID!): LabelCancellationResult!
+        createProviderShippingLabel(
+          orderId: ID!
+          providerId: ID!
+          rateId: String!
+          dimensions: DimensionsInput
+          lineItems: [LineItemInput!]
+        ): ProviderShippingLabel
       }
     `,
     resolvers: {
@@ -119,6 +202,11 @@ export const extendGraphqlSchema = (schema) =>
         handlePayPalWebhook,
         getAnalytics,
         importInventory,
+        getRatesForOrder,
+        validateShippingAddress,
+        trackShipment,
+        cancelShippingLabel,
+        createProviderShippingLabel,
       }
     },
   });

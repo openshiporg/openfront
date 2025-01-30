@@ -14,7 +14,7 @@ const BillingAddress = ({
     "billing_address.postal_code": cart?.billing_address?.postal_code || "",
     "billing_address.city": cart?.billing_address?.city || "",
     "billing_address.country_code":
-      cart?.billing_address?.country_code || countryCode || "",
+      cart?.billing_address?.country?.iso2 || countryCode || "",
     "billing_address.province": cart?.billing_address?.province || "",
     "billing_address.phone": cart?.billing_address?.phone || "",
   })
@@ -27,7 +27,7 @@ const BillingAddress = ({
       "billing_address.company": cart?.billing_address?.company || "",
       "billing_address.postal_code": cart?.billing_address?.postal_code || "",
       "billing_address.city": cart?.billing_address?.city || "",
-      "billing_address.country_code": cart?.billing_address?.country_code || "",
+      "billing_address.country_code": cart?.billing_address?.country?.iso2 || "",
       "billing_address.province": cart?.billing_address?.province || "",
       "billing_address.phone": cart?.billing_address?.phone || "",
     })

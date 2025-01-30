@@ -7,9 +7,11 @@ import {
   timestamp,
   relationship,
   select,
+  virtual,
 } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
+import { graphql } from "@keystone-6/core";
 
 export const Payment = list({
   access: {
@@ -34,6 +36,68 @@ export const Payment = list({
       ],
       defaultValue: "pending",
       validation: { isRequired: true },
+      hooks: {
+        beforeOperation: async ({ operation, resolvedData, item, context }) => {
+          // Only proceed for updates where status is changing
+          if (operation === "update" && resolvedData.status && item.status !== resolvedData.status) {
+            const payment = await context.sudo().query.Payment.findOne({
+              where: { id: item.id },
+              query: `
+                id
+                amount
+                data
+                order {
+                  id
+                }
+              `,
+            });
+
+            if (!payment?.order?.id) return resolvedData;
+
+            let eventData = {
+              ...resolvedData,
+            };
+
+            // If payment is captured, update order payment status and create capture record
+            if (resolvedData.status === 'captured') {
+              eventData = {
+                ...eventData,
+                capturedAt: new Date().toISOString(),
+                order: {
+                  update: {
+                    where: { id: payment.order.id },
+                    data: {
+                      paymentStatus: 'captured',
+                      events: {
+                        create: {
+                          type: 'PAYMENT_CAPTURED',
+                          data: {
+                            amount: payment.amount,
+                            paymentId: item.id,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              };
+
+              // Create capture record
+              await context.sudo().query.Capture.createOne({
+                data: {
+                  amount: payment.amount,
+                  payment: { connect: { id: item.id } },
+                  metadata: payment.data,
+                  createdBy: 'system',
+                },
+              });
+            }
+
+            return eventData;
+          }
+          return resolvedData;
+        },
+      },
     }),
     amount: integer({
       validation: {
@@ -81,6 +145,32 @@ export const Payment = list({
     }),
     user: relationship({
       ref: "User.payments",
+    }),
+    paymentLink: virtual({
+      field: graphql.field({
+        type: graphql.String,
+        resolve(item) {
+          if (!item.data) return null;
+
+          // For Stripe payments
+          if (item.data.provider_id?.startsWith('pp_stripe_')) {
+            const paymentIntentId = item.data.payment_intent_id;
+            if (paymentIntentId) {
+              return `https://dashboard.stripe.com/payments/${paymentIntentId}`;
+            }
+          }
+
+          // For PayPal payments
+          if (item.data.provider_id?.startsWith('pp_paypal_')) {
+            const paypalOrderId = item.data.id;
+            if (paypalOrderId) {
+              return `https://www.paypal.com/activity/payment/${paypalOrderId}`;
+            }
+          }
+
+          return null;
+        }
+      })
     }),
     ...trackingFields,
   },

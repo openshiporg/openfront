@@ -736,8 +736,6 @@ input UserRelateToManyForCreateInput {
 type Order {
   id: ID!
   status: OrderStatusType
-  fulfillmentStatus: OrderFulfillmentStatusType
-  paymentStatus: OrderPaymentStatusType
   displayId: Int
   email: String
   taxRate: Float
@@ -773,45 +771,32 @@ type Order {
   shippingMethodsCount(where: ShippingMethodWhereInput! = {}): Int
   swaps(where: SwapWhereInput! = {}, orderBy: [SwapOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: SwapWhereUniqueInput): [Swap!]
   swapsCount(where: SwapWhereInput! = {}): Int
-  createdAt: DateTime
-  updatedAt: DateTime
   secretKey: String
   subtotal: String
   shipping: String
-  tax: String
   discount: String
+  tax: String
   total: String
   rawTotal: Int
+  fulfillmentDetails: JSON
+  unfulfilled: JSON
+  fulfillmentStatus: JSON
+  paymentDetails: JSON
+  totalPaid: Int
+  formattedTotalPaid: String
   events(where: OrderEventWhereInput! = {}, orderBy: [OrderEventOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: OrderEventWhereUniqueInput): [OrderEvent!]
   eventsCount(where: OrderEventWhereInput! = {}): Int
+  note: String
+  shippingLabels(where: ShippingLabelWhereInput! = {}, orderBy: [ShippingLabelOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ShippingLabelWhereUniqueInput): [ShippingLabel!]
+  shippingLabelsCount(where: ShippingLabelWhereInput! = {}): Int
+  createdAt: DateTime
+  updatedAt: DateTime
 }
 
 enum OrderStatusType {
   pending
   completed
   archived
-  canceled
-  requires_action
-}
-
-enum OrderFulfillmentStatusType {
-  not_fulfilled
-  partially_fulfilled
-  fulfilled
-  partially_shipped
-  shipped
-  partially_returned
-  returned
-  canceled
-  requires_action
-}
-
-enum OrderPaymentStatusType {
-  not_paid
-  awaiting
-  captured
-  partially_refunded
-  refunded
   canceled
   requires_action
 }
@@ -826,8 +811,6 @@ input OrderWhereInput {
   NOT: [OrderWhereInput!]
   id: IDFilter
   status: OrderStatusTypeNullableFilter
-  fulfillmentStatus: OrderFulfillmentStatusTypeNullableFilter
-  paymentStatus: OrderPaymentStatusTypeNullableFilter
   displayId: IntFilter
   email: StringFilter
   taxRate: FloatNullableFilter
@@ -852,10 +835,12 @@ input OrderWhereInput {
   returns: ReturnManyRelationFilter
   shippingMethods: ShippingMethodManyRelationFilter
   swaps: SwapManyRelationFilter
-  createdAt: DateTimeFilter
-  updatedAt: DateTimeFilter
   secretKey: StringFilter
   events: OrderEventManyRelationFilter
+  note: StringFilter
+  shippingLabels: ShippingLabelManyRelationFilter
+  createdAt: DateTimeFilter
+  updatedAt: DateTimeFilter
 }
 
 input OrderStatusTypeNullableFilter {
@@ -863,20 +848,6 @@ input OrderStatusTypeNullableFilter {
   in: [OrderStatusType!]
   notIn: [OrderStatusType!]
   not: OrderStatusTypeNullableFilter
-}
-
-input OrderFulfillmentStatusTypeNullableFilter {
-  equals: OrderFulfillmentStatusType
-  in: [OrderFulfillmentStatusType!]
-  notIn: [OrderFulfillmentStatusType!]
-  not: OrderFulfillmentStatusTypeNullableFilter
-}
-
-input OrderPaymentStatusTypeNullableFilter {
-  equals: OrderPaymentStatusType
-  in: [OrderPaymentStatusType!]
-  notIn: [OrderPaymentStatusType!]
-  not: OrderPaymentStatusTypeNullableFilter
 }
 
 input IntFilter {
@@ -955,11 +926,15 @@ input SwapManyRelationFilter {
   none: SwapWhereInput
 }
 
+input ShippingLabelManyRelationFilter {
+  every: ShippingLabelWhereInput
+  some: ShippingLabelWhereInput
+  none: ShippingLabelWhereInput
+}
+
 input OrderOrderByInput {
   id: OrderDirection
   status: OrderDirection
-  fulfillmentStatus: OrderDirection
-  paymentStatus: OrderDirection
   displayId: OrderDirection
   email: OrderDirection
   taxRate: OrderDirection
@@ -967,15 +942,14 @@ input OrderOrderByInput {
   idempotencyKey: OrderDirection
   noNotification: OrderDirection
   externalId: OrderDirection
+  secretKey: OrderDirection
+  note: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
-  secretKey: OrderDirection
 }
 
 input OrderUpdateInput {
   status: OrderStatusType
-  fulfillmentStatus: OrderFulfillmentStatusType
-  paymentStatus: OrderPaymentStatusType
   displayId: Int
   email: String
   taxRate: Float
@@ -1001,10 +975,12 @@ input OrderUpdateInput {
   returns: ReturnRelateToManyForUpdateInput
   shippingMethods: ShippingMethodRelateToManyForUpdateInput
   swaps: SwapRelateToManyForUpdateInput
-  createdAt: DateTime
-  updatedAt: DateTime
   secretKey: String
   events: OrderEventRelateToManyForUpdateInput
+  note: String
+  shippingLabels: ShippingLabelRelateToManyForUpdateInput
+  createdAt: DateTime
+  updatedAt: DateTime
 }
 
 input AddressRelateToOneForUpdateInput {
@@ -1100,6 +1076,13 @@ input SwapRelateToManyForUpdateInput {
   connect: [SwapWhereUniqueInput!]
 }
 
+input ShippingLabelRelateToManyForUpdateInput {
+  disconnect: [ShippingLabelWhereUniqueInput!]
+  set: [ShippingLabelWhereUniqueInput!]
+  create: [ShippingLabelCreateInput!]
+  connect: [ShippingLabelWhereUniqueInput!]
+}
+
 input OrderUpdateArgs {
   where: OrderWhereUniqueInput!
   data: OrderUpdateInput!
@@ -1107,8 +1090,6 @@ input OrderUpdateArgs {
 
 input OrderCreateInput {
   status: OrderStatusType
-  fulfillmentStatus: OrderFulfillmentStatusType
-  paymentStatus: OrderPaymentStatusType
   displayId: Int
   email: String
   taxRate: Float
@@ -1134,10 +1115,12 @@ input OrderCreateInput {
   returns: ReturnRelateToManyForCreateInput
   shippingMethods: ShippingMethodRelateToManyForCreateInput
   swaps: SwapRelateToManyForCreateInput
-  createdAt: DateTime
-  updatedAt: DateTime
   secretKey: String
   events: OrderEventRelateToManyForCreateInput
+  note: String
+  shippingLabels: ShippingLabelRelateToManyForCreateInput
+  createdAt: DateTime
+  updatedAt: DateTime
 }
 
 input AddressRelateToOneForCreateInput {
@@ -1210,12 +1193,14 @@ input SwapRelateToManyForCreateInput {
   connect: [SwapWhereUniqueInput!]
 }
 
+input ShippingLabelRelateToManyForCreateInput {
+  create: [ShippingLabelCreateInput!]
+  connect: [ShippingLabelWhereUniqueInput!]
+}
+
 type LineItem {
   id: ID!
   quantity: Int
-  fulfilledQuantity: Int
-  returnedQuantity: Int
-  shippedQuantity: Int
   metadata: JSON
   isReturn: Boolean
   isGiftcard: Boolean
@@ -1259,9 +1244,6 @@ input LineItemWhereInput {
   NOT: [LineItemWhereInput!]
   id: IDFilter
   quantity: IntFilter
-  fulfilledQuantity: IntNullableFilter
-  returnedQuantity: IntNullableFilter
-  shippedQuantity: IntNullableFilter
   isReturn: BooleanFilter
   isGiftcard: BooleanFilter
   shouldMerge: BooleanFilter
@@ -1279,17 +1261,6 @@ input LineItemWhereInput {
   returnItems: ReturnItemManyRelationFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
-}
-
-input IntNullableFilter {
-  equals: Int
-  in: [Int!]
-  notIn: [Int!]
-  lt: Int
-  lte: Int
-  gt: Int
-  gte: Int
-  not: IntNullableFilter
 }
 
 input ClaimItemManyRelationFilter {
@@ -1325,9 +1296,6 @@ input ReturnItemManyRelationFilter {
 input LineItemOrderByInput {
   id: OrderDirection
   quantity: OrderDirection
-  fulfilledQuantity: OrderDirection
-  returnedQuantity: OrderDirection
-  shippedQuantity: OrderDirection
   isReturn: OrderDirection
   isGiftcard: OrderDirection
   shouldMerge: OrderDirection
@@ -1339,9 +1307,6 @@ input LineItemOrderByInput {
 
 input LineItemUpdateInput {
   quantity: Int
-  fulfilledQuantity: Int
-  returnedQuantity: Int
-  shippedQuantity: Int
   metadata: JSON
   isReturn: Boolean
   isGiftcard: Boolean
@@ -1428,9 +1393,6 @@ input LineItemUpdateArgs {
 
 input LineItemCreateInput {
   quantity: Int
-  fulfilledQuantity: Int
-  returnedQuantity: Int
-  shippedQuantity: Int
   metadata: JSON
   isReturn: Boolean
   isGiftcard: Boolean
@@ -1586,6 +1548,17 @@ input ProductWhereInput {
   productVariants: ProductVariantManyRelationFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
+}
+
+input IntNullableFilter {
+  equals: Int
+  in: [Int!]
+  notIn: [Int!]
+  lt: Int
+  lte: Int
+  gt: Int
+  gte: Int
+  not: IntNullableFilter
 }
 
 input ProductStatusTypeNullableFilter {
@@ -2632,6 +2605,7 @@ type Payment {
   refunds(where: RefundWhereInput! = {}, orderBy: [RefundOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: RefundWhereUniqueInput): [Refund!]
   refundsCount(where: RefundWhereInput! = {}): Int
   user: User
+  paymentLink: String
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -2790,13 +2764,13 @@ input RefundRelateToManyForCreateInput {
 
 type Address {
   id: ID!
+  label: String
   company: String
   firstName: String
   lastName: String
   address1: String
   address2: String
   city: String
-  countryCode: String
   province: String
   postalCode: String
   phone: String
@@ -2804,6 +2778,8 @@ type Address {
   metadata: JSON
   country: Country
   user: User
+  shippingProviders(where: ShippingProviderWhereInput! = {}, orderBy: [ShippingProviderOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ShippingProviderWhereUniqueInput): [ShippingProvider!]
+  shippingProvidersCount(where: ShippingProviderWhereInput! = {}): Int
   cart: Cart
   claimOrders(where: ClaimOrderWhereInput! = {}, orderBy: [ClaimOrderOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ClaimOrderWhereUniqueInput): [ClaimOrder!]
   claimOrdersCount(where: ClaimOrderWhereInput! = {}): Int
@@ -2836,13 +2812,13 @@ input AddressWhereInput {
   address1: StringFilter
   address2: StringFilter
   city: StringFilter
-  countryCode: StringFilter
   province: StringFilter
   postalCode: StringFilter
   phone: StringFilter
   isBilling: BooleanFilter
   country: CountryWhereInput
   user: UserWhereInput
+  shippingProviders: ShippingProviderManyRelationFilter
   cart: CartWhereInput
   claimOrders: ClaimOrderManyRelationFilter
   ordersUsingAsBillingAddress: OrderManyRelationFilter
@@ -2854,6 +2830,12 @@ input AddressWhereInput {
   updatedAt: DateTimeFilter
 }
 
+input ShippingProviderManyRelationFilter {
+  every: ShippingProviderWhereInput
+  some: ShippingProviderWhereInput
+  none: ShippingProviderWhereInput
+}
+
 input AddressOrderByInput {
   id: OrderDirection
   company: OrderDirection
@@ -2862,7 +2844,6 @@ input AddressOrderByInput {
   address1: OrderDirection
   address2: OrderDirection
   city: OrderDirection
-  countryCode: OrderDirection
   province: OrderDirection
   postalCode: OrderDirection
   phone: OrderDirection
@@ -2878,7 +2859,6 @@ input AddressUpdateInput {
   address1: String
   address2: String
   city: String
-  countryCode: String
   province: String
   postalCode: String
   phone: String
@@ -2886,6 +2866,7 @@ input AddressUpdateInput {
   metadata: JSON
   country: CountryRelateToOneForUpdateInput
   user: UserRelateToOneForUpdateInput
+  shippingProviders: ShippingProviderRelateToManyForUpdateInput
   cart: CartRelateToOneForUpdateInput
   claimOrders: ClaimOrderRelateToManyForUpdateInput
   ordersUsingAsBillingAddress: OrderRelateToManyForUpdateInput
@@ -2903,6 +2884,13 @@ input CountryRelateToOneForUpdateInput {
   disconnect: Boolean
 }
 
+input ShippingProviderRelateToManyForUpdateInput {
+  disconnect: [ShippingProviderWhereUniqueInput!]
+  set: [ShippingProviderWhereUniqueInput!]
+  create: [ShippingProviderCreateInput!]
+  connect: [ShippingProviderWhereUniqueInput!]
+}
+
 input AddressUpdateArgs {
   where: AddressWhereUniqueInput!
   data: AddressUpdateInput!
@@ -2915,7 +2903,6 @@ input AddressCreateInput {
   address1: String
   address2: String
   city: String
-  countryCode: String
   province: String
   postalCode: String
   phone: String
@@ -2923,6 +2910,7 @@ input AddressCreateInput {
   metadata: JSON
   country: CountryRelateToOneForCreateInput
   user: UserRelateToOneForCreateInput
+  shippingProviders: ShippingProviderRelateToManyForCreateInput
   cart: CartRelateToOneForCreateInput
   claimOrders: ClaimOrderRelateToManyForCreateInput
   ordersUsingAsBillingAddress: OrderRelateToManyForCreateInput
@@ -2937,6 +2925,11 @@ input AddressCreateInput {
 input CountryRelateToOneForCreateInput {
   create: CountryCreateInput
   connect: CountryWhereUniqueInput
+}
+
+input ShippingProviderRelateToManyForCreateInput {
+  create: [ShippingProviderCreateInput!]
+  connect: [ShippingProviderWhereUniqueInput!]
 }
 
 type Cart {
@@ -4407,20 +4400,20 @@ input DraftOrderCreateInput {
 
 type Fulfillment {
   id: ID!
-  data: JSON
   shippedAt: DateTime
   canceledAt: DateTime
+  data: JSON
   metadata: JSON
   idempotencyKey: String
   noNotification: Boolean
+  order: Order
+  claimOrder: ClaimOrder
   swap: Swap
   fulfillmentProvider: FulfillmentProvider
-  claimOrder: ClaimOrder
-  order: Order
   fulfillmentItems(where: FulfillmentItemWhereInput! = {}, orderBy: [FulfillmentItemOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: FulfillmentItemWhereUniqueInput): [FulfillmentItem!]
   fulfillmentItemsCount(where: FulfillmentItemWhereInput! = {}): Int
-  trackingLinks(where: TrackingLinkWhereInput! = {}, orderBy: [TrackingLinkOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: TrackingLinkWhereUniqueInput): [TrackingLink!]
-  trackingLinksCount(where: TrackingLinkWhereInput! = {}): Int
+  shippingLabels(where: ShippingLabelWhereInput! = {}, orderBy: [ShippingLabelOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ShippingLabelWhereUniqueInput): [ShippingLabel!]
+  shippingLabelsCount(where: ShippingLabelWhereInput! = {}): Int
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -4438,20 +4431,14 @@ input FulfillmentWhereInput {
   canceledAt: DateTimeNullableFilter
   idempotencyKey: StringFilter
   noNotification: BooleanFilter
+  order: OrderWhereInput
+  claimOrder: ClaimOrderWhereInput
   swap: SwapWhereInput
   fulfillmentProvider: FulfillmentProviderWhereInput
-  claimOrder: ClaimOrderWhereInput
-  order: OrderWhereInput
   fulfillmentItems: FulfillmentItemManyRelationFilter
-  trackingLinks: TrackingLinkManyRelationFilter
+  shippingLabels: ShippingLabelManyRelationFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
-}
-
-input TrackingLinkManyRelationFilter {
-  every: TrackingLinkWhereInput
-  some: TrackingLinkWhereInput
-  none: TrackingLinkWhereInput
 }
 
 input FulfillmentOrderByInput {
@@ -4465,18 +4452,18 @@ input FulfillmentOrderByInput {
 }
 
 input FulfillmentUpdateInput {
-  data: JSON
   shippedAt: DateTime
   canceledAt: DateTime
+  data: JSON
   metadata: JSON
   idempotencyKey: String
   noNotification: Boolean
+  order: OrderRelateToOneForUpdateInput
+  claimOrder: ClaimOrderRelateToOneForUpdateInput
   swap: SwapRelateToOneForUpdateInput
   fulfillmentProvider: FulfillmentProviderRelateToOneForUpdateInput
-  claimOrder: ClaimOrderRelateToOneForUpdateInput
-  order: OrderRelateToOneForUpdateInput
   fulfillmentItems: FulfillmentItemRelateToManyForUpdateInput
-  trackingLinks: TrackingLinkRelateToManyForUpdateInput
+  shippingLabels: ShippingLabelRelateToManyForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -4487,31 +4474,24 @@ input FulfillmentProviderRelateToOneForUpdateInput {
   disconnect: Boolean
 }
 
-input TrackingLinkRelateToManyForUpdateInput {
-  disconnect: [TrackingLinkWhereUniqueInput!]
-  set: [TrackingLinkWhereUniqueInput!]
-  create: [TrackingLinkCreateInput!]
-  connect: [TrackingLinkWhereUniqueInput!]
-}
-
 input FulfillmentUpdateArgs {
   where: FulfillmentWhereUniqueInput!
   data: FulfillmentUpdateInput!
 }
 
 input FulfillmentCreateInput {
-  data: JSON
   shippedAt: DateTime
   canceledAt: DateTime
+  data: JSON
   metadata: JSON
   idempotencyKey: String
   noNotification: Boolean
+  order: OrderRelateToOneForCreateInput
+  claimOrder: ClaimOrderRelateToOneForCreateInput
   swap: SwapRelateToOneForCreateInput
   fulfillmentProvider: FulfillmentProviderRelateToOneForCreateInput
-  claimOrder: ClaimOrderRelateToOneForCreateInput
-  order: OrderRelateToOneForCreateInput
   fulfillmentItems: FulfillmentItemRelateToManyForCreateInput
-  trackingLinks: TrackingLinkRelateToManyForCreateInput
+  shippingLabels: ShippingLabelRelateToManyForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -4519,11 +4499,6 @@ input FulfillmentCreateInput {
 input FulfillmentProviderRelateToOneForCreateInput {
   create: FulfillmentProviderCreateInput
   connect: FulfillmentProviderWhereUniqueInput
-}
-
-input TrackingLinkRelateToManyForCreateInput {
-  create: [TrackingLinkCreateInput!]
-  connect: [TrackingLinkWhereUniqueInput!]
 }
 
 type FulfillmentItem {
@@ -4592,14 +4567,19 @@ input FulfillmentRelateToOneForCreateInput {
 
 type FulfillmentProvider {
   id: ID!
+  name: String
   code: String
   isInstalled: Boolean
+  credentials: JSON
+  metadata: JSON
   fulfillments(where: FulfillmentWhereInput! = {}, orderBy: [FulfillmentOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: FulfillmentWhereUniqueInput): [Fulfillment!]
   fulfillmentsCount(where: FulfillmentWhereInput! = {}): Int
   regions(where: RegionWhereInput! = {}, orderBy: [RegionOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: RegionWhereUniqueInput): [Region!]
   regionsCount(where: RegionWhereInput! = {}): Int
   shippingOptions(where: ShippingOptionWhereInput! = {}, orderBy: [ShippingOptionOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ShippingOptionWhereUniqueInput): [ShippingOption!]
   shippingOptionsCount(where: ShippingOptionWhereInput! = {}): Int
+  shippingProviders(where: ShippingProviderWhereInput! = {}, orderBy: [ShippingProviderOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ShippingProviderWhereUniqueInput): [ShippingProvider!]
+  shippingProvidersCount(where: ShippingProviderWhereInput! = {}): Int
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -4614,11 +4594,13 @@ input FulfillmentProviderWhereInput {
   OR: [FulfillmentProviderWhereInput!]
   NOT: [FulfillmentProviderWhereInput!]
   id: IDFilter
+  name: StringFilter
   code: StringFilter
   isInstalled: BooleanFilter
   fulfillments: FulfillmentManyRelationFilter
   regions: RegionManyRelationFilter
   shippingOptions: ShippingOptionManyRelationFilter
+  shippingProviders: ShippingProviderManyRelationFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
@@ -4631,6 +4613,7 @@ input ShippingOptionManyRelationFilter {
 
 input FulfillmentProviderOrderByInput {
   id: OrderDirection
+  name: OrderDirection
   code: OrderDirection
   isInstalled: OrderDirection
   createdAt: OrderDirection
@@ -4638,11 +4621,15 @@ input FulfillmentProviderOrderByInput {
 }
 
 input FulfillmentProviderUpdateInput {
+  name: String
   code: String
   isInstalled: Boolean
+  credentials: JSON
+  metadata: JSON
   fulfillments: FulfillmentRelateToManyForUpdateInput
   regions: RegionRelateToManyForUpdateInput
   shippingOptions: ShippingOptionRelateToManyForUpdateInput
+  shippingProviders: ShippingProviderRelateToManyForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -4660,11 +4647,15 @@ input FulfillmentProviderUpdateArgs {
 }
 
 input FulfillmentProviderCreateInput {
+  name: String
   code: String
   isInstalled: Boolean
+  credentials: JSON
+  metadata: JSON
   fulfillments: FulfillmentRelateToManyForCreateInput
   regions: RegionRelateToManyForCreateInput
   shippingOptions: ShippingOptionRelateToManyForCreateInput
+  shippingProviders: ShippingProviderRelateToManyForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -5544,11 +5535,17 @@ type PaymentProvider {
   name: String
   code: String
   isInstalled: Boolean
+  credentials: JSON
   metadata: JSON
+  createPaymentFunction: String
+  capturePaymentFunction: String
+  refundPaymentFunction: String
+  getPaymentStatusFunction: String
+  generatePaymentLinkFunction: String
   regions(where: RegionWhereInput! = {}, orderBy: [RegionOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: RegionWhereUniqueInput): [Region!]
   regionsCount(where: RegionWhereInput! = {}): Int
-  paymentSessions(where: PaymentSessionWhereInput! = {}, orderBy: [PaymentSessionOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PaymentSessionWhereUniqueInput): [PaymentSession!]
-  paymentSessionsCount(where: PaymentSessionWhereInput! = {}): Int
+  sessions(where: PaymentSessionWhereInput! = {}, orderBy: [PaymentSessionOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PaymentSessionWhereUniqueInput): [PaymentSession!]
+  sessionsCount(where: PaymentSessionWhereInput! = {}): Int
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -5566,8 +5563,13 @@ input PaymentProviderWhereInput {
   name: StringFilter
   code: StringFilter
   isInstalled: BooleanFilter
+  createPaymentFunction: StringFilter
+  capturePaymentFunction: StringFilter
+  refundPaymentFunction: StringFilter
+  getPaymentStatusFunction: StringFilter
+  generatePaymentLinkFunction: StringFilter
   regions: RegionManyRelationFilter
-  paymentSessions: PaymentSessionManyRelationFilter
+  sessions: PaymentSessionManyRelationFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
@@ -5583,6 +5585,11 @@ input PaymentProviderOrderByInput {
   name: OrderDirection
   code: OrderDirection
   isInstalled: OrderDirection
+  createPaymentFunction: OrderDirection
+  capturePaymentFunction: OrderDirection
+  refundPaymentFunction: OrderDirection
+  getPaymentStatusFunction: OrderDirection
+  generatePaymentLinkFunction: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
 }
@@ -5591,9 +5598,15 @@ input PaymentProviderUpdateInput {
   name: String
   code: String
   isInstalled: Boolean
+  credentials: JSON
   metadata: JSON
+  createPaymentFunction: String
+  capturePaymentFunction: String
+  refundPaymentFunction: String
+  getPaymentStatusFunction: String
+  generatePaymentLinkFunction: String
   regions: RegionRelateToManyForUpdateInput
-  paymentSessions: PaymentSessionRelateToManyForUpdateInput
+  sessions: PaymentSessionRelateToManyForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -5614,9 +5627,15 @@ input PaymentProviderCreateInput {
   name: String
   code: String
   isInstalled: Boolean
+  credentials: JSON
   metadata: JSON
+  createPaymentFunction: String
+  capturePaymentFunction: String
+  refundPaymentFunction: String
+  getPaymentStatusFunction: String
+  generatePaymentLinkFunction: String
   regions: RegionRelateToManyForCreateInput
-  paymentSessions: PaymentSessionRelateToManyForCreateInput
+  sessions: PaymentSessionRelateToManyForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -5628,7 +5647,6 @@ input PaymentSessionRelateToManyForCreateInput {
 
 type PaymentCollection {
   id: ID!
-  status: PaymentCollectionStatusType
   description: PaymentCollectionDescriptionType
   amount: Int
   authorizedAmount: Int
@@ -5641,14 +5659,6 @@ type PaymentCollection {
   cart: Cart
   createdAt: DateTime
   updatedAt: DateTime
-}
-
-enum PaymentCollectionStatusType {
-  not_paid
-  pending
-  partially_paid
-  paid
-  canceled
 }
 
 enum PaymentCollectionDescriptionType {
@@ -5665,7 +5675,6 @@ input PaymentCollectionWhereInput {
   OR: [PaymentCollectionWhereInput!]
   NOT: [PaymentCollectionWhereInput!]
   id: IDFilter
-  status: PaymentCollectionStatusTypeNullableFilter
   description: PaymentCollectionDescriptionTypeNullableFilter
   amount: IntFilter
   authorizedAmount: IntNullableFilter
@@ -5677,13 +5686,6 @@ input PaymentCollectionWhereInput {
   updatedAt: DateTimeFilter
 }
 
-input PaymentCollectionStatusTypeNullableFilter {
-  equals: PaymentCollectionStatusType
-  in: [PaymentCollectionStatusType!]
-  notIn: [PaymentCollectionStatusType!]
-  not: PaymentCollectionStatusTypeNullableFilter
-}
-
 input PaymentCollectionDescriptionTypeNullableFilter {
   equals: PaymentCollectionDescriptionType
   in: [PaymentCollectionDescriptionType!]
@@ -5693,7 +5695,6 @@ input PaymentCollectionDescriptionTypeNullableFilter {
 
 input PaymentCollectionOrderByInput {
   id: OrderDirection
-  status: OrderDirection
   description: OrderDirection
   amount: OrderDirection
   authorizedAmount: OrderDirection
@@ -5703,7 +5704,6 @@ input PaymentCollectionOrderByInput {
 }
 
 input PaymentCollectionUpdateInput {
-  status: PaymentCollectionStatusType
   description: PaymentCollectionDescriptionType
   amount: Int
   authorizedAmount: Int
@@ -5722,7 +5722,6 @@ input PaymentCollectionUpdateArgs {
 }
 
 input PaymentCollectionCreateInput {
-  status: PaymentCollectionStatusType
   description: PaymentCollectionDescriptionType
   amount: Int
   authorizedAmount: Int
@@ -5740,7 +5739,7 @@ type PaymentSession {
   isSelected: Boolean
   isInitiated: Boolean
   amount: Int
-  status: PaymentSessionStatusType
+  formattedAmount: String
   data: JSON
   idempotencyKey: String
   paymentCollection: PaymentCollection
@@ -5748,15 +5747,6 @@ type PaymentSession {
   paymentAuthorizedAt: DateTime
   createdAt: DateTime
   updatedAt: DateTime
-}
-
-enum PaymentSessionStatusType {
-  pending
-  processing
-  authorized
-  requires_more
-  error
-  canceled
 }
 
 input PaymentSessionWhereUniqueInput {
@@ -5771,7 +5761,6 @@ input PaymentSessionWhereInput {
   isSelected: BooleanFilter
   isInitiated: BooleanFilter
   amount: IntFilter
-  status: PaymentSessionStatusTypeNullableFilter
   idempotencyKey: StringFilter
   paymentCollection: PaymentCollectionWhereInput
   paymentProvider: PaymentProviderWhereInput
@@ -5780,19 +5769,11 @@ input PaymentSessionWhereInput {
   updatedAt: DateTimeFilter
 }
 
-input PaymentSessionStatusTypeNullableFilter {
-  equals: PaymentSessionStatusType
-  in: [PaymentSessionStatusType!]
-  notIn: [PaymentSessionStatusType!]
-  not: PaymentSessionStatusTypeNullableFilter
-}
-
 input PaymentSessionOrderByInput {
   id: OrderDirection
   isSelected: OrderDirection
   isInitiated: OrderDirection
   amount: OrderDirection
-  status: OrderDirection
   idempotencyKey: OrderDirection
   paymentAuthorizedAt: OrderDirection
   createdAt: OrderDirection
@@ -5803,7 +5784,6 @@ input PaymentSessionUpdateInput {
   isSelected: Boolean
   isInitiated: Boolean
   amount: Int
-  status: PaymentSessionStatusType
   data: JSON
   idempotencyKey: String
   paymentCollection: PaymentCollectionRelateToOneForUpdateInput
@@ -5828,7 +5808,6 @@ input PaymentSessionCreateInput {
   isSelected: Boolean
   isInitiated: Boolean
   amount: Int
-  status: PaymentSessionStatusType
   data: JSON
   idempotencyKey: String
   paymentCollection: PaymentCollectionRelateToOneForCreateInput
@@ -6350,6 +6329,8 @@ type Region {
   shippingOptionsCount(where: ShippingOptionWhereInput! = {}): Int
   taxRates(where: TaxRateWhereInput! = {}, orderBy: [TaxRateOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: TaxRateWhereUniqueInput): [TaxRate!]
   taxRatesCount(where: TaxRateWhereInput! = {}): Int
+  shippingProviders(where: ShippingProviderWhereInput! = {}, orderBy: [ShippingProviderOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ShippingProviderWhereUniqueInput): [ShippingProvider!]
+  shippingProvidersCount(where: ShippingProviderWhereInput! = {}): Int
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -6382,6 +6363,7 @@ input RegionWhereInput {
   paymentProviders: PaymentProviderManyRelationFilter
   shippingOptions: ShippingOptionManyRelationFilter
   taxRates: TaxRateManyRelationFilter
+  shippingProviders: ShippingProviderManyRelationFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
@@ -6436,6 +6418,7 @@ input RegionUpdateInput {
   paymentProviders: PaymentProviderRelateToManyForUpdateInput
   shippingOptions: ShippingOptionRelateToManyForUpdateInput
   taxRates: TaxRateRelateToManyForUpdateInput
+  shippingProviders: ShippingProviderRelateToManyForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -6492,6 +6475,7 @@ input RegionCreateInput {
   paymentProviders: PaymentProviderRelateToManyForCreateInput
   shippingOptions: ShippingOptionRelateToManyForCreateInput
   taxRates: TaxRateRelateToManyForCreateInput
+  shippingProviders: ShippingProviderRelateToManyForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -7643,68 +7627,6 @@ input TaxRateCreateInput {
   updatedAt: DateTime
 }
 
-type TrackingLink {
-  id: ID!
-  url: String
-  trackingNumber: String
-  metadata: JSON
-  idempotencyKey: String
-  fulfillment: Fulfillment
-  createdAt: DateTime
-  updatedAt: DateTime
-}
-
-input TrackingLinkWhereUniqueInput {
-  id: ID
-}
-
-input TrackingLinkWhereInput {
-  AND: [TrackingLinkWhereInput!]
-  OR: [TrackingLinkWhereInput!]
-  NOT: [TrackingLinkWhereInput!]
-  id: IDFilter
-  url: StringFilter
-  trackingNumber: StringFilter
-  idempotencyKey: StringFilter
-  fulfillment: FulfillmentWhereInput
-  createdAt: DateTimeFilter
-  updatedAt: DateTimeFilter
-}
-
-input TrackingLinkOrderByInput {
-  id: OrderDirection
-  url: OrderDirection
-  trackingNumber: OrderDirection
-  idempotencyKey: OrderDirection
-  createdAt: OrderDirection
-  updatedAt: OrderDirection
-}
-
-input TrackingLinkUpdateInput {
-  url: String
-  trackingNumber: String
-  metadata: JSON
-  idempotencyKey: String
-  fulfillment: FulfillmentRelateToOneForUpdateInput
-  createdAt: DateTime
-  updatedAt: DateTime
-}
-
-input TrackingLinkUpdateArgs {
-  where: TrackingLinkWhereUniqueInput!
-  data: TrackingLinkUpdateInput!
-}
-
-input TrackingLinkCreateInput {
-  url: String
-  trackingNumber: String
-  metadata: JSON
-  idempotencyKey: String
-  fulfillment: FulfillmentRelateToOneForCreateInput
-  createdAt: DateTime
-  updatedAt: DateTime
-}
-
 type BatchJob {
   id: ID!
   type: BatchJobTypeType
@@ -8017,8 +7939,10 @@ type OrderEvent {
 }
 
 enum OrderEventTypeType {
+  ORDER_PLACED
   STATUS_CHANGE
   PAYMENT_STATUS_CHANGE
+  PAYMENT_CAPTURED
   FULFILLMENT_STATUS_CHANGE
   NOTE_ADDED
   EMAIL_SENT
@@ -8085,6 +8009,222 @@ input OrderEventCreateInput {
   createdBy: UserRelateToOneForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
+}
+
+type ShippingProvider {
+  id: ID!
+  name: String
+  isActive: Boolean
+  accessToken: String
+  createLabelFunction: String
+  getRatesFunction: String
+  validateAddressFunction: String
+  trackShipmentFunction: String
+  cancelLabelFunction: String
+  metadata: JSON
+  regions(where: RegionWhereInput! = {}, orderBy: [RegionOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: RegionWhereUniqueInput): [Region!]
+  regionsCount(where: RegionWhereInput! = {}): Int
+  labels(where: ShippingLabelWhereInput! = {}, orderBy: [ShippingLabelOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ShippingLabelWhereUniqueInput): [ShippingLabel!]
+  labelsCount(where: ShippingLabelWhereInput! = {}): Int
+  fulfillmentProvider: FulfillmentProvider
+  fromAddress: Address
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input ShippingProviderWhereUniqueInput {
+  id: ID
+}
+
+input ShippingProviderWhereInput {
+  AND: [ShippingProviderWhereInput!]
+  OR: [ShippingProviderWhereInput!]
+  NOT: [ShippingProviderWhereInput!]
+  id: IDFilter
+  name: StringFilter
+  isActive: BooleanFilter
+  accessToken: StringFilter
+  createLabelFunction: StringFilter
+  getRatesFunction: StringFilter
+  validateAddressFunction: StringFilter
+  trackShipmentFunction: StringFilter
+  cancelLabelFunction: StringFilter
+  regions: RegionManyRelationFilter
+  labels: ShippingLabelManyRelationFilter
+  fulfillmentProvider: FulfillmentProviderWhereInput
+  fromAddress: AddressWhereInput
+  createdAt: DateTimeFilter
+  updatedAt: DateTimeFilter
+}
+
+input ShippingProviderOrderByInput {
+  id: OrderDirection
+  name: OrderDirection
+  isActive: OrderDirection
+  accessToken: OrderDirection
+  createLabelFunction: OrderDirection
+  getRatesFunction: OrderDirection
+  validateAddressFunction: OrderDirection
+  trackShipmentFunction: OrderDirection
+  cancelLabelFunction: OrderDirection
+  createdAt: OrderDirection
+  updatedAt: OrderDirection
+}
+
+input ShippingProviderUpdateInput {
+  name: String
+  isActive: Boolean
+  accessToken: String
+  createLabelFunction: String
+  getRatesFunction: String
+  validateAddressFunction: String
+  trackShipmentFunction: String
+  cancelLabelFunction: String
+  metadata: JSON
+  regions: RegionRelateToManyForUpdateInput
+  labels: ShippingLabelRelateToManyForUpdateInput
+  fulfillmentProvider: FulfillmentProviderRelateToOneForUpdateInput
+  fromAddress: AddressRelateToOneForUpdateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input ShippingProviderUpdateArgs {
+  where: ShippingProviderWhereUniqueInput!
+  data: ShippingProviderUpdateInput!
+}
+
+input ShippingProviderCreateInput {
+  name: String
+  isActive: Boolean
+  accessToken: String
+  createLabelFunction: String
+  getRatesFunction: String
+  validateAddressFunction: String
+  trackShipmentFunction: String
+  cancelLabelFunction: String
+  metadata: JSON
+  regions: RegionRelateToManyForCreateInput
+  labels: ShippingLabelRelateToManyForCreateInput
+  fulfillmentProvider: FulfillmentProviderRelateToOneForCreateInput
+  fromAddress: AddressRelateToOneForCreateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+type ShippingLabel {
+  id: ID!
+  status: ShippingLabelStatusType
+  labelUrl: String
+  carrier: String
+  service: String
+  rate: JSON
+  trackingNumber: String
+  trackingUrl: String
+  order: Order
+  provider: ShippingProvider
+  fulfillment: Fulfillment
+  data: JSON
+  metadata: JSON
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+enum ShippingLabelStatusType {
+  created
+  purchased
+  failed
+}
+
+input ShippingLabelWhereUniqueInput {
+  id: ID
+}
+
+input ShippingLabelWhereInput {
+  AND: [ShippingLabelWhereInput!]
+  OR: [ShippingLabelWhereInput!]
+  NOT: [ShippingLabelWhereInput!]
+  id: IDFilter
+  status: ShippingLabelStatusTypeNullableFilter
+  labelUrl: StringFilter
+  carrier: StringFilter
+  service: StringFilter
+  trackingNumber: StringFilter
+  trackingUrl: StringFilter
+  order: OrderWhereInput
+  provider: ShippingProviderWhereInput
+  fulfillment: FulfillmentWhereInput
+  createdAt: DateTimeFilter
+  updatedAt: DateTimeFilter
+}
+
+input ShippingLabelStatusTypeNullableFilter {
+  equals: ShippingLabelStatusType
+  in: [ShippingLabelStatusType!]
+  notIn: [ShippingLabelStatusType!]
+  not: ShippingLabelStatusTypeNullableFilter
+}
+
+input ShippingLabelOrderByInput {
+  id: OrderDirection
+  status: OrderDirection
+  labelUrl: OrderDirection
+  carrier: OrderDirection
+  service: OrderDirection
+  trackingNumber: OrderDirection
+  trackingUrl: OrderDirection
+  createdAt: OrderDirection
+  updatedAt: OrderDirection
+}
+
+input ShippingLabelUpdateInput {
+  status: ShippingLabelStatusType
+  labelUrl: String
+  carrier: String
+  service: String
+  rate: JSON
+  trackingNumber: String
+  trackingUrl: String
+  order: OrderRelateToOneForUpdateInput
+  provider: ShippingProviderRelateToOneForUpdateInput
+  fulfillment: FulfillmentRelateToOneForUpdateInput
+  data: JSON
+  metadata: JSON
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input ShippingProviderRelateToOneForUpdateInput {
+  create: ShippingProviderCreateInput
+  connect: ShippingProviderWhereUniqueInput
+  disconnect: Boolean
+}
+
+input ShippingLabelUpdateArgs {
+  where: ShippingLabelWhereUniqueInput!
+  data: ShippingLabelUpdateInput!
+}
+
+input ShippingLabelCreateInput {
+  status: ShippingLabelStatusType
+  labelUrl: String
+  carrier: String
+  service: String
+  rate: JSON
+  trackingNumber: String
+  trackingUrl: String
+  order: OrderRelateToOneForCreateInput
+  provider: ShippingProviderRelateToOneForCreateInput
+  fulfillment: FulfillmentRelateToOneForCreateInput
+  data: JSON
+  metadata: JSON
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input ShippingProviderRelateToOneForCreateInput {
+  create: ShippingProviderCreateInput
+  connect: ShippingProviderWhereUniqueInput
 }
 
 """
@@ -8495,12 +8635,6 @@ type Mutation {
   updateTaxRates(data: [TaxRateUpdateArgs!]!): [TaxRate]
   deleteTaxRate(where: TaxRateWhereUniqueInput!): TaxRate
   deleteTaxRates(where: [TaxRateWhereUniqueInput!]!): [TaxRate]
-  createTrackingLink(data: TrackingLinkCreateInput!): TrackingLink
-  createTrackingLinks(data: [TrackingLinkCreateInput!]!): [TrackingLink]
-  updateTrackingLink(where: TrackingLinkWhereUniqueInput!, data: TrackingLinkUpdateInput!): TrackingLink
-  updateTrackingLinks(data: [TrackingLinkUpdateArgs!]!): [TrackingLink]
-  deleteTrackingLink(where: TrackingLinkWhereUniqueInput!): TrackingLink
-  deleteTrackingLinks(where: [TrackingLinkWhereUniqueInput!]!): [TrackingLink]
   createBatchJob(data: BatchJobCreateInput!): BatchJob
   createBatchJobs(data: [BatchJobCreateInput!]!): [BatchJob]
   updateBatchJob(where: BatchJobWhereUniqueInput!, data: BatchJobUpdateInput!): BatchJob
@@ -8531,6 +8665,18 @@ type Mutation {
   updateOrderEvents(data: [OrderEventUpdateArgs!]!): [OrderEvent]
   deleteOrderEvent(where: OrderEventWhereUniqueInput!): OrderEvent
   deleteOrderEvents(where: [OrderEventWhereUniqueInput!]!): [OrderEvent]
+  createShippingProvider(data: ShippingProviderCreateInput!): ShippingProvider
+  createShippingProviders(data: [ShippingProviderCreateInput!]!): [ShippingProvider]
+  updateShippingProvider(where: ShippingProviderWhereUniqueInput!, data: ShippingProviderUpdateInput!): ShippingProvider
+  updateShippingProviders(data: [ShippingProviderUpdateArgs!]!): [ShippingProvider]
+  deleteShippingProvider(where: ShippingProviderWhereUniqueInput!): ShippingProvider
+  deleteShippingProviders(where: [ShippingProviderWhereUniqueInput!]!): [ShippingProvider]
+  createShippingLabel(data: ShippingLabelCreateInput!): ShippingLabel
+  createShippingLabels(data: [ShippingLabelCreateInput!]!): [ShippingLabel]
+  updateShippingLabel(where: ShippingLabelWhereUniqueInput!, data: ShippingLabelUpdateInput!): ShippingLabel
+  updateShippingLabels(data: [ShippingLabelUpdateArgs!]!): [ShippingLabel]
+  deleteShippingLabel(where: ShippingLabelWhereUniqueInput!): ShippingLabel
+  deleteShippingLabels(where: [ShippingLabelWhereUniqueInput!]!): [ShippingLabel]
   endSession: Boolean!
   authenticateUserWithPassword(email: String!, password: String!): UserAuthenticationWithPasswordResult
   createInitialUser(data: CreateInitialUserInput!): UserAuthenticationWithPasswordSuccess!
@@ -8555,6 +8701,11 @@ type Mutation {
   handlePayPalWebhook(event: JSON!, headers: JSON!): WebhookResult!
   getAnalytics: JSON
   importInventory: Boolean
+  getRatesForOrder(orderId: ID!, providerId: ID!, dimensions: DimensionsInput): [ShippingRate!]!
+  validateShippingAddress(providerId: ID!, address: JSON!): AddressValidationResult!
+  trackShipment(providerId: ID!, trackingNumber: String!): ShipmentTrackingResult!
+  cancelShippingLabel(providerId: ID!, labelId: ID!): LabelCancellationResult!
+  createProviderShippingLabel(orderId: ID!, providerId: ID!, rateId: String!, dimensions: DimensionsInput, lineItems: [LineItemInput!]): ProviderShippingLabel
 }
 
 union UserAuthenticationWithPasswordResult = UserAuthenticationWithPasswordSuccess | UserAuthenticationWithPasswordFailure
@@ -8787,9 +8938,6 @@ type Query {
   taxRates(where: TaxRateWhereInput! = {}, orderBy: [TaxRateOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: TaxRateWhereUniqueInput): [TaxRate!]
   taxRate(where: TaxRateWhereUniqueInput!): TaxRate
   taxRatesCount(where: TaxRateWhereInput! = {}): Int
-  trackingLinks(where: TrackingLinkWhereInput! = {}, orderBy: [TrackingLinkOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: TrackingLinkWhereUniqueInput): [TrackingLink!]
-  trackingLink(where: TrackingLinkWhereUniqueInput!): TrackingLink
-  trackingLinksCount(where: TrackingLinkWhereInput! = {}): Int
   batchJobs(where: BatchJobWhereInput! = {}, orderBy: [BatchJobOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: BatchJobWhereUniqueInput): [BatchJob!]
   batchJob(where: BatchJobWhereUniqueInput!): BatchJob
   batchJobsCount(where: BatchJobWhereInput! = {}): Int
@@ -8805,6 +8953,12 @@ type Query {
   orderEvents(where: OrderEventWhereInput! = {}, orderBy: [OrderEventOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: OrderEventWhereUniqueInput): [OrderEvent!]
   orderEvent(where: OrderEventWhereUniqueInput!): OrderEvent
   orderEventsCount(where: OrderEventWhereInput! = {}): Int
+  shippingProviders(where: ShippingProviderWhereInput! = {}, orderBy: [ShippingProviderOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ShippingProviderWhereUniqueInput): [ShippingProvider!]
+  shippingProvider(where: ShippingProviderWhereUniqueInput!): ShippingProvider
+  shippingProvidersCount(where: ShippingProviderWhereInput! = {}): Int
+  shippingLabels(where: ShippingLabelWhereInput! = {}, orderBy: [ShippingLabelOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ShippingLabelWhereUniqueInput): [ShippingLabel!]
+  shippingLabel(where: ShippingLabelWhereUniqueInput!): ShippingLabel
+  shippingLabelsCount(where: ShippingLabelWhereInput! = {}): Int
   keystone: KeystoneMeta!
   authenticatedItem: AuthenticatedItem
   validateUserPasswordResetToken(email: String!, token: String!): ValidateUserPasswordResetTokenResult
@@ -8929,6 +9083,72 @@ enum KeystoneAdminUISortDirection {
 
 input CartCodeInput {
   code: String!
+}
+
+type ShippingRate {
+  id: ID!
+  provider: String!
+  service: String!
+  carrier: String!
+  price: String!
+  estimatedDays: String!
+}
+
+type ProviderShippingLabel {
+  id: ID!
+  status: String!
+  trackingNumber: String
+  trackingUrl: String
+  labelUrl: String
+  data: JSON
+}
+
+type PackageDimensions {
+  length: Float!
+  width: Float!
+  height: Float!
+  weight: Float!
+  unit: String!
+  weightUnit: String!
+}
+
+input DimensionsInput {
+  length: Float!
+  width: Float!
+  height: Float!
+  weight: Float!
+  unit: String!
+  weightUnit: String!
+}
+
+input LineItemInput {
+  lineItemId: ID!
+  quantity: Int!
+}
+
+type AddressValidationResult {
+  isValid: Boolean!
+  normalizedAddress: JSON
+  errors: [String!]
+}
+
+type TrackingEvent {
+  status: String!
+  location: String
+  timestamp: String!
+  message: String
+}
+
+type ShipmentTrackingResult {
+  status: String!
+  estimatedDeliveryDate: String
+  trackingEvents: [TrackingEvent!]!
+}
+
+type LabelCancellationResult {
+  success: Boolean!
+  refundStatus: String
+  error: String
 }
 
 input UserUpdateProfileInput {

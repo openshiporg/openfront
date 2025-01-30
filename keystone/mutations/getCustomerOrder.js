@@ -8,8 +8,8 @@ async function getCustomerOrder(root, { orderId, secretKey }, context) {
       secretKey
       displayId
       status
-      paymentStatus
       fulfillmentStatus
+      paymentDetails
       total
       subtotal
       shipping
@@ -19,6 +19,8 @@ async function getCustomerOrder(root, { orderId, secretKey }, context) {
       email
       user {
         id
+        name
+        email
       }
       shippingAddress {
         firstName
@@ -29,7 +31,11 @@ async function getCustomerOrder(root, { orderId, secretKey }, context) {
         city
         province
         postalCode
-        countryCode
+        country {
+          id
+          iso2
+          name
+        }
         phone
       }
       billingAddress {
@@ -41,7 +47,11 @@ async function getCustomerOrder(root, { orderId, secretKey }, context) {
         city
         province
         postalCode
-        countryCode
+        country {
+          id
+          iso2
+          name
+        }
         phone
       }
       shippingMethods {
