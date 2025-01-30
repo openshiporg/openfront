@@ -79,6 +79,7 @@ import {
   TooltipTrigger,
 } from "@ui/tooltip";
 import { ToggleGroup, ToggleGroupItem } from "@ui/toggle-group";
+import { GraphQLErrorNotice } from "@keystone/themes/Tailwind/orion/components/GraphQLErrorNotice";
 
 const GET_ORDER_QUERY = gql`
   query GetOrder($id: ID!) {
@@ -370,7 +371,7 @@ export function CreateDialog({ title, listKey, children }) {
                 <Info className="h-4 w-4" />
                 <p className="basis-11/12">
                   Each function can be configured to either use a built-in
-                  adapter (e.g. 'easypost') or a custom HTTP endpoint that will
+                  adapter (e.g. &apos;easypost&apos;) or a custom HTTP endpoint that will
                   handle the shipping operations.
                 </p>
               </div>

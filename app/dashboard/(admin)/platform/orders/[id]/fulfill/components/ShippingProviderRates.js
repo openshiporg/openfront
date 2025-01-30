@@ -76,10 +76,6 @@ export function ShippingProviderRates({
     },
   });
 
-  useEffect(() => {
-    handleGetRates();
-  }, [provider.id, dimensions, weight]);
-
   const handleGetRates = async () => {
     setIsLoading(true);
     setError(null);
@@ -104,6 +100,10 @@ export function ShippingProviderRates({
       setError(error.message);
     }
   };
+
+  useEffect(() => {
+    handleGetRates();
+  }, [provider.id, dimensions, weight]);
 
   if (!provider.isActive) {
     return null;

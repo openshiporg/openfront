@@ -475,7 +475,7 @@ export default function OrderPage({ params }) {
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Not Found</AlertTitle>
         <AlertDescription>
-          Order not found or you don't have access.
+          Order not found or you don&apos;t have access.
         </AlertDescription>
       </Alert>
     );
