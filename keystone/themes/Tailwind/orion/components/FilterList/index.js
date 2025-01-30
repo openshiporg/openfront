@@ -12,18 +12,20 @@ import { useList } from "@keystone/keystoneProvider";
 
 export function FilterList({ filters, list }) {
   return (
-    <div className="flex flex-wrap gap-2 w-full">
-      {filters.map((filter) => {
-        const field = list.fields[filter.field];
-        return (
-          <FilterPill
-            key={`${filter.field}_${filter.type}`}
-            field={field}
-            filter={filter}
-          />
-        );
-      })}
-    </div>
+    filters.length > 0 && (
+      <div className="flex flex-wrap gap-2 w-full">
+        {filters.map((filter) => {
+          const field = list.fields[filter.field];
+          return (
+            <FilterPill
+              key={`${filter.field}_${filter.type}`}
+              field={field}
+              filter={filter}
+            />
+          );
+        })}
+      </div>
+    )
   );
 }
 
@@ -54,30 +56,49 @@ function FilterPill({ filter, field }) {
       placement="bottom"
     >
       <PopoverTrigger asChild>
-        <div className="inline-flex rounded-md text-muted-foreground" role="group">
-          <Button
-            variant="outline"
-            size="icon"
-            className="[&_svg]:size-3 w-6 h-full rounded-r-none px-2 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
-          >
-            <XIcon className="size-4" />
-          </Button>
+        <div
+          className="inline-flex rounded-md text-muted-foreground shadow-xs"
+          role="group"
+        >
+          <div className="flex border rounded-s-md">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-none rounded-s-[calc(theme(borderRadius.md)-1px)] [&_svg]:size-3 w-6 h-6 px-2 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-950"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove();
+              }}
+            >
+              <XIcon  />
+            </Button>
+          </div>
           <Button
             variant="outline"
             size="xs"
-            className="uppercase py-1 flex-wrap rounded-l-none border-l-0 [&_svg]:size-3.5 text-xs px-2"
+            className="py-0.5 shadow-none justify-start uppercase flex-wrap rounded-l-none border-l-0 [&_svg]:size-3.5 text-xs px-2"
           >
             <span>{field.label}</span>
             <ChevronRightIcon />
             <span>{field.controller.filter.types[filter.type].label}</span>
             <ChevronRightIcon />
-            <span className="font-semibold text-indigo-600 dark:text-indigo-400">
-              {filter.value}
-            </span>
+            <div className="flex flex-wrap gap-1">
+              {typeof filter.value === "string" &&
+              filter.value.includes(",") ? (
+                filter.value.split(",").map((value, index) => (
+                  <span
+                    key={index}
+                    className="text-[.6rem] font-semibold text-indigo-600 dark:text-indigo-400 bg-zinc-100 dark:bg-zinc-800 px-1 py-[0.05rem] rounded truncate max-w-[150px]"
+                  >
+                    {value.trim()}
+                  </span>
+                ))
+              ) : (
+                <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                  {filter.value}
+                </span>
+              )}
+            </div>
             <ChevronDownIcon />
           </Button>
         </div>

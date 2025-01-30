@@ -84,7 +84,7 @@ export function AppSidebar({ sidebarLinks = [], ...props }) {
           <Logo />
         </SidebarMenuButton>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="no-scrollbar">
         {/* Main Navigation */}
         <SidebarGroup>
           <SidebarGroupLabel>Platform</SidebarGroupLabel>
@@ -136,7 +136,7 @@ export function AppSidebar({ sidebarLinks = [], ...props }) {
         {/* Dashboard Links - Collapsible/Dropdown */}
         <SidebarGroup>
           <SidebarGroupLabel>Dashboard</SidebarGroupLabel>
-          <div className="group-has-[[data-collapsible=icon]]/sidebar-wrapper:hidden">
+          <div className="max-h-full overflow-y-auto group-has-[[data-collapsible=icon]]/sidebar-wrapper:hidden">
             <Collapsible
               key={dashboardItem.title}
               asChild

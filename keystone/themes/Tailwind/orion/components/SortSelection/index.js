@@ -82,7 +82,7 @@ export function SortSelection({ list, orderableFields, children }) {
           )}
         </div>
         <DropdownMenuSeparator />
-        <ScrollArea vpClassName="max-h-72">
+        <div className="max-h-[300px] overflow-y-auto">
           {[...orderableFields, noFieldOption.value].map((fieldPath) => {
             const isNoFieldOption = fieldPath === noFieldOption.value;
             const option = isNoFieldOption
@@ -124,7 +124,7 @@ export function SortSelection({ list, orderableFields, children }) {
               </DropdownMenuItem>
             );
           })}
-        </ScrollArea>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );

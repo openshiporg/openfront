@@ -969,9 +969,9 @@
     tslib "^2.0.0"
 
 "@easypost/api@^7.5.3":
-  version "7.5.3"
-  resolved "https://registry.yarnpkg.com/@easypost/api/-/api-7.5.3.tgz#8968e58d8a5a0f8a854a08fb5c06141a4470d2ff"
-  integrity sha512-gT31SwpCogvjDRO/Jhdkz7Myi5KM4kXkrVkr4PYq3TymO2vzO9nGKjNX+pfOd6aN1LX4BYN4gmYN+RjKtKhCQg==
+  version "7.5.4"
+  resolved "https://registry.yarnpkg.com/@easypost/api/-/api-7.5.4.tgz#1b60c847533028ef974da8ddb3ef306e873bce3c"
+  integrity sha512-RXI6DBOxvbm6IQV9R+bg0N17KrqLEZc0ACfkHs7pdxHD+Zoe4/DjpYI6aMLHRFpLY3tFNMoooLZ5y7QOmm4sig==
   dependencies:
     core-js "~3.30.2"
     nodent-runtime "~3.2.1"
@@ -9227,10 +9227,15 @@ semver@^6.3.1:
   resolved "https://registry.yarnpkg.com/semver/-/semver-6.3.1.tgz#556d2ef8689146e46dcea4bfdd095f3434dffcb4"
   integrity sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==
 
-semver@^7.3.4, semver@^7.3.5, semver@^7.3.7, semver@^7.3.8:
+semver@^7.3.4, semver@^7.3.5, semver@^7.3.7:
   version "7.6.3"
   resolved "https://registry.yarnpkg.com/semver/-/semver-7.6.3.tgz#980f7b5550bc175fb4dc09403085627f9eb33143"
   integrity sha512-oVekP1cKtI+CTDvHWYFUcMtsK/00wmAEfyqKfNdARm8u1wNVhSgaX7A8d4UuIlUI5e84iEwOhs7ZPYRmzU9U6A==
+
+semver@^7.3.8:
+  version "7.7.0"
+  resolved "https://registry.yarnpkg.com/semver/-/semver-7.7.0.tgz#9c6fe61d0c6f9fa9e26575162ee5a9180361b09c"
+  integrity sha512-DrfFnPzblFmNrIZzg5RzHegbiRWg7KMR7btwi2yjHwx06zsUbO5g613sVwEV7FTwmzJu+Io0lJe2GJ3LxqpvBQ==
 
 send@0.19.0:
   version "0.19.0"
@@ -9309,9 +9314,9 @@ shebang-regex@^3.0.0:
   integrity sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==
 
 shippo@^2.14.1:
-  version "2.14.1"
-  resolved "https://registry.yarnpkg.com/shippo/-/shippo-2.14.1.tgz#20ffb802b848e3120b0d6ce5fc6cd6630a7adb3d"
-  integrity sha512-ocpcQiCg3QFJFhKtLCCd3k3UcmiM3gouqfHWXrkQ7H7+LAZGq0ce4JX5Bv8i1As4bl6dLuDE/s4+KgESkSxDVw==
+  version "2.15.0"
+  resolved "https://registry.yarnpkg.com/shippo/-/shippo-2.15.0.tgz#8d1ba77b7e9fbc5f0a5fe0e20db51f0852bda2c8"
+  integrity sha512-ND6QT3xSW8tMCkNNGqIbtpuuGR/CqPBa7dyYuHmT1F554LoqA9K24R2iVLC/yXO5LTT2xskbkY/IKUg2RazVFg==
 
 side-channel-list@^1.0.0:
   version "1.0.0"

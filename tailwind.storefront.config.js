@@ -3,13 +3,13 @@ const path = require("path")
 module.exports = {
   darkMode: "class",
   presets: [require("@medusajs/ui-preset")],
-  // content: [
-  //   "./app/(storefront)/**/*.{js,ts,jsx,tsx}",
-  //   "./pages/(storefront)/**/*.{js,ts,jsx,tsx}",
-  //   "./storefront/lib/**/*.{js,ts,jsx,tsx}",
-  //   "./storefront/modules/**/*.{js,ts,jsx,tsx}",
-  //   "./node_modules/@medusajs/ui/dist/**/*.{js,jsx,ts,tsx}",
-  // ],
+  content: [
+    "./app/(storefront)/**/*.{js,ts,jsx,tsx}",
+    "./pages/(storefront)/**/*.{js,ts,jsx,tsx}",
+    "./storefront/lib/**/*.{js,ts,jsx,tsx}",
+    "./storefront/modules/**/*.{js,ts,jsx,tsx}",
+    "./node_modules/@medusajs/ui/dist/**/*.{js,jsx,ts,tsx}",
+  ],
   theme: {
     extend: {
       transitionProperty: {

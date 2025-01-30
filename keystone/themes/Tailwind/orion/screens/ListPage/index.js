@@ -401,9 +401,9 @@ export const ListPageTemplate = ({ listKey }) => {
                 </p>
               </div>
               {/* Controls Row */}
-              <div className="flex flex-wrap items-center gap-2 mt-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 mt-4">
                 {/* Left Side Controls */}
-                <div className="relative max-w-[300px] min-w-[150px]">
+                <div className="relative flex-1 min-w-72">
                   <ListFilter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <form
                     onSubmit={(e) => {
@@ -431,7 +431,7 @@ export const ListPageTemplate = ({ listKey }) => {
                   <Button
                     variant="outline"
                     size="icon"
-                    className="lg:px-4 lg:py-2 lg:w-auto"
+                    className="lg:px-4 lg:py-2 lg:w-auto rounded-lg"
                   >
                     <FilterIcon className="stroke-muted-foreground" />
                     <span className="hidden lg:inline">Filter</span>
@@ -445,15 +445,18 @@ export const ListPageTemplate = ({ listKey }) => {
                   <Button
                     variant="outline"
                     size="icon"
-                    className="lg:px-4 lg:py-2 lg:w-auto"
+                    className="lg:px-4 lg:py-2 lg:w-auto rounded-lg"
                   >
                     <Columns3 className="stroke-muted-foreground" />
                     <span className="hidden lg:inline">Display</span>
                   </Button>
                 </FieldSelection>
                 {showCreate && (
-                  <AdminLink href={`/${list.path}/create`} className="ml-auto">
-                    <Button size="icon" className="lg:px-4 lg:py-2 lg:w-auto">
+                  <AdminLink href={`/${list.path}/create`}>
+                    <Button
+                      size="icon"
+                      className="lg:px-4 lg:py-2 lg:w-auto rounded-lg"
+                    >
                       <DiamondPlus className="h-4 w-4" />
                       <span className="hidden lg:inline">
                         Create {list.singular}
@@ -465,7 +468,10 @@ export const ListPageTemplate = ({ listKey }) => {
 
               {/* Active Filters */}
               {filters.filters.length > 0 && (
-                <div className="flex gap-2 mt-1">
+                <div className="flex gap-1.5 mt-1 border bg-muted/40 rounded-lg p-2 items-center">
+                  <div className="flex items-center gap-1.5 border-r border-muted-foreground/30 pr-2 mr-1.5">
+                    <FilterIcon className="stroke-muted-foreground/50 size-4" strokeWidth={1.5} />
+                  </div>
                   <FilterList filters={filters.filters} list={list} />
                 </div>
               )}
