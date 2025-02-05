@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@ui/button";
 import { Input } from "@ui/input";
 import { Label } from "@ui/label";
@@ -6,6 +6,48 @@ import { Plus, Trash2 } from "lucide-react";
 import { MeasurementInput } from "./MeasurementInput";
 import { PriceInput } from "./PriceInput";
 import { Switch } from "@ui/switch";
+
+// Move the function outside component
+const generateVariantCombinations = (options, variants) => {
+  if (options.length === 0) return variants;
+
+  const combinations = options.reduce((acc, option) => {
+    if (acc.length === 0) {
+      return option.values.map(value => ([{ optionId: option.id, value }]));
+    }
+    return acc.flatMap(combination => 
+      option.values.map(value => [...combination, { optionId: option.id, value }])
+    );
+  }, []);
+
+  return combinations.map(combination => {
+    // Try to find existing variant with this combination
+    const existingVariant = variants.find(variant => 
+      combination.every(({ optionId, value }) => 
+        variant.productOptionValues?.some(v => 
+          v.productOption?.id === optionId && v.value === value
+        )
+      )
+    );
+
+    if (existingVariant) {
+      return existingVariant;
+    }
+
+    // Create new variant
+    return {
+      title: combination.map(c => c.value).join(" / "),
+      sku: "",
+      barcode: "",
+      prices: [],
+      measurements: [],
+      productOptionValues: combination.map(({ optionId, value }) => ({
+        productOption: { id: optionId },
+        value
+      }))
+    };
+  });
+};
 
 export function VariantsTab({ variants = [], productOptions = [], currencies = [], onChange }) {
   // Track if we're using multiple variants
@@ -37,6 +79,11 @@ export function VariantsTab({ variants = [], productOptions = [], currencies = [
     return [];
   });
 
+  // Wrap the function call in useCallback
+  const generateVariants = useCallback((options) => {
+    return generateVariantCombinations(options, variants);
+  }, [variants]);
+
   // Handle switching between single and multiple variants
   const handleVariantTypeChange = (checked) => {
     setUseMultipleVariants(checked);
@@ -67,52 +114,11 @@ export function VariantsTab({ variants = [], productOptions = [], currencies = [
 
   // Update variants when options change
   useEffect(() => {
-    if (useMultipleVariants && selectedOptions.length > 0) {
-      const newVariants = generateVariantCombinations();
-      onChange(newVariants);
+    if (selectedOptions.length > 0) {
+      const combinations = generateVariants(selectedOptions);
+      onChange(combinations);
     }
-  }, [selectedOptions, useMultipleVariants]);
-
-  const generateVariantCombinations = () => {
-    if (selectedOptions.length === 0) return variants;
-
-    const combinations = selectedOptions.reduce((acc, option) => {
-      if (acc.length === 0) {
-        return option.values.map(value => ([{ optionId: option.id, value }]));
-      }
-      return acc.flatMap(combination => 
-        option.values.map(value => [...combination, { optionId: option.id, value }])
-      );
-    }, []);
-
-    return combinations.map(combination => {
-      // Try to find existing variant with this combination
-      const existingVariant = variants.find(variant => 
-        combination.every(({ optionId, value }) => 
-          variant.productOptionValues?.some(v => 
-            v.productOption?.id === optionId && v.value === value
-          )
-        )
-      );
-
-      if (existingVariant) {
-        return existingVariant;
-      }
-
-      // Create new variant
-      return {
-        title: combination.map(c => c.value).join(" / "),
-        sku: "",
-        barcode: "",
-        prices: [],
-        measurements: [],
-        productOptionValues: combination.map(({ optionId, value }) => ({
-          productOption: { id: optionId },
-          value
-        }))
-      };
-    });
-  };
+  }, [selectedOptions, generateVariants, onChange]);
 
   const addOption = () => {
     setSelectedOptions([
@@ -125,7 +131,7 @@ export function VariantsTab({ variants = [], productOptions = [], currencies = [
     const newOptions = [...selectedOptions];
     newOptions.splice(index, 1);
     setSelectedOptions(newOptions);
-    onChange(generateVariantCombinations());
+    onChange(generateVariants(newOptions));
   };
 
   const updateOption = (index, field, value) => {
@@ -135,7 +141,7 @@ export function VariantsTab({ variants = [], productOptions = [], currencies = [
       [field]: value,
     };
     setSelectedOptions(newOptions);
-    onChange(generateVariantCombinations());
+    onChange(generateVariants(newOptions));
   };
 
   const updateOptionValues = (optionIndex, values) => {
@@ -145,7 +151,7 @@ export function VariantsTab({ variants = [], productOptions = [], currencies = [
       values: values.split(",").map(v => v.trim()).filter(Boolean)
     };
     setSelectedOptions(newOptions);
-    onChange(generateVariantCombinations());
+    onChange(generateVariants(newOptions));
   };
 
   const updateVariant = (index, field, value) => {

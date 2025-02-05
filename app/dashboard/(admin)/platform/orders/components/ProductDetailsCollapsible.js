@@ -9,6 +9,7 @@ import { ChevronsUpDown } from "lucide-react";
 import { ItemPagination, ItemPaginationStats } from "./ItemPagination";
 import { Skeleton } from "@ui/skeleton";
 import { Badge } from "@ui/badge";
+import Image from "next/image";
 
 export const LINE_ITEMS_QUERY = gql`
   query LINE_ITEMS_QUERY($orderId: ID!, $take: Int!, $skip: Int!) {
@@ -136,10 +137,12 @@ export const ProductDetailsCollapsible = ({
                 >
                   {item.productVariant?.product?.thumbnail && (
                     <div className="flex-shrink-0">
-                      <img
+                      <Image
                         src={item.productVariant.product.thumbnail}
                         alt={item.productVariant.product.title}
-                        className="w-16 h-16 object-cover rounded-sm"
+                        width={48}
+                        height={48}
+                        className="size-12 rounded-lg object-cover"
                       />
                     </div>
                   )}

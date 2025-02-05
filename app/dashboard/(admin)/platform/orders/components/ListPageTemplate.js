@@ -69,20 +69,20 @@ const ColoredSquare = ({ className, children }) => (
 
 const DiamondPlus = () => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
+    width="20"
+    height="20"
+    viewBox="0 0 20 20"
     fill="none"
-    stroke="currentColor"
-    stroke-width="2"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    class="lucide lucide-diamond-plus"
+    xmlns="http://www.w3.org/2000/svg"
   >
-    <path d="M12 8v8" />
-    <path d="M2.7 10.3a2.41 2.41 0 0 0 0 3.41l7.59 7.59a2.41 2.41 0 0 0 3.41 0l7.59-7.59a2.41 2.41 0 0 0 0-3.41L13.7 2.71a2.41 2.41 0 0 0-3.41 0z" />
-    <path d="M8 12h8" />
+    <path
+      d="M10 4V16M4 10H16"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="text-muted-foreground"
+    />
   </svg>
 );
 

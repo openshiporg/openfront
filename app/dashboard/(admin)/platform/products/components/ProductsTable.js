@@ -22,6 +22,7 @@ import { MoreHorizontal, PenSquare, Trash2 } from "lucide-react";
 import { DeleteButton } from "@keystone/themes/Tailwind/orion/components/EditItemDrawer";
 import { useDrawer } from "@keystone/themes/Tailwind/orion/components/Modals/drawer-context";
 import { cn } from "@keystone/utils/cn";
+import { CreateButtonLink } from "@keystone/themes/Tailwind/orion/components/CreateButtonLink";
 
 export const ProductsTable = ({
   data,
@@ -85,7 +86,7 @@ export const ProductsTable = ({
               <span className="text-muted-foreground pb-4">
                 Get started by creating a new one.{" "}
               </span>
-              {showCreate && <CreateButtonLink list={list} />}
+              {showCreate && <CreateButtonLink href="/dashboard/admin/platform/products/new" />}
             </>
           )}
         </div>

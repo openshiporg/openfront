@@ -26,8 +26,10 @@ import {
   KeyRound,
   MapPin,
   Truck,
+  ChevronLeft,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 import { Button } from "@ui/button";
 import {
@@ -43,7 +45,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  SelectLabel
+  SelectLabel,
 } from "@ui/select";
 import { CreateDialog } from "../page";
 import { ShippingProviderRates } from "./ShippingProviderRates";
@@ -81,6 +83,7 @@ import { ScrollArea, ScrollBar } from "@ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ui/tabs";
 import { Badge } from "@ui/badge";
 import { RadioGroup, RadioGroupItem } from "@ui/radio-group";
+import { useForm } from "react-hook-form";
 
 const CREATE_PROVIDER_SHIPPING_LABEL = gql`
   mutation CreateProviderShippingLabel(
@@ -108,8 +111,12 @@ const CREATE_PROVIDER_SHIPPING_LABEL = gql`
 `;
 
 const GET_USER_ADDRESSES = gql`
-  query GetUserAddresses($userId: ID!) {
-    addresses(where: { user: { id: { equals: $userId } } }) {
+  query GetUserAddresses($userId: ID!, $take: Int!, $skip: Int!) {
+    addresses(
+      where: { user: { id: { equals: $userId } } }
+      take: $take
+      skip: $skip
+    ) {
       id
       company
       firstName
@@ -122,6 +129,7 @@ const GET_USER_ADDRESSES = gql`
       phone
       label
     }
+    addressesCount(where: { user: { id: { equals: $userId } } })
   }
 `;
 
@@ -132,6 +140,21 @@ const GET_CURRENT_USER = gql`
         id
       }
     }
+  }
+`;
+
+const GET_COUNTRIES = gql`
+  query RelationshipSelect(
+    $where: CountryWhereInput!
+    $take: Int!
+    $skip: Int!
+  ) {
+    items: countries(where: $where, take: $take, skip: $skip) {
+      ____id____: id
+      ____label____: name
+      __typename
+    }
+    count: countriesCount(where: $where)
   }
 `;
 
@@ -154,25 +177,31 @@ function StatusIndicator({ provider, isPreset }) {
   );
 }
 
-function ProviderActionsInline({ provider, onProviderToggle, children }) {
+function ProviderActionsInline({
+  provider,
+  onProviderToggle,
+  children,
+  onDelete,
+}) {
   const { openEditDrawer } = useDrawer();
   const { handleDelete } = useDeleteItem("ShippingProvider");
   const handleDeleteProvider = async () => {
     const result = await handleDelete(provider.id, provider.name);
-    // Additional handling if needed
+    if (result?.success) {
+      // If the provider was deleted successfully, call onDelete callback
+      onDelete?.(provider);
+    }
   };
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger>
-        {children}
-      </DropdownMenuTrigger>
+      <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
       <DropdownMenuContent>
         <DropdownMenuItem
           onClick={() => onProviderToggle(provider.id)}
           className="gap-2 font-medium tracking-wide text-xs"
         >
           <Plus className="h-3.5 w-3.5" />
-          {provider.isActive ? "DEACTIVATE" : "ACTIVATE"}
+          {provider?.isActive ? "DEACTIVATE" : "ACTIVATE"}
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => openEditDrawer(provider.id, "ShippingProvider")}
@@ -279,10 +308,12 @@ function ProviderTabContent({
           <div className="flex justify-between items-start p-2 rounded-lg bg-muted/40 border">
             <div className="flex flex-wrap gap-4 items-center">
               {getCarrierIconUrl(selectedRate.carrier, new Set()) ? (
-                <img
+                <Image
                   src={getCarrierIconUrl(selectedRate.carrier, new Set())}
                   alt={selectedRate.carrier}
                   className="h-6 w-auto mt-0.5"
+                  width={24}
+                  height={24}
                 />
               ) : (
                 <div className="h-6 px-2 bg-zinc-100 rounded flex items-center">
@@ -355,220 +386,599 @@ function ProviderTabContent({
   );
 }
 
-// Update the AddressSelect component to use real data
+// Update AddressSelect component to handle creation
 function AddressSelect({ value, onChange }) {
   const id = useId();
   const [showNewAddress, setShowNewAddress] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const addressesPerPage = 5;
+
+  const form = useForm({
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      company: "",
+      address1: "",
+      address2: "",
+      city: "",
+      province: "",
+      postalCode: "",
+      phone: "",
+      country: "",
+    },
+  });
+
   const { data: userData } = useQuery(GET_CURRENT_USER);
   const userId = userData?.authenticatedItem?.id;
-  
-  const { data: addressData, loading } = useQuery(GET_USER_ADDRESSES, {
-    variables: { userId },
+
+  const {
+    data: addressData,
+    loading: addressesLoading,
+    refetch,
+  } = useQuery(GET_USER_ADDRESSES, {
+    variables: {
+      userId,
+      take: addressesPerPage,
+      skip: (currentPage - 1) * addressesPerPage,
+    },
     skip: !userId,
   });
 
+  const { data: countriesData, loading: countriesLoading } = useQuery(
+    GET_COUNTRIES,
+    {
+      variables: {
+        where: {},
+        take: 250,
+        skip: 0,
+      },
+    }
+  );
+
+  const addressList = useList("Address");
+  const { createWithData: createAddress, state: createState } =
+    useCreateItem(addressList);
+
   const addresses = addressData?.addresses || [];
+  const totalAddresses = addressData?.addressesCount || 0;
+  const totalPages = Math.ceil(totalAddresses / addressesPerPage);
+
+  const countries = countriesData?.items || [];
+
+  const onSubmit = async (data) => {
+    try {
+      const result = await createAddress({
+        data: {
+          ...data,
+          user: { connect: { id: userId } },
+          country: { connect: { id: data.country } },
+        },
+      });
+
+      if (result?.id) {
+        setShowNewAddress(false);
+        onChange(result.id);
+        refetch();
+        form.reset();
+      }
+    } catch (error) {
+      console.error("Failed to create address:", error);
+    }
+  };
 
   return (
-    <div className="space-y-4">
-      <RadioGroup 
-        className="gap-2" 
-        value={value} 
-        onValueChange={(val) => {
-          if (val === 'new') {
-            setShowNewAddress(true);
-          } else {
-            setShowNewAddress(false);
-            onChange(val);
-          }
-        }}
-      >
-        {loading ? (
-          <div className="p-4 text-sm text-muted-foreground">Loading addresses...</div>
-        ) : addresses.length === 0 ? (
-          <div className="p-4 text-sm text-muted-foreground">No addresses found</div>
-        ) : (
-          addresses.map((address) => (
-            <div key={address.id} className="relative flex w-full items-start gap-2 rounded-lg border border-input p-4 shadow-sm shadow-black/5 has-[[data-state=checked]]:border-ring">
+    <div className="space-y-2 mt-2">
+      <Label className="mb-1.5 text-xs">Shipping from Address</Label>
+
+      {showNewAddress ? (
+        <div className="space-y-4 rounded-lg border p-4 bg-muted/40">
+          <div className="flex items-center justify-between mb-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => {
+                setShowNewAddress(false);
+                form.reset();
+              }}
+              className="[&_svg]:size-3 w-5 h-5"
+            >
+              <ChevronLeft />
+            </Button>
+          </div>
+
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="flex flex-wrap gap-3">
+              <div className="flex-1 min-w-[200px]">
+                <Label className="mb-1.5 block text-xs">First Name</Label>
+                <Input
+                  className="h-8 rounded-lg text-sm"
+                  placeholder="John"
+                  {...form.register("firstName", { required: true })}
+                />
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <Label className="mb-1.5 block text-xs">Last Name</Label>
+                <Input
+                  className="h-8 rounded-lg text-sm"
+                  placeholder="Doe"
+                  {...form.register("lastName", { required: true })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="mb-1.5 block text-xs">Company (Optional)</Label>
+              <Input
+                className="h-8 rounded-lg text-sm"
+                placeholder="Acme Inc."
+                {...form.register("company")}
+              />
+            </div>
+
+            <div>
+              <Label className="mb-1.5 block text-xs">Street Address</Label>
+              <Input
+                className="h-8 rounded-lg text-sm mb-2"
+                placeholder="123 Main Street"
+                {...form.register("address1", { required: true })}
+              />
+              <Input
+                className="h-8 rounded-lg text-sm"
+                placeholder="Suite 100 (Optional)"
+                {...form.register("address2")}
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <div className="flex-1 min-w-[200px]">
+                <Label className="mb-1.5 block text-xs">City</Label>
+                <Input
+                  className="h-8 rounded-lg text-sm"
+                  placeholder="San Francisco"
+                  {...form.register("city", { required: true })}
+                />
+              </div>
+              <div className="w-[100px]">
+                <Label className="mb-1.5 block text-xs">State</Label>
+                <Input
+                  className="h-8 rounded-lg text-sm"
+                  placeholder="CA"
+                  {...form.register("province", { required: true })}
+                />
+              </div>
+              <div className="w-[120px]">
+                <Label className="mb-1.5 block text-xs">ZIP Code</Label>
+                <Input
+                  className="h-8 rounded-lg text-sm"
+                  placeholder="94105"
+                  {...form.register("postalCode", { required: true })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="mb-1.5 block text-xs">Country</Label>
+              <Select
+                onValueChange={(value) => form.setValue("country", value)}
+                value={form.watch("country")}
+              >
+                <SelectTrigger className="h-8 rounded-lg text-sm">
+                  <SelectValue placeholder="Select country" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {countriesLoading ? (
+                      <SelectItem value="" disabled>
+                        Loading...
+                      </SelectItem>
+                    ) : (
+                      countries.map((country) => (
+                        <SelectItem
+                          key={country.____id____}
+                          value={country.____id____}
+                        >
+                          {country.____label____}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="mb-1.5 block text-xs">Phone Number</Label>
+              <Input
+                className="h-8 rounded-lg text-sm"
+                placeholder="(555) 123-4567"
+                {...form.register("phone")}
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                size="sm"
+                className="h-8 rounded-lg"
+                disabled={createState === "loading"}
+                isLoading={createState === "loading"}
+              >
+                {createState === "loading" ? "Saving..." : "Save Address"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      ) : (
+        <>
+          <RadioGroup
+            className="gap-2"
+            value={value}
+            onValueChange={(val) => {
+              if (val === "new") {
+                setShowNewAddress(true);
+              } else {
+                onChange(val);
+              }
+            }}
+          >
+            {addressesLoading ? (
+              <div className="p-4 text-sm text-muted-foreground">
+                Loading addresses...
+              </div>
+            ) : addresses.length === 0 ? (
+              <div className="p-4 text-sm text-muted-foreground">
+                No addresses found
+              </div>
+            ) : (
+              addresses.map((address) => (
+                <div
+                  key={address.id}
+                  className="relative flex w-full items-start gap-2 rounded-lg border border-input p-4 shadow-sm shadow-black/5 has-[[data-state=checked]]:border-ring"
+                >
+                  <RadioGroupItem
+                    value={address.id}
+                    id={`${id}-${address.id}`}
+                    aria-describedby={`${id}-${address.id}-description`}
+                    className="order-1 after:absolute after:inset-0"
+                  />
+                  <div className="grid grow gap-2">
+                    <Label htmlFor={`${id}-${address.id}`}>
+                      {address.company ||
+                        `${address.firstName} ${address.lastName}`}{" "}
+                      {address.phone && (
+                        <span className="text-xs font-normal leading-[inherit] text-muted-foreground">
+                          ({address.phone})
+                        </span>
+                      )}
+                    </Label>
+                    <p
+                      id={`${id}-${address.id}-description`}
+                      className="text-xs text-muted-foreground"
+                    >
+                      {[
+                        address.address1,
+                        address.address2,
+                        [address.city, address.province, address.postalCode]
+                          .filter(Boolean)
+                          .join(", "),
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+
+            <div className="relative flex w-full items-start gap-2 rounded-lg border border-input p-4 shadow-sm shadow-black/5 has-[[data-state=checked]]:border-ring">
               <RadioGroupItem
-                value={address.id}
-                id={`${id}-${address.id}`}
-                aria-describedby={`${id}-${address.id}-description`}
+                value="new"
+                id={`${id}-new`}
                 className="order-1 after:absolute after:inset-0"
               />
               <div className="grid grow gap-2">
-                <Label htmlFor={`${id}-${address.id}`}>
-                  {address.company || `${address.firstName} ${address.lastName}`}{" "}
-                  {address.phone && (
-                    <span className="text-xs font-normal leading-[inherit] text-muted-foreground">
-                      ({address.phone})
-                    </span>
-                  )}
-                </Label>
-                <p id={`${id}-${address.id}-description`} className="text-xs text-muted-foreground">
-                  {[
-                    address.address1,
-                    address.address2,
-                    [address.city, address.province, address.postalCode].filter(Boolean).join(', ')
-                  ].filter(Boolean).join(', ')}
-                </p>
+                <Label htmlFor={`${id}-new`}>Create New Address</Label>
               </div>
             </div>
-          ))
-        )}
-        
-        <div className="relative flex w-full items-start gap-2 rounded-lg border border-input p-4 shadow-sm shadow-black/5 has-[[data-state=checked]]:border-ring">
-          <RadioGroupItem
-            value="new"
-            id={`${id}-new`}
-            className="order-1 after:absolute after:inset-0"
-          />
-          <div className="grid grow gap-2">
-            <Label htmlFor={`${id}-new`}>
-              Create New Address
-            </Label>
-          </div>
-        </div>
-      </RadioGroup>
+          </RadioGroup>
 
-      {showNewAddress && (
-        <div className="space-y-4 rounded-lg border p-4">
-          <div className="flex flex-wrap gap-3">
-            <div className="flex-1 min-w-[200px]">
-              <Label className="mb-1.5 block text-xs">First Name</Label>
-              <Input className="h-8 rounded-lg text-sm" />
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
             </div>
-            <div className="flex-1 min-w-[200px]">
-              <Label className="mb-1.5 block text-xs">Last Name</Label>
-              <Input className="h-8 rounded-lg text-sm" />
-            </div>
-          </div>
-          
-          <div>
-            <Label className="mb-1.5 block text-xs">Company (Optional)</Label>
-            <Input className="h-8 rounded-lg text-sm" />
-          </div>
-          
-          <div>
-            <Label className="mb-1.5 block text-xs">Street Address</Label>
-            <Input className="h-8 rounded-lg text-sm mb-2" placeholder="Address Line 1" />
-            <Input className="h-8 rounded-lg text-sm" placeholder="Address Line 2 (Optional)" />
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <div className="flex-1 min-w-[200px]">
-              <Label className="mb-1.5 block text-xs">City</Label>
-              <Input className="h-8 rounded-lg text-sm" />
-            </div>
-            <div className="w-[100px]">
-              <Label className="mb-1.5 block text-xs">State</Label>
-              <Input className="h-8 rounded-lg text-sm" />
-            </div>
-            <div className="w-[120px]">
-              <Label className="mb-1.5 block text-xs">ZIP Code</Label>
-              <Input className="h-8 rounded-lg text-sm" />
-            </div>
-          </div>
-
-          <div>
-            <Label className="mb-1.5 block text-xs">Phone Number</Label>
-            <Input className="h-8 rounded-lg text-sm" />
-          </div>
-
-          <Button 
-            size="sm" 
-            className="h-8 rounded-lg"
-            onClick={() => {
-              // Handle save new address
-              setShowNewAddress(false);
-            }}
-          >
-            Save Address
-          </Button>
-        </div>
+          )}
+        </>
       )}
     </div>
   );
 }
 
+// Utility function for saving provider
+const useProviderSave = () => {
+  const shippingProviderList = useList("ShippingProvider");
+  const { createWithData: createProvider, state: createState } =
+    useCreateItem(shippingProviderList);
+
+  const getFunctionFields = (providerId) => {
+    const functionSuffix = providerId.toLowerCase();
+    return {
+      createLabelFunction: `${functionSuffix}`,
+      getRatesFunction: `${functionSuffix}`,
+      validateAddressFunction: `${functionSuffix}`,
+      trackShipmentFunction: `${functionSuffix}`,
+      cancelLabelFunction: `${functionSuffix}`,
+    };
+  };
+
+  const handleSaveProvider = async ({
+    name,
+    accessToken,
+    selectedAddress,
+    isPreset,
+    presetId,
+    onSuccess,
+  }) => {
+    if (!selectedAddress || !accessToken) {
+      console.error("Missing required fields");
+      return;
+    }
+
+    try {
+      const result = await createProvider({
+        data: {
+          name,
+          fromAddress: { connect: { id: selectedAddress } },
+          isActive: true,
+          accessToken,
+          ...(isPreset
+            ? {
+                ...getFunctionFields(presetId),
+                metadata: {
+                  source: "preset",
+                  presetId,
+                },
+              }
+            : {}),
+        },
+      });
+
+      if (result?.id) {
+        onSuccess?.(result);
+      }
+    } catch (error) {
+      console.error("Failed to create provider:", error);
+    }
+  };
+
+  return { handleSaveProvider, createState };
+};
+
 // PresetTab Tab Component
-function PresetTabContent({ provider, providerProps }) {
+function PresetTabContent({
+  provider,
+  providerProps,
+  onNameChange,
+  onSuccess,
+}) {
+  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [accessToken, setAccessToken] = useState("");
+  const [name, setName] = useState(provider.name);
+  const { handleSaveProvider, createState } = useProviderSave();
+
+  // Update name when provider changes
+  useEffect(() => {
+    setName(provider.name);
+    onNameChange?.(provider.name);
+  }, [provider.name, onNameChange]);
+
+  const handleSave = () => {
+    handleSaveProvider({
+      name,
+      accessToken,
+      selectedAddress,
+      isPreset: true,
+      presetId: provider.id,
+      onSuccess,
+    });
+  };
+
+  const handleNameChange = (e) => {
+    const newName = e.target.value;
+    setName(newName);
+    onNameChange?.(newName);
+  };
+
   return (
-    <Fields
-      {...getFilteredProps(providerProps, [
-        { key: "name", fieldMeta: { defaultValue: provider.name } },
-        { key: "accessToken" },
-      ])}
-    >
-      <AddressSelect 
-        value={provider.fromAddress} 
-        onChange={(address) => {
-          // Handle address change
-        }}
-        addresses={[
-          {
-            id: '1',
-            name: 'Main Office',
-            type: 'Business',
-            street: '123 Main St',
-            city: 'San Francisco',
-            state: 'CA',
-            zip: '94105'
-          },
-          // Add more addresses as needed
-        ]}
-      />
-    </Fields>
+    <div className="space-y-4">
+      <div>
+        <Label className="mb-1.5 block text-xs">Name</Label>
+        <Input
+          className="h-8 rounded-lg text-sm"
+          placeholder="Provider name"
+          value={name}
+          onChange={handleNameChange}
+        />
+      </div>
+      <div>
+        <Label className="mb-1.5 block text-xs">Access Token</Label>
+        <Input
+          type="password"
+          className="h-8 rounded-lg text-sm"
+          placeholder={`Enter your ${provider.name} API key`}
+          value={accessToken}
+          onChange={(e) => setAccessToken(e.target.value)}
+        />
+      </div>
+
+      <AddressSelect value={selectedAddress} onChange={setSelectedAddress} />
+
+      <div className="flex justify-end pt-4 border-t">
+        <Button
+          size="sm"
+          className="h-8 rounded-lg"
+          onClick={handleSave}
+          disabled={
+            !name ||
+            !selectedAddress ||
+            !accessToken ||
+            createState === "loading"
+          }
+          isLoading={createState === "loading"}
+        >
+          {createState === "loading" ? "Creating..." : "Create Provider"}
+        </Button>
+      </div>
+    </div>
   );
 }
 
-// New Provider Tab Component
-function NewProviderTabContent({ providerProps }) {
+// Update the NewProviderTabContent component
+function NewProviderTabContent({ providerProps, onSuccess, defaultPreset }) {
   const [activeTab, setActiveTab] = useState("general");
+  const [selectedPreset, setSelectedPreset] = useState(defaultPreset?.id || "custom");
+  const { handleSaveProvider, createState } = useProviderSave();
+  const [selectedAddress, setSelectedAddress] = useState(null);
+  const [accessToken, setAccessToken] = useState("");
+  const [name, setName] = useState(defaultPreset?.name || "");
+  const [functions, setFunctions] = useState(() => {
+    if (defaultPreset?.id) {
+      const presetId = defaultPreset.id.toLowerCase();
+      return {
+        createLabelFunction: presetId,
+        getRatesFunction: presetId,
+        validateAddressFunction: presetId,
+        trackShipmentFunction: presetId,
+        cancelLabelFunction: presetId,
+      };
+    }
+    return {
+      createLabelFunction: "",
+      getRatesFunction: "",
+      validateAddressFunction: "",
+      trackShipmentFunction: "",
+      cancelLabelFunction: "",
+    };
+  });
+
+  const functionDescriptions = {
+    createLabelFunction: {
+      label: "Create Label Function",
+      description:
+        "Function that creates a shipping label. Receives order details, selected rate, and returns label data.",
+    },
+    getRatesFunction: {
+      label: "Get Rates Function",
+      description:
+        "Function that fetches shipping rates. Receives package dimensions, weight, addresses, and returns available rates.",
+    },
+    validateAddressFunction: {
+      label: "Validate Address Function",
+      description:
+        "Function that validates shipping addresses. Receives address details and returns validation results.",
+    },
+    trackShipmentFunction: {
+      label: "Track Shipment Function",
+      description:
+        "Function that tracks shipments. Receives tracking number and returns tracking status.",
+    },
+    cancelLabelFunction: {
+      label: "Cancel Label Function",
+      description:
+        "Function that cancels a shipping label. Receives label ID and handles cancellation with the provider.",
+    },
+  };
 
   const fieldGroups = {
     general: {
-      icon: Settings,
-      label: "General",
-      fields: [
-        { key: "name" },
-      ],
-    },
-    authentication: {
       icon: KeyRound,
-      label: "Authentication",
-      fields: [
-        { key: "accessToken" },
-      ],
-    },
-    address: {
-      icon: MapPin,
-      label: "Address",
-      fields: [
-        { key: "fromAddress" },
-      ],
+      label: "General",
+      Component: () => (
+        <div className="space-y-4">
+          <div>
+            <Label className="mb-1.5 block text-xs">Name</Label>
+            <Input
+              className="h-8 rounded-lg text-sm"
+              placeholder="Provider name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label className="mb-1.5 block text-xs">Access Token</Label>
+            <Input
+              type="password"
+              className="h-8 rounded-lg text-sm"
+              placeholder="Enter access token"
+              value={accessToken}
+              onChange={(e) => setAccessToken(e.target.value)}
+            />
+          </div>
+          <AddressSelect
+            value={selectedAddress}
+            onChange={setSelectedAddress}
+          />
+        </div>
+      ),
     },
     functions: {
       icon: Code2,
       label: "Functions",
-      fields: [
-        { key: "createLabelFunction" },
-        { key: "getRatesFunction" },
-        { key: "validateAddressFunction" },
-        { key: "trackShipmentFunction" },
-        { key: "cancelLabelFunction" },
-      ],
+      Component: () => (
+        <div className="space-y-6">
+          {Object.entries(functionDescriptions).map(
+            ([key, { label, description }]) => (
+              <div key={key} className="space-y-2">
+                <div>
+                  <Label className="mb-1.5 block text-xs">{label}</Label>
+                  <Input
+                    className="h-8 rounded-lg text-sm"
+                    placeholder={`Enter ${label.toLowerCase()}`}
+                    value={functions[key]}
+                    onChange={(e) =>
+                      setFunctions((prev) => ({
+                        ...prev,
+                        [key]: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">{description}</p>
+              </div>
+            )
+          )}
+        </div>
+      ),
     },
   };
 
-  return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} orientation="vertical" className="flex w-full gap-2">
-      <TabsList className="flex-col rounded-none border-l border-border bg-transparent p-0 h-auto mb-auto">
+  const renderContent = () => (
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <TabsList className="w-full border-b justify-center rounded-none h-9 bg-transparent p-0">
         {Object.entries(fieldGroups).map(([key, group]) => (
           <TabsTrigger
             key={key}
             value={key}
-            className="relative w-full justify-start rounded-none text-xs after:absolute after:inset-y-0 after:start-0 after:w-0.5 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:after:bg-primary"
+            className="uppercase tracking-wide -mb-1 text-[11px] relative h-8 rounded-none border-b-2 border-b-transparent bg-transparent px-3 pb-2 pt-2 font-medium text-muted-foreground/80 hover:text-foreground data-[state=active]:border-b-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
           >
             <div className="flex items-center gap-2">
               <group.icon
@@ -583,16 +993,51 @@ function NewProviderTabContent({ providerProps }) {
         ))}
       </TabsList>
 
-      <div className="grow rounded-lg border border-border text-start">
+      <div className="mt-4">
         {Object.entries(fieldGroups).map(([key, group]) => (
-          <TabsContent key={key} value={key} className="px-4 py-3">
-            <Fields
-              {...getFilteredProps(providerProps, group.fields)}
-            />
+          <TabsContent key={key} value={key} className="px-4">
+            <group.Component />
           </TabsContent>
         ))}
       </div>
     </Tabs>
+  );
+
+  return (
+    <div className="space-y-6">
+      {renderContent()}
+
+      <div className="flex justify-end border-t p-4">
+        <Button
+          size="sm"
+          className="h-8 rounded-lg"
+          onClick={() => {
+            handleSaveProvider({
+              name,
+              accessToken,
+              selectedAddress,
+              isPreset: !!defaultPreset,
+              presetId: defaultPreset?.id || selectedPreset,
+              onSuccess,
+              ...functions,
+            });
+          }}
+          disabled={
+            !name ||
+            !selectedAddress ||
+            !accessToken ||
+            createState === "loading"
+          }
+          isLoading={createState === "loading"}
+        >
+          {createState === "loading" 
+            ? "Creating..." 
+            : defaultPreset 
+              ? `Create ${defaultPreset.name} Provider` 
+              : "Create Provider"}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -616,6 +1061,7 @@ export function ShippingTabs({
   const [trackingNumber, setTrackingNumber] = useState("");
   const [carrier, setCarrier] = useState("");
   const [noNotification, setNoNotification] = useState(false);
+  const [name, setName] = useState("");
 
   const fulfillmentList = useList("Fulfillment");
   const { createWithData: createFulfillment, state: fulfillmentState } =
@@ -769,6 +1215,27 @@ export function ShippingTabs({
     ),
   ];
 
+  // Handle provider deletion
+  const handleProviderDelete = (provider) => {
+    // If the deleted provider was selected, find its preset equivalent
+    if (selectedTab === provider.id) {
+      const metadata = provider.metadata || {};
+      if (metadata.source === "preset" && metadata.presetId) {
+        // Switch back to the preset version
+        setSelectedTab(metadata.presetId);
+      } else {
+        // If it wasn't a preset or we can't determine the preset, go to manual
+        setSelectedTab("manual");
+      }
+    }
+  };
+
+  // Handle provider creation success
+  const handleProviderCreated = (provider) => {
+    // Select the newly created provider
+    setSelectedTab(provider.id);
+  };
+
   // JSON map for tab configuration
   const tabsConfig = [
     {
@@ -791,22 +1258,29 @@ export function ShippingTabs({
     },
     ...computedProviders.map((provider) => {
       const ContentComponent = provider.isPreset
-        ? () => (<PresetTabContent provider={provider} providerProps={createProps} />)
+        ? () => (
+            <PresetTabContent
+              provider={provider}
+              providerProps={createProps}
+              onNameChange={setName}
+              onSuccess={handleProviderCreated}
+            />
+          )
         : () => (
-          <ProviderTabContent
-            provider={provider}
-            selectedRate={selectedRate}
-            setSelectedRate={setSelectedRate}
-            error={error}
-            loading={loading}
-            handleCreateLabel={handleCreateLabel}
-            hasSelectedItems={hasSelectedItems}
-            order={order}
-            onRateSelect={handleRateSelect}
-            dimensions={dimensions}
-            weight={weight}
-          />
-        );
+            <ProviderTabContent
+              provider={provider}
+              selectedRate={selectedRate}
+              setSelectedRate={setSelectedRate}
+              error={error}
+              loading={loading}
+              handleCreateLabel={handleCreateLabel}
+              hasSelectedItems={hasSelectedItems}
+              order={order}
+              onRateSelect={handleRateSelect}
+              dimensions={dimensions}
+              weight={weight}
+            />
+          );
       return {
         id: provider.id,
         label: provider.name,
@@ -819,16 +1293,21 @@ export function ShippingTabs({
       id: "new",
       label: "New Provider",
       icon: Plus,
-      Component: () => <NewProviderTabContent providerProps={createProps} />,
+      Component: () => (
+        <NewProviderTabContent
+          providerProps={createProps}
+          onSuccess={handleProviderCreated}
+        />
+      ),
     },
   ];
 
   return (
     <div className="rounded-lg border">
-      <CardContent className="p-4">
+      <CardContent className="p-0 space-y-5">
         {/* Package Information Section */}
-        <div className="mb-8">
-          <div>
+        <div>
+          <div className="px-4 pt-4">
             <h3 className="font-medium uppercase text-xs tracking-wider text-muted-foreground mb-2">
               Package Dimensions
             </h3>
@@ -843,71 +1322,110 @@ export function ShippingTabs({
         </div>
 
         {/* Shipping Method Selection */}
-        <div>
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium uppercase text-xs tracking-wider text-muted-foreground mb-2">
-              Shipping Method
-            </h3>
-          </div>
+        <div className="space-y-4">
+          <div className="px-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium uppercase text-xs tracking-wider text-muted-foreground mb-2">
+                Shipping Method
+              </h3>
+            </div>
 
-          <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Select value={selectedTab} onValueChange={setSelectedTab}>
-                <SelectTrigger
-                  className="shadow-sm w-auto gap-6 [&>span]:flex [&>span]:items-center [&>span]:gap-2 [&>span_svg]:shrink-0 text-xs font-medium opacity-90 h-8 rounded-lg"
-                >
+                <SelectTrigger className="shadow-sm w-auto gap-6 [&>span]:flex [&>span]:items-center [&>span]:gap-2 [&>span_svg]:shrink-0 text-xs font-medium opacity-90 h-8 rounded-lg">
                   <SelectValue placeholder="Select shipping method" />
                 </SelectTrigger>
                 <SelectContent className="[&_*[role=option]>span>svg]:shrink-0 [&_*[role=option]>span>svg]:text-muted-foreground/80 [&_*[role=option]>span]:end-2 [&_*[role=option]>span]:start-auto [&_*[role=option]>span]:flex [&_*[role=option]>span]:items-center [&_*[role=option]>span]:gap-2 [&_*[role=option]]:pe-8 [&_*[role=option]]:ps-2">
                   <SelectGroup>
                     <SelectLabel className="text-muted-foreground font-normal text-xs ps-2">
-                      Select shipping method
+                      Shipping Providers
                     </SelectLabel>
-                    {tabsConfig.map((tab) => {
-                      const actualProvider = providers.find(p => p.id === tab.id) || tab;
-                      return (
-                        <SelectItem
-                          key={tab.id}
-                          value={tab.id}
-                          className="text-xs font-medium"
-                        >
-                          <span className="flex items-center gap-2">
-                            {tab.icon ? (
-                              <tab.icon
-                                className="opacity-60"
-                                size={10}
-                                strokeWidth={2}
-                                aria-hidden="true"
-                              />
-                            ) : (
-                              <StatusIndicator 
-                                provider={actualProvider} 
-                                isPreset={tab.isPreset} 
-                              />
-                            )}
-                            <span className="truncate uppercase tracking-wide opacity-75 font-medium">{tab.label}</span>
+                    <SelectItem value="manual" className="text-xs font-medium">
+                      <span className="flex items-center gap-2">
+                        <Package
+                          className="opacity-60"
+                          size={10}
+                          strokeWidth={2}
+                          aria-hidden="true"
+                        />
+                        <span className="truncate uppercase tracking-wide opacity-75 font-medium">
+                          Manual
+                        </span>
+                      </span>
+                    </SelectItem>
+                    {providers.map((provider) => (
+                      <SelectItem
+                        key={provider.id}
+                        value={provider.id}
+                        className="text-xs font-medium"
+                      >
+                        <span className="flex items-center gap-2">
+                          <StatusIndicator provider={provider} />
+                          <span className="truncate uppercase tracking-wide opacity-75 font-medium">
+                            {provider.name}
                           </span>
-                        </SelectItem>
-                      );
-                    })}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+
+                  <SelectGroup>
+                    <SelectLabel className="text-muted-foreground font-normal text-xs ps-2">
+                      Create Provider
+                    </SelectLabel>
+                    <SelectItem value="new" className="text-xs font-medium">
+                      <span className="flex items-center gap-2">
+                        <Settings
+                          className="opacity-60"
+                          size={10}
+                          strokeWidth={2}
+                        />
+                        <span className="truncate uppercase tracking-wide opacity-75 font-medium">
+                          Build from scratch
+                        </span>
+                      </span>
+                    </SelectItem>
+                    {[
+                      { id: "shippo", name: "Shippo" },
+                      { id: "shipengine", name: "ShipEngine" },
+                    ].map((preset) => (
+                      <SelectItem
+                        key={preset.id}
+                        value={preset.id}
+                        className="text-xs font-medium"
+                      >
+                        <span className="flex items-center gap-2">
+                          <StatusIndicator provider={preset} isPreset={true} />
+                          <span className="truncate uppercase tracking-wide opacity-75 font-medium">
+                            Build from {preset.name}
+                          </span>
+                        </span>
+                      </SelectItem>
+                    ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>
 
-              {selectedTab !== "manual" && selectedTab !== "new" && (
-                <ProviderActionsInline 
-                  provider={providers.find(p => p.id === selectedTab) || tabsConfig.find(t => t.id === selectedTab)} 
-                  onProviderToggle={onProviderToggle}
-                >
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </ProviderActionsInline>
-              )}
+              {selectedTab !== "manual" &&
+                selectedTab !== "new" &&
+                !tabsConfig.find((t) => t.id === selectedTab)?.isPreset && (
+                  <ProviderActionsInline
+                    provider={
+                      providers.find((p) => p.id === selectedTab) ||
+                      tabsConfig.find((t) => t.id === selectedTab)
+                    }
+                    onProviderToggle={onProviderToggle}
+                    onDelete={handleProviderDelete}
+                  >
+                    <Button variant="outline" size="icon" className="h-8 w-8">
+                      <MoreVertical />
+                    </Button>
+                  </ProviderActionsInline>
+                )}
             </div>
-
-            {tabsConfig.find(tab => tab.id === selectedTab)?.Component()}
           </div>
+
+          {tabsConfig.find((tab) => tab.id === selectedTab)?.Component()}
         </div>
       </CardContent>
     </div>

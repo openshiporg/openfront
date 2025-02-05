@@ -98,6 +98,43 @@ export function ListPageTemplate({ listKey = "Product" }) {
   const searchParams = useSearchParams();
   const [loadingActions, setLoadingActions] = useState({});
 
+  // Handle setting default status filter
+  const handleDefaultStatus = () => {
+    const params = new URLSearchParams(searchParams);
+    if (!params.get("!status_matches")) {
+      const filterValue = [{
+        label: "Published",
+        value: "published"
+      }];
+      params.set("!status_matches", JSON.stringify(filterValue));
+      push(`?${params.toString()}`, { shallow: true });
+    }
+  };
+
+  // Call it once during initial render
+  React.useEffect(() => {
+    handleDefaultStatus();
+  }, []);
+
+  // Handle search updates
+  const updateSearchParams = (value) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (value) {
+      newParams.set("search", value);
+    } else {
+      newParams.delete("search");
+    }
+    push(`?${newParams.toString()}`);
+  };
+
+  // Replace the search useEffect with direct updates
+  const handleSearchChange = (value) => {
+    updateSearchString(value);
+    if (value !== searchParams.get("search")) {
+      updateSearchParams(value);
+    }
+  };
+
   const handleStatusChange = (status) => {
     const params = new URLSearchParams(searchParams);
     if (status === selectedStatus) {
@@ -111,18 +148,6 @@ export function ListPageTemplate({ listKey = "Product" }) {
     }
     push(`?${params.toString()}`);
   };
-
-  React.useEffect(() => {
-    const params = new URLSearchParams(searchParams);
-    if (!params.get("!status_matches")) {
-      const filterValue = [{
-        label: "Published",
-        value: "published"
-      }];
-      params.set("!status_matches", JSON.stringify(filterValue));
-      push(`?${params.toString()}`, { shallow: true });
-    }
-  }, []);
 
   // Get selected status from the parameter format
   const selectedStatus = useMemo(() => {
@@ -184,20 +209,6 @@ export function ListPageTemplate({ listKey = "Product" }) {
   const searchParam = typeof query.search === "string" ? query.search : "";
   const [searchString, updateSearchString] = useState(searchParam);
   const search = useFilter(searchParam, list, searchFields);
-
-  const updateSearch = (value) => {
-    const { search, ...queries } = query;
-    const newQueryString = new URLSearchParams(queries).toString();
-    if (value.trim()) {
-      const searchQuery = `search=${encodeURIComponent(value)}`;
-      const queryString = newQueryString
-        ? `${newQueryString}&${searchQuery}`
-        : searchQuery;
-      push(`?${queryString}`);
-    } else {
-      push(`?${newQueryString}`);
-    }
-  };
 
   let selectedFields = useMemo(
     () =>
@@ -343,14 +354,14 @@ export function ListPageTemplate({ listKey = "Product" }) {
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
-                    updateSearch(searchString);
+                    handleSearchChange(searchString);
                   }}
                 >
                   <Input
                     type="search"
                     className="pl-9 w-full h-9 rounded-lg placeholder:text-muted-foreground/80 text-sm shadow-sm"
                     value={searchString}
-                    onChange={(e) => updateSearchString(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     placeholder={`Search by ${searchLabels.join(", ").toLowerCase()}`}
                   />
                 </form>

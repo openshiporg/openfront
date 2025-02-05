@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Button } from "@ui/button";
 import { Alert, AlertDescription } from "@ui/alert";
 import { Skeleton } from "@ui/skeleton";
@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@keystone/themes/Tailwind/orion/primitives/default/ui/select";
+import Image from "next/image";
 
 // A manual map for carrier icons. Add any carriers you want to override here.
 const manualCarrierIconsMap = {
@@ -121,7 +122,7 @@ export function ShippingProviderRates({
     },
   });
 
-  const handleGetRates = async () => {
+  const handleGetRates = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -144,11 +145,11 @@ export function ShippingProviderRates({
       console.error("Error getting rates:", error);
       setError(error.message);
     }
-  };
+  }, [getRates, order.id, provider.id, dimensions, weight]);
 
   useEffect(() => {
     handleGetRates();
-  }, [provider.id, dimensions, weight]);
+  }, [handleGetRates]);
 
   if (!provider.isActive) {
     return null;
@@ -219,11 +220,12 @@ export function ShippingProviderRates({
                   <div className="flex flex-wrap gap-4 items-center">
                     <div className="h-6 w-12 flex items-center justify-center">
                       {iconUrl ? (
-                        <img
+                        <Image
                           src={iconUrl}
                           alt={rate.carrier}
                           className="h-full w-full object-contain p-0.5"
-                          // On error, mark this carrier as failed so future renders fall back
+                          width={48}
+                          height={24}
                           onError={() =>
                             setFailedIcons(
                               (prev) => new Set([...prev, carrierKey])
