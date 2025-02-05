@@ -773,7 +773,6 @@ export const Order = list({
                     quantity
                     productVariant {
                       sku
-                      weight
                     }
                   }
                   fulfillments {
@@ -809,7 +808,6 @@ export const Order = list({
                   title: lineItem.title,
                   thumbnail: lineItem.thumbnail,
                   sku: lineItem.productVariant?.sku || '',
-                  weight: lineItem.productVariant?.weight || 0,
                   quantity: remainingQuantity,
                   totalQuantity: lineItem.quantity,
                   fulfilledQuantity

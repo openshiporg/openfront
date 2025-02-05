@@ -22,6 +22,15 @@ import { useList } from "@keystone/keystoneProvider";
 import { AdminLink } from "@keystone/themes/Tailwind/orion/components/AdminLink";
 import { useDrawer } from "@keystone/themes/Tailwind/orion/components/Modals/drawer-context";
 import { ArrowRight } from "lucide-react";
+import { cn } from "@keystone/utils/cn";
+
+const statusColors = {
+  pending: "cyan",
+  completed: "green",
+  archived: "zinc",
+  canceled: "red",
+  requires_action: "orange",
+};
 
 export const OrderDetailsComponent = ({
   order,
@@ -75,14 +84,18 @@ export const OrderDetailsComponent = ({
                     minute: "2-digit",
                   })}
                 </span>
-                <span className="mx-1.5">‧</span>
-                <AdminLink
-                  href={`/platform/users/${order.user.id}`}
-                  className="text-muted-foreground hover:text-blue-600 dark:hover:text-blue-400 group inline-flex items-center gap-1"
-                >
-                  {order.user.name}
-                  <ArrowRight className="h-3 w-3 opacity-0 -translate-x-2 transition-all group-hover:opacity-100 group-hover:translate-x-0" />
-                </AdminLink>
+                {order.user && (
+                  <>
+                    <span className="mx-1.5">‧</span>
+                    <AdminLink
+                      href={`/platform/users/${order.user.id}`}
+                      className="text-muted-foreground hover:text-blue-600 dark:hover:text-blue-400 group inline-flex items-center gap-1"
+                    >
+                      {order.user.name}
+                      <ArrowRight className="h-3 w-3 opacity-0 -translate-x-2 transition-all group-hover:opacity-100 group-hover:translate-x-0" />
+                    </AdminLink>
+                  </>
+                )}
               </span>
             </div>
 
@@ -109,18 +122,10 @@ export const OrderDetailsComponent = ({
           <div className="flex flex-col sm:items-end mt-4 sm:mt-0">
             <div className="flex flex-wrap items-center gap-2 sm:justify-end">
               <Badge
-                color={
-                  order.status === "pending"
-                    ? "zinc"
-                    : order.status === "completed"
-                      ? "green"
-                      : order.status === "canceled"
-                        ? "red"
-                        : "blue"
-                }
-                className="text-xs border font-medium py-1"
+                className="border py-1 text-xs tracking-wide font-medium"
+                color={statusColors[order.status]}
               >
-                {order.status.toUpperCase()}
+                {order.status.toUpperCase().replace("_", " ")}
               </Badge>
               {currentAction && (
                 <Badge

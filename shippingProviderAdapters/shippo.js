@@ -1,24 +1,25 @@
 const SHIPPO_API_URL = "https://api.goshippo.com";
 
-export async function createLabelFunction({ provider, order, rateId, dimensions, lineItems }) {
-  console.log('Creating label with:', {
-    provider: {
-      id: provider.id,
-      name: provider.name,
-      accessToken: provider.accessToken
-    },
-    dimensions,
-    rateId,
-    lineItems
-  });
-
+export async function createLabelFunction({
+  provider,
+  order,
+  rateId,
+  dimensions,
+  lineItems,
+}) {
   if (!dimensions) {
     throw new Error("Dimensions are required to create a shipping label");
   }
 
-  if (!dimensions.length || !dimensions.width || !dimensions.height || !dimensions.weight) {
-    console.log('Invalid dimensions:', dimensions);
-    throw new Error("Invalid dimensions provided. All dimensions and weight are required");
+  if (
+    !dimensions.length ||
+    !dimensions.width ||
+    !dimensions.height ||
+    !dimensions.weight
+  ) {
+    throw new Error(
+      "Invalid dimensions provided. All dimensions and weight are required"
+    );
   }
 
   // Create address object first
@@ -105,17 +106,16 @@ export async function createLabelFunction({ provider, order, rateId, dimensions,
     throw new Error(transaction.message || "Failed to create label");
   }
 
-  console.log('Shippo transaction response:', transaction);
-
   // Check if Shippo returned an error status
-  if (transaction.status === 'ERROR') {
-    const errorMessage = transaction.messages?.[0]?.text || 'Label creation failed';
+  if (transaction.status === "ERROR") {
+    const errorMessage =
+      transaction.messages?.[0]?.text || "Label creation failed";
     throw new Error(errorMessage);
   }
 
   // Only return success if we actually got a label URL
   if (!transaction.label_url) {
-    throw new Error('No label URL received from Shippo');
+    throw new Error("No label URL received from Shippo");
   }
 
   return {
@@ -132,7 +132,6 @@ export async function getRatesFunction({ provider, order, dimensions }) {
   if (!dimensions) {
     throw new Error("Dimensions are required to get shipping rates");
   }
-
   // Create address first
   const addressToResponse = await fetch(`${SHIPPO_API_URL}/addresses/`, {
     method: "POST",
@@ -193,11 +192,10 @@ export async function getRatesFunction({ provider, order, dimensions }) {
 
   const shipment = await shipmentResponse.json();
   if (!shipmentResponse.ok) {
-    throw new Error(shipment.message || "Failed to create shipment");
+    throw new Error(
+      shipment.message || shipment.__all__ || "Failed to create shipment"
+    );
   }
-
-  console.log(shipment.parcels);
-  console.log(dimensions);
 
   return shipment.rates.map((rate) => ({
     id: rate.object_id,

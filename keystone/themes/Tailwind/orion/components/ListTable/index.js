@@ -223,7 +223,7 @@ export function ListTable({
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
                 <TableHead
-                  className="text-nowrap text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase"
+                  className="text-nowrap text-[.6rem] sm:text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase"
                   key={header.id}
                 >
                   {header.isPlaceholder
@@ -242,7 +242,7 @@ export function ListTable({
             <TableRow key={row.id}>
               {row.getVisibleCells().map((cell, index) => (
                 <TableCell
-                  className={`text-sm ${index === 1 && "font-medium"}`}
+                  className={`text-xs sm:text-sm ${index === 1 && "font-medium"}`}
                   key={cell.id}
                 >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}

@@ -2,7 +2,7 @@ import { Text } from "@medusajs/ui";
 
 const OrderDetails = ({ order, showStatus }) => {
   const formatStatus = (str) => {
-    const formatted = str.split("_").join(" ");
+    const formatted = str?.split("_").join(" ");
 
     return formatted.slice(0, 1).toUpperCase() + formatted.slice(1);
   };
@@ -27,16 +27,14 @@ const OrderDetails = ({ order, showStatus }) => {
         {showStatus && (
           <>
             <Text>
-              Fulfillment status:{" "}
+              Order status:{" "}
               <span className="text-ui-fg-subtle">
-                {formatStatus(order.fulfillmentStatus?.status || "not_fulfilled")}
+                {formatStatus(order.fulfillmentStatus.status)}
               </span>
             </Text>
             <Text>
-              Payment status:{" "}
-              <span className="text-ui-fg-subtle">
-                {formatStatus(order.paymentDetails?.[0]?.status || "not_paid")}
-              </span>
+              Fulfillment status:{" "}
+              <span className="text-ui-fg-subtle">{formatStatus(order.fulfillmentStatus.shippingStatus)}</span>
             </Text>
           </>
         )}

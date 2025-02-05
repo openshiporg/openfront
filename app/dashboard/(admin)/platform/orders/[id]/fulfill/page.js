@@ -80,6 +80,7 @@ import {
 } from "@ui/tooltip";
 import { ToggleGroup, ToggleGroupItem } from "@ui/toggle-group";
 import { GraphQLErrorNotice } from "@keystone/themes/Tailwind/orion/components/GraphQLErrorNotice";
+import { MultipleSelector } from "@keystone/themes/Tailwind/orion/primitives/default/ui/multi-select";
 
 const GET_ORDER_QUERY = gql`
   query GetOrder($id: ID!) {
@@ -211,8 +212,8 @@ export function getFilteredProps(props, modifications, defaultCollapse) {
 export const shippingProviders = {
   EasyPost: "easypost",
   Shippo: "shippo",
+  ShipEngine: "shipengine",
   ShipStation: "soon",
-  ShipEngine: "soon",
 };
 
 export function CreateDialog({ title, listKey, children }) {
@@ -321,10 +322,15 @@ export function CreateDialog({ title, listKey, children }) {
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="gap-0 p-0 max-h-[80vh] overflow-hidden flex flex-col">
-        <DialogHeader className="contents space-y-0 text-left">
-          <DialogTitle className="border-b border-border px-6 py-4 text-base">
-            {title}
+      <DialogContent className="gap-0 p-0">
+        <DialogHeader>
+          <DialogTitle className="border-b px-6 py-4 text-base">
+            <div className="flex flex-col">
+              {title}
+              <span className="text-sm text-muted-foreground font-normal">
+                Choose the frameworks you want to work with.
+              </span>
+            </div>
           </DialogTitle>
         </DialogHeader>
         {error && (
@@ -333,55 +339,51 @@ export function CreateDialog({ title, listKey, children }) {
             errors={error?.graphQLErrors}
           />
         )}
-        <div className="flex-1 overflow-y-auto">
-          <div className="px-6 py-4 space-y-4">
-            <div className="space-y-2">
-              <Label>Provider</Label>
-              <Select
-                onValueChange={handleProviderSelection}
-                value={selectedProvider}
-              >
-                <SelectTrigger className="w-full bg-muted/40">
-                  <SelectValue placeholder="Select a provider" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel className="-ml-6">Templates</SelectLabel>
-                    {Object.entries(shippingProviders).map(([key, value]) => (
-                      <SelectItem
-                        key={key}
-                        value={value}
-                        disabled={value === "soon"}
-                      >
-                        {key}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                  <SelectGroup>
-                    <SelectLabel className="-ml-6">Custom</SelectLabel>
-                    <SelectItem value="custom">
-                      Start from scratch...
+        <div className="px-6 py-4 space-y-4">
+          <div className="space-y-2">
+            <Label>Provider</Label>
+            <Select
+              onValueChange={handleProviderSelection}
+              value={selectedProvider}
+            >
+              <SelectTrigger className="w-full bg-muted/40">
+                <SelectValue placeholder="Select a provider" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel className="-ml-6">Templates</SelectLabel>
+                  {Object.entries(shippingProviders).map(([key, value]) => (
+                    <SelectItem
+                      key={key}
+                      value={value}
+                      disabled={value === "soon"}
+                    >
+                      {key}
                     </SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-            {selectedProvider === "custom" && (
-              <div className="flex items-center gap-3 px-4 py-2 text-sm text-blue-600 dark:text-blue-500 bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <Info className="h-4 w-4" />
-                <p className="basis-11/12">
-                  Each function can be configured to either use a built-in
-                  adapter (e.g. &apos;easypost&apos;) or a custom HTTP endpoint that will
-                  handle the shipping operations.
-                </p>
-              </div>
-            )}
-            {selectedProvider && (
-              <div className="bg-muted/20 p-4 border rounded-lg overflow-auto">
-                <Fields {...filteredProps} />
-              </div>
-            )}
+                  ))}
+                </SelectGroup>
+                <SelectGroup>
+                  <SelectLabel className="-ml-6">Custom</SelectLabel>
+                  <SelectItem value="custom">Start from scratch...</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
+          {selectedProvider === "custom" && (
+            <div className="flex items-center gap-3 px-4 py-2 text-sm text-blue-600 dark:text-blue-500 bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <Info className="h-4 w-4" />
+              <p className="basis-11/12">
+                Each function can be configured to either use a built-in adapter
+                (e.g. &apos;easypost&apos;) or a custom HTTP endpoint that will
+                handle the shipping operations.
+              </p>
+            </div>
+          )}
+          {selectedProvider && (
+            <div className="bg-muted/20 p-4 border rounded-lg">
+              <Fields {...filteredProps} />
+            </div>
+          )}
         </div>
         <DialogFooter className="border-t border-border px-6 py-4 sm:items-center">
           <Button variant="outline" onClick={handleDialogClose}>
@@ -401,7 +403,6 @@ export function CreateDialog({ title, listKey, children }) {
 }
 
 export default function FulfillOrder({ params }) {
-  const [selectedTab, setSelectedTab] = useState("manual");
   const [selectedRate, setSelectedRate] = useState(null);
   const [selectedQuantities, setSelectedQuantities] = useState({});
   const [trackingNumber, setTrackingNumber] = useState("");
@@ -580,81 +581,6 @@ export default function FulfillOrder({ params }) {
       setNoNotification(false);
     } catch (error) {
       // TODO: Show error toast/alert
-    }
-  };
-
-  const handleCreateLabel = async () => {
-    try {
-      if (!selectedRate) {
-        throw new Error("Please select a shipping rate");
-      }
-
-      // Find the provider for the selected rate
-      const provider = providersData.shippingProviders.find(
-        (p) => p.id === selectedRate.providerId
-      );
-      if (!provider) throw new Error("Selected provider not found");
-
-      // Create label using adapter
-      const labelData = await executeAdapterFunction({
-        provider,
-        functionName: "createLabel",
-        args: {
-          order,
-          items: Object.entries(selectedQuantities)
-            .filter(([_, qty]) => parseInt(qty) > 0)
-            .map(([id, qty]) => ({
-              lineItemId: id,
-              quantity: parseInt(qty),
-            })),
-          rate: selectedRate,
-        },
-      });
-
-      // Create fulfillment with shipping label
-      const fulfillmentData = {
-        order: { connect: { id: params.id } },
-        fulfillmentItems: {
-          create: Object.entries(selectedQuantities)
-            .filter(([_, qty]) => parseInt(qty) > 0)
-            .map(([lineItemId, qty]) => ({
-              lineItem: { connect: { id: lineItemId } },
-              quantity: parseInt(qty),
-            })),
-        },
-        shippingLabels: {
-          create: [
-            {
-              provider: { connect: { id: provider.id } },
-              status: labelData.status,
-              trackingNumber: labelData.trackingNumber,
-              trackingUrl: labelData.trackingUrl,
-              labelUrl: labelData.labelUrl,
-              data: labelData.data,
-              rate: labelData.rate,
-            },
-          ],
-        },
-        noNotification,
-        metadata: {
-          source: "admin",
-          createdBy: "admin",
-        },
-      };
-
-      const result = await createFulfillment({ data: fulfillmentData });
-      if (!result) throw new Error("Failed to create fulfillment");
-
-      // Refetch queries and reset form
-      await client.refetchQueries({
-        include: "active",
-      });
-
-      setSelectedQuantities({});
-      setNoNotification(false);
-      setSelectedRate(null);
-    } catch (error) {
-      // TODO: Show error toast
     }
   };
 
@@ -840,125 +766,22 @@ export default function FulfillOrder({ params }) {
                       </div>
                     ))}
 
-                    <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-                      <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="manual">
-                          <Package className="h-3 w-3 mr-2" />
-                          Mark as Fulfilled
-                        </TabsTrigger>
-
-                        <TabsTrigger value="label">
-                          <ScanBarcode className="h-3 w-3 mr-2" />
-                          Buy Shipping Label
-                        </TabsTrigger>
-                      </TabsList>
-
-                      <TabsContent value="manual" className="space-y-4">
-                        <div className="space-y-4 rounded-lg bg-muted/40 border p-4">
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label>Tracking number</Label>
-                              <Input
-                                value={trackingNumber}
-                                onChange={(e) =>
-                                  setTrackingNumber(e.target.value)
-                                }
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label>Shipping carrier</Label>
-                              <Select
-                                value={carrier}
-                                onValueChange={setCarrier}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select carrier" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="ups">UPS</SelectItem>
-                                  <SelectItem value="usps">USPS</SelectItem>
-                                  <SelectItem value="fedex">FedEx</SelectItem>
-                                  <SelectItem value="dhl">DHL</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="send-notification"
-                                checked={!noNotification}
-                                onCheckedChange={(checked) =>
-                                  setNoNotification(!checked)
-                                }
-                              />
-                              <Label
-                                htmlFor="send-notification"
-                                className="text-sm"
-                              >
-                                Notify customer
-                              </Label>
-                            </div>
-
-                            <Button
-                              onClick={handleFulfill}
-                              disabled={
-                                fulfillmentState === "loading" ||
-                                !hasSelectedItems
-                              }
-                              isLoading={fulfillmentState === "loading"}
-                            >
-                              {fulfillmentState === "loading"
-                                ? "Fulfilling..."
-                                : "Fulfill items"}
-                            </Button>
-                          </div>
-                        </div>
-                      </TabsContent>
-
-                      <TabsContent value="label" className="space-y-4">
-                        {!providersData?.shippingProviders?.length ? (
-                          <div className="rounded-lg bg-muted/40 border p-4 text-center space-y-3">
-                            <div className="mx-auto w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center">
-                              <ScanBarcode className="h-6 w-6 text-zinc-600" />
-                            </div>
-                            <div>
-                              <h3 className="font-medium mb-1">
-                                No shipping providers configured
-                              </h3>
-                              <p className="text-sm text-muted-foreground mb-4">
-                                Create a shipping provider to start generating
-                                shipping labels
-                              </p>
-                              <CreateDialog
-                                title="Create Shipping Provider"
-                                listKey="ShippingProvider"
-                              >
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="mx-auto"
-                                >
-                                  <Plus className="h-4 w-4 mr-2" />
-                                  Create Provider
-                                </Button>
-                              </CreateDialog>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="space-y-4">
-                            <ShippingTabs
-                              providers={providersData.shippingProviders}
-                              onProviderToggle={handleProviderToggle}
-                              order={order}
-                              onRateSelect={(rate) => setSelectedRate(rate)}
-                              selectedQuantities={selectedQuantities}
-                              setSelectedQuantities={setSelectedQuantities}
-                            />
-                          </div>
-                        )}
-                      </TabsContent>
-                    </Tabs>
+                    <ShippingTabs
+                      providers={providersData?.shippingProviders || []}
+                      order={order}
+                      onRateSelect={setSelectedRate}
+                      onProviderToggle={handleProviderToggle}
+                      selectedQuantities={selectedQuantities}
+                      setSelectedQuantities={setSelectedQuantities}
+                      trackingNumber={trackingNumber}
+                      setTrackingNumber={setTrackingNumber}
+                      carrier={carrier}
+                      setCarrier={setCarrier}
+                      noNotification={noNotification}
+                      setNoNotification={setNoNotification}
+                      onManualFulfill={handleFulfill}
+                      fulfillmentState={fulfillmentState}
+                    />
                   </>
                 )}
                 {order.fulfillments?.length > 0 && (
@@ -975,7 +798,9 @@ export default function FulfillOrder({ params }) {
                           <div>
                             <p className="text-sm font-medium">
                               Fulfilled on{" "}
-                              {new Date(fulfillment.createdAt).toLocaleDateString("en-US", {
+                              {new Date(
+                                fulfillment.createdAt
+                              ).toLocaleDateString("en-US", {
                                 year: "numeric",
                                 month: "long",
                                 day: "numeric",
@@ -986,27 +811,42 @@ export default function FulfillOrder({ params }) {
                           </div>
                           <div className="flex gap-1">
                             {fulfillment.shippingLabels?.[0] && (
-                              <ToggleGroup type="single" variant="outline" className="inline-flex gap-0 -space-x-px rounded-md shadow-sm shadow-black/5 bg-background">
+                              <ToggleGroup
+                                type="single"
+                                variant="outline"
+                                className="inline-flex gap-0 -space-x-px rounded-md shadow-sm shadow-black/5 bg-background"
+                              >
                                 <TooltipProvider delayDuration={0}>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <ToggleGroupItem value="label" className="h-6 px-2 text-xs rounded-none shadow-none first:rounded-s-md focus-visible:z-10">
+                                      <ToggleGroupItem
+                                        value="label"
+                                        className="h-6 px-2 text-xs rounded-none shadow-none first:rounded-s-md focus-visible:z-10"
+                                      >
                                         Label
                                       </ToggleGroupItem>
                                     </TooltipTrigger>
                                     <TooltipContent className="py-3">
                                       <div className="space-y-1">
-                                        <p className="text-[13px] font-medium">Tracking Information</p>
+                                        <p className="text-[13px] font-medium">
+                                          Tracking Information
+                                        </p>
                                         <div className="flex items-center gap-2">
                                           <p className="text-xs text-muted-foreground">
-                                            {fulfillment.shippingLabels[0].trackingNumber}
+                                            {
+                                              fulfillment.shippingLabels[0]
+                                                .trackingNumber
+                                            }
                                           </p>
                                           <Button
                                             variant="outline"
                                             size="icon"
                                             className="[&_svg]:size-3 w-5 h-5"
                                             onClick={() => {
-                                              navigator.clipboard.writeText(fulfillment.shippingLabels[0].trackingNumber);
+                                              navigator.clipboard.writeText(
+                                                fulfillment.shippingLabels[0]
+                                                  .trackingNumber
+                                              );
                                             }}
                                           >
                                             <Copy />
@@ -1017,10 +857,15 @@ export default function FulfillOrder({ params }) {
                                   </Tooltip>
                                 </TooltipProvider>
                                 {fulfillment.shippingLabels?.[0]?.labelUrl && (
-                                  <ToggleGroupItem 
-                                    value="download" 
+                                  <ToggleGroupItem
+                                    value="download"
                                     className="h-6 px-2 rounded-none shadow-none last:rounded-e-md focus-visible:z-10"
-                                    onClick={() => window.open(fulfillment.shippingLabels[0].labelUrl, "_blank")}
+                                    onClick={() =>
+                                      window.open(
+                                        fulfillment.shippingLabels[0].labelUrl,
+                                        "_blank"
+                                      )
+                                    }
                                   >
                                     <Download className="h-3 w-3" />
                                   </ToggleGroupItem>
@@ -1038,7 +883,7 @@ export default function FulfillOrder({ params }) {
                                 )
                               }
                             >
-                              <Trash2/>
+                              <Trash2 />
                             </Button>
                           </div>
                         </div>

@@ -71,71 +71,6 @@ import { Input } from "../../primitives/default/ui/input";
 import { Badge, BadgeButton } from "../../primitives/default/ui/badge";
 import { AdminLink } from "../../components/AdminLink";
 import { PageBreadcrumbs } from "../../components/PageBreadcrumbs";
-const invoices = [
-  {
-    invoice: "INV001",
-    paymentStatus: "Paid",
-    totalAmount: "$250.00",
-    paymentMethod: "Credit Card",
-    id: "1",
-    createdAt: "2021-01-01",
-    updatedAt: "2021-01-01",
-  },
-  {
-    invoice: "INV002",
-    paymentStatus: "Pending",
-    totalAmount: "$150.00",
-    paymentMethod: "PayPal",
-    id: "2",
-    createdAt: "2021-01-01",
-    updatedAt: "2021-01-01",
-  },
-  {
-    invoice: "INV003",
-    paymentStatus: "Unpaid",
-    totalAmount: "$350.00",
-    paymentMethod: "Bank Transfer",
-    id: "3",
-    createdAt: "2021-01-01",
-    updatedAt: "2021-01-01",
-  },
-  {
-    invoice: "INV004",
-    paymentStatus: "Paid",
-    totalAmount: "$450.00",
-    paymentMethod: "Credit Card",
-    id: "4",
-    createdAt: "2021-01-01",
-    updatedAt: "2021-01-01",
-  },
-  {
-    invoice: "INV005",
-    paymentStatus: "Paid",
-    totalAmount: "$550.00",
-    paymentMethod: "PayPal",
-    id: "5",
-    createdAt: "2021-01-01",
-    updatedAt: "2021-01-01",
-  },
-  {
-    invoice: "INV006",
-    paymentStatus: "Pending",
-    totalAmount: "$200.00",
-    paymentMethod: "Bank Transfer",
-    id: "6",
-    createdAt: "2021-01-01",
-    updatedAt: "2021-01-01",
-  },
-  {
-    invoice: "INV007",
-    paymentStatus: "Unpaid",
-    totalAmount: "$300.00",
-    paymentMethod: "Credit Card",
-    id: "7",
-    createdAt: "2021-01-01",
-    updatedAt: "2021-01-01",
-  },
-];
 
 const DiamondPlus = () => (
   <svg
@@ -155,6 +90,7 @@ const DiamondPlus = () => (
     <path d="M8 12h8" />
   </svg>
 );
+
 let listMetaGraphqlQuery = gql`
   query ($listKey: String!) {
     keystone {
@@ -384,10 +320,10 @@ export const ListPageTemplate = ({ listKey }) => {
               },
             ]}
           />
-          <main className="w-full h-full max-w-4xl mx-auto p-4 md:p-6 flex flex-col gap-4">
+          <main className="w-full h-full max-w-4xl mx-auto p-4 md:p-6 flex flex-col gap-2">
             <div className="flex flex-col gap-2.5">
               {/* Simple Title */}
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col">
                 <h1 className="text-2xl font-semibold">{list.label}</h1>
                 <p className="text-muted-foreground">
                   {list.description ? (
@@ -401,9 +337,9 @@ export const ListPageTemplate = ({ listKey }) => {
                 </p>
               </div>
               {/* Controls Row */}
-              <div className="flex flex-wrap items-center justify-between gap-2 mt-4">
+              <div className="flex flex-wrap items-center gap-2 mt-2">
                 {/* Left Side Controls */}
-                <div className="relative flex-1 min-w-72">
+                <div className="relative flex-1 min-w-80">
                   <ListFilter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <form
                     onSubmit={(e) => {
@@ -480,7 +416,7 @@ export const ListPageTemplate = ({ listKey }) => {
                   <Button
                     variant="link"
                     size="xs"
-                    className="uppercase py-1 px-0 text-xs text-muted-foreground [&_svg]:size-3"
+                    className="uppercase py-1 px-0 text-xs text-muted-foreground [&_svg]:size-3 ml-1"
                   >
                     Sorting by{" "}
                     {sort ? (

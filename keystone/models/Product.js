@@ -2,7 +2,6 @@ import { graphql, list } from "@keystone-6/core";
 import { denyAll } from "@keystone-6/core/access";
 import {
   checkbox,
-  integer,
   json,
   select,
   text,
@@ -23,11 +22,9 @@ export const Product = list({
     },
     filter: {
       query: ({ session }) => {
-        // Admin users can see all products
         if (permissions.canManageProducts({ session })) {
           return true;
         }
-        // Non-admin users can only see published products
         return {
           status: {
             equals: 'published'
@@ -60,14 +57,82 @@ export const Product = list({
         },
       }),
     }),
-    weight: integer(),
-    length: integer(),
-    height: integer(),
-    width: integer(),
-    hsCode: text(),
-    originCountry: text(),
-    midCode: text(),
-    material: text(),
+    dimensionsRange: virtual({
+      field: graphql.field({
+        type: graphql.JSON,
+        resolve: async (item, args, context) => {
+          const product = await context.query.Product.findOne({
+            where: { id: item.id },
+            query: `
+              productVariants {
+                measurements {
+                  value
+                  unit
+                  type
+                }
+              }
+            `,
+          });
+
+          if (!product.productVariants?.length) return null;
+
+          const dimensions = {
+            weight: { min: null, max: null },
+            length: { min: null, max: null },
+            height: { min: null, max: null },
+            width: { min: null, max: null }
+          };
+
+          product.productVariants.forEach(variant => {
+            variant.measurements?.forEach(measurement => {
+              const dim = measurement.type;
+              if (dimensions[dim] && measurement.value !== null && measurement.value !== undefined) {
+                // TODO: Handle unit conversion if needed
+                if (dimensions[dim].min === null || measurement.value < dimensions[dim].min) {
+                  dimensions[dim].min = measurement.value;
+                }
+                if (dimensions[dim].max === null || measurement.value > dimensions[dim].max) {
+                  dimensions[dim].max = measurement.value;
+                }
+              }
+            });
+          });
+
+          return dimensions;
+        },
+      }),
+    }),
+    defaultDimensions: virtual({
+      field: graphql.field({
+        type: graphql.JSON,
+        resolve: async (item, args, context) => {
+          const product = await context.query.Product.findOne({
+            where: { id: item.id },
+            query: `
+              productVariants(take: 1) {
+                measurements {
+                  value
+                  unit
+                  type
+                }
+              }
+            `,
+          });
+
+          if (!product.productVariants?.[0]?.measurements) return null;
+
+          const dimensions = {};
+          product.productVariants[0].measurements.forEach(measurement => {
+            dimensions[measurement.type] = {
+              value: measurement.value,
+              unit: measurement.unit
+            };
+          });
+
+          return dimensions;
+        },
+      }),
+    }),
     metadata: json(),
     discountable: checkbox({
       defaultValue: true,

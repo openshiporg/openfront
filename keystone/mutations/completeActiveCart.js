@@ -8,6 +8,9 @@ async function completeActiveCart(root, { cartId }, context) {
       id
       email
       rawTotal
+      user {
+        id
+      }
       region {
         id
         taxRate
@@ -59,6 +62,7 @@ async function completeActiveCart(root, { cartId }, context) {
     data: {
       cart: { connect: { id: cartId } },
       email: cart.email,
+      user: cart.user?.id ? { connect: { id: cart.user.id } } : undefined,
       region: { connect: { id: cart.region.id } },
       currency: { connect: { code: cart.region.currency.code } },
       billingAddress: { connect: { id: cart.billingAddress.id } },

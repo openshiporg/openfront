@@ -83,6 +83,7 @@ export async function createCart(data = {}) {
   `;
 
   const headers = getAuthHeaders();
+  console.log("createCart", headers);
   return openfrontClient.request(CREATE_CART_MUTATION, { data }, headers);
 }
 
@@ -417,12 +418,12 @@ export async function removeDiscountFromCart(cartId, code) {
 export async function getOrSetCart(countryCode) {
   let cartId = getCartId();
   let cart = null;
+  const headers = getAuthHeaders();
 
   // Try to get cart if we have an ID
   if (cartId) {
     try {
-      const result = await openfrontClient.request(CART_QUERY, { cartId });
-
+      const result = await openfrontClient.request(CART_QUERY, { cartId }, headers);
       cart = result?.activeCart;
 
       // If cart doesn't exist in DB, remove the cookie
@@ -446,7 +447,8 @@ export async function getOrSetCart(countryCode) {
         }
       }
     `,
-    { code: countryCode }
+    { code: countryCode },
+    headers
   );
 
   const regionId = regions[0]?.id;
@@ -458,8 +460,8 @@ export async function getOrSetCart(countryCode) {
   if (!cart) {
     const { createCart: newCart } = await openfrontClient.request(
       gql`
-        mutation CreateCart($regionId: ID!) {
-          createCart(data: { region: { connect: { id: $regionId } } }) {
+        mutation CreateCart($data: CartCreateInput!) {
+          createCart(data: $data) {
             id
             region {
               id
@@ -467,17 +469,21 @@ export async function getOrSetCart(countryCode) {
           }
         }
       `,
-      { regionId }
+      { 
+        data: { 
+          region: { connect: { id: regionId } }
+        }
+      },
+      headers
     );
 
     cart = newCart;
     setCartId(cart.id);
     revalidateTag("cart");
   }
-
   // If cart exists but region changed, update it
-  if (cart && cart.region?.id !== regionId) {
-    await openfrontClient.request(
+  else if (cart.region?.id !== regionId) {
+    const { updateActiveCart } = await openfrontClient.request(
       gql`
         mutation UpdateActiveCart($cartId: ID!, $data: CartUpdateInput!) {
           updateActiveCart(cartId: $cartId, data: $data) {
@@ -488,9 +494,10 @@ export async function getOrSetCart(countryCode) {
       {
         cartId: cart.id,
         data: {
-          region: { connect: { id: regionId } },
-        },
-      }
+          region: { connect: { id: regionId } }
+        }
+      },
+      headers
     );
     revalidateTag("cart");
   }

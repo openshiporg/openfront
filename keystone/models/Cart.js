@@ -145,79 +145,61 @@ export const Cart = list({
     },
   },
   hooks: {
-    async afterOperation({ operation, item, context, originalItem }) {
+    async beforeOperation({ operation, resolvedData, context, item }) {
       const sudoContext = context.sudo();
 
-      // Handle region change
-      if (operation === "update" && item.regionId !== originalItem?.regionId) {
-        // Get cart with shipping methods
-        const cart = await sudoContext.query.Cart.findOne({
-          where: { id: item.id },
-          query: `
-            id
-            shippingMethods {
-              id
-            }
-          `,
-        });
-
-        // Delete existing shipping methods
-        if (cart?.shippingMethods?.length > 0) {
-          await Promise.all(
-            cart.shippingMethods.map((method) =>
-              sudoContext.db.ShippingMethod.deleteOne({
-                where: { id: method.id },
-              })
-            )
-          );
-        }
-
-        // Disconnect payment collection as in original code
-        await sudoContext.query.Cart.updateOne({
-          where: { id: item.id },
-          data: {
-            paymentCollection: {
-              disconnect: true,
-            },
-          },
-        });
-
-        // Connect cheapest shipping option for new region
-        const cheapestShippingOption = await findCheapestShippingOption(
-          item.regionId,
-          context
-        );
-        if (cheapestShippingOption) {
-          await sudoContext.db.ShippingMethod.createOne({
-            data: {
-              cart: { connect: { id: item.id } },
-              shippingOption: { connect: { id: cheapestShippingOption.id } },
-              price: cheapestShippingOption.amount,
-              data: {
-                name: cheapestShippingOption.name,
-              },
-            },
-          });
-        }
+      // Handle user connection on create if user is authenticated
+      if (operation === 'create' && context.session?.itemId) {
+        resolvedData.user = { connect: { id: context.session.itemId } };
       }
 
-      // Handle cart creation
-      if (operation === "create" && item.regionId) {
-        const cheapestShippingOption = await findCheapestShippingOption(
-          item.regionId,
-          context
-        );
-        if (cheapestShippingOption) {
-          await sudoContext.db.ShippingMethod.createOne({
-            data: {
-              cart: { connect: { id: item.id } },
-              shippingOption: { connect: { id: cheapestShippingOption.id } },
-              price: cheapestShippingOption.amount,
+      // Handle region changes and shipping methods
+      if ((operation === 'create' && resolvedData.region) || 
+          (operation === 'update' && resolvedData.region && item?.region?.id !== resolvedData.region.connect?.id)) {
+        
+        const regionId = operation === 'create' ? resolvedData.region.connect.id : resolvedData.region.connect.id;
+
+        // Find cheapest shipping option for new region
+        const cheapestOption = await findCheapestShippingOption(regionId, context);
+
+        if (operation === 'create') {
+          // For new carts, add the shipping method directly in the create
+          if (cheapestOption) {
+            resolvedData.shippingMethods = {
+              create: [{
+                shippingOption: { connect: { id: cheapestOption.id } },
+                price: cheapestOption.amount,
+                data: { name: cheapestOption.name }
+              }]
+            };
+          }
+        } else {
+          // For updates, we need to handle existing shipping methods
+          if (item.shippingMethods?.length) {
+            // Delete existing shipping methods
+            await Promise.all(
+              item.shippingMethods.map(method => 
+                sudoContext.db.ShippingMethod.deleteOne({
+                  where: { id: method.id }
+                })
+              )
+            );
+          }
+
+          // Add new shipping method
+          if (cheapestOption) {
+            await sudoContext.db.ShippingMethod.createOne({
               data: {
-                name: cheapestShippingOption.name,
-              },
-            },
-          });
+                cart: { connect: { id: item.id } },
+                shippingOption: { connect: { id: cheapestOption.id } },
+                price: cheapestOption.amount,
+                data: { name: cheapestOption.name }
+              }
+            });
+          }
+
+          // Disconnect payment collection on region change
+          resolvedData.paymentCollection = { disconnect: true };
         }
       }
     },
@@ -246,6 +228,7 @@ export const Cart = list({
       many: false,
       hooks: {
         resolveInput({ operation, resolvedData, context }) {
+          console.log("resolveInput", operation, resolvedData, context.session?.itemId)
           if (
             (operation === "create" || operation === "update") &&
             !resolvedData.user &&

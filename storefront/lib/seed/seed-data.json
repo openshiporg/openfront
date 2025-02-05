@@ -110,7 +110,7 @@
     {
       "name": "Standard Shipping",
       "region_id": "eu",
-      "provider_id": "fp_manual",
+      "provider_id": "manual",
       "data": {
         "id": "manual-fulfillment"
       },
@@ -120,7 +120,7 @@
     {
       "name": "Express Shipping",
       "region_id": "eu",
-      "provider_id": "fp_manual",
+      "provider_id": "manual",
       "data": {
         "id": "manual-fulfillment"
       },
@@ -130,7 +130,7 @@
     {
       "name": "Return Shipping",
       "region_id": "eu",
-      "provider_id": "fp_manual",
+      "provider_id": "manual",
       "data": {
         "id": "manual-fulfillment"
       },
@@ -141,7 +141,7 @@
     {
       "name": "Standard Shipping",
       "region_id": "na",
-      "provider_id": "fp_manual",
+      "provider_id": "manual",
       "data": {
         "id": "manual-fulfillment"
       },
@@ -151,7 +151,7 @@
     {
       "name": "Express Shipping",
       "region_id": "na",
-      "provider_id": "fp_manual",
+      "provider_id": "manual",
       "data": {
         "id": "manual-fulfillment"
       },
@@ -161,7 +161,7 @@
     {
       "name": "Return Shipping",
       "region_id": "na",
-      "provider_id": "fp_manual",
+      "provider_id": "manual",
       "data": {
         "id": "manual-fulfillment"
       },

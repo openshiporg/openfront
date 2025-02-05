@@ -11,368 +11,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model User {
-  id                        String          @id @default(cuid())
-  name                      String          @default("")
-  email                     String          @unique @default("")
-  password                  String?
-  role                      Role?           @relation("User_role", fields: [roleId], references: [id])
-  roleId                    String?         @map("role")
-  apiKeys                   ApiKey[]        @relation("ApiKey_user")
-  phone                     String          @default("")
-  hasAccount                Boolean         @default(false)
-  addresses                 Address[]       @relation("Address_user")
-  orders                    Order[]         @relation("Order_user")
-  orderEvents               OrderEvent[]    @relation("OrderEvent_user")
-  carts                     Cart[]          @relation("Cart_user")
-  customerGroups            CustomerGroup[] @relation("CustomerGroup_users")
-  notifications             Notification[]  @relation("Notification_user")
-  payments                  Payment[]       @relation("Payment_user")
-  batchJobs                 BatchJob[]      @relation("BatchJob_createdBy")
-  team                      Team?           @relation("User_team", fields: [teamId], references: [id])
-  teamId                    String?         @map("team")
-  teamLead                  Team[]          @relation("Team_leader")
-  userField                 UserField?      @relation("User_userField", fields: [userFieldId], references: [id])
-  userFieldId               String?         @unique @map("userField")
-  createdAt                 DateTime        @default(now())
-  updatedAt                 DateTime        @default(now()) @updatedAt
-  passwordResetToken        String?
-  passwordResetIssuedAt     DateTime?
-  passwordResetRedeemedAt   DateTime?
-  from_OrderEvent_createdBy OrderEvent[]    @relation("OrderEvent_createdBy")
-
-  @@index([roleId])
-  @@index([teamId])
-}
-
-model UserField {
-  id                  String    @id @default(cuid())
-  user                User?     @relation("User_userField")
-  lastLoginIp         String    @default("")
-  lastLoginUserAgent  String    @default("")
-  loginHistory        Json?     @default("[]")
-  preferences         Json?     @default("{\"theme\":\"light\",\"notifications\":true,\"emailNotifications\":true}")
-  notes               String    @default("")
-  lastPasswordChange  DateTime?
-  failedLoginAttempts Json?     @default("{\"count\":0,\"lastAttempt\":null,\"lockedUntil\":null}")
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @default(now()) @updatedAt
-}
-
-model Role {
-  id                       String   @id @default(cuid())
-  name                     String   @default("")
-  canReadOrders            Boolean  @default(false)
-  canManageOrders          Boolean  @default(false)
-  canReadProducts          Boolean  @default(false)
-  canManageProducts        Boolean  @default(false)
-  canReadFulfillments      Boolean  @default(false)
-  canManageFulfillments    Boolean  @default(false)
-  canReadUsers             Boolean  @default(false)
-  canManageUsers           Boolean  @default(false)
-  canReadRoles             Boolean  @default(false)
-  canManageRoles           Boolean  @default(false)
-  canReadCheckouts         Boolean  @default(false)
-  canManageCheckouts       Boolean  @default(false)
-  canReadDiscounts         Boolean  @default(false)
-  canManageDiscounts       Boolean  @default(false)
-  canReadGiftCards         Boolean  @default(false)
-  canManageGiftCards       Boolean  @default(false)
-  canReadReturns           Boolean  @default(false)
-  canManageReturns         Boolean  @default(false)
-  canReadSalesChannels     Boolean  @default(false)
-  canManageSalesChannels   Boolean  @default(false)
-  canReadPayments          Boolean  @default(false)
-  canManagePayments        Boolean  @default(false)
-  canReadIdempotencyKeys   Boolean  @default(false)
-  canManageIdempotencyKeys Boolean  @default(false)
-  canReadApps              Boolean  @default(false)
-  canManageApps            Boolean  @default(false)
-  canManageKeys            Boolean  @default(false)
-  assignedTo               User[]   @relation("User_role")
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @default(now()) @updatedAt
-}
-
-model Order {
-  id                   String                @id @default(cuid())
-  status               OrderStatusType       @default(pending)
-  displayId            Int
-  email                String                @default("")
-  taxRate              Float?
-  canceledAt           DateTime?
-  metadata             Json?
-  idempotencyKey       String                @default("")
-  noNotification       Boolean               @default(false)
-  externalId           String                @default("")
-  shippingAddress      Address?              @relation("Order_shippingAddress", fields: [shippingAddressId], references: [id])
-  shippingAddressId    String?               @map("shippingAddress")
-  billingAddress       Address?              @relation("Order_billingAddress", fields: [billingAddressId], references: [id])
-  billingAddressId     String?               @map("billingAddress")
-  currency             Currency?             @relation("Order_currency", fields: [currencyId], references: [id])
-  currencyId           String?               @map("currency")
-  draftOrder           DraftOrder?           @relation("DraftOrder_order")
-  cart                 Cart?                 @relation("Cart_order")
-  user                 User?                 @relation("Order_user", fields: [userId], references: [id])
-  userId               String?               @map("user")
-  region               Region?               @relation("Order_region", fields: [regionId], references: [id])
-  regionId             String?               @map("region")
-  claimOrders          ClaimOrder[]          @relation("ClaimOrder_order")
-  fulfillments         Fulfillment[]         @relation("Fulfillment_order")
-  giftCards            GiftCard[]            @relation("GiftCard_order")
-  giftCardTransactions GiftCardTransaction[] @relation("GiftCardTransaction_order")
-  lineItems            LineItem[]            @relation("LineItem_order")
-  discounts            Discount[]            @relation("Discount_orders")
-  payments             Payment[]             @relation("Payment_order")
-  returns              Return[]              @relation("Return_order")
-  shippingMethods      ShippingMethod[]      @relation("ShippingMethod_order")
-  swaps                Swap[]                @relation("Swap_order")
-  secretKey            String                @default("")
-  events               OrderEvent[]          @relation("OrderEvent_order")
-  note                 String                @default("")
-  shippingLabels       ShippingLabel[]       @relation("ShippingLabel_order")
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @default(now()) @updatedAt
-
-  @@index([shippingAddressId])
-  @@index([billingAddressId])
-  @@index([currencyId])
-  @@index([userId])
-  @@index([regionId])
-}
-
-model LineItem {
-  id                  String               @id @default(cuid())
-  quantity            Int
-  metadata            Json?
-  isReturn            Boolean              @default(false)
-  isGiftcard          Boolean              @default(false)
-  shouldMerge         Boolean              @default(true)
-  allowDiscounts      Boolean              @default(true)
-  hasShipping         Boolean              @default(false)
-  claimOrder          ClaimOrder?          @relation("LineItem_claimOrder", fields: [claimOrderId], references: [id])
-  claimOrderId        String?              @map("claimOrder")
-  cart                Cart?                @relation("LineItem_cart", fields: [cartId], references: [id])
-  cartId              String?              @map("cart")
-  swap                Swap?                @relation("LineItem_swap", fields: [swapId], references: [id])
-  swapId              String?              @map("swap")
-  order               Order?               @relation("LineItem_order", fields: [orderId], references: [id])
-  orderId             String?              @map("order")
-  productVariant      ProductVariant?      @relation("LineItem_productVariant", fields: [productVariantId], references: [id])
-  productVariantId    String?              @map("productVariant")
-  claimItems          ClaimItem[]          @relation("ClaimItem_lineItem")
-  fulfillmentItems    FulfillmentItem[]    @relation("FulfillmentItem_lineItem")
-  lineItemAdjustments LineItemAdjustment[] @relation("LineItemAdjustment_lineItem")
-  lineItemTaxLines    LineItemTaxLine[]    @relation("LineItemTaxLine_lineItem")
-  returnItems         ReturnItem[]         @relation("ReturnItem_lineItem")
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @default(now()) @updatedAt
-
-  @@index([claimOrderId])
-  @@index([cartId])
-  @@index([swapId])
-  @@index([orderId])
-  @@index([productVariantId])
-}
-
-model Product {
-  id                 String              @id @default(cuid())
-  title              String              @default("")
-  description        String              @default("")
-  handle             String              @unique @default("")
-  subtitle           String              @default("")
-  isGiftcard         Boolean             @default(false)
-  weight             Int?
-  length             Int?
-  height             Int?
-  width              Int?
-  hsCode             String              @default("")
-  originCountry      String              @default("")
-  midCode            String              @default("")
-  material           String              @default("")
-  metadata           Json?
-  discountable       Boolean             @default(true)
-  status             ProductStatusType   @default(draft)
-  externalId         String              @default("")
-  productCollections ProductCollection[] @relation("Product_productCollections")
-  productCategories  ProductCategory[]   @relation("Product_productCategories")
-  shippingProfile    ShippingProfile?    @relation("Product_shippingProfile", fields: [shippingProfileId], references: [id])
-  shippingProfileId  String?             @map("shippingProfile")
-  productType        ProductType?        @relation("Product_productType", fields: [productTypeId], references: [id])
-  productTypeId      String?             @map("productType")
-  discountConditions DiscountCondition[] @relation("DiscountCondition_products")
-  discountRules      DiscountRule[]      @relation("DiscountRule_products")
-  productImages      ProductImage[]      @relation("Product_productImages")
-  productOptions     ProductOption[]     @relation("ProductOption_product")
-  productTags        ProductTag[]        @relation("Product_productTags")
-  taxRates           TaxRate[]           @relation("Product_taxRates")
-  productVariants    ProductVariant[]    @relation("ProductVariant_product")
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @default(now()) @updatedAt
-
-  @@index([shippingProfileId])
-  @@index([productTypeId])
-}
-
-model ProductCollection {
-  id                 String              @id @default(cuid())
-  title              String              @default("")
-  handle             String              @unique @default("")
-  metadata           Json?
-  discountConditions DiscountCondition[] @relation("DiscountCondition_productCollections")
-  products           Product[]           @relation("Product_productCollections")
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @default(now()) @updatedAt
-}
-
-model ProductCategory {
-  id                 String              @id @default(cuid())
-  title              String              @default("")
-  handle             String              @unique @default("")
-  metadata           Json?
-  isInternal         Boolean             @default(false)
-  isActive           Boolean             @default(true)
-  discountConditions DiscountCondition[] @relation("DiscountCondition_productCategories")
-  products           Product[]           @relation("Product_productCategories")
-  parentCategory     ProductCategory?    @relation("ProductCategory_parentCategory", fields: [parentCategoryId], references: [id])
-  parentCategoryId   String?             @map("parentCategory")
-  categoryChildren   ProductCategory[]   @relation("ProductCategory_parentCategory")
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @default(now()) @updatedAt
-
-  @@index([parentCategoryId])
-}
-
-model ProductImage {
-  id              String    @id @default(cuid())
-  image_id        String?
-  image_filesize  Int?
-  image_width     Int?
-  image_height    Int?
-  image_extension String?
-  altText         String    @default("")
-  products        Product[] @relation("Product_productImages")
-  metadata        Json?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @default(now()) @updatedAt
-}
-
-model ProductOption {
-  id                  String               @id @default(cuid())
-  title               String               @default("")
-  metadata            Json?
-  product             Product?             @relation("ProductOption_product", fields: [productId], references: [id])
-  productId           String?              @map("product")
-  productOptionValues ProductOptionValue[] @relation("ProductOptionValue_productOption")
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @default(now()) @updatedAt
-
-  @@index([productId])
-}
-
-model ProductOptionValue {
-  id              String           @id @default(cuid())
-  value           String           @default("")
-  metadata        Json?
-  productVariants ProductVariant[] @relation("ProductOptionValue_productVariants")
-  productOption   ProductOption?   @relation("ProductOptionValue_productOption", fields: [productOptionId], references: [id])
-  productOptionId String?          @map("productOption")
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @default(now()) @updatedAt
-
-  @@index([productOptionId])
-}
-
-model ProductTag {
-  id                 String              @id @default(cuid())
-  value              String              @default("")
-  metadata           Json?
-  discountConditions DiscountCondition[] @relation("DiscountCondition_productTags")
-  products           Product[]           @relation("Product_productTags")
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @default(now()) @updatedAt
-}
-
-model ProductType {
-  id                 String              @id @default(cuid())
-  value              String              @default("")
-  metadata           Json?
-  discountConditions DiscountCondition[] @relation("DiscountCondition_productTypes")
-  products           Product[]           @relation("Product_productType")
-  taxRates           TaxRate[]           @relation("ProductType_taxRates")
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @default(now()) @updatedAt
-}
-
-model ProductVariant {
-  id                  String               @id @default(cuid())
-  title               String               @default("")
-  sku                 String               @default("")
-  barcode             String               @default("")
-  ean                 String               @default("")
-  upc                 String               @default("")
-  inventoryQuantity   Int
-  allowBackorder      Boolean              @default(false)
-  manageInventory     Boolean              @default(true)
-  hsCode              String               @default("")
-  originCountry       String               @default("")
-  midCode             String               @default("")
-  material            String               @default("")
-  weight              Int?
-  length              Int?
-  height              Int?
-  width               Int?
-  metadata            Json?
-  variantRank         Int?                 @default(0)
-  product             Product?             @relation("ProductVariant_product", fields: [productId], references: [id])
-  productId           String?              @map("product")
-  claimItems          ClaimItem[]          @relation("ClaimItem_productVariant")
-  lineItems           LineItem[]           @relation("LineItem_productVariant")
-  prices              MoneyAmount[]        @relation("MoneyAmount_productVariant")
-  productOptionValues ProductOptionValue[] @relation("ProductOptionValue_productVariants")
-  location            Location?            @relation("ProductVariant_location", fields: [locationId], references: [id])
-  locationId          String?              @map("location")
-  stockMovements      StockMovement[]      @relation("StockMovement_variant")
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @default(now()) @updatedAt
-
-  @@index([productId])
-  @@index([locationId])
-}
-
-model Payment {
-  id                  String             @id @default(cuid())
-  status              PaymentStatusType  @default(pending)
-  amount              Int
-  currencyCode        String             @default("")
-  amountRefunded      Int                @default(0)
-  data                Json?
-  capturedAt          DateTime?
-  canceledAt          DateTime?
-  metadata            Json?
-  idempotencyKey      String             @default("")
-  cart                Cart?              @relation("Cart_payment")
-  paymentCollection   PaymentCollection? @relation("Payment_paymentCollection", fields: [paymentCollectionId], references: [id])
-  paymentCollectionId String?            @map("paymentCollection")
-  swap                Swap?              @relation("Payment_swap", fields: [swapId], references: [id])
-  swapId              String?            @unique @map("swap")
-  currency            Currency?          @relation("Payment_currency", fields: [currencyId], references: [id])
-  currencyId          String?            @map("currency")
-  order               Order?             @relation("Payment_order", fields: [orderId], references: [id])
-  orderId             String?            @map("order")
-  captures            Capture[]          @relation("Capture_payment")
-  refunds             Refund[]           @relation("Refund_payment")
-  user                User?              @relation("Payment_user", fields: [userId], references: [id])
-  userId              String?            @map("user")
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @default(now()) @updatedAt
-
-  @@index([paymentCollectionId])
-  @@index([currencyId])
-  @@index([orderId])
-  @@index([userId])
-}
-
 model Address {
   id                           String             @id @default(cuid())
   company                      String             @default("")
@@ -405,6 +43,46 @@ model Address {
   @@index([countryId])
   @@index([userId])
   @@index([cartId])
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  user      User?    @relation("ApiKey_user", fields: [userId], references: [id])
+  userId    String?  @map("user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([userId])
+}
+
+model BatchJob {
+  id          String             @id @default(cuid())
+  type        BatchJobTypeType
+  status      BatchJobStatusType @default(CREATED)
+  context     Json?              @default("{}")
+  result      Json?              @default("{}")
+  error       String             @default("")
+  progress    Int?               @default(0)
+  createdBy   User?              @relation("BatchJob_createdBy", fields: [createdById], references: [id])
+  createdById String?            @map("createdBy")
+  completedAt DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @default(now()) @updatedAt
+
+  @@index([createdById])
+}
+
+model Capture {
+  id        String   @id @default(cuid())
+  amount    Int
+  payment   Payment? @relation("Capture_payment", fields: [paymentId], references: [id])
+  paymentId String?  @map("payment")
+  metadata  Json?
+  createdBy String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([paymentId])
 }
 
 model Cart {
@@ -449,14 +127,43 @@ model Cart {
   @@index([shippingAddressId])
 }
 
-model ApiKey {
-  id        String   @id @default(cuid())
-  user      User?    @relation("ApiKey_user", fields: [userId], references: [id])
-  userId    String?  @map("user")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+model ClaimImage {
+  id              String     @id @default(cuid())
+  image_id        String?
+  image_filesize  Int?
+  image_width     Int?
+  image_height    Int?
+  image_extension String?
+  altText         String     @default("")
+  claimItem       ClaimItem? @relation("ClaimImage_claimItem", fields: [claimItemId], references: [id])
+  claimItemId     String?    @map("claimItem")
+  metadata        Json?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @default(now()) @updatedAt
 
-  @@index([userId])
+  @@index([claimItemId])
+}
+
+model ClaimItem {
+  id               String              @id @default(cuid())
+  reason           ClaimItemReasonType
+  note             String              @default("")
+  quantity         Int
+  metadata         Json?
+  productVariant   ProductVariant?     @relation("ClaimItem_productVariant", fields: [productVariantId], references: [id])
+  productVariantId String?             @map("productVariant")
+  lineItem         LineItem?           @relation("ClaimItem_lineItem", fields: [lineItemId], references: [id])
+  lineItemId       String?             @map("lineItem")
+  claimOrder       ClaimOrder?         @relation("ClaimItem_claimOrder", fields: [claimOrderId], references: [id])
+  claimOrderId     String?             @map("claimOrder")
+  claimImages      ClaimImage[]        @relation("ClaimImage_claimItem")
+  claimTags        ClaimTag[]          @relation("ClaimItem_claimTags")
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @default(now()) @updatedAt
+
+  @@index([productVariantId])
+  @@index([lineItemId])
+  @@index([claimOrderId])
 }
 
 model ClaimOrder {
@@ -484,45 +191,6 @@ model ClaimOrder {
 
   @@index([addressId])
   @@index([orderId])
-}
-
-model ClaimItem {
-  id               String              @id @default(cuid())
-  reason           ClaimItemReasonType
-  note             String              @default("")
-  quantity         Int
-  metadata         Json?
-  productVariant   ProductVariant?     @relation("ClaimItem_productVariant", fields: [productVariantId], references: [id])
-  productVariantId String?             @map("productVariant")
-  lineItem         LineItem?           @relation("ClaimItem_lineItem", fields: [lineItemId], references: [id])
-  lineItemId       String?             @map("lineItem")
-  claimOrder       ClaimOrder?         @relation("ClaimItem_claimOrder", fields: [claimOrderId], references: [id])
-  claimOrderId     String?             @map("claimOrder")
-  claimImages      ClaimImage[]        @relation("ClaimImage_claimItem")
-  claimTags        ClaimTag[]          @relation("ClaimItem_claimTags")
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @default(now()) @updatedAt
-
-  @@index([productVariantId])
-  @@index([lineItemId])
-  @@index([claimOrderId])
-}
-
-model ClaimImage {
-  id              String     @id @default(cuid())
-  image_id        String?
-  image_filesize  Int?
-  image_width     Int?
-  image_height    Int?
-  image_extension String?
-  altText         String     @default("")
-  claimItem       ClaimItem? @relation("ClaimImage_claimItem", fields: [claimItemId], references: [id])
-  claimItemId     String?    @map("claimItem")
-  metadata        Json?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @default(now()) @updatedAt
-
-  @@index([claimItemId])
 }
 
 model ClaimTag {
@@ -565,17 +233,6 @@ model Currency {
   updatedAt    DateTime      @default(now()) @updatedAt
 }
 
-model CustomerGroup {
-  id                 String              @id @default(cuid())
-  name               String              @default("")
-  metadata           Json?
-  users              User[]              @relation("CustomerGroup_users")
-  discountConditions DiscountCondition[] @relation("CustomerGroup_discountConditions")
-  priceLists         PriceList[]         @relation("CustomerGroup_priceLists")
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @default(now()) @updatedAt
-}
-
 model CustomShippingOption {
   id               String          @id @default(cuid())
   price            Int
@@ -589,6 +246,17 @@ model CustomShippingOption {
 
   @@index([shippingOptionId])
   @@index([cartId])
+}
+
+model CustomerGroup {
+  id                 String              @id @default(cuid())
+  name               String              @default("")
+  metadata           Json?
+  users              User[]              @relation("CustomerGroup_users")
+  discountConditions DiscountCondition[] @relation("CustomerGroup_discountConditions")
+  priceLists         PriceList[]         @relation("CustomerGroup_priceLists")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @default(now()) @updatedAt
 }
 
 model Discount {
@@ -783,6 +451,40 @@ model Invite {
   updatedAt DateTime        @default(now()) @updatedAt
 }
 
+model LineItem {
+  id                  String               @id @default(cuid())
+  quantity            Int
+  metadata            Json?
+  isReturn            Boolean              @default(false)
+  isGiftcard          Boolean              @default(false)
+  shouldMerge         Boolean              @default(true)
+  allowDiscounts      Boolean              @default(true)
+  hasShipping         Boolean              @default(false)
+  claimOrder          ClaimOrder?          @relation("LineItem_claimOrder", fields: [claimOrderId], references: [id])
+  claimOrderId        String?              @map("claimOrder")
+  cart                Cart?                @relation("LineItem_cart", fields: [cartId], references: [id])
+  cartId              String?              @map("cart")
+  swap                Swap?                @relation("LineItem_swap", fields: [swapId], references: [id])
+  swapId              String?              @map("swap")
+  order               Order?               @relation("LineItem_order", fields: [orderId], references: [id])
+  orderId             String?              @map("order")
+  productVariant      ProductVariant?      @relation("LineItem_productVariant", fields: [productVariantId], references: [id])
+  productVariantId    String?              @map("productVariant")
+  claimItems          ClaimItem[]          @relation("ClaimItem_lineItem")
+  fulfillmentItems    FulfillmentItem[]    @relation("FulfillmentItem_lineItem")
+  lineItemAdjustments LineItemAdjustment[] @relation("LineItemAdjustment_lineItem")
+  lineItemTaxLines    LineItemTaxLine[]    @relation("LineItemTaxLine_lineItem")
+  returnItems         ReturnItem[]         @relation("ReturnItem_lineItem")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @default(now()) @updatedAt
+
+  @@index([claimOrderId])
+  @@index([cartId])
+  @@index([swapId])
+  @@index([orderId])
+  @@index([productVariantId])
+}
+
 model LineItemAdjustment {
   id          String    @id @default(cuid())
   description String    @default("")
@@ -811,6 +513,29 @@ model LineItemTaxLine {
   updatedAt  DateTime  @default(now()) @updatedAt
 
   @@index([lineItemId])
+}
+
+model Location {
+  id          String           @id @default(cuid())
+  name        String           @default("")
+  description String           @default("")
+  address     String           @default("")
+  variants    ProductVariant[] @relation("ProductVariant_location")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @default(now()) @updatedAt
+}
+
+model Measurement {
+  id               String          @id @default(cuid())
+  value            Float
+  unit             String          @default("g")
+  type             String          @default("weight")
+  productVariant   ProductVariant? @relation("Measurement_productVariant", fields: [productVariantId], references: [id])
+  productVariantId String?         @map("productVariant")
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @default(now()) @updatedAt
+
+  @@index([productVariantId])
 }
 
 model MoneyAmount {
@@ -890,6 +615,119 @@ model OAuth {
   updatedAt       DateTime @default(now()) @updatedAt
 }
 
+model Order {
+  id                   String                @id @default(cuid())
+  status               OrderStatusType       @default(pending)
+  displayId            Int
+  email                String                @default("")
+  taxRate              Float?
+  canceledAt           DateTime?
+  metadata             Json?
+  idempotencyKey       String                @default("")
+  noNotification       Boolean               @default(false)
+  externalId           String                @default("")
+  shippingAddress      Address?              @relation("Order_shippingAddress", fields: [shippingAddressId], references: [id])
+  shippingAddressId    String?               @map("shippingAddress")
+  billingAddress       Address?              @relation("Order_billingAddress", fields: [billingAddressId], references: [id])
+  billingAddressId     String?               @map("billingAddress")
+  currency             Currency?             @relation("Order_currency", fields: [currencyId], references: [id])
+  currencyId           String?               @map("currency")
+  draftOrder           DraftOrder?           @relation("DraftOrder_order")
+  cart                 Cart?                 @relation("Cart_order")
+  user                 User?                 @relation("Order_user", fields: [userId], references: [id])
+  userId               String?               @map("user")
+  region               Region?               @relation("Order_region", fields: [regionId], references: [id])
+  regionId             String?               @map("region")
+  claimOrders          ClaimOrder[]          @relation("ClaimOrder_order")
+  fulfillments         Fulfillment[]         @relation("Fulfillment_order")
+  giftCards            GiftCard[]            @relation("GiftCard_order")
+  giftCardTransactions GiftCardTransaction[] @relation("GiftCardTransaction_order")
+  lineItems            LineItem[]            @relation("LineItem_order")
+  discounts            Discount[]            @relation("Discount_orders")
+  payments             Payment[]             @relation("Payment_order")
+  returns              Return[]              @relation("Return_order")
+  shippingMethods      ShippingMethod[]      @relation("ShippingMethod_order")
+  swaps                Swap[]                @relation("Swap_order")
+  secretKey            String                @default("")
+  events               OrderEvent[]          @relation("OrderEvent_order")
+  note                 String                @default("")
+  shippingLabels       ShippingLabel[]       @relation("ShippingLabel_order")
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @default(now()) @updatedAt
+
+  @@index([shippingAddressId])
+  @@index([billingAddressId])
+  @@index([currencyId])
+  @@index([userId])
+  @@index([regionId])
+}
+
+model OrderEvent {
+  id          String             @id @default(cuid())
+  order       Order?             @relation("OrderEvent_order", fields: [orderId], references: [id])
+  orderId     String?            @map("order")
+  user        User?              @relation("OrderEvent_user", fields: [userId], references: [id])
+  userId      String?            @map("user")
+  type        OrderEventTypeType @default(STATUS_CHANGE)
+  data        Json?              @default("{}")
+  time        DateTime?          @default(now())
+  createdBy   User?              @relation("OrderEvent_createdBy", fields: [createdById], references: [id])
+  createdById String?            @map("createdBy")
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @default(now()) @updatedAt
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([createdById])
+}
+
+model Payment {
+  id                  String             @id @default(cuid())
+  status              PaymentStatusType  @default(pending)
+  amount              Int
+  currencyCode        String             @default("")
+  amountRefunded      Int                @default(0)
+  data                Json?
+  capturedAt          DateTime?
+  canceledAt          DateTime?
+  metadata            Json?
+  idempotencyKey      String             @default("")
+  cart                Cart?              @relation("Cart_payment")
+  paymentCollection   PaymentCollection? @relation("Payment_paymentCollection", fields: [paymentCollectionId], references: [id])
+  paymentCollectionId String?            @map("paymentCollection")
+  swap                Swap?              @relation("Payment_swap", fields: [swapId], references: [id])
+  swapId              String?            @unique @map("swap")
+  currency            Currency?          @relation("Payment_currency", fields: [currencyId], references: [id])
+  currencyId          String?            @map("currency")
+  order               Order?             @relation("Payment_order", fields: [orderId], references: [id])
+  orderId             String?            @map("order")
+  captures            Capture[]          @relation("Capture_payment")
+  refunds             Refund[]           @relation("Refund_payment")
+  user                User?              @relation("Payment_user", fields: [userId], references: [id])
+  userId              String?            @map("user")
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @default(now()) @updatedAt
+
+  @@index([paymentCollectionId])
+  @@index([currencyId])
+  @@index([orderId])
+  @@index([userId])
+}
+
+model PaymentCollection {
+  id               String                            @id @default(cuid())
+  description      PaymentCollectionDescriptionType? @default(default)
+  amount           Int
+  authorizedAmount Int?                              @default(0)
+  refundedAmount   Int?                              @default(0)
+  metadata         Json?
+  paymentSessions  PaymentSession[]                  @relation("PaymentSession_paymentCollection")
+  payments         Payment[]                         @relation("Payment_paymentCollection")
+  cart             Cart?                             @relation("Cart_paymentCollection")
+  createdAt        DateTime                          @default(now())
+  updatedAt        DateTime                          @default(now()) @updatedAt
+}
+
 model PaymentProvider {
   id                          String           @id @default(cuid())
   name                        String           @default("")
@@ -906,20 +744,6 @@ model PaymentProvider {
   sessions                    PaymentSession[] @relation("PaymentSession_paymentProvider")
   createdAt                   DateTime         @default(now())
   updatedAt                   DateTime         @default(now()) @updatedAt
-}
-
-model PaymentCollection {
-  id               String                            @id @default(cuid())
-  description      PaymentCollectionDescriptionType? @default(default)
-  amount           Int
-  authorizedAmount Int?                              @default(0)
-  refundedAmount   Int?                              @default(0)
-  metadata         Json?
-  paymentSessions  PaymentSession[]                  @relation("PaymentSession_paymentCollection")
-  payments         Payment[]                         @relation("Payment_paymentCollection")
-  cart             Cart?                             @relation("Cart_paymentCollection")
-  createdAt        DateTime                          @default(now())
-  updatedAt        DateTime                          @default(now()) @updatedAt
 }
 
 model PaymentSession {
@@ -940,19 +764,6 @@ model PaymentSession {
   @@index([idempotencyKey])
   @@index([paymentCollectionId])
   @@index([paymentProviderId])
-}
-
-model Capture {
-  id        String   @id @default(cuid())
-  amount    Int
-  payment   Payment? @relation("Capture_payment", fields: [paymentId], references: [id])
-  paymentId String?  @map("payment")
-  metadata  Json?
-  createdBy String   @default("")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-
-  @@index([paymentId])
 }
 
 model PriceList {
@@ -985,15 +796,6 @@ model PriceRule {
   @@index([priceSetId])
 }
 
-model RuleType {
-  id            String     @id @default(cuid())
-  name          String     @default("")
-  ruleAttribute String     @unique @default("")
-  priceSets     PriceSet[] @relation("PriceSet_ruleTypes")
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @default(now()) @updatedAt
-}
-
 model PriceSet {
   id         String        @id @default(cuid())
   prices     MoneyAmount[] @relation("MoneyAmount_priceSet")
@@ -1001,6 +803,160 @@ model PriceSet {
   ruleTypes  RuleType[]    @relation("PriceSet_ruleTypes")
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @default(now()) @updatedAt
+}
+
+model Product {
+  id                 String              @id @default(cuid())
+  title              String              @default("")
+  description        String              @default("")
+  handle             String              @unique @default("")
+  subtitle           String              @default("")
+  isGiftcard         Boolean             @default(false)
+  metadata           Json?
+  discountable       Boolean             @default(true)
+  status             ProductStatusType   @default(draft)
+  externalId         String              @default("")
+  productCollections ProductCollection[] @relation("Product_productCollections")
+  productCategories  ProductCategory[]   @relation("Product_productCategories")
+  shippingProfile    ShippingProfile?    @relation("Product_shippingProfile", fields: [shippingProfileId], references: [id])
+  shippingProfileId  String?             @map("shippingProfile")
+  productType        ProductType?        @relation("Product_productType", fields: [productTypeId], references: [id])
+  productTypeId      String?             @map("productType")
+  discountConditions DiscountCondition[] @relation("DiscountCondition_products")
+  discountRules      DiscountRule[]      @relation("DiscountRule_products")
+  productImages      ProductImage[]      @relation("Product_productImages")
+  productOptions     ProductOption[]     @relation("ProductOption_product")
+  productTags        ProductTag[]        @relation("Product_productTags")
+  taxRates           TaxRate[]           @relation("Product_taxRates")
+  productVariants    ProductVariant[]    @relation("ProductVariant_product")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @default(now()) @updatedAt
+
+  @@index([shippingProfileId])
+  @@index([productTypeId])
+}
+
+model ProductCategory {
+  id                 String              @id @default(cuid())
+  title              String              @default("")
+  handle             String              @unique @default("")
+  metadata           Json?
+  isInternal         Boolean             @default(false)
+  isActive           Boolean             @default(true)
+  discountConditions DiscountCondition[] @relation("DiscountCondition_productCategories")
+  products           Product[]           @relation("Product_productCategories")
+  parentCategory     ProductCategory?    @relation("ProductCategory_parentCategory", fields: [parentCategoryId], references: [id])
+  parentCategoryId   String?             @map("parentCategory")
+  categoryChildren   ProductCategory[]   @relation("ProductCategory_parentCategory")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @default(now()) @updatedAt
+
+  @@index([parentCategoryId])
+}
+
+model ProductCollection {
+  id                 String              @id @default(cuid())
+  title              String              @default("")
+  handle             String              @unique @default("")
+  metadata           Json?
+  discountConditions DiscountCondition[] @relation("DiscountCondition_productCollections")
+  products           Product[]           @relation("Product_productCollections")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @default(now()) @updatedAt
+}
+
+model ProductImage {
+  id              String    @id @default(cuid())
+  image_id        String?
+  image_filesize  Int?
+  image_width     Int?
+  image_height    Int?
+  image_extension String?
+  altText         String    @default("")
+  products        Product[] @relation("Product_productImages")
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
+}
+
+model ProductOption {
+  id                  String               @id @default(cuid())
+  title               String               @default("")
+  metadata            Json?
+  product             Product?             @relation("ProductOption_product", fields: [productId], references: [id])
+  productId           String?              @map("product")
+  productOptionValues ProductOptionValue[] @relation("ProductOptionValue_productOption")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @default(now()) @updatedAt
+
+  @@index([productId])
+}
+
+model ProductOptionValue {
+  id              String           @id @default(cuid())
+  value           String           @default("")
+  metadata        Json?
+  productVariants ProductVariant[] @relation("ProductOptionValue_productVariants")
+  productOption   ProductOption?   @relation("ProductOptionValue_productOption", fields: [productOptionId], references: [id])
+  productOptionId String?          @map("productOption")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @default(now()) @updatedAt
+
+  @@index([productOptionId])
+}
+
+model ProductTag {
+  id                 String              @id @default(cuid())
+  value              String              @default("")
+  metadata           Json?
+  discountConditions DiscountCondition[] @relation("DiscountCondition_productTags")
+  products           Product[]           @relation("Product_productTags")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @default(now()) @updatedAt
+}
+
+model ProductType {
+  id                 String              @id @default(cuid())
+  value              String              @default("")
+  metadata           Json?
+  discountConditions DiscountCondition[] @relation("DiscountCondition_productTypes")
+  products           Product[]           @relation("Product_productType")
+  taxRates           TaxRate[]           @relation("ProductType_taxRates")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @default(now()) @updatedAt
+}
+
+model ProductVariant {
+  id                  String               @id @default(cuid())
+  title               String               @default("")
+  sku                 String               @default("")
+  barcode             String               @default("")
+  ean                 String               @default("")
+  upc                 String               @default("")
+  inventoryQuantity   Int
+  allowBackorder      Boolean              @default(false)
+  manageInventory     Boolean              @default(true)
+  hsCode              String               @default("")
+  originCountry       String               @default("")
+  midCode             String               @default("")
+  material            String               @default("")
+  metadata            Json?
+  variantRank         Int?                 @default(0)
+  product             Product?             @relation("ProductVariant_product", fields: [productId], references: [id])
+  productId           String?              @map("product")
+  claimItems          ClaimItem[]          @relation("ClaimItem_productVariant")
+  lineItems           LineItem[]           @relation("LineItem_productVariant")
+  prices              MoneyAmount[]        @relation("MoneyAmount_productVariant")
+  productOptionValues ProductOptionValue[] @relation("ProductOptionValue_productVariants")
+  location            Location?            @relation("ProductVariant_location", fields: [locationId], references: [id])
+  locationId          String?              @map("location")
+  stockMovements      StockMovement[]      @relation("StockMovement_variant")
+  measurements        Measurement[]        @relation("Measurement_productVariant")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @default(now()) @updatedAt
+
+  @@index([productId])
+  @@index([locationId])
 }
 
 model Refund {
@@ -1110,6 +1066,50 @@ model ReturnReason {
   @@index([parentReturnReasonId])
 }
 
+model Role {
+  id                       String   @id @default(cuid())
+  name                     String   @default("")
+  canReadOrders            Boolean  @default(false)
+  canManageOrders          Boolean  @default(false)
+  canReadProducts          Boolean  @default(false)
+  canManageProducts        Boolean  @default(false)
+  canReadFulfillments      Boolean  @default(false)
+  canManageFulfillments    Boolean  @default(false)
+  canReadUsers             Boolean  @default(false)
+  canManageUsers           Boolean  @default(false)
+  canReadRoles             Boolean  @default(false)
+  canManageRoles           Boolean  @default(false)
+  canReadCheckouts         Boolean  @default(false)
+  canManageCheckouts       Boolean  @default(false)
+  canReadDiscounts         Boolean  @default(false)
+  canManageDiscounts       Boolean  @default(false)
+  canReadGiftCards         Boolean  @default(false)
+  canManageGiftCards       Boolean  @default(false)
+  canReadReturns           Boolean  @default(false)
+  canManageReturns         Boolean  @default(false)
+  canReadSalesChannels     Boolean  @default(false)
+  canManageSalesChannels   Boolean  @default(false)
+  canReadPayments          Boolean  @default(false)
+  canManagePayments        Boolean  @default(false)
+  canReadIdempotencyKeys   Boolean  @default(false)
+  canManageIdempotencyKeys Boolean  @default(false)
+  canReadApps              Boolean  @default(false)
+  canManageApps            Boolean  @default(false)
+  canManageKeys            Boolean  @default(false)
+  assignedTo               User[]   @relation("User_role")
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @default(now()) @updatedAt
+}
+
+model RuleType {
+  id            String     @id @default(cuid())
+  name          String     @default("")
+  ruleAttribute String     @unique @default("")
+  priceSets     PriceSet[] @relation("PriceSet_ruleTypes")
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @default(now()) @updatedAt
+}
+
 model SalesChannel {
   id          String   @id @default(cuid())
   name        String   @default("")
@@ -1117,6 +1117,31 @@ model SalesChannel {
   isDisabled  Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
+}
+
+model ShippingLabel {
+  id             String                  @id @default(cuid())
+  status         ShippingLabelStatusType @default(created)
+  labelUrl       String                  @default("")
+  carrier        String                  @default("")
+  service        String                  @default("")
+  rate           Json?
+  trackingNumber String                  @default("")
+  trackingUrl    String                  @default("")
+  order          Order?                  @relation("ShippingLabel_order", fields: [orderId], references: [id])
+  orderId        String?                 @map("order")
+  provider       ShippingProvider?       @relation("ShippingLabel_provider", fields: [providerId], references: [id])
+  providerId     String?                 @map("provider")
+  fulfillment    Fulfillment?            @relation("ShippingLabel_fulfillment", fields: [fulfillmentId], references: [id])
+  fulfillmentId  String?                 @map("fulfillment")
+  data           Json?
+  metadata       Json?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @default(now()) @updatedAt
+
+  @@index([orderId])
+  @@index([providerId])
+  @@index([fulfillmentId])
 }
 
 model ShippingMethod {
@@ -1209,6 +1234,44 @@ model ShippingProfile {
   updatedAt       DateTime                @default(now()) @updatedAt
 }
 
+model ShippingProvider {
+  id                      String               @id @default(cuid())
+  name                    String               @default("")
+  isActive                Boolean              @default(false)
+  accessToken             String               @default("")
+  createLabelFunction     String               @default("")
+  getRatesFunction        String               @default("")
+  validateAddressFunction String               @default("")
+  trackShipmentFunction   String               @default("")
+  cancelLabelFunction     String               @default("")
+  metadata                Json?
+  regions                 Region[]             @relation("Region_shippingProviders")
+  labels                  ShippingLabel[]      @relation("ShippingLabel_provider")
+  fulfillmentProvider     FulfillmentProvider? @relation("ShippingProvider_fulfillmentProvider", fields: [fulfillmentProviderId], references: [id])
+  fulfillmentProviderId   String?              @map("fulfillmentProvider")
+  fromAddress             Address?             @relation("ShippingProvider_fromAddress", fields: [fromAddressId], references: [id])
+  fromAddressId           String?              @map("fromAddress")
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @default(now()) @updatedAt
+
+  @@index([fulfillmentProviderId])
+  @@index([fromAddressId])
+}
+
+model StockMovement {
+  id        String                @id @default(cuid())
+  type      StockMovementTypeType
+  quantity  Int
+  reason    String                @default("")
+  note      String                @default("")
+  variant   ProductVariant?       @relation("StockMovement_variant", fields: [variantId], references: [id])
+  variantId String?               @map("variant")
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @default(now()) @updatedAt
+
+  @@index([variantId])
+}
+
 model Store {
   id                  String     @id @default(cuid())
   name                String     @default("Openfront Store")
@@ -1273,23 +1336,6 @@ model TaxRate {
   @@index([regionId])
 }
 
-model BatchJob {
-  id          String             @id @default(cuid())
-  type        BatchJobTypeType
-  status      BatchJobStatusType @default(CREATED)
-  context     Json?              @default("{}")
-  result      Json?              @default("{}")
-  error       String             @default("")
-  progress    Int?               @default(0)
-  createdBy   User?              @relation("BatchJob_createdBy", fields: [createdById], references: [id])
-  createdById String?            @map("createdBy")
-  completedAt DateTime?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @default(now()) @updatedAt
-
-  @@index([createdById])
-}
-
 model Team {
   id          String   @id @default(cuid())
   name        String   @default("")
@@ -1303,119 +1349,67 @@ model Team {
   @@index([leaderId])
 }
 
-model Location {
-  id          String           @id @default(cuid())
-  name        String           @default("")
-  description String           @default("")
-  address     String           @default("")
-  variants    ProductVariant[] @relation("ProductVariant_location")
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @default(now()) @updatedAt
+model User {
+  id                        String          @id @default(cuid())
+  name                      String          @default("")
+  email                     String          @unique @default("")
+  password                  String?
+  role                      Role?           @relation("User_role", fields: [roleId], references: [id])
+  roleId                    String?         @map("role")
+  apiKeys                   ApiKey[]        @relation("ApiKey_user")
+  phone                     String          @default("")
+  hasAccount                Boolean         @default(false)
+  addresses                 Address[]       @relation("Address_user")
+  orders                    Order[]         @relation("Order_user")
+  orderEvents               OrderEvent[]    @relation("OrderEvent_user")
+  carts                     Cart[]          @relation("Cart_user")
+  customerGroups            CustomerGroup[] @relation("CustomerGroup_users")
+  notifications             Notification[]  @relation("Notification_user")
+  payments                  Payment[]       @relation("Payment_user")
+  batchJobs                 BatchJob[]      @relation("BatchJob_createdBy")
+  team                      Team?           @relation("User_team", fields: [teamId], references: [id])
+  teamId                    String?         @map("team")
+  teamLead                  Team[]          @relation("Team_leader")
+  userField                 UserField?      @relation("User_userField", fields: [userFieldId], references: [id])
+  userFieldId               String?         @unique @map("userField")
+  createdAt                 DateTime        @default(now())
+  updatedAt                 DateTime        @default(now()) @updatedAt
+  passwordResetToken        String?
+  passwordResetIssuedAt     DateTime?
+  passwordResetRedeemedAt   DateTime?
+  from_OrderEvent_createdBy OrderEvent[]    @relation("OrderEvent_createdBy")
+
+  @@index([roleId])
+  @@index([teamId])
 }
 
-model StockMovement {
-  id        String                @id @default(cuid())
-  type      StockMovementTypeType
-  quantity  Int
-  reason    String                @default("")
-  note      String                @default("")
-  variant   ProductVariant?       @relation("StockMovement_variant", fields: [variantId], references: [id])
-  variantId String?               @map("variant")
-  createdAt DateTime              @default(now())
-  updatedAt DateTime              @default(now()) @updatedAt
-
-  @@index([variantId])
+model UserField {
+  id                  String    @id @default(cuid())
+  user                User?     @relation("User_userField")
+  lastLoginIp         String    @default("")
+  lastLoginUserAgent  String    @default("")
+  loginHistory        Json?     @default("[]")
+  preferences         Json?     @default("{\"theme\":\"light\",\"notifications\":true,\"emailNotifications\":true}")
+  notes               String    @default("")
+  lastPasswordChange  DateTime?
+  failedLoginAttempts Json?     @default("{\"count\":0,\"lastAttempt\":null,\"lockedUntil\":null}")
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @default(now()) @updatedAt
 }
 
-model OrderEvent {
-  id          String             @id @default(cuid())
-  order       Order?             @relation("OrderEvent_order", fields: [orderId], references: [id])
-  orderId     String?            @map("order")
-  user        User?              @relation("OrderEvent_user", fields: [userId], references: [id])
-  userId      String?            @map("user")
-  type        OrderEventTypeType @default(STATUS_CHANGE)
-  data        Json?              @default("{}")
-  time        DateTime?          @default(now())
-  createdBy   User?              @relation("OrderEvent_createdBy", fields: [createdById], references: [id])
-  createdById String?            @map("createdBy")
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @default(now()) @updatedAt
-
-  @@index([orderId])
-  @@index([userId])
-  @@index([createdById])
+enum BatchJobTypeType {
+  PRODUCT_IMPORT
+  ORDER_EXPORT
+  INVENTORY_UPDATE
+  PRICE_UPDATE
 }
 
-model ShippingProvider {
-  id                      String               @id @default(cuid())
-  name                    String               @default("")
-  isActive                Boolean              @default(false)
-  accessToken             String               @default("")
-  createLabelFunction     String               @default("")
-  getRatesFunction        String               @default("")
-  validateAddressFunction String               @default("")
-  trackShipmentFunction   String               @default("")
-  cancelLabelFunction     String               @default("")
-  metadata                Json?
-  regions                 Region[]             @relation("Region_shippingProviders")
-  labels                  ShippingLabel[]      @relation("ShippingLabel_provider")
-  fulfillmentProvider     FulfillmentProvider? @relation("ShippingProvider_fulfillmentProvider", fields: [fulfillmentProviderId], references: [id])
-  fulfillmentProviderId   String?              @map("fulfillmentProvider")
-  fromAddress             Address?             @relation("ShippingProvider_fromAddress", fields: [fromAddressId], references: [id])
-  fromAddressId           String?              @map("fromAddress")
-  createdAt               DateTime             @default(now())
-  updatedAt               DateTime             @default(now()) @updatedAt
-
-  @@index([fulfillmentProviderId])
-  @@index([fromAddressId])
-}
-
-model ShippingLabel {
-  id             String                  @id @default(cuid())
-  status         ShippingLabelStatusType @default(created)
-  labelUrl       String                  @default("")
-  carrier        String                  @default("")
-  service        String                  @default("")
-  rate           Json?
-  trackingNumber String                  @default("")
-  trackingUrl    String                  @default("")
-  order          Order?                  @relation("ShippingLabel_order", fields: [orderId], references: [id])
-  orderId        String?                 @map("order")
-  provider       ShippingProvider?       @relation("ShippingLabel_provider", fields: [providerId], references: [id])
-  providerId     String?                 @map("provider")
-  fulfillment    Fulfillment?            @relation("ShippingLabel_fulfillment", fields: [fulfillmentId], references: [id])
-  fulfillmentId  String?                 @map("fulfillment")
-  data           Json?
-  metadata       Json?
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @default(now()) @updatedAt
-
-  @@index([orderId])
-  @@index([providerId])
-  @@index([fulfillmentId])
-}
-
-enum OrderStatusType {
-  pending
-  completed
-  archived
-  canceled
-  requires_action
-}
-
-enum ProductStatusType {
-  draft
-  proposed
-  published
-  rejected
-}
-
-enum PaymentStatusType {
-  pending
-  authorized
-  captured
-  failed
-  canceled
+enum BatchJobStatusType {
+  CREATED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELED
 }
 
 enum CartTypeType {
@@ -1424,6 +1418,13 @@ enum CartTypeType {
   draft_order
   payment_link
   claim
+}
+
+enum ClaimItemReasonType {
+  missing_item
+  wrong_item
+  production_failure
+  other
 }
 
 enum ClaimOrderPaymentStatusType {
@@ -1447,13 +1448,6 @@ enum ClaimOrderFulfillmentStatusType {
 enum ClaimOrderTypeType {
   refund
   replace
-}
-
-enum ClaimItemReasonType {
-  missing_item
-  wrong_item
-  production_failure
-  other
 }
 
 enum DiscountConditionTypeType {
@@ -1491,6 +1485,35 @@ enum InviteRoleType {
   developer
 }
 
+enum OrderStatusType {
+  pending
+  completed
+  archived
+  canceled
+  requires_action
+}
+
+enum OrderEventTypeType {
+  ORDER_PLACED
+  STATUS_CHANGE
+  PAYMENT_STATUS_CHANGE
+  PAYMENT_CAPTURED
+  FULFILLMENT_STATUS_CHANGE
+  NOTE_ADDED
+  EMAIL_SENT
+  TRACKING_NUMBER_ADDED
+  RETURN_REQUESTED
+  REFUND_PROCESSED
+}
+
+enum PaymentStatusType {
+  pending
+  authorized
+  captured
+  failed
+  canceled
+}
+
 enum PaymentCollectionDescriptionType {
   default
   refund
@@ -1511,6 +1534,13 @@ enum PriceRuleTypeType {
   percentage
 }
 
+enum ProductStatusType {
+  draft
+  proposed
+  published
+  rejected
+}
+
 enum RefundReasonType {
   discount
   return
@@ -1524,6 +1554,12 @@ enum ReturnStatusType {
   received
   requires_action
   canceled
+}
+
+enum ShippingLabelStatusType {
+  created
+  purchased
+  failed
 }
 
 enum ShippingOptionPriceTypeType {
@@ -1541,6 +1577,11 @@ enum ShippingProfileTypeType {
   default
   gift_card
   custom
+}
+
+enum StockMovementTypeType {
+  RECEIVE
+  REMOVE
 }
 
 enum SwapFulfillmentStatusType {
@@ -1562,43 +1603,4 @@ enum SwapPaymentStatusType {
   partially_refunded
   refunded
   requires_action
-}
-
-enum BatchJobTypeType {
-  PRODUCT_IMPORT
-  ORDER_EXPORT
-  INVENTORY_UPDATE
-  PRICE_UPDATE
-}
-
-enum BatchJobStatusType {
-  CREATED
-  PROCESSING
-  COMPLETED
-  FAILED
-  CANCELED
-}
-
-enum StockMovementTypeType {
-  RECEIVE
-  REMOVE
-}
-
-enum OrderEventTypeType {
-  ORDER_PLACED
-  STATUS_CHANGE
-  PAYMENT_STATUS_CHANGE
-  PAYMENT_CAPTURED
-  FULFILLMENT_STATUS_CHANGE
-  NOTE_ADDED
-  EMAIL_SENT
-  TRACKING_NUMBER_ADDED
-  RETURN_REQUESTED
-  REFUND_PROCESSED
-}
-
-enum ShippingLabelStatusType {
-  created
-  purchased
-  failed
 }

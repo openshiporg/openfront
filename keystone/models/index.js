@@ -1,29 +1,16 @@
-import { User } from "./User";
-import { UserField } from "./UserField";
-import { Role } from "./Role";
-import { Order } from "./Order";
-import { LineItem } from "./LineItem";
-import { Product } from "./Product";
-import { ProductCollection } from "./ProductCollection";
-import { ProductCategory } from "./ProductCategory";
-import { ProductImage } from "./ProductImage";
-import { ProductOption } from "./ProductOption";
-import { ProductOptionValue } from "./ProductOptionValue";
-import { ProductTag } from "./ProductTag";
-import { ProductType } from "./ProductType";
-import { ProductVariant } from "./ProductVariant";
-import { Payment } from "./Payment";
 import { Address } from "./Address";
-import { Cart } from "./Cart";
 import { ApiKey } from "./ApiKey";
-import { ClaimOrder } from "./ClaimOrder";
-import { ClaimItem } from "./ClaimItem";
+import { BatchJob } from './BatchJob';
+import { Capture } from "./Capture";
+import { Cart } from "./Cart";
 import { ClaimImage } from "./ClaimImage";
+import { ClaimItem } from "./ClaimItem";
+import { ClaimOrder } from "./ClaimOrder";
 import { ClaimTag } from "./ClaimTag";
 import { Country } from "./Country";
 import { Currency } from "./Currency";
-import { CustomerGroup } from "./CustomerGroup";
 import { CustomShippingOption } from "./CustomShippingOption";
+import { CustomerGroup } from "./CustomerGroup";
 import { Discount } from "./Discount";
 import { DiscountCondition } from "./DiscountCondition";
 import { DiscountRule } from "./DiscountRule";
@@ -35,71 +22,72 @@ import { GiftCard } from "./GiftCard";
 import { GiftCardTransaction } from "./GiftCardTransaction";
 import { IdempotencyKey } from "./IdempotencyKey";
 import { Invite } from "./Invite";
+import { LineItem } from "./LineItem";
 import { LineItemAdjustment } from "./LineItemAdjustment";
 import { LineItemTaxLine } from "./LineItemTaxLine";
+import { Location } from './Location';
+import { Measurement } from './Measurement';
 import { MoneyAmount } from "./MoneyAmount";
 import { Note } from "./Note";
 import { Notification } from "./Notification";
 import { NotificationProvider } from "./NotificationProvider";
 import { OAuth } from "./OAuth";
-import { PaymentProvider } from "./PaymentProvider";
+import { Order } from "./Order";
+import { OrderEvent } from './OrderEvent';
+import { Payment } from "./Payment";
 import { PaymentCollection } from "./PaymentCollection";
+import { PaymentProvider } from "./PaymentProvider";
 import { PaymentSession } from "./PaymentSession";
 import { PriceList } from "./PriceList";
 import { PriceRule } from './PriceRule';
 import { PriceSet } from './PriceSet';
+import { Product } from "./Product";
+import { ProductCategory } from "./ProductCategory";
+import { ProductCollection } from "./ProductCollection";
+import { ProductImage } from "./ProductImage";
+import { ProductOption } from "./ProductOption";
+import { ProductOptionValue } from "./ProductOptionValue";
+import { ProductTag } from "./ProductTag";
+import { ProductType } from "./ProductType";
+import { ProductVariant } from "./ProductVariant";
 import { Refund } from "./Refund";
 import { Region } from "./Region";
 import { Return } from "./Return";
 import { ReturnItem } from "./ReturnItem";
 import { ReturnReason } from "./ReturnReason";
+import { Role } from "./Role";
+import { RuleType } from "./RuleType";
 import { SalesChannel } from "./SalesChannel";
+import { ShippingLabel } from './ShippingLabel';
 import { ShippingMethod } from "./ShippingMethod";
 import { ShippingMethodTaxLine } from "./ShippingMethodTaxLine";
 import { ShippingOption } from "./ShippingOption";
 import { ShippingOptionRequirement } from "./ShippingOptionRequirement";
 import { ShippingProfile } from "./ShippingProfile";
+import { ShippingProvider } from './ShippingProvider';
+import { StockMovement } from './StockMovement';
 import { Store } from "./Store";
 import { Swap } from "./Swap";
 import { TaxProvider } from "./TaxProvider";
 import { TaxRate } from "./TaxRate";
-import { RuleType } from "./RuleType";
-import { Capture } from "./Capture";
-import { BatchJob } from './BatchJob';
 import { Team } from './Team';
-import { Location } from './Location';
-import { StockMovement } from './StockMovement';
-import { OrderEvent } from './OrderEvent';
-import { ShippingProvider } from './ShippingProvider';
-import { ShippingLabel } from './ShippingLabel';
+import { User } from "./User";
+import { UserField } from "./UserField";
 
 export const models = {
-  User,
-  UserField,
-  Role,
-  Order,
-  LineItem,
-  Product,
-  ProductCollection,
-  ProductCategory,
-  ProductImage,
-  ProductOption,
-  ProductOptionValue,
-  ProductTag,
-  ProductType,
-  ProductVariant,
-  Payment,
   Address,
-  Cart,
   ApiKey,
-  ClaimOrder,
-  ClaimItem,
+  BatchJob,
+  Capture,
+  Cart,
   ClaimImage,
+  ClaimItem,
+  ClaimOrder,
   ClaimTag,
   Country,
   Currency,
-  CustomerGroup,
   CustomShippingOption,
+  CustomerGroup,
   Discount,
   DiscountCondition,
   DiscountRule,
@@ -111,41 +99,55 @@ export const models = {
   GiftCardTransaction,
   IdempotencyKey,
   Invite,
+  LineItem,
   LineItemAdjustment,
   LineItemTaxLine,
+  Location,
+  Measurement,
   MoneyAmount,
   Note,
   Notification,
   NotificationProvider,
   OAuth,
-  PaymentProvider,
+  Order,
+  OrderEvent,
+  Payment,
   PaymentCollection,
+  PaymentProvider,
   PaymentSession,
-  Capture,
   PriceList,
   PriceRule,
-  RuleType,
   PriceSet,
+  Product,
+  ProductCategory,
+  ProductCollection,
+  ProductImage,
+  ProductOption,
+  ProductOptionValue,
+  ProductTag,
+  ProductType,
+  ProductVariant,
   Refund,
   Region,
   Return,
   ReturnItem,
   ReturnReason,
+  Role,
+  RuleType,
   SalesChannel,
+  ShippingLabel,
   ShippingMethod,
   ShippingMethodTaxLine,
   ShippingOption,
   ShippingOptionRequirement,
   ShippingProfile,
+  ShippingProvider,
+  StockMovement,
   Store,
   Swap,
   TaxProvider,
   TaxRate,
-  BatchJob,
   Team,
-  Location,
-  StockMovement,
-  OrderEvent,
-  ShippingProvider,
-  ShippingLabel,
+  User,
+  UserField,
 };

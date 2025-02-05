@@ -73,6 +73,7 @@
     "apollo-upload-client": "^17.0.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
+    "cmdk": "^1.0.4",
     "dayjs": "^1.11.5",
     "dotenv": "^16.0.0",
     "dumb-passwords": "^0.2.1",

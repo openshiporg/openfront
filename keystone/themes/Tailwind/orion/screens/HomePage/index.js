@@ -259,7 +259,7 @@ export const HomePage = () => {
           </p>
         </div>
 
-        <OnboardingCard />
+        <OnboardingCard data={data} />
 
         {/* Platform section */}
         <div className="mb-6">

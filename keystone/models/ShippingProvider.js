@@ -88,13 +88,13 @@ export const ShippingProvider = list({
     fromAddress: relationship({
       ref: 'Address.shippingProviders',
       many: false,
-    //   ui: {
-    //     // displayMode: 'cards',
-    //     // cardFields: ['company', 'address1', 'city', 'province', 'country'],
-    //     inlineCreate: { fields: ['company', 'firstName', 'lastName', 'address1', 'address2', 'city', 'province', 'postalCode', 'country', 'phone'] },
-    //     inlineEdit: { fields: ['company', 'firstName', 'lastName', 'address1', 'address2', 'city', 'province', 'postalCode', 'country', 'phone'] },
-    //     inlineConnect: true,
-    //   },
+      // ui: {
+      //   displayMode: 'cards',
+      //   cardFields: ['company', 'address1', 'city', 'province', 'country'],
+      //   inlineCreate: { fields: ['company', 'firstName', 'lastName', 'address1', 'address2', 'city', 'province', 'postalCode', 'country', 'phone'] },
+      //   inlineEdit: { fields: ['company', 'firstName', 'lastName', 'address1', 'address2', 'city', 'province', 'postalCode', 'country', 'phone'] },
+      //   inlineConnect: true,
+      // },
     }),
 
     ...trackingFields,

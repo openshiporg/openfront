@@ -1,12 +1,7 @@
 import { gql, useMutation } from "@keystone-6/core/admin-ui/apollo";
 import { Check } from "lucide-react";
 import { Button } from "@ui/button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@ui/card";
+import { Card, CardHeader, CardTitle, CardDescription } from "@ui/card";
 
 const SEED_STOREFRONT = gql`
   mutation {
@@ -36,26 +31,34 @@ export const OnboardingCard = ({ data }) => {
   };
 
   // Don't show the card if regions exist (store is already set up)
-  if (data?.discountsCount > 0) {
+  if (parseInt(data["Region"]) > 0) {
     return null;
   }
 
   return (
     <Card className="flex mb-4 justify-between p-4 gap-8 bg-muted/40">
       <CardHeader className="p-0">
-        <CardTitle className="text-sm font-semibold tracking-wide text-foreground/75 uppercase mb-2">Welcome to Openfront</CardTitle>
+        <CardTitle className="text-sm font-semibold tracking-wide text-foreground/75 uppercase mb-2">
+          Welcome to Openfront
+        </CardTitle>
         <CardDescription>
-          Let's set up your store with essential configurations. We'll create regions, 
-          countries, currencies, shipping options, payment providers, and add sample 
-          products to help you get started quickly.
+          Let's set up your store with essential configurations. We'll create
+          regions, countries, currencies, shipping options, payment providers,
+          and add sample products to help you get started quickly.
         </CardDescription>
       </CardHeader>
       <div>
-        <Button variant="outline" size="sm" onClick={handleSeed} disabled={isSeeding} isLoading={isSeeding}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleSeed}
+          disabled={isSeeding}
+          isLoading={isSeeding}
+        >
           {!isSeeding && <Check />}
           {isSeeding ? "Creating..." : "Confirm"}
         </Button>
       </div>
     </Card>
   );
-}; 
+};

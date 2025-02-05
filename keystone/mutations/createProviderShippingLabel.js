@@ -80,7 +80,7 @@ async function createProviderShippingLabel(root, { orderId, providerId, rateId, 
     }
   }
 
-  try {
+  // try {
     // Get the provider with all required fields
     const provider = await context.query.ShippingProvider.findOne({
       where: { id: providerId },
@@ -129,7 +129,7 @@ async function createProviderShippingLabel(root, { orderId, providerId, rateId, 
     });
 
     // Create fulfillment and shipping label
-    const fulfillment = await context.db.Fulfillment.createOne({
+    const fulfillment = await context.query.Fulfillment.createOne({
       data: {
         order: { connect: { id: orderId } },
         fulfillmentItems: {
@@ -156,21 +156,33 @@ async function createProviderShippingLabel(root, { orderId, providerId, rateId, 
           createdBy: "admin",
         },
       },
+      query: `
+        id
+        shippingLabels {
+          id
+          status
+          trackingNumber
+          trackingUrl
+          labelUrl
+          data
+        }
+      `
     });
 
     return fulfillment.shippingLabels[0];
-  } catch (error) {
-    // Create a failed shipping label record
-    const failedLabel = await context.db.ShippingLabel.createOne({
-      data: {
-        status: "failed",
-        provider: { connect: { id: providerId } },
-        data: { error: error.message },
-      },
-    });
+  // } catch (error) {
+  //   // Create a failed shipping label record
+  //   const failedLabel = await context.db.ShippingLabel.createOne({
+  //     data: {
+  //       status: "failed",
+  //       provider: { connect: { id: providerId } },
+  //       data: { error: error.message },
+  //     },
+  //   });
 
-    return failedLabel;
-  }
+  //   throw new Error(`Shipping provider ${provider.id} has no access token configured`);
+
+  // }
 }
 
 export default createProviderShippingLabel; 

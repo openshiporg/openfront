@@ -43,10 +43,11 @@ async function getRatesForOrder(root, { orderId, providerId, dimensions }, conte
             quantity
             productVariant {
               id
-              weight
-              width
-              height
-              length
+              measurements {
+                value
+                unit
+                type
+              }
             }
           }
         `,
@@ -102,17 +103,34 @@ async function getRatesForOrder(root, { orderId, providerId, dimensions }, conte
       let maxHeight = 0;
       let totalWeight = 0;
       let hasDimensions = false;
+      let weightUnit = null;
+      let dimensionUnit = null;
 
       order.lineItems.forEach(item => {
         const variant = item.productVariant;
-        if (variant) {
-          if (variant.length && variant.width && variant.height && variant.weight) {
-            hasDimensions = true;
-            maxLength = Math.max(maxLength, variant.length);
-            maxWidth = Math.max(maxWidth, variant.width);
-            maxHeight = Math.max(maxHeight, variant.height);
-            totalWeight += variant.weight * item.quantity;
-          }
+        if (variant?.measurements?.length) {
+          hasDimensions = true;
+          variant.measurements.forEach(measurement => {
+            const { type, value, unit } = measurement;
+            switch (type) {
+              case 'weight':
+                totalWeight += value * item.quantity;
+                weightUnit = unit;
+                break;
+              case 'length':
+                maxLength = Math.max(maxLength, value);
+                dimensionUnit = unit;
+                break;
+              case 'width':
+                maxWidth = Math.max(maxWidth, value);
+                dimensionUnit = unit;
+                break;
+              case 'height':
+                maxHeight = Math.max(maxHeight, value);
+                dimensionUnit = unit;
+                break;
+            }
+          });
         }
       });
 
@@ -125,8 +143,8 @@ async function getRatesForOrder(root, { orderId, providerId, dimensions }, conte
         width: maxWidth,
         height: maxHeight,
         weight: totalWeight,
-        unit: "cm", // Default unit
-        weightUnit: "kg" // Default weight unit
+        unit: dimensionUnit || "cm", // Default unit
+        weightUnit: weightUnit || "kg" // Default weight unit
       };
     }
 

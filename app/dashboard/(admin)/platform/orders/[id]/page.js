@@ -30,7 +30,6 @@ import {
   DialogClose,
 } from "@ui/dialog";
 import { GraphQLErrorNotice } from "@keystone/themes/Tailwind/orion/components/GraphQLErrorNotice";
-import { Fields } from "./components/Fields";
 import { useUpdateItem } from "@keystone/themes/Tailwind/orion/components/EditItemDrawer";
 import {
   deserializeValue,
@@ -51,6 +50,7 @@ import {
 } from "@ui/dropdown-menu";
 import { useCreateItem } from "@keystone/utils/useCreateItem";
 import { PageBreadcrumbs } from "@keystone/themes/Tailwind/orion/components/PageBreadcrumbs";
+import { Fields } from "@keystone/themes/Tailwind/orion/components/Fields";
 
 export function getFilteredProps(props, modifications, defaultCollapse) {
   const fieldKeysToShow = modifications.map((mod) => mod.key);

@@ -55,10 +55,6 @@ export const ProductVariant = list({
     originCountry: text(),
     midCode: text(),
     material: text(),
-    weight: integer(),
-    length: integer(),
-    height: integer(),
-    width: integer(),
     metadata: json(),
     variantRank: integer({
       defaultValue: 0,
@@ -87,6 +83,10 @@ export const ProductVariant = list({
     }),
     stockMovements: relationship({
       ref: "StockMovement.variant",
+      many: true,
+    }),
+    measurements: relationship({
+      ref: "Measurement.productVariant",
       many: true,
     }),
     ...trackingFields,

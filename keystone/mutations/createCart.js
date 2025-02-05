@@ -1,5 +1,7 @@
 async function createCart(root, { regionId }, context) {
   const sudoContext = context.sudo()
+
+  console.log("createCart", regionId, context.session?.itemId)
   
   const newCart = await sudoContext.db.Cart.createOne({
     data: {
