@@ -351,7 +351,7 @@ function ProviderTabContent({
                           <Alert key={idx} variant="destructive">
                             <AlertTitle>System Error</AlertTitle>
                             <AlertDescription>
-                              {err.extensions.originalError.message ||
+                              {err?.extensions?.originalError.message ||
                                 err.message}
                             </AlertDescription>
                           </Alert>

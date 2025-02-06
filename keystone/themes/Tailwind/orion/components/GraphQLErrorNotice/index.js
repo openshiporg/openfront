@@ -16,7 +16,7 @@ export function GraphQLErrorNotice({ errors, networkError }) {
         {errors.map((err, idx) => (
           <Alert key={idx} variant="destructive">
             <AlertTitle>System Error</AlertTitle>
-            <AlertDescription>{err.extensions.originalError.message || err.message}</AlertDescription>
+            <AlertDescription>{err?.extensions?.originalError.message || err.message}</AlertDescription>
           </Alert>
         ))}
       </div>

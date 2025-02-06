@@ -15,6 +15,13 @@ import {
   MoreHorizontal,
   Printer,
   PencilIcon,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Package,
+  Building,
+  ShoppingBag,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@ui/alert";
 import { Button } from "@ui/button";
@@ -51,6 +58,13 @@ import {
 import { useCreateItem } from "@keystone/utils/useCreateItem";
 import { PageBreadcrumbs } from "@keystone/themes/Tailwind/orion/components/PageBreadcrumbs";
 import { Fields } from "@keystone/themes/Tailwind/orion/components/Fields";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@ui/tooltip";
+import { cn } from "@keystone/utils/cn";
 
 export function getFilteredProps(props, modifications, defaultCollapse) {
   const fieldKeysToShow = modifications.map((mod) => mod.key);
@@ -326,43 +340,71 @@ export default function OrderPage({ params }) {
       paymentDetails
       totalPaid
       formattedTotalPaid
-      events {
+      lineItems {
         id
-        type
-        data
-        time
-        createdAt
-        user {
-          id
-          name
-          email
-        }
-      }
-      payments {
-        id
-        amount
-        status
-        data
+        quantity
         metadata
-        createdAt
-        paymentLink
+        isReturn
+        isGiftcard
+        total
+        unitPrice
+        title
+        thumbnail
+        description
+        availableInRegion
+        percentageOff
+        originalPrice
+        fulfillmentStatus
+        productVariant {
+          id
+          title
+          sku
+          barcode
+          ean
+          upc
+          productOptionValues {
+            id
+            value
+            productOption {
+              id
+              title
+            }
+          }
+          product {
+            id
+            title
+            thumbnail
+            description
+          }
+        }
       }
       fulfillments {
         id
-        data
-        shippedAt
-        canceledAt
-        metadata
+        createdAt
         fulfillmentItems {
           id
           quantity
+          lineItem {
+            id
+          }
+        }
+        shippingLabels {
+          id
+          labelUrl
+          trackingNumber
+          trackingUrl
+          carrier
         }
       }
+      unfulfilled
       user {
         id
         name
         email
         phone
+        orders {
+          id
+        }
       }
       billingAddress {
         id
@@ -394,33 +436,16 @@ export default function OrderPage({ params }) {
           name
         }
       }
-      lineItems {
+      events {
         id
-        quantity
-        metadata
-        isReturn
-        isGiftcard
-        total
-        unitPrice
-        title
-        thumbnail
-        description
-        availableInRegion
-        percentageOff
-        originalPrice
-        productVariant {
+        type
+        data
+        time
+        createdAt
+        user {
           id
-          title
-          sku
-          barcode
-          ean
-          upc
-          product {
-            id
-            title
-            thumbnail
-            description
-          }
+          name
+          email
         }
       }
     `;
@@ -481,9 +506,41 @@ export default function OrderPage({ params }) {
     );
   }
 
-  const unfulfilledItems = order.lineItems.filter(
-    (item) => !item.fulfilledQuantity || item.fulfilledQuantity < item.quantity
-  );
+  const { lineItems = [] } = order;
+
+  const getFulfillmentStatus = (item) => {
+    const fulfillmentItems =
+      order.fulfillments?.flatMap((f) => f.fulfillmentItems) || [];
+    const fulfilledQuantity = fulfillmentItems
+      .filter((fi) => fi.lineItem.id === item.id)
+      .reduce((sum, fi) => sum + fi.quantity, 0);
+
+    if (fulfilledQuantity === item.quantity) {
+      return {
+        label: "Fulfilled",
+        className:
+          "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
+      };
+    } else if (fulfilledQuantity > 0) {
+      return {
+        label: "Partially Fulfilled",
+        className:
+          "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
+      };
+    }
+    return {
+      label: "Unfulfilled",
+      className:
+        "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
+    };
+  };
+
+  const getFulfillmentStatusClassName = (status) => {
+    if (status === "Fulfilled") {
+      return "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400";
+    }
+    return "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400";
+  };
 
   return (
     <>
@@ -541,60 +598,109 @@ export default function OrderPage({ params }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            {unfulfilledItems.length > 0 && (
-              <Card className="bg-muted/40">
-                <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    Items to be fulfilled
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-3 pt-3">
-                  <div className="border bg-background/40 shadow-sm rounded-md">
-                    {unfulfilledItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex flex-col sm:flex-row items-start gap-2 py-2 pl-2 pr-4 [&:not(:last-child)]:border-b border-border"
-                      >
-                        <div className="h-16 w-16 bg-muted rounded-md flex-shrink-0 flex items-center justify-center">
-                          {item.thumbnail ? (
-                            <Image
-                              src={item.thumbnail}
-                              alt={item.title}
-                              width={64}
-                              height={64}
-                              className="rounded-md object-cover"
-                            />
-                          ) : (
-                            <div className="h-16 w-16 bg-muted rounded-md" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium truncate">{item.title}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Reference: {item.productVariant?.sku || "N/A"}
-                          </p>
-                        </div>
-                        <div className="text-right self-start sm:self-center">
-                          <div className="text-sm">
-                            {item.unitPrice} × {item.quantity}
+            <Card className="bg-muted/20 p-0">
+              <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  Order Items
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {lineItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-start space-x-4 py-4 border-b last:border-0 p-2"
+                  >
+                    <div className="h-16 w-16 bg-muted/10 rounded-md flex-shrink-0 flex items-center justify-center">
+                      {item.thumbnail ? (
+                        <Image
+                          src={item.thumbnail}
+                          alt={item.title}
+                          width={64}
+                          height={64}
+                          className="object-cover rounded-md"
+                        />
+                      ) : (
+                        <div className="h-16 w-16 bg-muted rounded-md" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col">
+                        <div className="flex flex-col">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-2">
+                              <div>
+                                <span className="font-medium text-sm">
+                                  {item.productVariant?.product?.title ||
+                                    item.title}
+                                </span>
+                                <div className="flex flex-wrap gap-2">
+                                  {item.productVariant?.productOptionValues?.map(
+                                    (optionValue) => (
+                                      <div
+                                        key={optionValue.id}
+                                        className="flex items-center text-xs text-muted-foreground"
+                                      >
+                                        <span className="opacity-75">
+                                          {optionValue.productOption.title}
+                                        </span>
+                                        <span className="ml-1 font-medium">
+                                          {optionValue.value}
+                                        </span>
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 mt-1">
+                                {item.productVariant?.sku && (
+                                  <p className="text-xs text-muted-foreground">
+                                    SKU: {item.productVariant.sku}
+                                  </p>
+                                )}
+                                <Badge
+                                  color={
+                                    item.fulfillmentStatus === "Fulfilled"
+                                      ? "blue"
+                                      : "rose"
+                                  }
+                                  className={cn(
+                                    "py-0 text-[11px] border uppercase font-medium tracking-wide rounded-full"
+                                  )}
+                                >
+                                  {item.fulfillmentStatus}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                {item.quantity} × {item.unitPrice}
+                              </div>
+                              <div className="text-sm font-medium whitespace-nowrap">
+                                {item.total}
+                              </div>
+                            </div>
                           </div>
-                          <div className="font-medium">{item.total}</div>
                         </div>
                       </div>
-                    ))}
+                    </div>
                   </div>
-                  <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-4 pt-4 border-t">
+                ))}
+                {lineItems.some(
+                  (item) => item.fulfillmentStatus !== "Fulfilled"
+                ) && (
+                  <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 p-2 bg-opacity-75">
                     <Link
                       href={`/dashboard/platform/orders/${order.id}/fulfill`}
                     >
                       <Button size="sm">Ship Items</Button>
                     </Link>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                )}
+              </CardContent>
+            </Card>
 
-            <Card className="bg-muted/40">
+            <Card className="bg-muted/20">
               <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
                 <CardTitle className="flex items-center gap-2 text-base">
                   {order.paymentDetails?.[0]?.status === "captured"
@@ -613,7 +719,7 @@ export default function OrderPage({ params }) {
                   )}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-3 pt-3">
+              <CardContent className="p-3 pt-3 text-sm">
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Items Subtotal</span>
@@ -640,7 +746,7 @@ export default function OrderPage({ params }) {
               </CardContent>
             </Card>
 
-            <Card className="overflow-hidden bg-muted/40">
+            <Card className="overflow-hidden bg-muted/20">
               <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
                 <CardTitle className="text-base">Activity Log</CardTitle>
                 <div className="flex items-center gap-2">
@@ -653,7 +759,7 @@ export default function OrderPage({ params }) {
               <CardContent className="p-3 pt-3">
                 <div className="space-y-4">
                   {order.events?.map((event) => (
-                    <div key={event.id} className="flex gap-4">
+                    <div key={event.id} className="flex gap-4 text-sm">
                       <Clock className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
                       <div className="min-w-0">
                         <p className="font-medium">{event.type}</p>
@@ -684,108 +790,125 @@ export default function OrderPage({ params }) {
           </div>
 
           <div className="space-y-6">
-            <Card className="bg-muted/40">
+            <Card className="bg-muted/20">
               <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
-                <CardTitle className="text-base">Internal Notes</CardTitle>
-                <EditDialog
-                  title="Update Note"
-                  listKey="Order"
-                  id={order.id}
-                  modifications={[{ key: "note" }]}
-                />
+                <CardTitle className="text-base">Customer</CardTitle>
               </CardHeader>
               <CardContent className="p-3 pt-3">
-                {order.note ? (
-                  <div className="bg-background border shadow-inner p-3 rounded-md overflow-x-auto">
-                    <p className="text-sm whitespace-pre-wrap">{order.note}</p>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-3">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      {order.user?.name || "Guest"}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      {order.user?.orders?.length || 1} Order
+                      {order.user?.orders?.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-muted/20">
+              <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
+                <CardTitle className="text-base">Contact Information</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-muted-foreground h-6 font-semibold text-[11px] uppercase px-1.5 tracking-wide"
+                >
+                  Edit
+                </Button>
+              </CardHeader>
+              <CardContent className="p-3 pt-3">
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-3">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      {order.email}
+                    </span>
+                  </div>
+                  {order.user?.phone ? (
+                    <div className="flex items-center space-x-3">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        {order.user.phone}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      No phone number
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-muted/20">
+              <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
+                <CardTitle className="text-base">Shipping Address</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-muted-foreground h-6 font-semibold text-[11px] uppercase px-1.5 tracking-wide"
+                >
+                  Edit
+                </Button>
+              </CardHeader>
+              <CardContent className="p-3 pt-3">
+                {order.shippingAddress ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-3">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        {order.shippingAddress.firstName}{" "}
+                        {order.shippingAddress.lastName}
+                      </span>
+                    </div>
+                    {order.shippingAddress.company && (
+                      <div className="flex items-center space-x-3">
+                        <Building className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          {order.shippingAddress.company}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-start space-x-3">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex flex-col text-sm text-muted-foreground">
+                        <span>{order.shippingAddress.address1}</span>
+                        {order.shippingAddress.address2 && (
+                          <span>{order.shippingAddress.address2}</span>
+                        )}
+                        <span>
+                          {order.shippingAddress.city},{" "}
+                          {order.shippingAddress.province}{" "}
+                          {order.shippingAddress.postalCode}
+                        </span>
+                        <span>{order.shippingAddress.country.name}</span>
+                      </div>
+                    </div>
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    No internal notes recorded
+                    No shipping address
                   </p>
                 )}
               </CardContent>
             </Card>
 
-            <Card className="bg-muted/40">
+            <Card className="bg-muted/20">
               <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
-                <CardTitle className="text-base">Customer</CardTitle>
+                <CardTitle className="text-base">Billing Address</CardTitle>
               </CardHeader>
               <CardContent className="p-3 pt-3">
-                <div className="space-y-4">
-                  {order.user && (
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-medium mb-2">Name</h4>
-                        <Link
-                          href={`#`}
-                          className="text-primary hover:underline text-sm break-all"
-                        >
-                          {order.user.name}
-                        </Link>
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-medium mb-2">Email</h4>
-                      <Link
-                        href={`mailto:${order.email}`}
-                        className="text-primary hover:underline text-sm break-all"
-                      >
-                        {order.email}
-                      </Link>
-                    </div>
-                    <EditDialog
-                      title="Update Contact"
-                      listKey="Order"
-                      id={order.id}
-                      modifications={[{ key: "email" }]}
-                    />
-                  </div>
-                  {order.shippingAddress && (
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-medium mb-2">Shipping Address</h4>
-                        <div className="text-sm space-y-1">
-                          <p>
-                            {order.shippingAddress.firstName}{" "}
-                            {order.shippingAddress.lastName}
-                          </p>
-                          <p>{order.shippingAddress.address1}</p>
-                          {order.shippingAddress.address2 && (
-                            <p>{order.shippingAddress.address2}</p>
-                          )}
-                          <p>
-                            {order.shippingAddress.city}
-                            {order.shippingAddress.province &&
-                              `, ${order.shippingAddress.province}`}{" "}
-                            {order.shippingAddress.postalCode}
-                          </p>
-                          <p>{order.shippingAddress.country?.name}</p>
-                          <p>{order.shippingAddress.phone}</p>
-                        </div>
-                      </div>
-                      <EditDialog
-                        title="Update Address"
-                        listKey="Address"
-                        id={order.shippingAddress.id}
-                        modifications={[
-                          { key: "firstName" },
-                          { key: "lastName" },
-                          { key: "company" },
-                          { key: "address1" },
-                          { key: "address2" },
-                          { key: "city" },
-                          { key: "province" },
-                          { key: "postalCode" },
-                          { key: "country" },
-                          { key: "phone" },
-                        ]}
-                      />
-                    </div>
-                  )}
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  Same as shipping address
+                </p>
               </CardContent>
             </Card>
           </div>

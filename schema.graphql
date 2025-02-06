@@ -3093,6 +3093,7 @@ type LineItem {
   total: String
   availableInRegion: String
   percentageOff: Int
+  fulfillmentStatus: String
   createdAt: DateTime
   updatedAt: DateTime
 }
