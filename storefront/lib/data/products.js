@@ -275,6 +275,12 @@ export const getProductByHandle = cache(async function ({ handle, regionId }) {
         productVariants {
           id
           title
+          measurements {
+            id
+            value
+            unit
+            type
+          }
           prices(where: { region: { id: { equals: $regionId } } }) {
             id
             amount

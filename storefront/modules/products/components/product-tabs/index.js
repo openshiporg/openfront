@@ -35,6 +35,25 @@ const ProductTabs = ({
 const ProductInfoTab = ({
   product
 }) => {
+  // Helper function to find measurement by type
+  const getMeasurement = (type) => {
+    const variant = product.productVariants?.[0]; // Using first variant for now
+    if (!variant?.measurements?.length) return null;
+    
+    return variant.measurements.find(m => m.type === type);
+  };
+
+  // Get weight and dimensions measurements
+  const weightMeasurement = getMeasurement('weight');
+  const lengthMeasurement = getMeasurement('length');
+  const widthMeasurement = getMeasurement('width');
+  const heightMeasurement = getMeasurement('height');
+
+  // Format dimensions string if all dimensions exist
+  const dimensionsString = lengthMeasurement && widthMeasurement && heightMeasurement
+    ? `${lengthMeasurement.value}${lengthMeasurement.unit} x ${widthMeasurement.value}${widthMeasurement.unit} x ${heightMeasurement.value}${heightMeasurement.unit}`
+    : "-";
+
   return (
     <div className="text-small-regular py-8">
       <div className="grid grid-cols-2 gap-x-8">
@@ -55,15 +74,11 @@ const ProductInfoTab = ({
         <div className="flex flex-col gap-y-4">
           <div>
             <span className="font-semibold">Weight</span>
-            <p>{product.weight ? `${product.weight} g` : "-"}</p>
+            <p>{weightMeasurement ? `${weightMeasurement.value} ${weightMeasurement.unit}` : "-"}</p>
           </div>
           <div>
             <span className="font-semibold">Dimensions</span>
-            <p>
-              {product.length && product.width && product.height
-                ? `${product.length}L x ${product.width}W x ${product.height}H`
-                : "-"}
-            </p>
+            <p>{dimensionsString}</p>
           </div>
         </div>
       </div>
