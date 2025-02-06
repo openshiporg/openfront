@@ -2,17 +2,17 @@ const SHIPENGINE_API_URL = "https://api.shipengine.com/v1";
 
 // Mapping of abbreviated weight units to ShipEngine expected full names
 const WEIGHT_UNIT_MAP = {
-  "oz": "ounce",
-  "lb": "pound",
-  "lbs": "pound",
-  "kg": "kilogram",
-  "g": "gram",
+  oz: "ounce",
+  lb: "pound",
+  lbs: "pound",
+  kg: "kilogram",
+  g: "gram",
 };
 
 // Mapping of abbreviated dimension units to ShipEngine expected full names (ShipEngine only supports "inch" and "centimeter" for dimensions)
 const DIMENSION_UNIT_MAP = {
-  "in": "inch",
-  "cm": "centimeter",
+  in: "inch",
+  cm: "centimeter",
 };
 
 // Helper function to convert dimensions
@@ -91,16 +91,6 @@ export async function createLabelFunction({
   dimensions,
   lineItems,
 }) {
-  console.log("Creating ShipEngine label with:", {
-    provider: {
-      id: provider.id,
-      name: provider.name,
-      apiKey: provider.accessToken,
-    },
-    dimensions,
-    rateId,
-    lineItems,
-  });
 
   if (!dimensions) {
     throw new Error("Dimensions are required to create a shipping label");
@@ -112,7 +102,6 @@ export async function createLabelFunction({
     !dimensions.height ||
     !dimensions.weight
   ) {
-    console.log("Invalid dimensions:", dimensions);
     throw new Error(
       "Invalid dimensions provided. All dimensions and weight are required"
     );
@@ -183,24 +172,16 @@ export async function createLabelFunction({
   });
 
   const result = await response.json();
-  console.log("ShipEngine label creation response:", result);
   if (!response.ok) {
     throw new Error(result.message || "Failed to create label");
   }
 
-  // Assuming the response contains the label_url, tracking_number, etc.
-  if (!result.label_url) {
+  // Update to get label URL from label_download
+  const labelUrl = result.label_download?.pdf || result.label_download?.href;
+  if (!labelUrl) {
     throw new Error("No label URL received from ShipEngine");
   }
 
-  console.log("ShipEngine label creation response:", {
-    status: "purchased",
-    data: result,
-    rate: result.rate,
-    trackingNumber: result.tracking_number,
-    trackingUrl: result.tracking_url,
-    labelUrl: result.label_url,
-  });
 
   return {
     status: "purchased",
@@ -208,14 +189,13 @@ export async function createLabelFunction({
     rate: result.rate,
     trackingNumber: result.tracking_number,
     trackingUrl: result.tracking_url,
-    labelUrl: result.label_url,
-    rateId: finalRateId
+    labelUrl: labelUrl,
+    rateId: finalRateId,
   };
 }
 
 // Gets shipping rates from ShipEngine
 export async function getRatesFunction({ provider, order, dimensions }) {
-  console.log("Getting ShipEngine rates with:", provider.name);
   if (!dimensions) {
     throw new Error("Dimensions are required to get shipping rates");
   }
@@ -287,12 +267,16 @@ export async function getRatesFunction({ provider, order, dimensions }) {
   // In our manual shipment example, each object contains id, providerId, service, carrier, price, currency, estimatedDays.
   return result.rate_response.rates.map((rate) => {
     // Calculate the full price as the sum of shipping_amount and other_amount.
-    const shippingAmt = (rate.shipping_amount && rate.shipping_amount.amount) || 0;
+    const shippingAmt =
+      (rate.shipping_amount && rate.shipping_amount.amount) || 0;
     const otherAmt = (rate.other_amount && rate.other_amount.amount) || 0;
     const totalPrice = Number(shippingAmt + otherAmt).toFixed(2);
-    
+
     // For ShipEngine, package the rate identifier along with the service.
-    const idValue = JSON.stringify({ id: rate.rate_id, service: rate.service_type || rate.service_code })
+    const idValue = JSON.stringify({
+      id: rate.rate_id,
+      service: rate.service_code,
+    });
 
     return {
       id: idValue,
@@ -300,7 +284,9 @@ export async function getRatesFunction({ provider, order, dimensions }) {
       service: rate.service_type || rate.service_code,
       carrier: rate.carrier_friendly_name || rate.carrier_code,
       price: totalPrice,
-      currency: rate.shipping_amount ? rate.shipping_amount.currency.toUpperCase() : "USD",
+      currency: rate.shipping_amount
+        ? rate.shipping_amount.currency.toUpperCase()
+        : "USD",
       estimatedDays: rate.delivery_days || rate.estimated_delivery_days,
     };
   });

@@ -57,7 +57,7 @@ import { cn } from "@keystone/utils/cn";
 import { useDrawer } from "@keystone/themes/Tailwind/orion/components/Modals/drawer-context";
 import { useList } from "@keystone/keystoneProvider";
 import { DeleteButton } from "@keystone/themes/Tailwind/orion/components/EditItemDrawer";
-import { Alert, AlertDescription } from "@ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@ui/alert";
 import { Skeleton } from "@ui/skeleton";
 import { gql, useMutation, useQuery } from "@keystone-6/core/admin-ui/apollo";
 import { ChevronUp, ChevronDown } from "lucide-react";
@@ -292,8 +292,8 @@ function ProviderTabContent({
   provider,
   selectedRate,
   setSelectedRate,
-  error,
-  loading,
+  createLabelError,
+  createLabelLoading,
   handleCreateLabel,
   hasSelectedItems,
   order,
@@ -338,12 +338,26 @@ function ProviderTabContent({
             </div>
             <div className="flex flex-col items-end h-full gap-3.5">
               <div className="flex items-center gap-2">
-                {error && (
+                {createLabelError && (
                   <div className="text-xs">
-                    <GraphQLErrorNotice
-                      networkError={error?.networkError}
-                      errors={error?.graphQLErrors}
-                    />
+                    {createLabelError?.networkError && (
+                      <Alert variant="destructive">
+                        {createLabelError?.networkError?.message}
+                      </Alert>
+                    )}
+                    {createLabelError?.graphQLErrors?.length && (
+                      <div className="space-y-2">
+                        {createLabelError?.graphQLErrors?.map((err, idx) => (
+                          <Alert key={idx} variant="destructive">
+                            <AlertTitle>System Error</AlertTitle>
+                            <AlertDescription>
+                              {err.extensions.originalError.message ||
+                                err.message}
+                            </AlertDescription>
+                          </Alert>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
                 <Button
@@ -360,8 +374,8 @@ function ProviderTabContent({
                 variant="outline"
                 className="h-6 px-2 flex items-center gap-2"
                 onClick={handleCreateLabel}
-                disabled={loading || !hasSelectedItems}
-                isLoading={loading}
+                disabled={createLabelLoading || !hasSelectedItems}
+                isLoading={createLabelLoading}
               >
                 <CreditCard className="size-3" />
                 Create Label
@@ -855,11 +869,18 @@ function PresetTabContent({
 // Update the NewProviderTabContent component
 function NewProviderTabContent({ providerProps, onSuccess, defaultPreset }) {
   const [activeTab, setActiveTab] = useState("general");
-  const [selectedPreset, setSelectedPreset] = useState(defaultPreset?.id || "custom");
+  const [selectedPreset, setSelectedPreset] = useState(
+    defaultPreset?.id || "custom"
+  );
   const { handleSaveProvider, createState } = useProviderSave();
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [accessToken, setAccessToken] = useState("");
-  const [name, setName] = useState(defaultPreset?.name || "");
+  const [name, setName] = useState(() => {
+    if (defaultPreset?.id) {
+      return defaultPreset.name;
+    }
+    return "";
+  });
   const [functions, setFunctions] = useState(() => {
     if (defaultPreset?.id) {
       const presetId = defaultPreset.id.toLowerCase();
@@ -879,6 +900,21 @@ function NewProviderTabContent({ providerProps, onSuccess, defaultPreset }) {
       cancelLabelFunction: "",
     };
   });
+
+  // Update name and functions when defaultPreset changes
+  useEffect(() => {
+    if (defaultPreset?.id) {
+      const presetId = defaultPreset.id.toLowerCase();
+      setName(defaultPreset.name);
+      setFunctions({
+        createLabelFunction: presetId,
+        getRatesFunction: presetId,
+        validateAddressFunction: presetId,
+        trackShipmentFunction: presetId,
+        cancelLabelFunction: presetId,
+      });
+    }
+  }, [defaultPreset]);
 
   const functionDescriptions = {
     createLabelFunction: {
@@ -1030,10 +1066,10 @@ function NewProviderTabContent({ providerProps, onSuccess, defaultPreset }) {
           }
           isLoading={createState === "loading"}
         >
-          {createState === "loading" 
-            ? "Creating..." 
-            : defaultPreset 
-              ? `Create ${defaultPreset.name} Provider` 
+          {createState === "loading"
+            ? "Creating..."
+            : defaultPreset
+              ? `Create ${defaultPreset.name} Provider`
               : "Create Provider"}
         </Button>
       </div>
@@ -1074,12 +1110,14 @@ export function ShippingTabs({
     error: shippingProviderError,
   } = useCreateItem(shippingProviderList);
 
-  const [createLabel, { loading, error }] = useMutation(
-    CREATE_PROVIDER_SHIPPING_LABEL,
-    {
-      refetchQueries: ["GetOrder"],
-    }
-  );
+  console.log({ shippingProviderError });
+
+  const [
+    createLabel,
+    { loading: createLabelLoading, error: createLabelError },
+  ] = useMutation(CREATE_PROVIDER_SHIPPING_LABEL, {
+    refetchQueries: ["GetOrder"],
+  });
 
   const hasSelectedItems = Object.values(selectedQuantities).some(
     (qty) => parseInt(qty) > 0
@@ -1256,51 +1294,35 @@ export function ShippingTabs({
         />
       ),
     },
-    ...computedProviders.map((provider) => {
-      const ContentComponent = provider.isPreset
-        ? () => (
-            <PresetTabContent
-              provider={provider}
-              providerProps={createProps}
-              onNameChange={setName}
-              onSuccess={handleProviderCreated}
-            />
-          )
-        : () => (
-            <ProviderTabContent
-              provider={provider}
-              selectedRate={selectedRate}
-              setSelectedRate={setSelectedRate}
-              error={error}
-              loading={loading}
-              handleCreateLabel={handleCreateLabel}
-              hasSelectedItems={hasSelectedItems}
-              order={order}
-              onRateSelect={handleRateSelect}
-              dimensions={dimensions}
-              weight={weight}
-            />
-          );
-      return {
-        id: provider.id,
-        label: provider.name,
-        icon: provider.icon,
-        isPreset: provider.isPreset,
-        Component: ContentComponent,
-      };
-    }),
-    {
-      id: "new",
-      label: "New Provider",
-      icon: Plus,
+    ...computedProviders.map((provider) => ({
+      id: provider.id,
+      label: provider.name,
+      icon: provider.icon,
       Component: () => (
-        <NewProviderTabContent
-          providerProps={createProps}
-          onSuccess={handleProviderCreated}
+        <ProviderTabContent
+          provider={provider}
+          selectedRate={selectedRate}
+          setSelectedRate={setSelectedRate}
+          createLabelError={createLabelError}
+          createLabelLoading={createLabelLoading}
+          handleCreateLabel={handleCreateLabel}
+          hasSelectedItems={hasSelectedItems}
+          order={order}
+          onRateSelect={handleRateSelect}
+          dimensions={dimensions}
+          weight={weight}
         />
       ),
-    },
+    })),
   ];
+
+  // Get the preset if we're creating from a preset
+  const presetProviders = [
+    { id: "shippo", name: "Shippo" },
+    { id: "shipengine", name: "ShipEngine" },
+  ];
+  const selectedPreset = presetProviders.find((p) => p.id === selectedTab);
+  const isCreatingProvider = selectedTab === "new" || selectedPreset;
 
   return (
     <div className="rounded-lg border">
@@ -1385,10 +1407,7 @@ export function ShippingTabs({
                         </span>
                       </span>
                     </SelectItem>
-                    {[
-                      { id: "shippo", name: "Shippo" },
-                      { id: "shipengine", name: "ShipEngine" },
-                    ].map((preset) => (
+                    {presetProviders.map((preset) => (
                       <SelectItem
                         key={preset.id}
                         value={preset.id}
@@ -1406,26 +1425,30 @@ export function ShippingTabs({
                 </SelectContent>
               </Select>
 
-              {selectedTab !== "manual" &&
-                selectedTab !== "new" &&
-                !tabsConfig.find((t) => t.id === selectedTab)?.isPreset && (
-                  <ProviderActionsInline
-                    provider={
-                      providers.find((p) => p.id === selectedTab) ||
-                      tabsConfig.find((t) => t.id === selectedTab)
-                    }
-                    onProviderToggle={onProviderToggle}
-                    onDelete={handleProviderDelete}
-                  >
-                    <Button variant="outline" size="icon" className="h-8 w-8">
-                      <MoreVertical />
-                    </Button>
-                  </ProviderActionsInline>
-                )}
+              {selectedTab !== "manual" && !isCreatingProvider && (
+                <ProviderActionsInline
+                  provider={providers.find((p) => p.id === selectedTab)}
+                  onProviderToggle={onProviderToggle}
+                  onDelete={handleProviderDelete}
+                >
+                  <Button variant="outline" size="icon" className="h-8 w-8">
+                    <MoreVertical />
+                  </Button>
+                </ProviderActionsInline>
+              )}
             </div>
           </div>
-
-          {tabsConfig.find((tab) => tab.id === selectedTab)?.Component()}
+          {isCreatingProvider ? (
+            <NewProviderTabContent
+              providerProps={createProps}
+              onSuccess={handleProviderCreated}
+              defaultPreset={selectedPreset}
+            />
+          ) : (
+            <div className="px-4 pb-4">
+              {tabsConfig.find((tab) => tab.id === selectedTab)?.Component()}
+            </div>
+          )}
         </div>
       </CardContent>
     </div>
