@@ -15,14 +15,13 @@ import {
 import { Button } from "@ui/button";
 import { RiLoader2Fill } from "@remixicon/react";
 import { ProductDetailsCollapsible } from "./ProductDetailsCollapsible";
-import { PencilSquareIcon, TrashIcon } from "@heroicons/react/16/solid";
+import { TrashIcon } from "@heroicons/react/16/solid";
 import { ChevronDown, MoreVertical, PenSquare, Trash2 } from "lucide-react";
 import { DeleteButton } from "@keystone/themes/Tailwind/orion/components/EditItemDrawer";
 import { useList } from "@keystone/keystoneProvider";
 import { AdminLink } from "@keystone/themes/Tailwind/orion/components/AdminLink";
 import { useDrawer } from "@keystone/themes/Tailwind/orion/components/Modals/drawer-context";
 import { ArrowRight } from "lucide-react";
-import { cn } from "@keystone/utils/cn";
 
 const statusColors = {
   pending: "cyan",

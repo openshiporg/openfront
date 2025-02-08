@@ -729,8 +729,23 @@ export const Order = list({
                         title
                         thumbnail
                         quantity
+                        unitPrice
+                        total
                         productVariant {
+                          id
                           sku
+                          title
+                          product {
+                            title
+                          }
+                          productOptionValues {
+                            id
+                            value
+                            productOption {
+                              id
+                              title
+                            }
+                          }
                         }
                       }
                     }
@@ -738,10 +753,10 @@ export const Order = list({
                 `,
               });
 
-              const activeFulfillments = order.fulfillments?.filter(f => !f.canceledAt) || [];
-              return activeFulfillments.map(fulfillment => ({
+              return order.fulfillments?.map(fulfillment => ({
                 id: fulfillment.id,
                 createdAt: fulfillment.createdAt,
+                canceledAt: fulfillment.canceledAt,
                 shippingLabels: fulfillment.shippingLabels?.map(label => ({
                   id: label.id,
                   trackingNumber: label.trackingNumber,
@@ -750,10 +765,19 @@ export const Order = list({
                   labelUrl: label.labelUrl
                 })) || [],
                 items: fulfillment.fulfillmentItems?.map(fi => ({
+                  id: fi.id,
                   quantity: fi.quantity,
-                  lineItem: fi.lineItem
+                  lineItem: {
+                    id: fi.lineItem.id,
+                    title: fi.lineItem.productVariant?.product?.title || fi.lineItem.title,
+                    thumbnail: fi.lineItem.thumbnail,
+                    sku: fi.lineItem.productVariant?.sku,
+                    unitPrice: fi.lineItem.unitPrice,
+                    total: fi.lineItem.total,
+                    productOptionValues: fi.lineItem.productVariant?.productOptionValues
+                  }
                 })) || []
-              }));
+              })) || [];
             },
           }),
         }),
@@ -771,8 +795,18 @@ export const Order = list({
                     title
                     thumbnail
                     quantity
+                    unitPrice
+                    total
                     productVariant {
                       sku
+                      productOptionValues {
+                        id
+                        value
+                        productOption {
+                          id
+                          title
+                        }
+                      }
                     }
                   }
                   fulfillments {
@@ -799,7 +833,7 @@ export const Order = list({
                 });
 
               // Map line items with their fulfillment status
-              return order.lineItems?.map(lineItem => {
+              const result = order.lineItems?.map(lineItem => {
                 const fulfilledQuantity = fulfilledQuantities[lineItem.id] || 0;
                 const remainingQuantity = lineItem.quantity - fulfilledQuantity;
 
@@ -810,9 +844,14 @@ export const Order = list({
                   sku: lineItem.productVariant?.sku || '',
                   quantity: remainingQuantity,
                   totalQuantity: lineItem.quantity,
-                  fulfilledQuantity
+                  fulfilledQuantity,
+                  unitPrice: lineItem.unitPrice,
+                  total: lineItem.total,
+                  productVariant: lineItem.productVariant
                 };
               }).filter(item => item.quantity > 0) || [];
+
+              return result;
             },
           }),
         }),

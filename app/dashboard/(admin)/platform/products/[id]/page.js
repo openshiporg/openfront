@@ -1,148 +1,39 @@
-import copyToClipboard from "clipboard-copy";
-import { useRouter, useSearchParams } from "next/navigation";
-import {
-  Fragment,
-  memo,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { models } from "@keystone/models";
-import { getNamesFromList } from "@keystone/utils/getNamesFromList";
-import { AlertTriangle, Save, Trash2 } from "lucide-react";
-import { useList } from "@keystone/keystoneProvider";
-import { usePreventNavigation } from "@keystone/utils/usePreventNavigation";
+"use client";
+
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { gql, useMutation, useQuery } from "@keystone-6/core/admin-ui/apollo";
-import {
-  deserializeValue,
-  makeDataGetter,
-  useChangedFieldsAndDataForUpdate,
-  useInvalidFields,
-} from "@keystone-6/core/admin-ui/utils";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "../../primitives/default/ui/alert";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../../primitives/default/ui/dialog";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "../../primitives/default/ui/breadcrumb";
-import { CreateButtonLink } from "../../components/CreateButtonLink";
-import { FieldLabel } from "../../components/FieldLabel";
-import { Fields } from "../../components/Fields";
-import { GraphQLErrorNotice } from "../../components/GraphQLErrorNotice";
-import { useToasts } from "../../components/Toast";
-import { AdminLink } from "../../components/AdminLink";
-import { Button } from "../../primitives/default/ui/button";
-import { LoadingIcon } from "../../components/LoadingIcon";
-import { Skeleton } from "../../primitives/default/ui/skeleton";
+import { makeDataGetter, deserializeValue, useChangedFieldsAndDataForUpdate, useInvalidFields } from "@keystone-6/core/admin-ui/utils";
+import { useList } from "@keystone/keystoneProvider";
+import { AlertTriangle, Save, Trash2, Settings, Layers } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@ui/alert";
+import { Button } from "@ui/button";
+import { GraphQLErrorNotice } from "@keystone/themes/Tailwind/orion/components/GraphQLErrorNotice";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Card, CardHeader, CardTitle } from "@ui/card";
+import { PageBreadcrumbs } from "@keystone/themes/Tailwind/orion/components/PageBreadcrumbs";
+import { Fields } from "@keystone/themes/Tailwind/orion/components/Fields";
+import { FieldLabel } from "@keystone/themes/Tailwind/orion/components/FieldLabel";
+import { useToasts } from "@keystone/themes/Tailwind/orion/components/Toast";
+import { usePreventNavigation } from "@keystone/utils/usePreventNavigation";
+import { Dialog, DialogClose, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@ui/dialog";
 import { basePath } from "@keystone/index";
-import { PageBreadcrumbs } from "../../components/PageBreadcrumbs";
-
-export function ItemPageHeader(props) {
-  return (
-    <div className="flex">
-      <nav className="pb-2 rounded-lg" aria-label="Breadcrumb">
-        <ol className="inline-flex items-center space-x-1 md:space-x-3">
-          <li className="inline-flex items-center">
-            <AdminLink
-              href="/"
-              className="inline-flex items-center text-md font-medium text-zinc-700 hover:text-blue-600 dark:text-zinc-400 dark:hover:text-white"
-            >
-              <svg
-                className="w-3 h-3 mr-2.5"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path d="m19.707 9.293-2-2-7-7a1 1 0 0 0-1.414 0l-7 7-2 2a1 1 0 0 0 1.414 1.414L2 10.414V18a2 2 0 0 0 2 2h3a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h3a2 2 0 0 0 2-2v-7.586l.293.293a1 1 0 0 0 1.414-1.414Z" />
-              </svg>
-              Home
-            </AdminLink>
-          </li>
-
-          {props.list.isSingleton ? (
-            <h3>{props.list.label}</h3>
-          ) : (
-            <Fragment>
-              <li>
-                <div className="flex items-center">
-                  <svg
-                    className="w-3 h-3 mx-1 text-zinc-400"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 6 10"
-                  >
-                    <path
-                      stroke="currentColor"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      strokeWidth="2"
-                      d="m1 9 4-4-4-4"
-                    />
-                  </svg>
-                  <AdminLink
-                    href={`/${props.list.path}`}
-                    className="ml-1 text-md font-medium text-zinc-700 hover:text-blue-600 md:ml-2 dark:text-zinc-400 dark:hover:text-white"
-                  >
-                    {props.list.label}
-                  </AdminLink>
-                </div>
-              </li>
-              <li>
-                <div className="flex items-center">
-                  <svg
-                    className="w-3 h-3 mx-1 text-zinc-400"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 6 10"
-                  >
-                    <path
-                      stroke="currentColor"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      strokeWidth="2"
-                      d="m1 9 4-4-4-4"
-                    />
-                  </svg>
-                  <div className="ml-1 text-md font-medium text-zinc-700 hover:text-blue-600 md:ml-2 dark:text-zinc-400 dark:hover:text-white">
-                    {props.label}
-                  </div>
-                </div>
-              </li>
-            </Fragment>
-          )}
-        </ol>
-      </nav>
-    </div>
-  );
-}
+import { Badge } from "@ui/badge";
+import { cn } from "@keystone/utils/cn";
+import { MediaTab } from "../create/components/MediaTab";
+import { VariantsTab } from "../create/components/VariantsTab";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ui/tabs";
+import { getFilteredProps } from "../create/components/MediaTab";
+import { UpdateMediaTab } from "./components/UpdateMediaTab";
+import { UpdateVariantsTab } from "./components/UpdateVariantsTab";
+import { CustomFields } from "./components/CustomFields";
+import * as CustomTextView from "./components/views/Text";
 
 // Core layout components
 const ColumnLayout = (props) => (
   <div
     className="items-start grid"
-    style={{ gridTemplateColumns: "3fr 0fr" }}
+    style={{ gridTemplateColumns: "2fr 1fr" }}
     {...props}
   />
 );
@@ -156,6 +47,38 @@ const BaseToolbar = (props) => (
     {props.children}
   </div>
 );
+
+// Field groupings
+const STATUS_FIELDS = [
+  { key: "status" },
+];
+
+const GENERAL_FIELDS = [
+  { key: "title" },
+  { key: "handle" },
+  { key: "description" },
+  { key: "subtitle" },
+  { key: "isGiftcard" },
+];
+
+const MEDIA_FIELDS = [
+  { key: "productImages" },
+];
+
+const ORGANIZATION_FIELDS = [
+  { key: "status" },
+  { key: "productCollections", fieldMeta: { hideButtons: true } },
+  { key: "productCategories", fieldMeta: { hideButtons: true } },
+  { key: "productTags", fieldMeta: { hideButtons: true } },
+];
+
+// Define custom components mapping at the top level
+const customComponents = {
+  title: CustomTextView.Field,
+  handle: CustomTextView.Field,
+  description: CustomTextView.Field,
+  subtitle: CustomTextView.Field,
+};
 
 // Utility hook
 function useEventCallback(callback) {
@@ -350,7 +273,6 @@ function useItemForm({ list, selectedFields, itemGetter }) {
   };
 }
 
-// Main Components
 function DeleteButton({ itemLabel, itemId, list }) {
   const toasts = useToasts();
   const [deleteItem, { loading }] = useMutation(
@@ -416,76 +338,6 @@ function DeleteButton({ itemLabel, itemId, list }) {
   );
 }
 
-function ItemForm({
-  list,
-  itemGetter,
-  selectedFields,
-  fieldModes,
-  fieldPositions,
-  item,
-  showDelete,
-}) {
-  const {
-    state,
-    setValue,
-    loading,
-    error,
-    forceValidation,
-    invalidFields,
-    changedFields,
-    onSave,
-    onReset,
-  } = useItemForm({
-    list,
-    selectedFields,
-    itemGetter,
-  });
-
-  const labelFieldValue = list.isSingleton
-    ? list.label
-    : state.item.data?.[list.labelField];
-  const itemId = state.item.data?.id;
-
-  return (
-    <Fragment>
-      <ItemFormContent
-        list={list}
-        item={item}
-        error={error}
-        fieldModes={fieldModes}
-        fieldPositions={fieldPositions}
-        forceValidation={forceValidation}
-        invalidFields={invalidFields}
-        value={state.value}
-        onChange={useCallback(
-          (value) => {
-            setValue((state) => ({
-              item: state.item,
-              value: value(state.value),
-            }));
-          },
-          [setValue]
-        )}
-      />
-      <Toolbar
-        hasChangedFields={!!changedFields.size}
-        loading={loading}
-        onSave={onSave}
-        onReset={onReset}
-        deleteButton={
-          showDelete ? (
-            <DeleteButton
-              list={list}
-              itemLabel={labelFieldValue ?? itemId}
-              itemId={itemId}
-            />
-          ) : undefined
-        }
-      />
-    </Fragment>
-  );
-}
-
 const Toolbar = memo(function Toolbar({
   hasChangedFields,
   loading,
@@ -539,22 +391,9 @@ const Toolbar = memo(function Toolbar({
   );
 });
 
-// Page Components
-export const ItemPage = ({ params }) => {
-  const listKey = params.listKey;
-  const id = params.id;
-  const listsObject = {};
-  for (const [key, list] of Object.entries(models)) {
-    const { adminUILabels } = getNamesFromList(key, list);
-    listsObject[adminUILabels.path] = key;
-  }
-  const key = listsObject[listKey];
-
-  return <ItemPageTemplate listKey={key} id={id} />;
-};
-
-export const ItemPageTemplate = ({ listKey, id }) => {
-  const list = useList(listKey);
+export default function ProductPage({ params }) {
+  const list = useList("Product");
+  const [activeTab, setActiveTab] = useState("general");
 
   const { query, selectedFields } = useMemo(() => {
     const selectedFields = Object.entries(list.fields)
@@ -571,13 +410,13 @@ export const ItemPageTemplate = ({ listKey, id }) => {
     return {
       selectedFields,
       query: gql`
-        query ItemPage($id: ID!, $listKey: String!) {
+        query ItemPage($id: ID!) {
           item: ${list.gqlNames.itemQueryName}(where: {id: $id}) {
             ${selectedFields}
           }
           keystone {
             adminMeta {
-              list(key: $listKey) {
+              list(key: "Product") {
                 hideCreate
                 hideDelete
                 fields {
@@ -596,11 +435,11 @@ export const ItemPageTemplate = ({ listKey, id }) => {
   }, [list]);
 
   let { data, error, loading } = useQuery(query, {
-    variables: { id, listKey },
+    variables: { id: params.id },
     errorPolicy: "all",
-    skip: id === undefined,
+    skip: params.id === undefined,
   });
-  loading ||= id === undefined;
+  loading ||= params.id === undefined;
 
   const dataGetter = makeDataGetter(data, error?.graphQLErrors);
 
@@ -632,7 +471,81 @@ export const ItemPageTemplate = ({ listKey, id }) => {
     return itemViewFieldPositionsByField;
   }, [dataGetter.data?.keystone?.adminMeta?.list?.fields]);
 
-  const metaQueryErrors = dataGetter.get("keystone").errors;
+  const {
+    state,
+    setValue,
+    loading: updateLoading,
+    error: updateError,
+    forceValidation,
+    invalidFields,
+    changedFields,
+    onSave,
+    onReset,
+  } = useItemForm({
+    list,
+    selectedFields,
+    itemGetter: dataGetter.get("item"),
+  });
+
+  const handleFieldChange = useCallback(
+    (value) => {
+      setValue((state) => ({
+        item: state.item,
+        value: typeof value === 'function' ? value(state.value) : value,
+      }));
+    },
+    [setValue]
+  );
+
+  // Create base props for all fields
+  const baseProps = useMemo(() => ({
+    fields: list.fields,
+    groups: list.groups || [],
+    fieldModes: itemViewFieldModesByField,
+    fieldPositions: itemViewFieldPositionsByField,
+    value: state.value,
+    onChange: handleFieldChange,
+  }), [list.fields, list.groups, itemViewFieldModesByField, itemViewFieldPositionsByField, state.value, handleFieldChange]);
+
+  // Get filtered props for each section
+  const statusProps = useMemo(() => {
+    return getFilteredProps(baseProps, STATUS_FIELDS);
+  }, [baseProps]);
+
+  const generalProps = useMemo(() => {
+    return getFilteredProps(baseProps, GENERAL_FIELDS);
+  }, [baseProps]);
+
+  const mediaProps = useMemo(() => {
+    return getFilteredProps(baseProps, MEDIA_FIELDS);
+  }, [baseProps]);
+
+  const organizationProps = useMemo(() => {
+    return getFilteredProps(baseProps, ORGANIZATION_FIELDS);
+  }, [baseProps]);
+
+  if (loading) return null;
+  if (error?.graphQLErrors.length || error?.networkError) {
+    return (
+      <GraphQLErrorNotice
+        errors={error?.graphQLErrors}
+        networkError={error?.networkError}
+      />
+    );
+  }
+
+  const product = data?.item;
+  if (!product) {
+    return (
+      <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Not Found</AlertTitle>
+        <AlertDescription>
+          Product not found or you don't have access.
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <>
@@ -644,100 +557,123 @@ export const ItemPageTemplate = ({ listKey, id }) => {
             href: "/",
           },
           {
-            type: "model",
-            label: list.label,
-            href: `/${list.path}`,
+            type: "page",
+            label: "Platform",
             showModelSwitcher: true,
+            switcherType: "platform",
+          },
+          {
+            type: "link",
+            label: "Products",
+            href: "/platform/products",
           },
           {
             type: "page",
-            label: loading
-              ? "Loading..."
-              : data?.item?.[list.labelField] || data?.item?.id || id,
+            label: product.title,
           },
         ]}
       />
       <main className="w-full max-w-4xl mx-auto p-4 md:p-6 flex flex-col gap-4">
         <div className="flex-col items-center">
           <h1 className="flex text-lg font-semibold md:text-2xl">
-            Manage{" "}
-            {loading ? (
-              <Skeleton className="ml-3 h-7 w-[150px]" />
-            ) : (
-              (data?.item?.[list.labelField] || data?.item?.id || id)
-            )}
+            Manage {product.title || product.id}
           </h1>
           <p className="text-muted-foreground">
-            {list.description ? (
-              <p>{list.description}</p>
-            ) : (
-              <span>
-                Update or delete this{" "}
-                <span className="lowercase">{list.singular}</span>
-              </span>
-            )}
+            Update or delete this product
           </p>
         </div>
-        {loading ? null : metaQueryErrors ? (
-          <div>
-            <Alert variant="destructive">{metaQueryErrors[0].message}</Alert>
-          </div>
-        ) : (
-          <div>
-            {data?.item == null ? (
-              <div>
-                {error?.graphQLErrors.length || error?.networkError ? (
-                  <GraphQLErrorNotice
-                    errors={error?.graphQLErrors}
-                    networkError={error?.networkError}
-                  />
-                ) : list.isSingleton ? (
-                  id === "1" ? (
-                    <div className="space-y-4">
-                      <Alert variant="destructive">
-                        <AlertTitle>System Error</AlertTitle>
-                        <AlertDescription>
-                          {list.label} doesn't exist or you don't have access to
-                          it.
-                        </AlertDescription>
-                      </Alert>
-                      {!data.keystone.adminMeta.list.hideCreate && (
-                        <CreateButtonLink list={list} />
-                      )}
-                    </div>
-                  ) : (
-                    <Alert variant="destructive">
-                      <AlertTitle>System Error</AlertTitle>
-                      <AlertDescription>
-                        The item with id "{id}" does not exist
-                      </AlertDescription>
-                    </Alert>
-                  )
-                ) : (
-                  <Alert variant="destructive">
-                    <AlertTriangle className="h-4 w-4 stroke-red-900 dark:stroke-red-500" />
-                    <AlertTitle>System Error</AlertTitle>
-                    <AlertDescription>
-                      The item with id "{id}" could not be found or you don't have
-                      access to it.
-                    </AlertDescription>
-                  </Alert>
-                )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            {/* General Info Card */}
+            <Card className="bg-muted/10">
+              <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+                  General Information
+                </CardTitle>
+              </CardHeader>
+              <div className="p-4">
+                <CustomFields
+                  {...generalProps}
+                  value={state.value}
+                  forceValidation={forceValidation}
+                  invalidFields={invalidFields}
+                  onChange={handleFieldChange}
+                  customComponents={customComponents}
+                />
               </div>
-            ) : (
-              <ItemForm
-                list={list}
-                fieldModes={itemViewFieldModesByField}
-                fieldPositions={itemViewFieldPositionsByField}
-                selectedFields={selectedFields}
-                itemGetter={dataGetter.get("item")}
-                item={data.item}
-                showDelete={!data.keystone.adminMeta.list.hideDelete}
-              />
-            )}
+            </Card>
+
+            {/* Media Card */}
+            <Card className="bg-muted/10">
+              <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+                  Media
+                </CardTitle>
+              </CardHeader>
+              <div className="p-4">
+                <UpdateMediaTab 
+                  {...baseProps}
+                  forceValidation={forceValidation}
+                  invalidFields={invalidFields}
+                />
+              </div>
+            </Card>
+
+            {/* Variants Card */}
+            <Card className="bg-muted/10">
+              <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+                  Variants
+                </CardTitle>
+              </CardHeader>
+              <div className="p-4">
+                <UpdateVariantsTab 
+                  {...baseProps}
+                  forceValidation={forceValidation}
+                  invalidFields={invalidFields}
+                />
+              </div>
+            </Card>
           </div>
-        )}
+
+          <div className="space-y-6">
+            {/* Organization Card */}
+            <Card className="bg-muted/10">
+              <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+                  Organization
+                </CardTitle>
+              </CardHeader>
+              <div className="p-4">
+                <Fields
+                  {...organizationProps}
+                  value={state.value}
+                  forceValidation={forceValidation}
+                  invalidFields={invalidFields}
+                  onChange={handleFieldChange}
+                />
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        <Toolbar
+          hasChangedFields={!!changedFields.size}
+          loading={updateLoading}
+          onSave={onSave}
+          onReset={onReset}
+          deleteButton={
+            !data.keystone.adminMeta.list.hideDelete ? (
+              <DeleteButton
+                list={list}
+                itemLabel={product[list.labelField] ?? product.id}
+                itemId={product.id}
+              />
+            ) : undefined
+          }
+        />
       </main>
     </>
   );
-};
+} 

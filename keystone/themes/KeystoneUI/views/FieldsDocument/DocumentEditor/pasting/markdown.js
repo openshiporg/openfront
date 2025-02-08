@@ -1,3 +1,4 @@
+// @ts-ignore
 import mdASTUtilFromMarkdown from "mdast-util-from-markdown"
 // @ts-ignore
 import autoLinkLiteralFromMarkdownExtension from "mdast-util-gfm-autolink-literal/from-markdown"

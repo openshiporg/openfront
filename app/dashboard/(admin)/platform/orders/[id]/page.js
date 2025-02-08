@@ -22,6 +22,8 @@ import {
   Package,
   Building,
   ShoppingBag,
+  ChevronRight,
+  Container,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@ui/alert";
 import { Button } from "@ui/button";
@@ -508,40 +510,6 @@ export default function OrderPage({ params }) {
 
   const { lineItems = [] } = order;
 
-  const getFulfillmentStatus = (item) => {
-    const fulfillmentItems =
-      order.fulfillments?.flatMap((f) => f.fulfillmentItems) || [];
-    const fulfilledQuantity = fulfillmentItems
-      .filter((fi) => fi.lineItem.id === item.id)
-      .reduce((sum, fi) => sum + fi.quantity, 0);
-
-    if (fulfilledQuantity === item.quantity) {
-      return {
-        label: "Fulfilled",
-        className:
-          "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
-      };
-    } else if (fulfilledQuantity > 0) {
-      return {
-        label: "Partially Fulfilled",
-        className:
-          "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
-      };
-    }
-    return {
-      label: "Unfulfilled",
-      className:
-        "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
-    };
-  };
-
-  const getFulfillmentStatusClassName = (status) => {
-    if (status === "Fulfilled") {
-      return "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400";
-    }
-    return "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400";
-  };
-
   return (
     <>
       <PageBreadcrumbs
@@ -598,111 +566,117 @@ export default function OrderPage({ params }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <Card className="bg-muted/20 p-0">
-              <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  Order Items
+            <Card className="bg-muted/10">
+              <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+                  Line Items
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                {lineItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-start space-x-4 py-4 border-b last:border-0 p-2"
-                  >
-                    <div className="h-16 w-16 bg-muted/10 rounded-md flex-shrink-0 flex items-center justify-center">
-                      {item.thumbnail ? (
-                        <Image
-                          src={item.thumbnail}
-                          alt={item.title}
-                          width={64}
-                          height={64}
-                          className="object-cover rounded-md"
-                        />
-                      ) : (
-                        <div className="h-16 w-16 bg-muted rounded-md" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col">
+                <div className="p-4">
+                  {lineItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-start space-x-4 py-3 p-2"
+                    >
+                      <div className="h-16 w-16 bg-muted/10 rounded-md flex-shrink-0 flex items-center justify-center">
+                        {item.thumbnail ? (
+                          <Image
+                            src={item.thumbnail}
+                            alt={item.title}
+                            width={64}
+                            height={64}
+                            className="object-cover rounded-md"
+                          />
+                        ) : (
+                          <div className="h-16 w-16 bg-muted rounded-md" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
                         <div className="flex flex-col">
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-2">
-                              <div>
-                                <span className="font-medium text-sm">
-                                  {item.productVariant?.product?.title ||
-                                    item.title}
-                                </span>
-                                <div className="flex flex-wrap gap-2">
-                                  {item.productVariant?.productOptionValues?.map(
-                                    (optionValue) => (
-                                      <div
-                                        key={optionValue.id}
-                                        className="flex items-center text-xs text-muted-foreground"
-                                      >
-                                        <span className="opacity-75">
-                                          {optionValue.productOption.title}
-                                        </span>
-                                        <span className="ml-1 font-medium">
-                                          {optionValue.value}
-                                        </span>
-                                      </div>
-                                    )
+                          <div className="flex flex-col">
+                            <div className="flex items-start justify-between">
+                              <div className="space-y-2">
+                                <div>
+                                  <span className="font-medium text-sm">
+                                    {item.productVariant?.product?.title ||
+                                      item.title}
+                                  </span>
+                                  <div className="flex flex-wrap gap-2">
+                                    {item.productVariant?.productOptionValues?.map(
+                                      (optionValue) => (
+                                        <div
+                                          key={optionValue.id}
+                                          className="flex items-center text-xs text-muted-foreground"
+                                        >
+                                          <span className="opacity-75">
+                                            {optionValue.productOption.title}
+                                          </span>
+                                          <span className="ml-1 font-medium">
+                                            {optionValue.value}
+                                          </span>
+                                        </div>
+                                      )
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 mt-1">
+                                  {item.productVariant?.sku && (
+                                    <p className="text-xs text-muted-foreground">
+                                      SKU: {item.productVariant.sku}
+                                    </p>
                                   )}
+                                  <Badge
+                                    className={cn(
+                                      "py-0 text-[11px] border uppercase font-medium tracking-wide rounded-full"
+                                    )}
+                                    color={
+                                      item.fulfillmentStatus === "Fulfilled"
+                                        ? "blue"
+                                        : "rose"
+                                    }
+                                  >
+                                    {item.fulfillmentStatus}
+                                  </Badge>
                                 </div>
                               </div>
-
-                              <div className="flex items-center gap-2 mt-1">
-                                {item.productVariant?.sku && (
-                                  <p className="text-xs text-muted-foreground">
-                                    SKU: {item.productVariant.sku}
-                                  </p>
-                                )}
-                                <Badge
-                                  color={
-                                    item.fulfillmentStatus === "Fulfilled"
-                                      ? "blue"
-                                      : "rose"
-                                  }
-                                  className={cn(
-                                    "py-0 text-[11px] border uppercase font-medium tracking-wide rounded-full"
-                                  )}
-                                >
-                                  {item.fulfillmentStatus}
-                                </Badge>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="text-xs text-muted-foreground whitespace-nowrap">
-                                {item.quantity} × {item.unitPrice}
-                              </div>
-                              <div className="text-sm font-medium whitespace-nowrap">
-                                {item.total}
+                              <div className="flex items-center gap-2">
+                                <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                  {item.quantity} × {item.unitPrice}
+                                </div>
+                                <div className="text-sm font-medium whitespace-nowrap">
+                                  {item.total}
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-                {lineItems.some(
-                  (item) => item.fulfillmentStatus !== "Fulfilled"
-                ) && (
-                  <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 p-2 bg-opacity-75">
-                    <Link
-                      href={`/dashboard/platform/orders/${order.id}/fulfill`}
-                    >
-                      <Button size="sm">Ship Items</Button>
-                    </Link>
-                  </div>
-                )}
+                  ))}
+                </div>
+                <div className="flex justify-end p-4 border-t">
+                  <Link href={`/dashboard/platform/orders/${order.id}/fulfill`}>
+                    <Button className="group relative pe-11" size="sm">
+                      Fulfill Items
+                      <span className="pointer-events-none absolute inset-y-0 end-0 flex w-8 items-center justify-center bg-primary-foreground/15">
+                        <Container
+                          className="opacity-60"
+                          size={14}
+                          strokeWidth={2}
+                          aria-hidden="true"
+                        />
+                      </span>
+                    </Button>
+                  </Link>
+                </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-muted/20">
-              <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
-                <CardTitle className="flex items-center gap-2 text-base">
+            <Card className="bg-muted/10">
+              <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
                   {order.paymentDetails?.[0]?.status === "captured"
                     ? "Payment Complete"
                     : "Payment Processing"}
@@ -719,7 +693,7 @@ export default function OrderPage({ params }) {
                   )}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-3 pt-3 text-sm">
+              <CardContent className="p-4 pt-3 text-sm">
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Items Subtotal</span>
@@ -746,9 +720,11 @@ export default function OrderPage({ params }) {
               </CardContent>
             </Card>
 
-            <Card className="overflow-hidden bg-muted/20">
-              <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
-                <CardTitle className="text-base">Activity Log</CardTitle>
+            <Card className="overflow-hidden bg-muted/10">
+              <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+                  Activity Log
+                </CardTitle>
                 <div className="flex items-center gap-2">
                   <Checkbox id="show-comments" />
                   <label htmlFor="show-comments" className="text-sm">
@@ -756,7 +732,7 @@ export default function OrderPage({ params }) {
                   </label>
                 </div>
               </CardHeader>
-              <CardContent className="p-3 pt-3">
+              <CardContent className="p-4 pt-3">
                 <div className="space-y-4">
                   {order.events?.map((event) => (
                     <div key={event.id} className="flex gap-4 text-sm">
@@ -790,46 +766,18 @@ export default function OrderPage({ params }) {
           </div>
 
           <div className="space-y-6">
-            <Card className="bg-muted/20">
-              <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
-                <CardTitle className="text-base">Customer</CardTitle>
+            <Card className="bg-muted/10">
+              <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+                  Customer
+                </CardTitle>
               </CardHeader>
-              <CardContent className="p-3 pt-3">
+              <CardContent className="p-4">
                 <div className="space-y-2">
                   <div className="flex items-center space-x-3">
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">
                       {order.user?.name || "Guest"}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                    <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      {order.user?.orders?.length || 1} Order
-                      {order.user?.orders?.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-muted/20">
-              <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
-                <CardTitle className="text-base">Contact Information</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-muted-foreground h-6 font-semibold text-[11px] uppercase px-1.5 tracking-wide"
-                >
-                  Edit
-                </Button>
-              </CardHeader>
-              <CardContent className="p-3 pt-3">
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-3">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
-                      {order.email}
                     </span>
                   </div>
                   {order.user?.phone ? (
@@ -844,22 +792,71 @@ export default function OrderPage({ params }) {
                       No phone number
                     </p>
                   )}
+                  <div className="flex items-center space-x-3">
+                    <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      {order.user?.orders?.length || 1} Order
+                      {order.user?.orders?.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-muted/20">
-              <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
-                <CardTitle className="text-base">Shipping Address</CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-muted-foreground h-6 font-semibold text-[11px] uppercase px-1.5 tracking-wide"
+            <Card className="bg-muted/10">
+              <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+                  Contact Information
+                </CardTitle>
+                <EditDialog
+                  title="Edit Contact Information"
+                  id={order.id}
+                  modifications={[{ key: "email" }]}
                 >
-                  Edit
-                </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-muted-foreground h-6 font-semibold text-[11px] uppercase px-1.5 tracking-wide"
+                  >
+                    Edit
+                  </Button>
+                </EditDialog>
               </CardHeader>
-              <CardContent className="p-3 pt-3">
+              <CardContent className="p-4">
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-3">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      {order.email}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-muted/10">
+              <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+                  Shipping Address
+                </CardTitle>
+                <EditDialog
+                  title="Edit Shipping Address"
+                  listKey="Address"
+                  id={order.shippingAddress?.id}
+                  // modifications={[
+                  //   { key: "" }
+                  // ]}
+                >
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-muted-foreground h-6 font-semibold text-[11px] uppercase px-1.5 tracking-wide"
+                  >
+                    Edit
+                  </Button>
+                </EditDialog>
+              </CardHeader>
+              <CardContent className="p-4">
                 {order.shippingAddress ? (
                   <div className="space-y-2">
                     <div className="flex items-center space-x-3">
@@ -901,11 +898,28 @@ export default function OrderPage({ params }) {
               </CardContent>
             </Card>
 
-            <Card className="bg-muted/20">
-              <CardHeader className="flex flex-row items-center justify-between p-3 pb-0">
-                <CardTitle className="text-base">Billing Address</CardTitle>
+            <Card className="bg-muted/10">
+              <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+                  Billing Address
+                </CardTitle>
+                {/* <EditDialog
+                  title="Edit Billing Address"
+                  id={order.id}
+                  modifications={[
+                    { key: "billingAddress" }
+                  ]}
+                >
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-muted-foreground h-6 font-semibold text-[11px] uppercase px-1.5 tracking-wide"
+                  >
+                    Edit
+                  </Button>
+                </EditDialog> */}
               </CardHeader>
-              <CardContent className="p-3 pt-3">
+              <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">
                   Same as shipping address
                 </p>

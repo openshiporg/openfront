@@ -250,7 +250,7 @@ export function ShippingProviderRates({
                         <span className="font-normal opacity-80">
                           {provider.name}
                         </span>{" "}
-                        • {rate.estimatedDays} day {rate.estimatedDays === "1" ? "" : "s"}
+                        • {rate.estimatedDays} {rate.estimatedDays !== "1" ? "days" : "day"}
                       </span>
                     </div>
                   </div>

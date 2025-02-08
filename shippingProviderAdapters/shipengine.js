@@ -187,6 +187,8 @@ export async function createLabelFunction({
     status: "purchased",
     data: result,
     rate: result.rate,
+    carrier: result.carrier_code,
+    service: result.service_type || result.service_code,
     trackingNumber: result.tracking_number,
     trackingUrl: result.tracking_url,
     labelUrl: labelUrl,

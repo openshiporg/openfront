@@ -60,13 +60,15 @@ async function createProviderShippingLabel(root, { orderId, providerId, rateId, 
     unfulfilledQuantities[item.id] = item.quantity;
   });
 
-  // Subtract quantities from existing fulfillments
+  // Subtract quantities from active fulfillments only (not cancelled ones)
   order.fulfillments?.forEach(fulfillment => {
-    if (!fulfillment.canceledAt) {
-      fulfillment.fulfillmentItems?.forEach(item => {
-        unfulfilledQuantities[item.lineItem.id] -= item.quantity;
-      });
+    // Skip cancelled fulfillments - their quantities should be available
+    if (fulfillment.canceledAt) {
+      return;
     }
+    fulfillment.fulfillmentItems?.forEach(item => {
+      unfulfilledQuantities[item.lineItem.id] -= item.quantity;
+    });
   });
 
   // Check each item's quantity
@@ -127,7 +129,6 @@ async function createProviderShippingLabel(root, { orderId, providerId, rateId, 
       dimensions,
       lineItems,
     });
-
     // Create fulfillment and shipping label
     const fulfillment = await context.query.Fulfillment.createOne({
       data: {
@@ -164,6 +165,8 @@ async function createProviderShippingLabel(root, { orderId, providerId, rateId, 
           trackingNumber
           trackingUrl
           labelUrl
+          carrier
+          service
           data
         }
       `

@@ -27,9 +27,13 @@ import {
   MapPin,
   Truck,
   ChevronLeft,
+  Container,
+  Weight,
+  AlertCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 
 import { Button } from "@ui/button";
 import {
@@ -84,6 +88,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ui/tabs";
 import { Badge } from "@ui/badge";
 import { RadioGroup, RadioGroupItem } from "@ui/radio-group";
 import { useForm } from "react-hook-form";
+import { Separator } from "@ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@ui/tooltip";
 
 const CREATE_PROVIDER_SHIPPING_LABEL = gql`
   mutation CreateProviderShippingLabel(
@@ -233,20 +244,18 @@ function ManualTabContent({
   handleManualFulfill,
   fulfillmentState,
   hasSelectedItems,
+  dimensions,
+  setDimensions,
+  weight,
+  setWeight,
 }) {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-3">
-        <div className="flex-1 min-w-[200px]">
-          <Label className="mb-1.5 block text-xs">Tracking number</Label>
-          <Input
-            value={trackingNumber}
-            onChange={(e) => setTrackingNumber(e.target.value)}
-            className="h-8 rounded-lg text-sm"
-          />
-        </div>
         <div className="w-[140px]">
-          <Label className="mb-1.5 block text-xs">Carrier</Label>
+          <h3 className="font-medium uppercase text-xs tracking-wider text-muted-foreground mb-1.5">
+            Carrier
+          </h3>
           <Select value={carrier} onValueChange={setCarrier}>
             <SelectTrigger className="h-8 rounded-lg text-sm">
               <SelectValue placeholder="Select" />
@@ -259,18 +268,34 @@ function ManualTabContent({
             </SelectContent>
           </Select>
         </div>
+        <div className="flex-1 min-w-[200px]">
+          <h3 className="font-medium uppercase text-xs tracking-wider text-muted-foreground mb-1.5">
+            Tracking Number
+          </h3>
+          <Input
+            value={trackingNumber}
+            onChange={(e) => setTrackingNumber(e.target.value)}
+            className="h-8 rounded-lg text-sm"
+            placeholder="Enter tracking number"
+          />
+        </div>
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="send-notification"
-            checked={!noNotification}
-            onCheckedChange={(checked) => setNoNotification(!checked)}
-          />
-          <Label htmlFor="send-notification" className="text-sm">
-            Notify customer
-          </Label>
+        <div className="flex flex-col gap-1.5">
+        
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="send-notification"
+              checked={!noNotification}
+              onCheckedChange={(checked) => setNoNotification(!checked)}
+            />
+            <Label htmlFor="send-notification" asChild>
+              <h3 className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+                Notify Customer
+              </h3>
+            </Label>
+          </div>
         </div>
 
         <Button
@@ -301,6 +326,22 @@ function ProviderTabContent({
   dimensions,
   weight,
 }) {
+  const [isCreatingLabel, setIsCreatingLabel] = useState(false);
+
+  const handleCreateLabelClick = async () => {
+    setIsCreatingLabel(true);
+    try {
+      await handleCreateLabel();
+      // Only clear the selection if successful
+      setSelectedRate(null);
+    } catch (error) {
+      // Error will be handled by parent component
+      console.error("Failed to create label:", error);
+    } finally {
+      setIsCreatingLabel(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4">
       {selectedRate && (
@@ -373,9 +414,9 @@ function ProviderTabContent({
                 size="sm"
                 variant="outline"
                 className="h-6 px-2 flex items-center gap-2"
-                onClick={handleCreateLabel}
-                disabled={createLabelLoading || !hasSelectedItems}
-                isLoading={createLabelLoading}
+                onClick={handleCreateLabelClick}
+                disabled={isCreatingLabel || !hasSelectedItems}
+                isLoading={isCreatingLabel}
               >
                 <CreditCard className="size-3" />
                 Create Label
@@ -1009,7 +1050,7 @@ function NewProviderTabContent({ providerProps, onSuccess, defaultPreset }) {
 
   const renderContent = () => (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-      <TabsList className="w-full border-b justify-center rounded-none h-9 bg-transparent p-0">
+      <TabsList className="w-full border-b justify-start rounded-none h-9 bg-transparent p-0">
         {Object.entries(fieldGroups).map(([key, group]) => (
           <TabsTrigger
             key={key}
@@ -1086,10 +1127,10 @@ export function ShippingTabs({
   setSelectedQuantities,
 }) {
   const [dimensions, setDimensions] = useState({
-    unit: "in",
     length: "5",
     width: "5",
     height: "5",
+    unit: "in",
   });
   const [weight, setWeight] = useState({ unit: "oz", value: "5" });
   const [selectedTab, setSelectedTab] = useState("manual");
@@ -1106,7 +1147,7 @@ export function ShippingTabs({
   const {
     create,
     props: createProps,
-    state,
+    state: shippingProviderState,
     error: shippingProviderError,
   } = useCreateItem(shippingProviderList);
 
@@ -1291,6 +1332,10 @@ export function ShippingTabs({
           handleManualFulfill={handleManualFulfill}
           fulfillmentState={fulfillmentState}
           hasSelectedItems={hasSelectedItems}
+          dimensions={dimensions}
+          setDimensions={setDimensions}
+          weight={weight}
+          setWeight={setWeight}
         />
       ),
     },
@@ -1327,27 +1372,11 @@ export function ShippingTabs({
   return (
     <div className="rounded-lg border">
       <CardContent className="p-0 space-y-5">
-        {/* Package Information Section */}
-        <div>
-          <div className="px-4 pt-4">
-            <h3 className="font-medium uppercase text-xs tracking-wider text-muted-foreground mb-2">
-              Package Dimensions
-            </h3>
-            <div className="flex flex-wrap gap-4">
-              <DimensionsInput
-                dimensions={dimensions}
-                setDimensions={setDimensions}
-              />
-              <WeightInput weight={weight} setWeight={setWeight} />
-            </div>
-          </div>
-        </div>
-
         {/* Shipping Method Selection */}
         <div className="space-y-4">
           <div className="px-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-medium uppercase text-xs tracking-wider text-muted-foreground mb-2">
+              <h3 className="font-medium uppercase text-xs tracking-wider text-muted-foreground mb-2 mt-4">
                 Shipping Method
               </h3>
             </div>
@@ -1393,7 +1422,7 @@ export function ShippingTabs({
 
                   <SelectGroup>
                     <SelectLabel className="text-muted-foreground font-normal text-xs ps-2">
-                      Create Provider
+                      Add Provider
                     </SelectLabel>
                     <SelectItem value="new" className="text-xs font-medium">
                       <span className="flex items-center gap-2">
@@ -1403,7 +1432,7 @@ export function ShippingTabs({
                           strokeWidth={2}
                         />
                         <span className="truncate uppercase tracking-wide opacity-75 font-medium">
-                          Build from scratch
+                          Custom Provider
                         </span>
                       </span>
                     </SelectItem>
@@ -1416,7 +1445,7 @@ export function ShippingTabs({
                         <span className="flex items-center gap-2">
                           <StatusIndicator provider={preset} isPreset={true} />
                           <span className="truncate uppercase tracking-wide opacity-75 font-medium">
-                            Build from {preset.name}
+                            {preset.name} Provider
                           </span>
                         </span>
                       </SelectItem>
@@ -1438,6 +1467,55 @@ export function ShippingTabs({
               )}
             </div>
           </div>
+
+          {/* Package Dimensions Section - Only show when not creating provider */}
+          {!isCreatingProvider && (
+            <div className="px-4">
+              <div className="flex flex-col gap-2">
+                <h3 className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+                  Package Dimensions
+                </h3>
+                <div className="flex items-center gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="[&_svg]:opacity-75 [&_svg]:size-3.5 gap-3 h-7"
+                      >
+                        <Container />
+                        {dimensions.length} × {dimensions.width} ×{" "}
+                        {dimensions.height} {dimensions.unit}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-fit p-3">
+                      <DimensionsInput
+                        dimensions={dimensions}
+                        setDimensions={setDimensions}
+                      />
+                    </PopoverContent>
+                  </Popover>
+
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="[&_svg]:opacity-75 [&_svg]:size-3.5 gap-3 h-7"
+                      >
+                        <Weight />
+                        {weight.value} {weight.unit}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-fit p-3">
+                      <WeightInput weight={weight} setWeight={setWeight} />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            </div>
+          )}
+
           {isCreatingProvider ? (
             <NewProviderTabContent
               providerProps={createProps}

@@ -4,7 +4,7 @@ import { getGqlNames } from "@keystone-6/core/types";
 import { hashString } from "./hashString";
 import { staticAdminMetaQuery } from "./staticAdminMetaQuery";
 
-const expectedExports = new Set(["Cell", "Field", "controller", "CardValue"]);
+const expectedExports = new Set(['Field', 'controller']);
 
 const adminMetaLocalStorageKey = "keystone.adminMeta";
 
@@ -83,23 +83,23 @@ export function useAdminMeta(adminMetaHash, fieldViews) {
       };
 
       for (const field of list.fields) {
-        expectedExports.forEach((exportName) => {
-          if (fieldViews[field.viewsIndex][exportName] === undefined) {
-            throw new Error(
-              `The view for the field at ${list.key}.${field.path} is missing the ${exportName} export`
-            );
-          }
-        });
-        Object.keys(fieldViews[field.viewsIndex]).forEach((exportName) => {
-          if (
-            !expectedExports.has(exportName) &&
-            exportName !== "allowedExportsOnCustomViews"
-          ) {
-            throw new Error(
-              `Unexpected export named ${exportName} from the view from the field at ${list.key}.${field.path}`
-            );
-          }
-        });
+        // expectedExports.forEach((exportName) => {
+        //   if (fieldViews[field.viewsIndex][exportName] === undefined) {
+        //     throw new Error(
+        //       `The view for the field at ${list.key}.${field.path} is missing the ${exportName} export`
+        //     );
+        //   }
+        // });
+        // Object.keys(fieldViews[field.viewsIndex]).forEach((exportName) => {
+        //   if (
+        //     !expectedExports.has(exportName) &&
+        //     exportName !== "allowedExportsOnCustomViews"
+        //   ) {
+        //     throw new Error(
+        //       `Unexpected export named ${exportName} from the view from the field at ${list.key}.${field.path}`
+        //     );
+        //   }
+        // });
         const views = { ...fieldViews[field.viewsIndex] };
         const customViews = {};
         if (field.customViewsIndex !== null) {
