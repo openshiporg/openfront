@@ -541,7 +541,7 @@ export default function ProductPage({ params }) {
         <AlertTriangle className="h-4 w-4" />
         <AlertTitle>Not Found</AlertTitle>
         <AlertDescription>
-          Product not found or you don't have access.
+          Product not found or you don&apos;t have access.
         </AlertDescription>
       </Alert>
     );

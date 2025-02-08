@@ -44,15 +44,7 @@ const RenderField = memo(function RenderField({
       <CustomField
         field={field.controller}
         value={value}
-        onChange={useMemo(() => {
-          if (onChange === undefined) return undefined;
-          return (value) => {
-            onChange((val) => ({
-              ...val,
-              [field.controller.path]: { kind: "value", value },
-            }));
-          };
-        }, [onChange, field.controller.path])}
+        onChange={onChange}
         autoFocus={autoFocus}
         forceValidation={forceValidation}
       />
@@ -66,15 +58,7 @@ const RenderField = memo(function RenderField({
         ...field.controller,
         hideButtons: field.fieldMeta?.hideButtons,
       }}
-      onChange={useMemo(() => {
-        if (onChange === undefined) return undefined;
-        return (value) => {
-          onChange((val) => ({
-            ...val,
-            [field.controller.path]: { kind: "value", value },
-          }));
-        };
-      }, [onChange, field.controller.path])}
+      onChange={onChange}
       value={value}
       autoFocus={autoFocus}
       forceValidation={forceValidation}
