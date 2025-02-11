@@ -4990,7 +4990,7 @@ input RuleTypeRelateToManyForCreateInput {
 type Product {
   id: ID!
   title: String
-  description: String
+  description: Product_description_Document
   handle: String
   subtitle: String
   isGiftcard: Boolean
@@ -5025,6 +5025,10 @@ type Product {
   updatedAt: DateTime
 }
 
+type Product_description_Document {
+  document(hydrateRelationships: Boolean! = false): JSON!
+}
+
 enum ProductStatusType {
   draft
   proposed
@@ -5043,7 +5047,6 @@ input ProductWhereInput {
   NOT: [ProductWhereInput!]
   id: IDFilter
   title: StringFilter
-  description: StringFilter
   handle: StringFilter
   subtitle: StringFilter
   isGiftcard: BooleanFilter
@@ -5099,7 +5102,6 @@ input TaxRateManyRelationFilter {
 input ProductOrderByInput {
   id: OrderDirection
   title: OrderDirection
-  description: OrderDirection
   handle: OrderDirection
   subtitle: OrderDirection
   isGiftcard: OrderDirection
@@ -5112,7 +5114,7 @@ input ProductOrderByInput {
 
 input ProductUpdateInput {
   title: String
-  description: String
+  description: JSON
   handle: String
   subtitle: String
   isGiftcard: Boolean
@@ -5182,7 +5184,7 @@ input ProductUpdateArgs {
 
 input ProductCreateInput {
   title: String
-  description: String
+  description: JSON
   handle: String
   subtitle: String
   isGiftcard: Boolean

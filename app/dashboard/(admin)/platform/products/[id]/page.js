@@ -76,7 +76,7 @@ const ORGANIZATION_FIELDS = [
 const customComponents = {
   title: CustomTextView.Field,
   handle: CustomTextView.Field,
-  description: CustomTextView.Field,
+  // description: CustomTextView.Field,
   subtitle: CustomTextView.Field,
 };
 

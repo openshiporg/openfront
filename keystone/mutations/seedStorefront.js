@@ -100,27 +100,89 @@ async function seedStorefront(root, args, context) {
     throw new Error("Not authenticated");
   }
 
+  // Validate seed data
+  if (!seedData?.store) {
+    throw new Error("Seed data missing required store configuration");
+  }
+
+  if (!Array.isArray(seedData?.currencies)) {
+    throw new Error("Seed data missing required currencies array");
+  }
+
   try {
     // Create store and currencies
     const { store, currencies } = seedData;
-    const {
-      data: { createStore },
-    } = await context.graphql.raw({
+
+    // First create currencies
+    const createdCurrencies = [];
+    for (const currency of currencies) {
+      try {
+        const {
+          data: { createCurrency },
+        } = await context.graphql.raw({
+          query: `mutation CreateCurrency($data: CurrencyCreateInput!) {
+            createCurrency(data: $data) {
+              id
+              code
+            }
+          }`,
+          variables: {
+            data: currency,
+          },
+        });
+        createdCurrencies.push(createCurrency);
+      } catch (error) {
+        // If currency already exists, fetch it
+        if (error.message.includes("Unique constraint failed")) {
+          const {
+            data: { currency },
+          } = await context.graphql.raw({
+            query: `query GetCurrency($code: String!) {
+              currency(where: { code: $code }) {
+                id
+                code
+              }
+            }`,
+            variables: {
+              code: currency.code,
+            },
+          });
+          createdCurrencies.push(currency);
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    // Then create store with currency connections
+    const storeResult = await context.graphql.raw({
       query: `mutation CreateStore($data: StoreCreateInput!) {
         createStore(data: $data) {
           id
         }
       }`,
       variables: {
-        data: { ...store, currencies: { create: currencies } },
+        data: {
+          ...store,
+          currencies: {
+            connect: createdCurrencies.map((currency) => ({ id: currency.id })),
+          },
+        },
       },
     });
+
+    if (!storeResult?.data?.createStore) {
+      console.error("Store creation failed:", storeResult);
+      throw new Error("Failed to create store - no data returned");
+    }
+
+    const { createStore } = storeResult.data;
     console.log(`Store created with ID: ${createStore.id}`);
 
     // Create payment providers
     const providerMap = new Map();
     for (const provider of seedData.paymentProviders) {
-      const functionName = provider.code.split('_')[2]; // Get 'stripe', 'paypal', or 'default'
+      const functionName = provider.code.split("_")[2]; // Get 'stripe', 'paypal', or 'default'
       const {
         data: { createPaymentProvider },
       } = await context.graphql.raw({
@@ -155,14 +217,16 @@ async function seedStorefront(root, args, context) {
         }
       }`,
       variables: {
-        data: { 
+        data: {
           name: "Manual Fulfillment",
           code: "fp_manual",
           isInstalled: true,
         },
       },
     });
-    console.log(`Manual fulfillment provider created with ID: ${createFulfillmentProvider.id}`);
+    console.log(
+      `Manual fulfillment provider created with ID: ${createFulfillmentProvider.id}`
+    );
 
     // Create countries
     for (const country of seedData.countries) {
@@ -307,7 +371,6 @@ async function seedStorefront(root, args, context) {
         description,
         handle,
         is_giftcard,
-        weight,
         options,
         variants,
         collections: productCollections,
@@ -315,146 +378,192 @@ async function seedStorefront(root, args, context) {
       } = product;
 
       // Create product
-      const {
-        data: { createProduct },
-      } = await context.graphql.raw({
-        query: `mutation CreateProduct($data: ProductCreateInput!) {
-          createProduct(data: $data) {
-            id
-            productOptions {
-              id
-              productOptionValues {
-                id
-                value
-              }
-            }
-          }
-        }`,
-        variables: {
-          data: {
-            title,
-            subtitle: subtitle || "",
-            description,
-            handle,
-            isGiftcard: is_giftcard,
-            weight,
-            status,
-            productOptions: {
-              create: options.map((option) => ({
-                title: option.title,
-                productOptionValues: {
-                  create: option.values.map((value) => ({ value })),
-                },
-              })),
-            },
-            productCategories: {
-              connect: categories.map((category) => ({
-                handle: category.id,
-              })),
-            },
-            productCollections: {
-              connect: productCollections
-                ? productCollections.map((collection) => ({
-                    handle: collection,
-                  }))
-                : [],
-            },
-          },
-        },
-      });
-
-      // Create variants
-      const allOptionValues = createProduct.productOptions.reduce(
-        (acc, option) => {
-          return acc.concat(option.productOptionValues);
-        },
-        []
-      );
-
-      for (const variant of variants) {
-        const { title, prices, options, inventory_quantity, manage_inventory } =
-          variant;
-
-        const optionValues = options.map((option) => option.value);
-        const matchingIds = allOptionValues
-          .filter((item) => optionValues.includes(item.value))
-          .map((item) => ({ id: item.id }));
-
-        await context.graphql.raw({
-          query: `mutation createProductVariants($data: [ProductVariantCreateInput!]!) {
-            createProductVariants(data: $data) {
-              id
-            }
-          }`,
-          variables: {
-            data: [
-              {
-                title,
-                inventoryQuantity: inventory_quantity,
-                manageInventory: manage_inventory,
-                prices: {
-                  create: prices.map(({ currency_code, amount }) => {
-                    const region = seedData.regions.find(
-                      (region) => region.currency_code === currency_code
-                    );
-                    return {
-                      amount,
-                      currency: { connect: { code: currency_code } },
-                      region: { connect: { code: region?.id } },
-                    };
-                  }),
-                },
-                productOptionValues: {
-                  connect: matchingIds,
-                },
-                product: {
-                  connect: { id: createProduct.id },
-                },
-              },
-            ],
-          },
+      try {
+        console.log(`Attempting to create product: ${title}`);
+        console.log("Product data:", {
+          title,
+          subtitle,
+          handle,
+          isGiftcard: is_giftcard,
+          status,
+          description:
+            typeof description === "string"
+              ? "string description"
+              : "document description",
+          categoriesCount: categories?.length,
+          optionsCount: options?.length,
+          collectionsCount: productCollections?.length,
         });
-      }
 
-      // Create product images
-      const filename = `${handle}.jpeg`;
-      const imagesDir = path.join(
-        process.cwd(),
-        "storefront",
-        "lib",
-        "seed",
-        "images"
-      );
-      const imagePath = path.join(imagesDir, filename);
-
-      if (fs.existsSync(imagePath)) {
-        const upload = prepareToUpload(imagePath);
-
-        await context.graphql.raw({
-          query: `mutation CreateProductImage($data: ProductImageCreateInput!) {
-            createProductImage(data: $data) {
+        const productResult = await context.graphql.raw({
+          query: `mutation CreateProduct($data: ProductCreateInput!) {
+            createProduct(data: $data) {
               id
-              image {
+              productOptions {
                 id
-                filesize
-                width
-                height
-                extension
-                url
+                productOptionValues {
+                  id
+                  value
+                }
               }
             }
           }`,
           variables: {
             data: {
-              image: {
-                upload,
+              title,
+              subtitle: subtitle || "",
+              description:
+                typeof description === "string"
+                  ? [{ type: "paragraph", children: [{ text: description }] }]
+                  : Array.isArray(description)
+                    ? description
+                    : [],
+              handle,
+              isGiftcard: is_giftcard,
+              status,
+              productOptions: {
+                create: options.map((option) => ({
+                  title: option.title,
+                  productOptionValues: {
+                    create: option.values.map((value) => ({ value })),
+                  },
+                })),
               },
-              products: {
-                connect: [{ id: createProduct.id }],
+              productCategories: {
+                connect: categories.map((category) => ({
+                  handle: category.id,
+                })),
+              },
+              productCollections: {
+                connect: productCollections
+                  ? productCollections.map((collection) => ({
+                      handle: collection,
+                    }))
+                  : [],
               },
             },
           },
         });
+
+        console.log("Product creation response:", productResult);
+
+        if (!productResult?.data?.createProduct) {
+          console.error(
+            "Product creation failed - full response:",
+            JSON.stringify(productResult, null, 2)
+          );
+          throw new Error(
+            `Failed to create product: ${title} - No data returned`
+          );
+        }
+
+        const { createProduct } = productResult.data;
+        console.log(
+          `Successfully created product ${title} with ID: ${createProduct.id}`
+        );
+
+        // Create variants
+        console.log(`Creating variants for product ${title}`);
+        const allOptionValues = createProduct.productOptions.reduce(
+          (acc, option) => {
+            return acc.concat(option.productOptionValues);
+          },
+          []
+        );
+
+        for (const variant of variants) {
+          const {
+            title,
+            prices,
+            options,
+            inventory_quantity,
+            manage_inventory,
+          } = variant;
+
+          const optionValues = options.map((option) => option.value);
+          const matchingIds = allOptionValues
+            .filter((item) => optionValues.includes(item.value))
+            .map((item) => ({ id: item.id }));
+
+          await context.graphql.raw({
+            query: `mutation createProductVariants($data: [ProductVariantCreateInput!]!) {
+              createProductVariants(data: $data) {
+                id
+              }
+            }`,
+            variables: {
+              data: [
+                {
+                  title,
+                  inventoryQuantity: inventory_quantity,
+                  manageInventory: manage_inventory,
+                  prices: {
+                    create: prices.map(({ currency_code, amount }) => {
+                      const region = seedData.regions.find(
+                        (region) => region.currency_code === currency_code
+                      );
+                      return {
+                        amount,
+                        currency: { connect: { code: currency_code } },
+                        region: { connect: { code: region?.id } },
+                      };
+                    }),
+                  },
+                  productOptionValues: {
+                    connect: matchingIds,
+                  },
+                  product: {
+                    connect: { id: createProduct.id },
+                  },
+                },
+              ],
+            },
+          });
+        }
+
+        // Create product images
+        const filename = `${handle}.jpeg`;
+        const imagesDir = path.join(
+          process.cwd(),
+          "storefront",
+          "lib",
+          "seed",
+          "images"
+        );
+        const imagePath = path.join(imagesDir, filename);
+
+        if (fs.existsSync(imagePath)) {
+          const upload = prepareToUpload(imagePath);
+
+          await context.graphql.raw({
+            query: `mutation CreateProductImage($data: ProductImageCreateInput!) {
+              createProductImage(data: $data) {
+                id
+                image {
+                  id
+                  filesize
+                  width
+                  height
+                  extension
+                  url
+                }
+              }
+            }`,
+            variables: {
+              data: {
+                image: {
+                  upload,
+                },
+                products: {
+                  connect: [{ id: createProduct.id }],
+                },
+              },
+            },
+          });
+        }
+      } catch (error) {
+        console.error(`Error creating product: ${title}`, error);
+        throw error;
       }
     }
 

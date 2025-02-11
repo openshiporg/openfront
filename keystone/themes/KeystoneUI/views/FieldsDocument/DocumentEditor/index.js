@@ -187,73 +187,66 @@ export function DocumentEditor({
   );
 
   return (
-    <div
-      css={{
-        border: `1px solid ${colors.border}`,
-        borderRadius: radii.small,
+    <DocumentEditorProvider
+      componentBlocks={componentBlocks}
+      documentFeatures={documentFeatures}
+      relationships={relationships}
+      editor={editor}
+      value={value}
+      onChange={(value) => {
+        onChange?.(value);
+        // this fixes a strange issue in Safari where the selection stays inside of the editor
+        // after a blur event happens but the selection is still in the editor
+        // so the cursor is visually in the wrong place and it inserts text backwards
+        const selection = window.getSelection();
+        if (selection && !ReactEditor.isFocused(editor)) {
+          const editorNode = ReactEditor.toDOMNode(editor, editor);
+          if (selection.anchorNode === editorNode) {
+            ReactEditor.focus(editor);
+          }
+        }
       }}
     >
-      <DocumentEditorProvider
-        componentBlocks={componentBlocks}
-        documentFeatures={documentFeatures}
-        relationships={relationships}
-        editor={editor}
-        value={value}
-        onChange={(value) => {
-          onChange?.(value);
-          // this fixes a strange issue in Safari where the selection stays inside of the editor
-          // after a blur event happens but the selection is still in the editor
-          // so the cursor is visually in the wrong place and it inserts text backwards
-          const selection = window.getSelection();
-          if (selection && !ReactEditor.isFocused(editor)) {
-            const editorNode = ReactEditor.toDOMNode(editor, editor);
-            if (selection.anchorNode === editorNode) {
-              ReactEditor.focus(editor);
-            }
-          }
-        }}
-      >
-        {useMemo(
-          () =>
-            onChange !== undefined && (
-              <Toolbar
-                documentFeatures={documentFeatures}
-                viewState={{
-                  expanded,
-                  toggle: () => {
-                    setExpanded((v) => !v);
-                  },
-                }}
-              />
-            ),
-          [expanded, documentFeatures, onChange]
-        )}
+      {useMemo(
+        () =>
+          onChange !== undefined && (
+            <Toolbar
+              documentFeatures={documentFeatures}
+              viewState={{
+                expanded,
+                toggle: () => {
+                  setExpanded((v) => !v);
+                },
+              }}
+            />
+          ),
+        [expanded, documentFeatures, onChange]
+      )}
 
-        <DocumentEditorEditable
-          css={[
-            {
-              borderRadius: "inherit",
-              background: fields.focus.inputBackground,
-              borderColor: fields.inputBorderColor,
-              paddingLeft: spacing.medium,
-              paddingRight: spacing.medium,
-              minHeight: 120,
-              scrollbarGutter: "stable",
-              // the !important is necessary to override the width set by resizing as an inline style
-              height: expanded ? "auto !important" : 224,
-              resize: expanded ? undefined : "vertical",
-              overflowY: "auto",
-            },
-          ]}
-          {...props}
-          readOnly={onChange === undefined}
-        />
-        {
-          // for debugging
-          false && <Debugger />
-        }
-      </DocumentEditorProvider>
-    </div>
+      <DocumentEditorEditable
+        css={[
+          {
+            borderRadius: "inherit",
+            background: fields.focus.inputBackground,
+            borderColor: fields.inputBorderColor,
+            paddingLeft: spacing.medium,
+            paddingRight: spacing.medium,
+            minHeight: 120,
+            scrollbarGutter: "stable",
+            // the !important is necessary to override the width set by resizing as an inline style
+            height: expanded ? "auto !important" : 224,
+            resize: expanded ? undefined : "vertical",
+            overflowY: "auto",
+          },
+        ]}
+        {...props}
+        readOnly={onChange === undefined}
+      />
+      {
+        // for debugging
+        false && <Debugger />
+      }
+    </DocumentEditorProvider>
   );
 }
 

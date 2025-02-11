@@ -31,7 +31,7 @@ export const OnboardingCard = ({ data }) => {
   };
 
   // Don't show the card if regions exist (store is already set up)
-  if (parseInt(data["Region"]) > 0) {
+  if (parseInt(data?.["Region"]) > 0) {
     return null;
   }
 

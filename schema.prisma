@@ -808,7 +808,7 @@ model PriceSet {
 model Product {
   id                 String              @id @default(cuid())
   title              String              @default("")
-  description        String              @default("")
+  description        Json                @default("[{\"type\":\"paragraph\",\"children\":[{\"text\":\"\"}]}]")
   handle             String              @unique @default("")
   subtitle           String              @default("")
   isGiftcard         Boolean             @default(false)

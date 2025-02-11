@@ -182,7 +182,9 @@ export const retrievePricedProductByHandle = cache(async function ({
       product(where: { handle: $handle }) {
         id
         title
-        description
+        description {
+          document
+        }
         handle
         thumbnail
         productCollections {
@@ -252,6 +254,9 @@ export const getProductByHandle = cache(async function ({ handle, regionId }) {
         title
         handle
         thumbnail
+        description {
+          document
+        }
         productCollections {
           id
           title
@@ -374,7 +379,9 @@ export const getProductsForSearch = cache(async function() {
         id
         title
         handle
-        description
+        description {
+          document
+        }
         thumbnail
         productTags {
           value

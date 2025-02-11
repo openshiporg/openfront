@@ -40,19 +40,18 @@ export const Product = list({
         isRequired: true,
       },
     }),
-    description: text(),
-    // content: document({
-    //   // We want to have support a fully featured document editor for our
-    //   // authors, so we're enabling all of the formatting abilities and
-    //   // providing 1, 2 or 3 column layouts.
-    //   formatting: true,
-    //   dividers: true,
-    //   links: true,
-    //   layouts: [
-    //     [1, 1],
-    //     [1, 1, 1],
-    //   ],
-    // }), 
+    description: document({
+      // We want to have support a fully featured document editor for our
+      // authors, so we're enabling all of the formatting abilities and
+      // providing 1, 2 or 3 column layouts.
+      formatting: true,
+      dividers: true,
+      links: true,
+      layouts: [
+        [1, 1],
+        [1, 1, 1],
+      ],
+    }), 
     handle: text({
       isIndexed: "unique",
     }),

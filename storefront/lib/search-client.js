@@ -23,7 +23,7 @@ async function initializeSearch() {
   products.forEach(product => {
     const searchableText = [
       product.title,
-      product.description,
+      product.description?.document?.map(node => node.children.map(child => child.text).join(" ")).join(" "),
       product.handle,
       product.productTags?.map(t => t.value).join(" "),
       product.productVariants?.map(v => v.title).join(" "),
