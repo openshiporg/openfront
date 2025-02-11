@@ -151,19 +151,19 @@ export const LineItem = list({
 
         description: virtual({
           field: graphql.field({
-            type: graphql.String,
+            type: graphql.JSON,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const lineItem = await sudoContext.query.LineItem.findOne({
                 where: { id: item.id },
-                query: "productVariant { product { description } }",
+                query: "productVariant { product { description { document } } }",
               });
 
               if (!lineItem?.productVariant?.product) {
                 return null;
               }
 
-              return lineItem.productVariant.product.description;
+              return lineItem.productVariant.product.description.document;
             },
           }),
         }),

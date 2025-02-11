@@ -41,9 +41,7 @@ async function activeCart(root, { cartId }, context) {
         quantity
         title
         thumbnail
-        description {
-          content
-        }
+        description
         unitPrice
         originalPrice
         total

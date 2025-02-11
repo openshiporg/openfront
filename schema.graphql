@@ -3087,7 +3087,7 @@ type LineItem {
   returnItemsCount(where: ReturnItemWhereInput! = {}): Int
   title: String
   thumbnail: String
-  description: String
+  description: JSON
   originalPrice: String
   unitPrice: String
   total: String
