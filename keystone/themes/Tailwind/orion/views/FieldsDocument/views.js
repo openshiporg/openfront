@@ -21,7 +21,7 @@ export function Field({ field, value, onChange, autoFocus, forceValidation }) {
       <FieldDescription id={`${field.path}-description`}>
         {field.description}
       </FieldDescription>
-      <div className="border bg-background rounded-md overflow-hidden shadow-xl">
+      <div className="border bg-background rounded-md overflow-hidden">
         <ForceValidationProvider value={!!forceValidation}>
           <DocumentEditor
             autoFocus={autoFocus}

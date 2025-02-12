@@ -228,7 +228,6 @@ export const Cart = list({
       many: false,
       hooks: {
         resolveInput({ operation, resolvedData, context }) {
-          console.log("resolveInput", operation, resolvedData, context.session?.itemId)
           if (
             (operation === "create" || operation === "update") &&
             !resolvedData.user &&
