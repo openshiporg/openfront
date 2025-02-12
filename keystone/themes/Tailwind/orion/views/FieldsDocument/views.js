@@ -10,39 +10,31 @@ import { FieldLabel } from "../../components/FieldLabel";
 import { FieldDescription } from "../../components/FieldDescription";
 import { CellContainer } from "../../components/CellContainer";
 import { CellLink } from "../../components/CellLink";
-
 export { controller } from "./views-shared";
 
 export function Field({ field, value, onChange, autoFocus, forceValidation }) {
   return (
-    // <FieldContainer>
-    //   <FieldLabel as="span" id={`${field.path}-label`}>
-    //     {field.label}
-    //   </FieldLabel>
-    //   <FieldDescription id={`${field.path}-description`}>
-    //     {field.description}
-    //   </FieldDescription>
-    //   <ForceValidationProvider value={!!forceValidation}>
-    //     <DocumentEditor
-    //       autoFocus={autoFocus}
-    //       aria-labelledby={`${field.path}-label`}
-    //       value={value}
-    //       onChange={onChange}
-    //       componentBlocks={field.componentBlocks}
-    //       relationships={field.relationships}
-    //       documentFeatures={field.documentFeatures}
-    //     />
-    //   </ForceValidationProvider>
-    // </FieldContainer>
-    <DocumentEditor
-      autoFocus={autoFocus}
-      aria-labelledby={`${field.path}-label`}
-      value={value}
-      onChange={onChange}
-      componentBlocks={field.componentBlocks}
-      relationships={field.relationships}
-      documentFeatures={field.documentFeatures}
-    />
+    <FieldContainer className="overflow-hidden">
+      <FieldLabel as="span" id={`${field.path}-label`}>
+        {field.label}
+      </FieldLabel>
+      <FieldDescription id={`${field.path}-description`}>
+        {field.description}
+      </FieldDescription>
+      <div className="border bg-background rounded-md overflow-hidden shadow-xl">
+        <ForceValidationProvider value={!!forceValidation}>
+          <DocumentEditor
+            autoFocus={autoFocus}
+            aria-labelledby={`${field.path}-label`}
+            value={value}
+            onChange={onChange}
+            componentBlocks={field.componentBlocks}
+            relationships={field.relationships}
+            documentFeatures={field.documentFeatures}
+          />
+        </ForceValidationProvider>
+      </div>
+    </FieldContainer>
   );
 }
 

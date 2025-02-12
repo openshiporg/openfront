@@ -57,6 +57,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@ui/select";
+import { Separator } from "../../../primitives/default/ui/separator";
 
 // Add this near the top of the file
 const isMac =
@@ -171,7 +172,7 @@ export function Toolbar({ documentFeatures, viewState }) {
           {hasMarks && (
             <InlineMarks marks={documentFeatures.formatting.inlineMarks} />
           )}
-          {hasMarks && <ToolbarSeparator />}
+          {hasMarks && <Separator orientation="vertical" />}
           {(documentFeatures.formatting.alignment.center ||
             documentFeatures.formatting.alignment.end) && (
             <TextAlignMenu alignment={documentFeatures.formatting.alignment} />
@@ -205,7 +206,7 @@ export function Toolbar({ documentFeatures, viewState }) {
             documentFeatures.formatting.alignment.end ||
             documentFeatures.formatting.listTypes.unordered ||
             documentFeatures.formatting.listTypes.ordered) && (
-            <ToolbarSeparator />
+            <Separator orientation="vertical"/>
           )}
 
           {documentFeatures.dividers && dividerButton}
@@ -218,31 +219,29 @@ export function Toolbar({ documentFeatures, viewState }) {
           {documentFeatures.formatting.blockTypes.code && codeButton}
           {!!hasBlockItems && <InsertBlockMenu />}
         </ToolbarGroup>
-        {useMemo(() => {
-          const ExpandIcon = viewState?.expanded ? Minimize2 : Maximize2;
-          return (
-            viewState && (
-              <ToolbarGroup>
-                <ToolbarSeparator />
+        <Separator orientation="vertical" className="mr-2"/>
+          {useMemo(() => {
+            const ExpandIcon = viewState?.expanded ? Minimize2 : Maximize2;
+            return (
+              viewState && (
                 <Tooltip>
-                  <TooltipTrigger asChild>
+                  <TooltipTrigger>
                     <ToolbarButton
                       onMouseDown={(event) => {
                         event.preventDefault();
                         viewState.toggle();
                       }}
                     >
-                      <ExpandIcon size={16} />
+                      <ExpandIcon />
                     </ToolbarButton>
                   </TooltipTrigger>
                   <TooltipWithShortcut>
                     {viewState.expanded ? "Collapse" : "Expand"}
                   </TooltipWithShortcut>
                 </Tooltip>
-              </ToolbarGroup>
-            )
-          );
-        }, [viewState])}
+              )
+            );
+          }, [viewState])}
       </ToolbarContainer>
     </TooltipProvider>
   );
@@ -281,7 +280,7 @@ const MarkButton = forwardRef(function MarkButton(props, ref) {
 const ToolbarContainer = ({ children }) => {
   return (
     <div className="sticky top-0 z-20 border-b">
-      <div className="flex flex-row justify-between items-center h-10 px-2 overflow-x-auto max-w-72">
+      <div className="flex flex-row justify-between items-center h-10 px-2">
         {children}
       </div>
     </div>
@@ -299,8 +298,8 @@ function HeadingMenu({ headingLevels }) {
         <PopoverTrigger>
           <HeadingButton showMenu={showMenu} />
         </PopoverTrigger>
-        <HeadingDialog 
-          headingLevels={headingLevels} 
+        <HeadingDialog
+          headingLevels={headingLevels}
           onSelect={() => setShowMenu(false)}
         />
       </Popover>

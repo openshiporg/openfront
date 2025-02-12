@@ -124,7 +124,7 @@ export function DocumentEditor ({
   )
 
   return (
-    <div className="border rounded-md shadow-sm">
+    <div>
       <DocumentEditorProvider
         componentBlocks={componentBlocks}
         documentFeatures={documentFeatures}
