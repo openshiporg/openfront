@@ -200,6 +200,15 @@ export const Product = list({
     productImages: relationship({
       ref: "ProductImage.products",
       many: true,
+      ui: {
+        displayMode: 'cards',
+        cardFields: ['image', 'altText'],
+        inlineCreate: { fields: ['image', 'altText'] },
+        inlineEdit: { fields: ['image', 'altText'] },
+        inlineConnect: true,
+        removeMode: 'disconnect',
+        linkToItem: false
+      }
     }),
     productOptions: relationship({
       ref: "ProductOption.product",

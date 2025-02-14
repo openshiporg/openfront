@@ -399,7 +399,7 @@ const HeaderActions = memo(function HeaderActions({
                 <CircleAlert className="opacity-80" size={16} strokeWidth={2} />
               </div>
               <DialogHeader>
-                <DialogTitle>
+                <DialogTitle className="text-sm line-clamp-3">
                   Are you sure you want to delete {itemLabel}?
                 </DialogTitle>
                 <DialogDescription className="mt-1">

@@ -15,9 +15,7 @@ export function useCreateItem(list) {
       id
       label: ${list.labelField}
   }
-}`, {
-  refetchQueries: "active"
-});
+}`);
 
   const [value, setValue] = useState(() => {
     const value = {};

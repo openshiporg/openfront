@@ -6,45 +6,48 @@ import { ChevronRight } from "lucide-react";
 import { cn } from "@keystone/utils/cn";
 import { Badge } from "@ui/badge";
 
-// Import our custom views
-import * as CustomTextView from "./views/Text";
-
-// Map of field types to our custom views
-const customViews = {
-  text: CustomTextView,
-};
-
 const RenderField = memo(function RenderField({
   field,
   value,
   autoFocus,
   forceValidation,
   onChange,
-  customComponents = {},
+  fieldTypeViews = {},  // Views that apply to all fields of a certain type
+  fieldViews = {}       // Views that apply to specific fields by path
 }) {
-  // First check for a custom component override
-  const CustomComponent = customComponents[field.controller.path];
-  if (CustomComponent) {
+  const memoizedOnChange = useMemo(() => {
+    if (onChange === undefined) return undefined;
+    return (value) => {
+      onChange((val) => ({
+        ...val,
+        [field.controller.path]: { kind: "value", value },
+      }));
+    };
+  }, [onChange, field.controller.path]);
+
+  // First check for a specific field override by path
+  if (fieldViews[field.path]) {
+    const CustomField = fieldViews[field.path].Field;
     return (
-      <CustomComponent
+      <CustomField
         field={field.controller}
         value={value}
-        onChange={onChange}
+        onChange={memoizedOnChange}
         autoFocus={autoFocus}
         forceValidation={forceValidation}
       />
     );
   }
 
-  // Then check for a custom view for this field type
-  const customView = customViews[field.views.Field?.fieldType];
-  if (customView) {
-    const CustomField = customView.Field;
+  // Then check for a field type override
+  const fieldType = field.controller.fieldType || field.views.Field?.fieldType;
+  if (fieldType && fieldTypeViews[fieldType]) {
+    const CustomField = fieldTypeViews[fieldType].Field;
     return (
       <CustomField
         field={field.controller}
         value={value}
-        onChange={onChange}
+        onChange={memoizedOnChange}
         autoFocus={autoFocus}
         forceValidation={forceValidation}
       />
@@ -58,7 +61,7 @@ const RenderField = memo(function RenderField({
         ...field.controller,
         hideButtons: field.fieldMeta?.hideButtons,
       }}
-      onChange={onChange}
+      onChange={memoizedOnChange}
       value={value}
       autoFocus={autoFocus}
       forceValidation={forceValidation}
@@ -76,7 +79,8 @@ export function CustomFields({
   position = "form",
   groups = [],
   onChange,
-  customComponents = {},
+  fieldTypeViews = {},  // Views that apply to all fields of a certain type
+  fieldViews = {}       // Views that apply to specific fields by path
 }) {
   const renderedFields = Object.fromEntries(
     Object.keys(fields).map((fieldKey) => {
@@ -107,7 +111,8 @@ export function CustomFields({
           forceValidation={forceValidation}
           invalidFields={invalidFields?.has(fieldKey)}
           onChange={fieldMode === "edit" ? onChange : undefined}
-          customComponents={customComponents}
+          fieldTypeViews={fieldTypeViews}
+          fieldViews={fieldViews}
         />,
       ];
     })

@@ -1151,7 +1151,6 @@ export function ShippingTabs({
     error: shippingProviderError,
   } = useCreateItem(shippingProviderList);
 
-  console.log({ shippingProviderError });
 
   const [
     createLabel,

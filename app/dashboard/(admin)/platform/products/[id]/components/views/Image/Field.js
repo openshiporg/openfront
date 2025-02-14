@@ -1,11 +1,13 @@
+"use client"
+
 import bytes from "bytes"
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 
-import { FieldContainer } from "../../components/FieldContainer";
-import { FieldDescription } from "../../components/FieldDescription";
-import { FieldLabel } from "../../components/FieldLabel";
+import { FieldContainer } from "@keystone/themes/Tailwind/orion/components/FieldContainer";
+import { FieldLabel } from "@keystone/themes/Tailwind/orion/components/FieldLabel";
+import { FieldDescription } from "@keystone/themes/Tailwind/orion/components/FieldDescription";
 
-import { Button } from "../../primitives/default/ui/button"
+import { Button } from "@keystone/themes/Tailwind/orion/primitives/default/ui/button"
 
 export const SUPPORTED_IMAGE_EXTENSIONS = ['jpg', 'png', 'webp', 'gif'];
 
