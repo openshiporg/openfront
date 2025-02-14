@@ -126,8 +126,8 @@ export function ItemPageHeader(props) {
                   >
                     <path
                       stroke="currentColor"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                       strokeWidth="2"
                       d="m1 9 4-4-4-4"
                     />
@@ -151,8 +151,8 @@ export function ItemPageHeader(props) {
                   >
                     <path
                       stroke="currentColor"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                       strokeWidth="2"
                       d="m1 9 4-4-4-4"
                     />
@@ -720,7 +720,7 @@ export const ItemPageTemplate = ({ listKey, id }) => {
                 <Alert variant="destructive">
                   <AlertTitle>System Error</AlertTitle>
                   <AlertDescription>
-                    {list.label} doesn't exist or you don't have access to it.
+                    {list.label} doesn&apos;t exist or you don&apos;t have access to it.
                   </AlertDescription>
                 </Alert>
                 {!data.keystone.adminMeta.list.hideCreate && (
@@ -731,7 +731,7 @@ export const ItemPageTemplate = ({ listKey, id }) => {
               <Alert variant="destructive">
                 <AlertTitle>System Error</AlertTitle>
                 <AlertDescription>
-                  The item with id "{id}" does not exist
+                  The item with id &quot;{id}&quot; does not exist
                 </AlertDescription>
               </Alert>
             )
@@ -740,7 +740,7 @@ export const ItemPageTemplate = ({ listKey, id }) => {
               <AlertTriangle className="h-4 w-4 stroke-red-900 dark:stroke-red-500" />
               <AlertTitle>System Error</AlertTitle>
               <AlertDescription>
-                The item with id "{id}" could not be found or you don't have
+                The item with id &quot;{id}&quot; could not be found or you don&apos;t have
                 access to it.
               </AlertDescription>
             </Alert>

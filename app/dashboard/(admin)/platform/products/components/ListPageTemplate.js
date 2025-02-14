@@ -114,7 +114,7 @@ export function ListPageTemplate({ listKey = "Product" }) {
   // Call it once during initial render
   React.useEffect(() => {
     handleDefaultStatus();
-  }, []);
+  }, [handleDefaultStatus]);
 
   // Handle search updates
   const updateSearchParams = (value) => {
