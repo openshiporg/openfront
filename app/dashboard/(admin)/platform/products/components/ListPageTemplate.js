@@ -98,23 +98,23 @@ export function ListPageTemplate({ listKey = "Product" }) {
   const searchParams = useSearchParams();
   const [loadingActions, setLoadingActions] = useState({});
 
-  // Handle setting default status filter
-  const handleDefaultStatus = () => {
-    const params = new URLSearchParams(searchParams);
-    if (!params.get("!status_matches")) {
-      const filterValue = [{
-        label: "Published",
-        value: "published"
-      }];
-      params.set("!status_matches", JSON.stringify(filterValue));
-      push(`?${params.toString()}`, { shallow: true });
-    }
-  };
-
   // Call it once during initial render
   React.useEffect(() => {
+    // Handle setting default status filter
+    const handleDefaultStatus = () => {
+      const params = new URLSearchParams(searchParams);
+      if (!params.get("!status_matches")) {
+        const filterValue = [{
+          label: "Published",
+          value: "published"
+        }];
+        params.set("!status_matches", JSON.stringify(filterValue));
+        push(`?${params.toString()}`, { shallow: true });
+      }
+    };
+
     handleDefaultStatus();
-  }, [handleDefaultStatus]);
+  }, [searchParams, push]);
 
   // Handle search updates
   const updateSearchParams = (value) => {

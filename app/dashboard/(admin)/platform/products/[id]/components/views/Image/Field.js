@@ -262,7 +262,6 @@ export const ImageWrapper = ({ children, url }) => {
     return (
       <a
         className={`block ${commonClasses}`}
-        target="_blank"
         href={url}
       >
         {children}
