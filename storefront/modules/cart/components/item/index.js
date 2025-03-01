@@ -63,6 +63,7 @@ const Item = ({
 
       <Table.Cell className="text-left">
         <Text className="txt-medium-plus text-ui-fg-base">{item.title}</Text>
+        {item.productVariant.title && <p className="text-ui-fg-subtle">{item.productVariant.title}</p>}
         <LineItemOptions variant={item.productVariant} />
       </Table.Cell>
 

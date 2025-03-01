@@ -345,40 +345,15 @@ export default function OrderPage({ params }) {
       lineItems {
         id
         quantity
-        metadata
-        isReturn
-        isGiftcard
-        total
-        unitPrice
         title
+        sku
         thumbnail
-        description
-        availableInRegion
-        percentageOff
-        originalPrice
-        fulfillmentStatus
-        productVariant {
-          id
-          title
-          sku
-          barcode
-          ean
-          upc
-          productOptionValues {
-            id
-            value
-            productOption {
-              id
-              title
-            }
-          }
-          product {
-            id
-            title
-            thumbnail
-            description
-          }
-        }
+        metadata
+        variantTitle
+        formattedUnitPrice
+        formattedTotal
+        productData
+        variantData
       }
       fulfillments {
         id
@@ -388,6 +363,16 @@ export default function OrderPage({ params }) {
           quantity
           lineItem {
             id
+            quantity
+            title
+            sku
+            thumbnail
+            metadata
+            variantTitle
+            formattedUnitPrice
+            formattedTotal
+            productData
+            variantData
           }
         }
         shippingLabels {
@@ -536,7 +521,7 @@ export default function OrderPage({ params }) {
           },
         ]}
       />
-      <main className="w-full max-w-4xl mx-auto p-4 md:p-6 flex flex-col gap-4">
+      <main className="w-full max-w-4xl p-4 md:p-6 flex flex-col gap-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -567,13 +552,13 @@ export default function OrderPage({ params }) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <Card className="bg-muted/10">
-              <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b">
                 <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
                   Line Items
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="p-4">
+                <div className="py-2 px-3 divide-y">
                   {lineItems.map((item) => (
                     <div
                       key={item.id}
@@ -599,54 +584,29 @@ export default function OrderPage({ params }) {
                               <div className="space-y-2">
                                 <div>
                                   <span className="font-medium text-sm">
-                                    {item.productVariant?.product?.title ||
-                                      item.title}
+                                    {item.title}
                                   </span>
-                                  <div className="flex flex-wrap gap-2">
-                                    {item.productVariant?.productOptionValues?.map(
-                                      (optionValue) => (
-                                        <div
-                                          key={optionValue.id}
-                                          className="flex items-center text-xs text-muted-foreground"
-                                        >
-                                          <span className="opacity-75">
-                                            {optionValue.productOption.title}
-                                          </span>
-                                          <span className="ml-1 font-medium">
-                                            {optionValue.value}
-                                          </span>
-                                        </div>
-                                      )
-                                    )}
-                                  </div>
+                                  {item.variantTitle && (
+                                    <div className="text-xs text-muted-foreground">
+                                      {item.variantTitle}
+                                    </div>
+                                  )}
                                 </div>
 
                                 <div className="flex items-center gap-2 mt-1">
-                                  {item.productVariant?.sku && (
+                                  {item.sku && (
                                     <p className="text-xs text-muted-foreground">
-                                      SKU: {item.productVariant.sku}
+                                      SKU: {item.sku}
                                     </p>
                                   )}
-                                  <Badge
-                                    className={cn(
-                                      "py-0 text-[11px] border uppercase font-medium tracking-wide rounded-full"
-                                    )}
-                                    color={
-                                      item.fulfillmentStatus === "Fulfilled"
-                                        ? "blue"
-                                        : "rose"
-                                    }
-                                  >
-                                    {item.fulfillmentStatus}
-                                  </Badge>
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
                                 <div className="text-xs text-muted-foreground whitespace-nowrap">
-                                  {item.quantity} × {item.unitPrice}
+                                  {item.quantity} × {item.formattedUnitPrice}
                                 </div>
                                 <div className="text-sm font-medium whitespace-nowrap">
-                                  {item.total}
+                                  {item.formattedTotal}
                                 </div>
                               </div>
                             </div>
@@ -675,7 +635,7 @@ export default function OrderPage({ params }) {
             </Card>
 
             <Card className="bg-muted/10">
-              <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b">
                 <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
                   {order.paymentDetails?.[0]?.status === "captured"
                     ? "Payment Complete"
@@ -721,7 +681,7 @@ export default function OrderPage({ params }) {
             </Card>
 
             <Card className="overflow-hidden bg-muted/10">
-              <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b">
                 <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
                   Activity Log
                 </CardTitle>
@@ -767,34 +727,30 @@ export default function OrderPage({ params }) {
 
           <div className="space-y-6">
             <Card className="bg-muted/10">
-              <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b">
                 <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
                   Customer
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4">
                 <div className="space-y-2">
-                  <div className="flex items-center space-x-3">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
+                  <div className="flex items-center space-x-3 text-foreground/75">
+                    <User className="h-4 w-4" />
+                    <span className="text-sm">
                       {order.user?.name || "Guest"}
                     </span>
                   </div>
-                  {order.user?.phone ? (
-                    <div className="flex items-center space-x-3">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">
-                        {order.user.phone}
-                      </span>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      No phone number
-                    </p>
-                  )}
-                  <div className="flex items-center space-x-3">
-                    <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
+
+                  <div className="flex items-center space-x-3 text-foreground/75">
+                    <Phone className="h-4 w-4" />
+                    <span className="text-sm">
+                      {order.user?.phone || "No phone number"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center space-x-3 text-foreground/75">
+                    <ShoppingBag className="h-4 w-4" />
+                    <span className="text-sm">
                       {order.user?.orders?.length || 1} Order
                       {order.user?.orders?.length !== 1 ? "s" : ""}
                     </span>
@@ -804,7 +760,7 @@ export default function OrderPage({ params }) {
             </Card>
 
             <Card className="bg-muted/10">
-              <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+              <CardHeader className="flex flex-row items-center justify-between px-4 py-2 border-b">
                 <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
                   Contact Information
                 </CardTitle>
@@ -824,9 +780,9 @@ export default function OrderPage({ params }) {
               </CardHeader>
               <CardContent className="p-4">
                 <div className="space-y-2">
-                  <div className="flex items-center space-x-3">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
+                  <div className="flex items-center space-x-3 text-foreground/75">
+                    <Mail className="h-4 w-4" />
+                    <span className="text-sm">
                       {order.email}
                     </span>
                   </div>
@@ -835,7 +791,7 @@ export default function OrderPage({ params }) {
             </Card>
 
             <Card className="bg-muted/10">
-              <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+              <CardHeader className="flex flex-row items-center justify-between px-4 py-2 border-b">
                 <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
                   Shipping Address
                 </CardTitle>
@@ -859,24 +815,24 @@ export default function OrderPage({ params }) {
               <CardContent className="p-4">
                 {order.shippingAddress ? (
                   <div className="space-y-2">
-                    <div className="flex items-center space-x-3">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">
+                    <div className="flex items-center space-x-3 text-foreground/75">
+                      <User className="h-4 w-4" />
+                      <span className="text-sm">
                         {order.shippingAddress.firstName}{" "}
                         {order.shippingAddress.lastName}
                       </span>
                     </div>
                     {order.shippingAddress.company && (
-                      <div className="flex items-center space-x-3">
-                        <Building className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
+                      <div className="flex items-center space-x-3 text-foreground/75">
+                        <Building className="h-4 w-4" />
+                        <span className="text-sm">
                           {order.shippingAddress.company}
                         </span>
                       </div>
                     )}
-                    <div className="flex items-start space-x-3">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <div className="flex flex-col text-sm text-muted-foreground">
+                    <div className="flex items-start space-x-3 text-foreground/75">
+                      <MapPin className="h-4 w-4" />
+                      <div className="flex flex-col text-sm">
                         <span>{order.shippingAddress.address1}</span>
                         {order.shippingAddress.address2 && (
                           <span>{order.shippingAddress.address2}</span>
@@ -899,7 +855,7 @@ export default function OrderPage({ params }) {
             </Card>
 
             <Card className="bg-muted/10">
-              <CardHeader className="flex flex-row items-center justify-between p-4 pb-0">
+              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b">
                 <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
                   Billing Address
                 </CardTitle>
@@ -920,7 +876,7 @@ export default function OrderPage({ params }) {
                 </EditDialog> */}
               </CardHeader>
               <CardContent className="p-4">
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-foreground/75">
                   Same as shipping address
                 </p>
               </CardContent>

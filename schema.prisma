@@ -219,18 +219,19 @@ model Country {
 }
 
 model Currency {
-  id           String        @id @default(cuid())
-  code         String        @unique @default("")
-  symbol       String        @default("")
-  symbolNative String        @default("")
-  name         String        @default("")
-  moneyAmounts MoneyAmount[] @relation("MoneyAmount_currency")
-  orders       Order[]       @relation("Order_currency")
-  payments     Payment[]     @relation("Payment_currency")
-  regions      Region[]      @relation("Region_currency")
-  stores       Store[]       @relation("Currency_stores")
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @default(now()) @updatedAt
+  id                             String             @id @default(cuid())
+  code                           String             @unique @default("")
+  symbol                         String             @default("")
+  symbolNative                   String             @default("")
+  name                           String             @default("")
+  moneyAmounts                   MoneyAmount[]      @relation("MoneyAmount_currency")
+  orders                         Order[]            @relation("Order_currency")
+  payments                       Payment[]          @relation("Payment_currency")
+  regions                        Region[]           @relation("Region_currency")
+  stores                         Store[]            @relation("Currency_stores")
+  createdAt                      DateTime           @default(now())
+  updatedAt                      DateTime           @default(now()) @updatedAt
+  from_OrderMoneyAmount_currency OrderMoneyAmount[] @relation("OrderMoneyAmount_currency")
 }
 
 model CustomShippingOption {
@@ -360,14 +361,14 @@ model Fulfillment {
 }
 
 model FulfillmentItem {
-  id            String       @id @default(cuid())
+  id            String         @id @default(cuid())
   quantity      Int
-  fulfillment   Fulfillment? @relation("FulfillmentItem_fulfillment", fields: [fulfillmentId], references: [id])
-  fulfillmentId String?      @map("fulfillment")
-  lineItem      LineItem?    @relation("FulfillmentItem_lineItem", fields: [lineItemId], references: [id])
-  lineItemId    String?      @map("lineItem")
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @default(now()) @updatedAt
+  fulfillment   Fulfillment?   @relation("FulfillmentItem_fulfillment", fields: [fulfillmentId], references: [id])
+  fulfillmentId String?        @map("fulfillment")
+  lineItem      OrderLineItem? @relation("FulfillmentItem_lineItem", fields: [lineItemId], references: [id])
+  lineItemId    String?        @map("lineItem")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @default(now()) @updatedAt
 
   @@index([fulfillmentId])
   @@index([lineItemId])
@@ -452,36 +453,33 @@ model Invite {
 }
 
 model LineItem {
-  id                  String               @id @default(cuid())
-  quantity            Int
-  metadata            Json?
-  isReturn            Boolean              @default(false)
-  isGiftcard          Boolean              @default(false)
-  shouldMerge         Boolean              @default(true)
-  allowDiscounts      Boolean              @default(true)
-  hasShipping         Boolean              @default(false)
-  claimOrder          ClaimOrder?          @relation("LineItem_claimOrder", fields: [claimOrderId], references: [id])
-  claimOrderId        String?              @map("claimOrder")
-  cart                Cart?                @relation("LineItem_cart", fields: [cartId], references: [id])
-  cartId              String?              @map("cart")
-  swap                Swap?                @relation("LineItem_swap", fields: [swapId], references: [id])
-  swapId              String?              @map("swap")
-  order               Order?               @relation("LineItem_order", fields: [orderId], references: [id])
-  orderId             String?              @map("order")
-  productVariant      ProductVariant?      @relation("LineItem_productVariant", fields: [productVariantId], references: [id])
-  productVariantId    String?              @map("productVariant")
-  claimItems          ClaimItem[]          @relation("ClaimItem_lineItem")
-  fulfillmentItems    FulfillmentItem[]    @relation("FulfillmentItem_lineItem")
-  lineItemAdjustments LineItemAdjustment[] @relation("LineItemAdjustment_lineItem")
-  lineItemTaxLines    LineItemTaxLine[]    @relation("LineItemTaxLine_lineItem")
-  returnItems         ReturnItem[]         @relation("ReturnItem_lineItem")
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @default(now()) @updatedAt
+  id                                  String               @id @default(cuid())
+  quantity                            Int
+  metadata                            Json?
+  isReturn                            Boolean              @default(false)
+  isGiftcard                          Boolean              @default(false)
+  shouldMerge                         Boolean              @default(true)
+  allowDiscounts                      Boolean              @default(true)
+  hasShipping                         Boolean              @default(false)
+  claimOrder                          ClaimOrder?          @relation("LineItem_claimOrder", fields: [claimOrderId], references: [id])
+  claimOrderId                        String?              @map("claimOrder")
+  cart                                Cart?                @relation("LineItem_cart", fields: [cartId], references: [id])
+  cartId                              String?              @map("cart")
+  swap                                Swap?                @relation("LineItem_swap", fields: [swapId], references: [id])
+  swapId                              String?              @map("swap")
+  productVariant                      ProductVariant?      @relation("LineItem_productVariant", fields: [productVariantId], references: [id])
+  productVariantId                    String?              @map("productVariant")
+  claimItems                          ClaimItem[]          @relation("ClaimItem_lineItem")
+  lineItemAdjustments                 LineItemAdjustment[] @relation("LineItemAdjustment_lineItem")
+  lineItemTaxLines                    LineItemTaxLine[]    @relation("LineItemTaxLine_lineItem")
+  returnItems                         ReturnItem[]         @relation("ReturnItem_lineItem")
+  createdAt                           DateTime             @default(now())
+  updatedAt                           DateTime             @default(now()) @updatedAt
+  from_OrderLineItem_originalLineItem OrderLineItem[]      @relation("OrderLineItem_originalLineItem")
 
   @@index([claimOrderId])
   @@index([cartId])
   @@index([swapId])
-  @@index([orderId])
   @@index([productVariantId])
 }
 
@@ -541,6 +539,7 @@ model Measurement {
 model MoneyAmount {
   id               String          @id @default(cuid())
   amount           Int
+  compareAmount    Int?
   minQuantity      Int?
   maxQuantity      Int?
   productVariant   ProductVariant? @relation("MoneyAmount_productVariant", fields: [productVariantId], references: [id])
@@ -642,7 +641,7 @@ model Order {
   fulfillments         Fulfillment[]         @relation("Fulfillment_order")
   giftCards            GiftCard[]            @relation("GiftCard_order")
   giftCardTransactions GiftCardTransaction[] @relation("GiftCardTransaction_order")
-  lineItems            LineItem[]            @relation("LineItem_order")
+  lineItems            OrderLineItem[]       @relation("OrderLineItem_order")
   discounts            Discount[]            @relation("Discount_orders")
   payments             Payment[]             @relation("Payment_order")
   returns              Return[]              @relation("Return_order")
@@ -679,6 +678,53 @@ model OrderEvent {
   @@index([orderId])
   @@index([userId])
   @@index([createdById])
+}
+
+model OrderLineItem {
+  id                 String            @id @default(cuid())
+  quantity           Int
+  title              String            @default("")
+  sku                String            @default("")
+  thumbnail          String            @default("")
+  metadata           Json?
+  productData        Json?
+  variantData        Json?
+  variantTitle       String            @default("")
+  formattedUnitPrice String            @default("")
+  formattedTotal     String            @default("")
+  order              Order?            @relation("OrderLineItem_order", fields: [orderId], references: [id])
+  orderId            String?           @map("order")
+  productVariant     ProductVariant?   @relation("OrderLineItem_productVariant", fields: [productVariantId], references: [id])
+  productVariantId   String?           @map("productVariant")
+  moneyAmount        OrderMoneyAmount? @relation("OrderLineItem_moneyAmount", fields: [moneyAmountId], references: [id])
+  moneyAmountId      String?           @unique @map("moneyAmount")
+  originalLineItem   LineItem?         @relation("OrderLineItem_originalLineItem", fields: [originalLineItemId], references: [id])
+  originalLineItemId String?           @map("originalLineItem")
+  fulfillmentItems   FulfillmentItem[] @relation("FulfillmentItem_lineItem")
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @default(now()) @updatedAt
+
+  @@index([orderId])
+  @@index([productVariantId])
+  @@index([originalLineItemId])
+}
+
+model OrderMoneyAmount {
+  id             String         @id @default(cuid())
+  amount         Int
+  originalAmount Int
+  priceData      Json?
+  metadata       Json?
+  orderLineItem  OrderLineItem? @relation("OrderLineItem_moneyAmount")
+  currency       Currency?      @relation("OrderMoneyAmount_currency", fields: [currencyId], references: [id])
+  currencyId     String?        @map("currency")
+  region         Region?        @relation("OrderMoneyAmount_region", fields: [regionId], references: [id])
+  regionId       String?        @map("region")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @default(now()) @updatedAt
+
+  @@index([currencyId])
+  @@index([regionId])
 }
 
 model Payment {
@@ -740,6 +786,7 @@ model PaymentProvider {
   refundPaymentFunction       String           @default("")
   getPaymentStatusFunction    String           @default("")
   generatePaymentLinkFunction String           @default("")
+  handleWebhookFunction       String           @default("")
   regions                     Region[]         @relation("PaymentProvider_regions")
   sessions                    PaymentSession[] @relation("PaymentSession_paymentProvider")
   createdAt                   DateTime         @default(now())
@@ -872,6 +919,7 @@ model ProductImage {
   image_width     Int?
   image_height    Int?
   image_extension String?
+  imagePath       String    @default("")
   altText         String    @default("")
   products        Product[] @relation("Product_productImages")
   metadata        Json?
@@ -927,33 +975,34 @@ model ProductType {
 }
 
 model ProductVariant {
-  id                  String               @id @default(cuid())
-  title               String               @default("")
-  sku                 String               @default("")
-  barcode             String               @default("")
-  ean                 String               @default("")
-  upc                 String               @default("")
-  inventoryQuantity   Int
-  allowBackorder      Boolean              @default(false)
-  manageInventory     Boolean              @default(true)
-  hsCode              String               @default("")
-  originCountry       String               @default("")
-  midCode             String               @default("")
-  material            String               @default("")
-  metadata            Json?
-  variantRank         Int?                 @default(0)
-  product             Product?             @relation("ProductVariant_product", fields: [productId], references: [id])
-  productId           String?              @map("product")
-  claimItems          ClaimItem[]          @relation("ClaimItem_productVariant")
-  lineItems           LineItem[]           @relation("LineItem_productVariant")
-  prices              MoneyAmount[]        @relation("MoneyAmount_productVariant")
-  productOptionValues ProductOptionValue[] @relation("ProductOptionValue_productVariants")
-  location            Location?            @relation("ProductVariant_location", fields: [locationId], references: [id])
-  locationId          String?              @map("location")
-  stockMovements      StockMovement[]      @relation("StockMovement_variant")
-  measurements        Measurement[]        @relation("Measurement_productVariant")
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @default(now()) @updatedAt
+  id                                String               @id @default(cuid())
+  title                             String               @default("")
+  sku                               String               @default("")
+  barcode                           String               @default("")
+  ean                               String               @default("")
+  upc                               String               @default("")
+  inventoryQuantity                 Int
+  allowBackorder                    Boolean              @default(false)
+  manageInventory                   Boolean              @default(true)
+  hsCode                            String               @default("")
+  originCountry                     String               @default("")
+  midCode                           String               @default("")
+  material                          String               @default("")
+  metadata                          Json?
+  variantRank                       Int?                 @default(0)
+  product                           Product?             @relation("ProductVariant_product", fields: [productId], references: [id])
+  productId                         String?              @map("product")
+  claimItems                        ClaimItem[]          @relation("ClaimItem_productVariant")
+  lineItems                         LineItem[]           @relation("LineItem_productVariant")
+  prices                            MoneyAmount[]        @relation("MoneyAmount_productVariant")
+  productOptionValues               ProductOptionValue[] @relation("ProductOptionValue_productVariants")
+  location                          Location?            @relation("ProductVariant_location", fields: [locationId], references: [id])
+  locationId                        String?              @map("location")
+  stockMovements                    StockMovement[]      @relation("StockMovement_variant")
+  measurements                      Measurement[]        @relation("Measurement_productVariant")
+  createdAt                         DateTime             @default(now())
+  updatedAt                         DateTime             @default(now()) @updatedAt
+  from_OrderLineItem_productVariant OrderLineItem[]      @relation("OrderLineItem_productVariant")
 
   @@index([productId])
   @@index([locationId])
@@ -975,31 +1024,32 @@ model Refund {
 }
 
 model Region {
-  id                   String                @id @default(cuid())
-  code                 String                @unique @default("")
-  name                 String                @default("")
-  taxRate              Float
-  taxCode              String                @default("")
-  metadata             Json?
-  giftCardsTaxable     Boolean               @default(true)
-  automaticTaxes       Boolean               @default(true)
-  currency             Currency?             @relation("Region_currency", fields: [currencyId], references: [id])
-  currencyId           String?               @map("currency")
-  carts                Cart[]                @relation("Cart_region")
-  countries            Country[]             @relation("Country_region")
-  discounts            Discount[]            @relation("Discount_regions")
-  giftCards            GiftCard[]            @relation("GiftCard_region")
-  moneyAmounts         MoneyAmount[]         @relation("MoneyAmount_region")
-  orders               Order[]               @relation("Order_region")
-  taxProvider          TaxProvider?          @relation("Region_taxProvider", fields: [taxProviderId], references: [id])
-  taxProviderId        String?               @map("taxProvider")
-  fulfillmentProviders FulfillmentProvider[] @relation("FulfillmentProvider_regions")
-  paymentProviders     PaymentProvider[]     @relation("PaymentProvider_regions")
-  shippingOptions      ShippingOption[]      @relation("ShippingOption_region")
-  taxRates             TaxRate[]             @relation("TaxRate_region")
-  shippingProviders    ShippingProvider[]    @relation("Region_shippingProviders")
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @default(now()) @updatedAt
+  id                           String                @id @default(cuid())
+  code                         String                @unique @default("")
+  name                         String                @default("")
+  taxRate                      Float
+  taxCode                      String                @default("")
+  metadata                     Json?
+  giftCardsTaxable             Boolean               @default(true)
+  automaticTaxes               Boolean               @default(true)
+  currency                     Currency?             @relation("Region_currency", fields: [currencyId], references: [id])
+  currencyId                   String?               @map("currency")
+  carts                        Cart[]                @relation("Cart_region")
+  countries                    Country[]             @relation("Country_region")
+  discounts                    Discount[]            @relation("Discount_regions")
+  giftCards                    GiftCard[]            @relation("GiftCard_region")
+  moneyAmounts                 MoneyAmount[]         @relation("MoneyAmount_region")
+  orders                       Order[]               @relation("Order_region")
+  taxProvider                  TaxProvider?          @relation("Region_taxProvider", fields: [taxProviderId], references: [id])
+  taxProviderId                String?               @map("taxProvider")
+  fulfillmentProviders         FulfillmentProvider[] @relation("FulfillmentProvider_regions")
+  paymentProviders             PaymentProvider[]     @relation("PaymentProvider_regions")
+  shippingOptions              ShippingOption[]      @relation("ShippingOption_region")
+  taxRates                     TaxRate[]             @relation("TaxRate_region")
+  shippingProviders            ShippingProvider[]    @relation("Region_shippingProviders")
+  createdAt                    DateTime              @default(now())
+  updatedAt                    DateTime              @default(now()) @updatedAt
+  from_OrderMoneyAmount_region OrderMoneyAmount[]    @relation("OrderMoneyAmount_region")
 
   @@index([currencyId])
   @@index([taxProviderId])
@@ -1187,6 +1237,7 @@ model ShippingMethodTaxLine {
 model ShippingOption {
   id                         String                      @id @default(cuid())
   name                       String                      @default("")
+  uniqueKey                  String                      @unique @default("")
   priceType                  ShippingOptionPriceTypeType
   amount                     Int?
   isReturn                   Boolean                     @default(false)

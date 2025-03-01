@@ -7,23 +7,13 @@ import {
   Package,
   ChevronDown,
   ChevronUp,
-  PencilIcon,
-  Trash2,
-  Tag,
   ScanBarcode,
   Plus,
-  Truck,
-  Box,
-  CreditCard,
-  Download,
-  Copy,
-  Ruler,
-  Scale,
   Minus,
   Ban,
   PackageCheck,
   CircleSlash,
-  AlertTriangle
+  AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -40,9 +30,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@ui/badge";
 import { Button } from "@ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@ui/card";
-import { Input } from "@ui/input";
 import { Label } from "@ui/label";
-import { Checkbox } from "@ui/checkbox";
 import { Separator } from "@ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@ui/popover";
 import {
@@ -51,21 +39,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogDescription,
   DialogFooter,
-  DialogClose,
 } from "@ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@ui/alert";
 import { useDeleteItem } from "@keystone/themes/Tailwind/orion/components/EditItemDrawer";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ui/tabs";
-import {
-  DynamicTabs,
-  DynamicTabsContent,
-  DynamicTabsList,
-  DynamicTabsTrigger,
-} from "@ui/dynamic-tabs";
-import { executeAdapterFunction } from "@keystone/utils/shippingProviderAdapter";
-import { EditDialog } from "../page";
 import {
   Select,
   SelectContent,
@@ -75,70 +52,78 @@ import {
   SelectValue,
   SelectLabel,
 } from "@ui/select";
-import { ADAPTER_FUNCTIONS } from "@keystone/utils/shippingProviderAdapter";
 import { Fields } from "@keystone/themes/Tailwind/orion/components/Fields";
 
 import { useUpdateItem } from "@keystone/themes/Tailwind/orion/components/EditItemDrawer";
 import { ShippingTabs } from "./components/ShippingTabs";
 import { PageBreadcrumbs } from "@keystone/themes/Tailwind/orion/components/PageBreadcrumbs";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@ui/tooltip";
-import { ToggleGroup, ToggleGroupItem } from "@ui/toggle-group";
 import { GraphQLErrorNotice } from "@keystone/themes/Tailwind/orion/components/GraphQLErrorNotice";
-import { MultipleSelector } from "@keystone/themes/Tailwind/orion/primitives/default/ui/multi-select";
-import { getCarrierIconUrl } from "./components/ShippingProviderRates";
+import { getCarrierIconUrl } from "./components/ShippingTabs/ShippingProviderRates";
+import { AdminLink } from "@keystone/themes/Tailwind/orion/components/AdminLink";
 
-const GET_ORDER_QUERY = gql`
-  query GetOrder($id: ID!) {
-    order(where: { id: $id }) {
+const UNFULFILLED_ITEMS_QUERY = gql`
+  query UNFULFILLED_ITEMS_QUERY($orderId: ID!) {
+    order(where: { id: $orderId }) {
       id
       displayId
       createdAt
-      shippingAddress {
-        id
-        firstName
-        lastName
-        company
-        address1
-        address2
-        city
-        province
-        postalCode
-        country {
-          name
-          iso2
-        }
-        phone
-      }
       unfulfilled
       fulfillmentDetails
-      fulfillmentStatus
       lineItems {
         id
-        title
-        thumbnail
         quantity
-        unitPrice
-        total
-        productVariant {
+        title
+        sku
+        thumbnail
+        metadata
+        variantTitle
+        formattedUnitPrice
+        formattedTotal
+        productData
+        variantData
+        fulfillmentItems {
           id
-          sku
-          title
-          product {
-            title
-          }
-          productOptionValues {
+          quantity
+          fulfillment {
             id
-            value
-            productOption {
-              id
-              title
-            }
+            canceledAt
           }
+        }
+      }
+    }
+  }
+`;
+
+const FULFILLMENT_HISTORY_QUERY = gql`
+  query FULFILLMENT_HISTORY_QUERY($orderId: ID!) {
+    order(where: { id: $orderId }) {
+      id
+      fulfillments {
+        id
+        createdAt
+        fulfillmentItems {
+          id
+          quantity
+          lineItem {
+            id
+            quantity
+            title
+            sku
+            thumbnail
+            metadata
+            variantTitle
+            formattedUnitPrice
+            formattedTotal
+            productData
+            variantData
+          }
+        }
+        shippingLabels {
+          id
+          labelUrl
+          trackingNumber
+          trackingUrl
+          carrier
         }
       }
     }
@@ -451,12 +436,14 @@ export default function FulfillOrder({ params }) {
     error: providerUpdateError,
   } = useUpdateItem("ShippingProvider");
 
-  const { data: providersData, loading: providersLoading } = useQuery(
-    GET_SHIPPING_PROVIDERS
-  );
+  const {
+    data: providersData,
+    loading: providersLoading,
+    refetch: refetchProviders,
+  } = useQuery(GET_SHIPPING_PROVIDERS);
 
-  const { data, loading, error } = useQuery(GET_ORDER_QUERY, {
-    variables: { id: params.id },
+  const { data, loading, error } = useQuery(UNFULFILLED_ITEMS_QUERY, {
+    variables: { orderId: params.id },
     onCompleted: (data) => {
       const initialQuantities = {};
       data.order.unfulfilled.forEach((item) => {
@@ -465,6 +452,10 @@ export default function FulfillOrder({ params }) {
       setSelectedQuantities(initialQuantities);
     },
   });
+
+  const handleRateSelect = (rate) => {
+    setSelectedRate(rate);
+  };
 
   const handleProviderToggle = async (providerId) => {
     try {
@@ -649,7 +640,7 @@ export default function FulfillOrder({ params }) {
           {
             type: "link",
             label: `#${order.displayId}`,
-            href: `/dashboard/platform/orders/${order.id}`,
+            href: `/platform/orders/${order.id}`,
           },
           {
             type: "page",
@@ -657,24 +648,24 @@ export default function FulfillOrder({ params }) {
           },
         ]}
       />
-      <main className="w-full max-w-5xl mx-auto p-4 md:p-6 flex flex-col gap-4">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 gap-4">
-          <div>
+      <div className="min-h-screen bg-muted/5">
+        <div className="max-w-7xl p-4 md:p-6">
+          <div className="mb-6">
             <div className="flex items-center gap-2 mb-1">
               <Button variant="link" className="px-0">
-                <Link
-                  href={`/dashboard/platform/orders/${order.id}`}
+                <AdminLink
+                  href={`/platform/orders/${order.id}`}
                   className="flex items-center text-muted-foreground hover:text-foreground"
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Back to Order
-                </Link>
+                </AdminLink>
               </Button>
             </div>
             <h1 className="text-2xl font-semibold">Fulfill Order</h1>
             <p className="text-sm text-muted-foreground">
-              Order #{order.displayId} •{" "}
-              {new Date(order.createdAt).toLocaleDateString("en-US", {
+              Order #{data.order.displayId} •{" "}
+              {new Date(data.order.createdAt).toLocaleDateString("en-US", {
                 year: "numeric",
                 month: "long",
                 day: "numeric",
@@ -683,43 +674,42 @@ export default function FulfillOrder({ params }) {
               })}
             </p>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-7 space-y-6">
-            <UnfulfilledItems
-              items={unfulfilledItems}
-              selectedQuantities={selectedQuantities}
-              setSelectedQuantities={setSelectedQuantities}
-              order={order}
-            />
-
-            {order.fulfillmentDetails?.length > 0 && (
-              <FulfillmentHistory
-                fulfillments={order.fulfillmentDetails}
-                onDelete={handleDeleteFulfillment}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-7 space-y-6">
+              <UnfulfilledItems
+                items={unfulfilledItems}
+                selectedQuantities={selectedQuantities}
+                setSelectedQuantities={setSelectedQuantities}
+                order={order}
               />
+
+              {order.fulfillmentDetails?.length > 0 && (
+                <FulfillmentHistory
+                  fulfillments={order.fulfillmentDetails}
+                  onDelete={handleDeleteFulfillment}
+                />
+              )}
+            </div>
+
+            {unfulfilledItems.length > 0 && (
+              <div className="lg:col-span-5 space-y-6">
+                <div className="lg:sticky lg:top-6">
+                  <ShippingTabs
+                    providers={providersData?.shippingProviders || []}
+                    order={data?.order}
+                    onRateSelect={handleRateSelect}
+                    onProviderToggle={handleProviderToggle}
+                    selectedQuantities={selectedQuantities}
+                    setSelectedQuantities={setSelectedQuantities}
+                    refetchProviders={refetchProviders}
+                  />
+                </div>
+              </div>
             )}
           </div>
-
-          <div className="lg:col-span-5 space-y-6">
-            <ShippingTabs
-              order={order}
-              providers={providersData?.shippingProviders || []}
-              selectedQuantities={selectedQuantities}
-              onFulfill={handleFulfill}
-              onProviderToggle={handleProviderToggle}
-              trackingNumber={trackingNumber}
-              setTrackingNumber={setTrackingNumber}
-              carrier={carrier}
-              setCarrier={setCarrier}
-              noNotification={noNotification}
-              setNoNotification={setNoNotification}
-              fulfillmentState={fulfillmentState}
-            />
-          </div>
         </div>
-      </main>
+      </div>
     </>
   );
 }
@@ -761,12 +751,12 @@ function UnfulfilledItems({
 
   return (
     <Card>
-      <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
+      <CardHeader className="px-4 py-3 flex flex-row items-center justify-between border-b">
         <h3 className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
           Unfulfilled Items
         </h3>
       </CardHeader>
-      <CardContent className="p-4 space-y-4">
+      <CardContent className="px-4 py-1 divide-y">
         {items.length > 0 ? (
           items.map((item) => (
             <UnfulfilledItem
@@ -789,7 +779,7 @@ function UnfulfilledItems({
             />
           ))
         ) : (
-          <div className="flex h-44 items-center justify-center rounded-lg border bg-muted/40 p-4">
+          <div className="flex h-44 items-center justify-center rounded-lg border bg-muted/40 p-4 my-3">
             <div className="text-center">
               <PackageCheck
                 className="mx-auto h-7 w-7 text-muted-foreground/50"
@@ -845,7 +835,7 @@ function UnfulfilledItems({
   );
 }
 
-// New component for fulfillment history section
+// Update FulfillmentHistory component
 function FulfillmentHistory({ fulfillments, onDelete }) {
   const [expandedFulfillments, setExpandedFulfillments] = useState([]);
   const [expandedSections, setExpandedSections] = useState({
@@ -869,6 +859,56 @@ function FulfillmentHistory({ fulfillments, onDelete }) {
   const activeFulfillments = fulfillments.filter((f) => !f.canceledAt);
   const cancelledFulfillments = fulfillments.filter((f) => f.canceledAt);
 
+  const renderFulfillmentItems = (items) => {
+    return items.map((item) => (
+      <div
+        key={item.id}
+        className="flex items-start space-x-4 py-4 border-t first:border-t-0"
+      >
+        <div className="h-20 w-20 bg-muted/10 rounded-md flex-shrink-0 flex items-center justify-center">
+          {item.lineItem.thumbnail ? (
+            <Image
+              src={item.lineItem.thumbnail}
+              alt={item.lineItem.title}
+              width={80}
+              height={80}
+              className="object-cover rounded-md"
+            />
+          ) : (
+            <Package className="h-8 w-8 text-muted-foreground/50" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-start gap-4">
+            <div className="space-y-1">
+              <h4 className="font-medium text-sm">{item.lineItem.title}</h4>
+              {item.lineItem.variantTitle && (
+                <p className="text-sm text-muted-foreground">
+                  {item.lineItem.variantTitle}
+                </p>
+              )}
+              <div className="flex items-center gap-2">
+                {item.lineItem.sku && (
+                  <p className="text-xs text-muted-foreground">
+                    SKU: {item.lineItem.sku}
+                  </p>
+                )}
+                <Badge className="py-0 text-[11px] border uppercase font-medium tracking-wide rounded-full">
+                  {item.quantity} Fulfilled
+                </Badge>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm font-medium mt-0.5">
+                {item.quantity} × {item.lineItem.formattedUnitPrice}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    ));
+  };
+
   return (
     <div className="space-y-6">
       {activeFulfillments.length > 0 && (
@@ -881,29 +921,25 @@ function FulfillmentHistory({ fulfillments, onDelete }) {
               Active Fulfillments
             </h3>
             <Badge
-              className="py-0 text-[11px] border uppercase font-medium tracking-wide rounded-full flex items-center gap-1"
-              color="blue"
+              className="border py-0.5 px-2 text-[11px] uppercase font-medium tracking-wide rounded-full flex items-center gap-1"
             >
               {activeFulfillments.length}
               {expandedSections.active ? (
-                <ChevronUp className="h-3 w-3" />
+                <ChevronUp className="h-3 w-3 ml-0.5" />
               ) : (
-                <ChevronDown className="h-3 w-3" />
+                <ChevronDown className="h-3 w-3 ml-0.5" />
               )}
             </Badge>
           </div>
           {expandedSections.active &&
             activeFulfillments.map((fulfillment) => (
-              <Card key={fulfillment.id} className="bg-muted/20">
-                <CardContent className="p-4">
+              <Card key={fulfillment.id}>
+                <CardHeader className="p-4 pb-3">
                   <div className="flex justify-between items-start">
                     <div className="space-y-1">
-                      <p className="text-sm font-medium">
-                        Fulfillment{" "}
-                        <span className="uppercase">
-                          #{fulfillment.id.slice(-6)}
-                        </span>
-                      </p>
+                      <CardTitle className="text-sm font-medium">
+                        Fulfillment #{fulfillment.id.slice(-6)}
+                      </CardTitle>
                       <p className="text-xs text-muted-foreground">
                         {new Date(fulfillment.createdAt).toLocaleDateString(
                           "en-US",
@@ -911,48 +947,11 @@ function FulfillmentHistory({ fulfillments, onDelete }) {
                             month: "long",
                             day: "numeric",
                             year: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
                           }
                         )}
                       </p>
-                      {fulfillment.shippingLabels?.[0] && (
-                        <div className="flex items-center gap-3 mt-2">
-                          {fulfillment.shippingLabels[0].carrier && (
-                            <div className="flex items-center gap-1.5">
-                              <Image
-                                src={getCarrierIconUrl(
-                                  fulfillment.shippingLabels[0].carrier,
-                                  new Set()
-                                )}
-                                alt={fulfillment.shippingLabels[0].carrier}
-                                width={16}
-                                height={16}
-                              />
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2">
-                            <Link
-                              href={
-                                fulfillment.shippingLabels[0].trackingUrl || "#"
-                              }
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-blue-500 hover:text-blue-700 hover:underline"
-                            >
-                              {fulfillment.shippingLabels[0].trackingNumber}
-                            </Link>
-                            {fulfillment.shippingLabels[0].labelUrl && (
-                              <Link
-                                href={fulfillment.shippingLabels[0].labelUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-blue-500 hover:text-blue-700"
-                              >
-                                <ScanBarcode className="h-3 w-3" />
-                              </Link>
-                            )}
-                          </div>
-                        </div>
-                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <Popover>
@@ -960,12 +959,12 @@ function FulfillmentHistory({ fulfillments, onDelete }) {
                           <Button
                             variant="outline"
                             size="icon"
-                            className="[&_svg]:size-3 w-5 h-5"
+                            className="[&_svg]:size-3 h-5 w-5"
                           >
-                            <Ban />
+                            <Ban className="h-3.5 w-3.5" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[200px] p-3" side="left">
+                        <PopoverContent className="w-[250px] p-3" side="left">
                           <div className="space-y-2.5">
                             <div className="space-y-1">
                               <p className="text-[13px] font-medium">
@@ -991,102 +990,62 @@ function FulfillmentHistory({ fulfillments, onDelete }) {
                       <Button
                         variant="outline"
                         size="icon"
-                        className="[&_svg]:size-3 w-5 h-5"
+                        className="[&_svg]:size-3 h-5 w-5"
                         onClick={() => toggleFulfillment(fulfillment.id)}
                       >
                         {expandedFulfillments.includes(fulfillment.id) ? (
-                          <ChevronUp />
+                          <ChevronUp className="h-3.5 w-3.5" />
                         ) : (
-                          <ChevronDown />
+                          <ChevronDown className="h-3.5 w-3.5" />
                         )}
                       </Button>
                     </div>
                   </div>
-                  {expandedFulfillments.includes(fulfillment.id) && (
-                    <div className="mt-4 space-y-4">
-                      <Separator />
-                      <div className="space-y-4">
-                        {fulfillment.items.map((item) => (
-                          <div
-                            key={item.id}
-                            className="flex items-start space-x-4"
+                  {fulfillment.shippingLabels?.[0] && (
+                    <div className="flex items-center gap-3 mt-3 pt-3">
+                      {fulfillment.shippingLabels[0].carrier && (
+                        <div className="flex items-center gap-1.5">
+                          <Image
+                            src={getCarrierIconUrl(
+                              fulfillment.shippingLabels[0].carrier,
+                              new Set()
+                            )}
+                            alt={fulfillment.shippingLabels[0].carrier}
+                            width={20}
+                            height={20}
+                          />
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={
+                            fulfillment.shippingLabels[0].trackingUrl || "#"
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-500 hover:text-blue-700 hover:underline"
+                        >
+                          {fulfillment.shippingLabels[0].trackingNumber}
+                        </Link>
+                        {fulfillment.shippingLabels[0].labelUrl && (
+                          <Link
+                            href={fulfillment.shippingLabels[0].labelUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-500 hover:text-blue-700" 
                           >
-                            <div className="h-16 w-16 bg-muted/10 rounded-md flex-shrink-0 flex items-center justify-center">
-                              {item.lineItem.thumbnail ? (
-                                <Image
-                                  src={item.lineItem.thumbnail}
-                                  alt={item.lineItem.title}
-                                  width={64}
-                                  height={64}
-                                  className="object-cover rounded-md"
-                                />
-                              ) : (
-                                <Package className="h-8 w-8 text-muted-foreground/50" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-col">
-                                <div className="flex flex-col">
-                                  <div className="flex items-start justify-between">
-                                    <div className="space-y-2">
-                                      <div>
-                                        <span className="font-medium text-sm">
-                                          {item.lineItem.title}
-                                        </span>
-                                        <div className="flex flex-wrap gap-2">
-                                          {item.lineItem.productOptionValues?.map(
-                                            (optionValue) => (
-                                              <div
-                                                key={optionValue.id}
-                                                className="flex items-center text-xs text-muted-foreground"
-                                              >
-                                                <span className="opacity-75">
-                                                  {
-                                                    optionValue.productOption
-                                                      .title
-                                                  }
-                                                </span>
-                                                <span className="ml-1 font-medium">
-                                                  {optionValue.value}
-                                                </span>
-                                              </div>
-                                            )
-                                          )}
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center gap-2 mt-1">
-                                        {item.lineItem.sku && (
-                                          <p className="text-xs text-muted-foreground">
-                                            SKU: {item.lineItem.sku}
-                                          </p>
-                                        )}
-                                        <Badge
-                                          className="py-0 text-[11px] border uppercase font-medium tracking-wide rounded-full"
-                                          color="blue"
-                                        >
-                                          Fulfilled
-                                        </Badge>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <div className="text-xs text-muted-foreground whitespace-nowrap">
-                                        {item.quantity} ×{" "}
-                                        {item.lineItem.unitPrice}
-                                      </div>
-                                      <div className="text-sm font-medium whitespace-nowrap">
-                                        {item.lineItem.total}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                            <ScanBarcode className="h-3 w-3" />
+                          </Link>   
+                        )}
                       </div>
                     </div>
                   )}
-                </CardContent>
+                </CardHeader>
+                {expandedFulfillments.includes(fulfillment.id) && (
+                  <CardContent className="p-4 pt-0">
+                    {renderFulfillmentItems(fulfillment.items)}
+                  </CardContent>
+                )}
               </Card>
             ))}
         </div>
@@ -1102,32 +1061,29 @@ function FulfillmentHistory({ fulfillments, onDelete }) {
               Cancelled Fulfillments
             </h3>
             <Badge
-              className="py-0 text-[11px] border uppercase font-medium tracking-wide rounded-full flex items-center gap-1"
+              className="border py-0.5 px-2 text-[11px] uppercase font-medium tracking-wide rounded-full flex items-center gap-1"
               color="rose"
             >
               {cancelledFulfillments.length}
               {expandedSections.cancelled ? (
-                <ChevronUp className="h-3 w-3" />
+                <ChevronUp className="h-3 w-3 ml-0.5" />
               ) : (
-                <ChevronDown className="h-3 w-3" />
+                <ChevronDown className="h-3 w-3 ml-0.5" />
               )}
             </Badge>
           </div>
           {expandedSections.cancelled &&
             cancelledFulfillments.map((fulfillment) => (
-              <Card 
-                key={fulfillment.id} 
-                className="bg-muted/20 opacity-75 hover:opacity-100 transition-opacity"
+              <Card
+                key={fulfillment.id}
+                className="opacity-75 hover:opacity-100 transition-opacity"
               >
-                <CardContent className="p-4">
+                <CardHeader className="p-4 pb-3">
                   <div className="flex justify-between items-start">
                     <div className="space-y-1">
-                      <p className="text-sm font-medium">
-                        Fulfillment{" "}
-                        <span className="uppercase">
-                          #{fulfillment.id.slice(-6)}
-                        </span>
-                      </p>
+                      <CardTitle className="text-sm font-medium">
+                        Fulfillment #{fulfillment.id.slice(-6)}
+                      </CardTitle>
                       <p className="text-xs text-muted-foreground">
                         {new Date(fulfillment.createdAt).toLocaleDateString(
                           "en-US",
@@ -1135,147 +1091,70 @@ function FulfillmentHistory({ fulfillments, onDelete }) {
                             month: "long",
                             day: "numeric",
                             year: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
                           }
                         )}
                       </p>
-                      {fulfillment.shippingLabels?.[0] && (
-                        <div className="flex items-center gap-3 mt-2">
-                          {fulfillment.shippingLabels[0].carrier && (
-                            <div className="flex items-center gap-1.5">
-                              <Image
-                                src={getCarrierIconUrl(
-                                  fulfillment.shippingLabels[0].carrier,
-                                  new Set()
-                                )}
-                                alt={fulfillment.shippingLabels[0].carrier}
-                                width={16}
-                                height={16}
-                              />
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2">
-                            <Link
-                              href={
-                                fulfillment.shippingLabels[0].trackingUrl || "#"
-                              }
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-blue-500 hover:text-blue-700 hover:underline"
-                            >
-                              {fulfillment.shippingLabels[0].trackingNumber}
-                            </Link>
-                            {fulfillment.shippingLabels[0].labelUrl && (
-                              <Link
-                                href={fulfillment.shippingLabels[0].labelUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-blue-500 hover:text-blue-700"
-                              >
-                                <ScanBarcode className="h-3 w-3" />
-                              </Link>
-                            )}
-                          </div>
-                        </div>
-                      )}
                     </div>
                     <Button
                       variant="outline"
                       size="icon"
-                      className="[&_svg]:size-3 w-5 h-5"
+                      className="[&_svg]:size-3 h-5 w-5"
                       onClick={() => toggleFulfillment(fulfillment.id)}
                     >
                       {expandedFulfillments.includes(fulfillment.id) ? (
-                        <ChevronUp />
+                        <ChevronUp className="h-3.5 w-3.5" />
                       ) : (
-                        <ChevronDown />
+                        <ChevronDown className="h-3.5 w-3.5" />
                       )}
                     </Button>
                   </div>
-                  {expandedFulfillments.includes(fulfillment.id) && (
-                    <div className="mt-4 space-y-4">
-                      <Separator />
-                      <div className="space-y-4">
-                        {fulfillment.items.map((item) => (
-                          <div
-                            key={item.id}
-                            className="flex items-start space-x-4"
+                  {fulfillment.shippingLabels?.[0] && (
+                    <div className="flex items-center gap-3 mt-3 pt-3">
+                      {fulfillment.shippingLabels[0].carrier && (
+                        <div className="flex items-center gap-1.5">
+                          <Image
+                            src={getCarrierIconUrl(
+                              fulfillment.shippingLabels[0].carrier,
+                              new Set()
+                            )}
+                            alt={fulfillment.shippingLabels[0].carrier}
+                            width={20}
+                            height={20}
+                          />
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <Link
+                          href={
+                            fulfillment.shippingLabels[0].trackingUrl || "#"
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-500 hover:text-blue-700 hover:underline"
+                        >
+                          {fulfillment.shippingLabels[0].trackingNumber}
+                        </Link>
+                        {fulfillment.shippingLabels[0].labelUrl && (
+                          <Link
+                            href={fulfillment.shippingLabels[0].labelUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-500 hover:text-blue-700"
                           >
-                            <div className="h-16 w-16 bg-muted/10 rounded-md flex-shrink-0 flex items-center justify-center">
-                              {item.lineItem.thumbnail ? (
-                                <Image
-                                  src={item.lineItem.thumbnail}
-                                  alt={item.lineItem.title}
-                                  width={64}
-                                  height={64}
-                                  className="object-cover rounded-md"
-                                />
-                              ) : (
-                                <Package className="h-8 w-8 text-muted-foreground/50" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-col">
-                                <div className="flex flex-col">
-                                  <div className="flex items-start justify-between">
-                                    <div className="space-y-2">
-                                      <div>
-                                        <span className="font-medium text-sm">
-                                          {item.lineItem.title}
-                                        </span>
-                                        <div className="flex flex-wrap gap-2">
-                                          {item.lineItem.productOptionValues?.map(
-                                            (optionValue) => (
-                                              <div
-                                                key={optionValue.id}
-                                                className="flex items-center text-xs text-muted-foreground"
-                                              >
-                                                <span className="opacity-75">
-                                                  {
-                                                    optionValue.productOption
-                                                      .title
-                                                  }
-                                                </span>
-                                                <span className="ml-1 font-medium">
-                                                  {optionValue.value}
-                                                </span>
-                                              </div>
-                                            )
-                                          )}
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center gap-2 mt-1">
-                                        {item.lineItem.sku && (
-                                          <p className="text-xs text-muted-foreground">
-                                            SKU: {item.lineItem.sku}
-                                          </p>
-                                        )}
-                                        <Badge
-                                          className="py-0 text-[11px] border uppercase font-medium tracking-wide rounded-full"
-                                          color="blue"
-                                        >
-                                          Fulfilled
-                                        </Badge>
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <div className="text-xs text-muted-foreground whitespace-nowrap">
-                                        {item.quantity} ×{" "}
-                                        {item.lineItem.unitPrice}
-                                      </div>
-                                      <div className="text-sm font-medium whitespace-nowrap">
-                                        {item.lineItem.total}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                            <ScanBarcode className="h-3 w-3" />
+                          </Link>
+                        )}
                       </div>
                     </div>
                   )}
-                </CardContent>
+                </CardHeader>
+                {expandedFulfillments.includes(fulfillment.id) && (
+                  <CardContent className="p-4 pt-0">
+                    {renderFulfillmentItems(fulfillment.items)}
+                  </CardContent>
+                )}
               </Card>
             ))}
         </div>
@@ -1299,7 +1178,7 @@ function UnfulfilledItem({ item, quantity, onQuantityChange }) {
   };
 
   return (
-    <div className="flex items-start space-x-4">
+    <div className="flex items-start space-x-4 py-2">
       <div className="h-16 w-16 bg-muted/10 rounded-md flex-shrink-0 flex items-center justify-center">
         {item.thumbnail ? (
           <Image
@@ -1316,35 +1195,21 @@ function UnfulfilledItem({ item, quantity, onQuantityChange }) {
       <div className="flex-1 min-w-0">
         <div className="flex flex-col">
           <div className="flex flex-col">
-            <div className="flex items-start justify-between">
+            <div className="flex items-start justify-between gap-10">
               <div className="space-y-2">
                 <div>
-                  <span className="font-medium text-sm">
-                    {item.productVariant?.product?.title || item.title}
-                  </span>
-                  <div className="flex flex-wrap gap-2">
-                    {item.productVariant?.productOptionValues?.map(
-                      (optionValue) => (
-                        <div
-                          key={optionValue.id}
-                          className="flex items-center text-xs text-muted-foreground"
-                        >
-                          <span className="opacity-75">
-                            {optionValue.productOption.title}
-                          </span>
-                          <span className="ml-1 font-medium">
-                            {optionValue.value}
-                          </span>
-                        </div>
-                      )
-                    )}
-                  </div>
+                  <span className="font-medium text-sm">{item.title}</span>
+                  {item.variantTitle && (
+                    <div className="text-xs text-muted-foreground">
+                      {item.variantTitle}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 mt-1">
-                  {item.productVariant?.sku && (
+                  {item.sku && (
                     <p className="text-xs text-muted-foreground">
-                      SKU: {item.productVariant.sku}
+                      SKU: {item.sku}
                     </p>
                   )}
                   <Badge
@@ -1358,38 +1223,34 @@ function UnfulfilledItem({ item, quantity, onQuantityChange }) {
               <div className="flex flex-col items-end gap-4">
                 <div className="flex items-center gap-2">
                   <div className="text-xs text-muted-foreground whitespace-nowrap">
-                    {item.quantity} × {item.unitPrice}
+                    {item.quantity} × {item.formattedUnitPrice}
                   </div>
                   <div className="text-sm font-medium whitespace-nowrap">
-                    {item.total}
+                    {item.formattedTotal}
                   </div>
                 </div>
-                <div
-                  className="inline-flex items-center rounded-full border bg-background h-7"
-                  role="group"
-                  aria-label="Quantity selector"
-                >
+                <div className="flex items-center gap-2">
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
-                    className="h-7 w-7 rounded-l-full"
+                    className="h-7 w-7"
                     onClick={decreaseQuantity}
                     disabled={quantity === 0}
                   >
                     <Minus className="h-3 w-3" />
                   </Button>
-                  <div className="flex items-center px-2 text-xs font-medium tabular-nums border-l border-r h-7">
+                  <div className="flex items-center gap-1 text-xs font-medium tabular-nums">
                     <span aria-label={`Current quantity is ${quantity}`}>
                       {quantity}
                     </span>
-                    <span className="text-muted-foreground ml-1">
+                    <span className="text-muted-foreground">
                       of {item.quantity}
                     </span>
                   </div>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
-                    className="h-7 w-7 rounded-r-full"
+                    className="h-7 w-7"
                     onClick={increaseQuantity}
                     disabled={quantity === item.quantity}
                   >

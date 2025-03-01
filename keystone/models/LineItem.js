@@ -80,18 +80,11 @@ export const LineItem = list({
     swap: relationship({
       ref: "Swap.lineItems",
     }),
-    order: relationship({
-      ref: "Order.lineItems",
-    }),
     productVariant: relationship({
       ref: "ProductVariant.lineItems",
     }),
     claimItems: relationship({
       ref: "ClaimItem.lineItem",
-      many: true,
-    }),
-    fulfillmentItems: relationship({
-      ref: "FulfillmentItem.lineItem",
       many: true,
     }),
     lineItemAdjustments: relationship({

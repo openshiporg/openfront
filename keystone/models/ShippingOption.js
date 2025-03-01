@@ -36,6 +36,10 @@ export const ShippingOption = list({
         isRequired: true,
       },
     }),
+    uniqueKey: text({
+      validation: { isRequired: true },
+      isIndexed: 'unique',
+    }),
     priceType: select({
       type: "enum",
       options: [
@@ -122,20 +126,7 @@ export const ShippingOption = list({
 
           return formatCurrency(amount / divisor, currencyCode);
         }
-      }),
-      ui: {
-        query: `{
-          amount
-          region {
-            currency {
-              code
-            }
-          }
-          taxRates {
-            rate
-          }
-        }`
-      }
+      })
     }),
     isTaxInclusive: virtual({
       field: graphql.field({

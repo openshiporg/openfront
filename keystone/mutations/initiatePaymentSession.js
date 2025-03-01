@@ -1,7 +1,6 @@
 "use server";
 
-import Stripe from "stripe";
-import fetch from "node-fetch";
+import { createPayment } from "../utils/paymentProviderAdapter";
 
 async function initiatePaymentSession(
   root,
@@ -45,10 +44,20 @@ async function initiatePaymentSession(
     throw new Error("Cart not found");
   }
 
-  // Get payment provider
+  // Get payment provider with all required fields
   const provider = await sudoContext.query.PaymentProvider.findOne({
     where: { code: paymentProviderId },
-    query: "id code isInstalled",
+    query: `
+      id 
+      code 
+      isInstalled
+      createPaymentFunction
+      capturePaymentFunction
+      refundPaymentFunction
+      getPaymentStatusFunction
+      generatePaymentLinkFunction
+      credentials
+    `,
   });
 
   if (!provider || !provider.isInstalled) {
@@ -97,90 +106,14 @@ async function initiatePaymentSession(
   }
 
   // If we get here, we need to create a new session
-  let sessionData = {};
-
-  // Initialize provider-specific session
   try {
-    if (provider.code === "pp_stripe_stripe") {
-      if (!process.env.STRIPE_SECRET_KEY) {
-        throw new Error("Stripe secret key not configured");
-      }
-
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-        apiVersion: "2023-10-16",
-      });
-
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: cart.rawTotal,
-        currency: cart.region.currency.code.toLowerCase(),
-        automatic_payment_methods: {
-          enabled: true,
-        },
-      });
-
-      sessionData = {
-        clientSecret: paymentIntent.client_secret,
-        paymentIntentId: paymentIntent.id,
-      };
-    } else if (provider.code === "pp_paypal_paypal") {
-      if (!process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) {
-        throw new Error("PayPal credentials not configured");
-      }
-
-      // Get PayPal access token
-      const tokenResponse = await fetch(
-        "https://api-m.sandbox.paypal.com/v1/oauth2/token",
-        {
-          method: "POST",
-          headers: {
-            Accept: "application/json",
-            "Accept-Language": "en_US",
-            Authorization: `Basic ${Buffer.from(
-              `${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`
-            ).toString("base64")}`,
-          },
-          body: "grant_type=client_credentials",
-        }
-      );
-
-      const { access_token } = await tokenResponse.json();
-      if (!access_token) {
-        throw new Error("Failed to get PayPal access token");
-      }
-
-      // Create PayPal order
-      const orderResponse = await fetch(
-        "https://api-m.sandbox.paypal.com/v2/checkout/orders",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${access_token}`,
-          },
-          body: JSON.stringify({
-            intent: "AUTHORIZE",
-            purchase_units: [
-              {
-                amount: {
-                  currency_code: cart.region.currency.code,
-                  value: (cart.rawTotal / 100).toFixed(2),
-                },
-              },
-            ],
-          }),
-        }
-      );
-
-      const order = await orderResponse.json();
-      if (order.error) {
-        throw new Error(`PayPal order creation failed: ${order.error.message}`);
-      }
-
-      sessionData = {
-        orderId: order.id,
-        status: order.status,
-      };
-    }
+    // Initialize provider-specific session using the adapter
+    const sessionData = await createPayment({
+      provider,
+      cart,
+      amount: cart.rawTotal,
+      currency: cart.region.currency.code,
+    });
 
     // Unselect any existing selected sessions first
     const existingSelectedSessions = cart.paymentCollection.paymentSessions?.filter(

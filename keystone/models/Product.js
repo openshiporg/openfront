@@ -8,10 +8,10 @@ import {
   relationship,
   virtual,
 } from "@keystone-6/core/fields";
-import { document } from '@keystone-6/fields-document'
+import { document } from "@keystone-6/fields-document";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
-import slugify from 'slugify';
+import slugify from "slugify";
 
 export const Product = list({
   access: {
@@ -28,11 +28,11 @@ export const Product = list({
         }
         return {
           status: {
-            equals: 'published'
-          }
+            equals: "published",
+          },
         };
-      }
-    }
+      },
+    },
   },
   fields: {
     title: text({
@@ -51,7 +51,7 @@ export const Product = list({
         [1, 1],
         [1, 1, 1],
       ],
-    }), 
+    }),
     handle: text({
       isIndexed: "unique",
     }),
@@ -63,9 +63,13 @@ export const Product = list({
         resolve: async (item, args, context) => {
           const product = await context.query.Product.findOne({
             where: { id: item.id },
-            query: 'productImages(take: 1) { image { url } }',
+            query: "productImages(take: 1) { image { url } imagePath }",
           });
-          return product.productImages[0]?.image?.url || null;
+          return (
+            product.productImages[0]?.image?.url ||
+            product.productImages[0]?.imagePath ||
+            null
+          );
         },
       }),
     }),
@@ -92,18 +96,28 @@ export const Product = list({
             weight: { min: null, max: null },
             length: { min: null, max: null },
             height: { min: null, max: null },
-            width: { min: null, max: null }
+            width: { min: null, max: null },
           };
 
-          product.productVariants.forEach(variant => {
-            variant.measurements?.forEach(measurement => {
+          product.productVariants.forEach((variant) => {
+            variant.measurements?.forEach((measurement) => {
               const dim = measurement.type;
-              if (dimensions[dim] && measurement.value !== null && measurement.value !== undefined) {
+              if (
+                dimensions[dim] &&
+                measurement.value !== null &&
+                measurement.value !== undefined
+              ) {
                 // TODO: Handle unit conversion if needed
-                if (dimensions[dim].min === null || measurement.value < dimensions[dim].min) {
+                if (
+                  dimensions[dim].min === null ||
+                  measurement.value < dimensions[dim].min
+                ) {
                   dimensions[dim].min = measurement.value;
                 }
-                if (dimensions[dim].max === null || measurement.value > dimensions[dim].max) {
+                if (
+                  dimensions[dim].max === null ||
+                  measurement.value > dimensions[dim].max
+                ) {
                   dimensions[dim].max = measurement.value;
                 }
               }
@@ -134,10 +148,10 @@ export const Product = list({
           if (!product.productVariants?.[0]?.measurements) return null;
 
           const dimensions = {};
-          product.productVariants[0].measurements.forEach(measurement => {
+          product.productVariants[0].measurements.forEach((measurement) => {
             dimensions[measurement.type] = {
               value: measurement.value,
-              unit: measurement.unit
+              unit: measurement.unit,
             };
           });
 
@@ -201,14 +215,14 @@ export const Product = list({
       ref: "ProductImage.products",
       many: true,
       ui: {
-        displayMode: 'cards',
-        cardFields: ['image', 'altText'],
-        inlineCreate: { fields: ['image', 'altText'] },
-        inlineEdit: { fields: ['image', 'altText'] },
+        displayMode: "cards",
+        cardFields: ["image", "altText", "imagePath"],
+        inlineCreate: { fields: ["image", "altText", "imagePath"] },
+        inlineEdit: { fields: ["image", "altText", "imagePath"] },
         inlineConnect: true,
-        removeMode: 'disconnect',
-        linkToItem: false
-      }
+        removeMode: "disconnect",
+        linkToItem: false,
+      },
     }),
     productOptions: relationship({
       ref: "ProductOption.product",
@@ -229,7 +243,12 @@ export const Product = list({
     ...trackingFields,
   },
   hooks: {
-    resolveInput: async ({ resolvedData, existingItem, context, operation }) => {
+    resolveInput: async ({
+      resolvedData,
+      existingItem,
+      context,
+      operation,
+    }) => {
       if (!resolvedData.handle && resolvedData.title) {
         let baseHandle = slugify(resolvedData.title, { lower: true });
         let handle = baseHandle;

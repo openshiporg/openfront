@@ -618,6 +618,8 @@ type Cart {
   subtotal: String
   total: String
   rawTotal: Int
+  rawSubtotal: String
+  rawTotalBreakdown: String
   discount: String
   giftCardTotal: String
   tax: String
@@ -2553,7 +2555,7 @@ type FulfillmentItem {
   id: ID!
   quantity: Int
   fulfillment: Fulfillment
-  lineItem: LineItem
+  lineItem: OrderLineItem
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -2569,7 +2571,7 @@ input FulfillmentItemWhereInput {
   id: IDFilter
   quantity: IntFilter
   fulfillment: FulfillmentWhereInput
-  lineItem: LineItemWhereInput
+  lineItem: OrderLineItemWhereInput
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
@@ -2584,7 +2586,7 @@ input FulfillmentItemOrderByInput {
 input FulfillmentItemUpdateInput {
   quantity: Int
   fulfillment: FulfillmentRelateToOneForUpdateInput
-  lineItem: LineItemRelateToOneForUpdateInput
+  lineItem: OrderLineItemRelateToOneForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -2592,6 +2594,12 @@ input FulfillmentItemUpdateInput {
 input FulfillmentRelateToOneForUpdateInput {
   create: FulfillmentCreateInput
   connect: FulfillmentWhereUniqueInput
+  disconnect: Boolean
+}
+
+input OrderLineItemRelateToOneForUpdateInput {
+  create: OrderLineItemCreateInput
+  connect: OrderLineItemWhereUniqueInput
   disconnect: Boolean
 }
 
@@ -2603,7 +2611,7 @@ input FulfillmentItemUpdateArgs {
 input FulfillmentItemCreateInput {
   quantity: Int
   fulfillment: FulfillmentRelateToOneForCreateInput
-  lineItem: LineItemRelateToOneForCreateInput
+  lineItem: OrderLineItemRelateToOneForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -2611,6 +2619,11 @@ input FulfillmentItemCreateInput {
 input FulfillmentRelateToOneForCreateInput {
   create: FulfillmentCreateInput
   connect: FulfillmentWhereUniqueInput
+}
+
+input OrderLineItemRelateToOneForCreateInput {
+  create: OrderLineItemCreateInput
+  connect: OrderLineItemWhereUniqueInput
 }
 
 type FulfillmentProvider {
@@ -3073,12 +3086,9 @@ type LineItem {
   claimOrder: ClaimOrder
   cart: Cart
   swap: Swap
-  order: Order
   productVariant: ProductVariant
   claimItems(where: ClaimItemWhereInput! = {}, orderBy: [ClaimItemOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ClaimItemWhereUniqueInput): [ClaimItem!]
   claimItemsCount(where: ClaimItemWhereInput! = {}): Int
-  fulfillmentItems(where: FulfillmentItemWhereInput! = {}, orderBy: [FulfillmentItemOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: FulfillmentItemWhereUniqueInput): [FulfillmentItem!]
-  fulfillmentItemsCount(where: FulfillmentItemWhereInput! = {}): Int
   lineItemAdjustments(where: LineItemAdjustmentWhereInput! = {}, orderBy: [LineItemAdjustmentOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: LineItemAdjustmentWhereUniqueInput): [LineItemAdjustment!]
   lineItemAdjustmentsCount(where: LineItemAdjustmentWhereInput! = {}): Int
   lineItemTaxLines(where: LineItemTaxLineWhereInput! = {}, orderBy: [LineItemTaxLineOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: LineItemTaxLineWhereUniqueInput): [LineItemTaxLine!]
@@ -3116,10 +3126,8 @@ input LineItemWhereInput {
   claimOrder: ClaimOrderWhereInput
   cart: CartWhereInput
   swap: SwapWhereInput
-  order: OrderWhereInput
   productVariant: ProductVariantWhereInput
   claimItems: ClaimItemManyRelationFilter
-  fulfillmentItems: FulfillmentItemManyRelationFilter
   lineItemAdjustments: LineItemAdjustmentManyRelationFilter
   lineItemTaxLines: LineItemTaxLineManyRelationFilter
   returnItems: ReturnItemManyRelationFilter
@@ -3162,10 +3170,8 @@ input LineItemUpdateInput {
   claimOrder: ClaimOrderRelateToOneForUpdateInput
   cart: CartRelateToOneForUpdateInput
   swap: SwapRelateToOneForUpdateInput
-  order: OrderRelateToOneForUpdateInput
   productVariant: ProductVariantRelateToOneForUpdateInput
   claimItems: ClaimItemRelateToManyForUpdateInput
-  fulfillmentItems: FulfillmentItemRelateToManyForUpdateInput
   lineItemAdjustments: LineItemAdjustmentRelateToManyForUpdateInput
   lineItemTaxLines: LineItemTaxLineRelateToManyForUpdateInput
   returnItems: ReturnItemRelateToManyForUpdateInput
@@ -3203,10 +3209,8 @@ input LineItemCreateInput {
   claimOrder: ClaimOrderRelateToOneForCreateInput
   cart: CartRelateToOneForCreateInput
   swap: SwapRelateToOneForCreateInput
-  order: OrderRelateToOneForCreateInput
   productVariant: ProductVariantRelateToOneForCreateInput
   claimItems: ClaimItemRelateToManyForCreateInput
-  fulfillmentItems: FulfillmentItemRelateToManyForCreateInput
   lineItemAdjustments: LineItemAdjustmentRelateToManyForCreateInput
   lineItemTaxLines: LineItemTaxLineRelateToManyForCreateInput
   returnItems: ReturnItemRelateToManyForCreateInput
@@ -3509,6 +3513,7 @@ input MeasurementCreateInput {
 type MoneyAmount {
   id: ID!
   amount: Int
+  compareAmount: Int
   minQuantity: Int
   maxQuantity: Int
   productVariant: ProductVariant
@@ -3544,6 +3549,7 @@ input MoneyAmountWhereInput {
   NOT: [MoneyAmountWhereInput!]
   id: IDFilter
   amount: IntFilter
+  compareAmount: IntNullableFilter
   minQuantity: IntNullableFilter
   maxQuantity: IntNullableFilter
   productVariant: ProductVariantWhereInput
@@ -3565,6 +3571,7 @@ input PriceRuleManyRelationFilter {
 input MoneyAmountOrderByInput {
   id: OrderDirection
   amount: OrderDirection
+  compareAmount: OrderDirection
   minQuantity: OrderDirection
   maxQuantity: OrderDirection
   createdAt: OrderDirection
@@ -3573,6 +3580,7 @@ input MoneyAmountOrderByInput {
 
 input MoneyAmountUpdateInput {
   amount: Int
+  compareAmount: Int
   minQuantity: Int
   maxQuantity: Int
   productVariant: ProductVariantRelateToOneForUpdateInput
@@ -3617,6 +3625,7 @@ input MoneyAmountUpdateArgs {
 
 input MoneyAmountCreateInput {
   amount: Int
+  compareAmount: Int
   minQuantity: Int
   maxQuantity: Int
   productVariant: ProductVariantRelateToOneForCreateInput
@@ -3962,8 +3971,8 @@ type Order {
   giftCardsCount(where: GiftCardWhereInput! = {}): Int
   giftCardTransactions(where: GiftCardTransactionWhereInput! = {}, orderBy: [GiftCardTransactionOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: GiftCardTransactionWhereUniqueInput): [GiftCardTransaction!]
   giftCardTransactionsCount(where: GiftCardTransactionWhereInput! = {}): Int
-  lineItems(where: LineItemWhereInput! = {}, orderBy: [LineItemOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: LineItemWhereUniqueInput): [LineItem!]
-  lineItemsCount(where: LineItemWhereInput! = {}): Int
+  lineItems(where: OrderLineItemWhereInput! = {}, orderBy: [OrderLineItemOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: OrderLineItemWhereUniqueInput): [OrderLineItem!]
+  lineItemsCount(where: OrderLineItemWhereInput! = {}): Int
   discounts(where: DiscountWhereInput! = {}, orderBy: [DiscountOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: DiscountWhereUniqueInput): [Discount!]
   discountsCount(where: DiscountWhereInput! = {}): Int
   payments(where: PaymentWhereInput! = {}, orderBy: [PaymentOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PaymentWhereUniqueInput): [Payment!]
@@ -4032,7 +4041,7 @@ input OrderWhereInput {
   fulfillments: FulfillmentManyRelationFilter
   giftCards: GiftCardManyRelationFilter
   giftCardTransactions: GiftCardTransactionManyRelationFilter
-  lineItems: LineItemManyRelationFilter
+  lineItems: OrderLineItemManyRelationFilter
   discounts: DiscountManyRelationFilter
   payments: PaymentManyRelationFilter
   returns: ReturnManyRelationFilter
@@ -4051,6 +4060,12 @@ input OrderStatusTypeNullableFilter {
   in: [OrderStatusType!]
   notIn: [OrderStatusType!]
   not: OrderStatusTypeNullableFilter
+}
+
+input OrderLineItemManyRelationFilter {
+  every: OrderLineItemWhereInput
+  some: OrderLineItemWhereInput
+  none: OrderLineItemWhereInput
 }
 
 input ReturnManyRelationFilter {
@@ -4102,7 +4117,7 @@ input OrderUpdateInput {
   fulfillments: FulfillmentRelateToManyForUpdateInput
   giftCards: GiftCardRelateToManyForUpdateInput
   giftCardTransactions: GiftCardTransactionRelateToManyForUpdateInput
-  lineItems: LineItemRelateToManyForUpdateInput
+  lineItems: OrderLineItemRelateToManyForUpdateInput
   discounts: DiscountRelateToManyForUpdateInput
   payments: PaymentRelateToManyForUpdateInput
   returns: ReturnRelateToManyForUpdateInput
@@ -4114,6 +4129,13 @@ input OrderUpdateInput {
   shippingLabels: ShippingLabelRelateToManyForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
+}
+
+input OrderLineItemRelateToManyForUpdateInput {
+  disconnect: [OrderLineItemWhereUniqueInput!]
+  set: [OrderLineItemWhereUniqueInput!]
+  create: [OrderLineItemCreateInput!]
+  connect: [OrderLineItemWhereUniqueInput!]
 }
 
 input ReturnRelateToManyForUpdateInput {
@@ -4156,7 +4178,7 @@ input OrderCreateInput {
   fulfillments: FulfillmentRelateToManyForCreateInput
   giftCards: GiftCardRelateToManyForCreateInput
   giftCardTransactions: GiftCardTransactionRelateToManyForCreateInput
-  lineItems: LineItemRelateToManyForCreateInput
+  lineItems: OrderLineItemRelateToManyForCreateInput
   discounts: DiscountRelateToManyForCreateInput
   payments: PaymentRelateToManyForCreateInput
   returns: ReturnRelateToManyForCreateInput
@@ -4168,6 +4190,11 @@ input OrderCreateInput {
   shippingLabels: ShippingLabelRelateToManyForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
+}
+
+input OrderLineItemRelateToManyForCreateInput {
+  create: [OrderLineItemCreateInput!]
+  connect: [OrderLineItemWhereUniqueInput!]
 }
 
 input ReturnRelateToManyForCreateInput {
@@ -4261,6 +4288,190 @@ input OrderEventCreateInput {
   data: JSON
   time: DateTime
   createdBy: UserRelateToOneForCreateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+type OrderLineItem {
+  id: ID!
+  quantity: Int
+  title: String
+  sku: String
+  thumbnail: String
+  metadata: JSON
+  productData: JSON
+  variantData: JSON
+  variantTitle: String
+  formattedUnitPrice: String
+  formattedTotal: String
+  order: Order
+  productVariant: ProductVariant
+  moneyAmount: OrderMoneyAmount
+  originalLineItem: LineItem
+  fulfillmentItems(where: FulfillmentItemWhereInput! = {}, orderBy: [FulfillmentItemOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: FulfillmentItemWhereUniqueInput): [FulfillmentItem!]
+  fulfillmentItemsCount(where: FulfillmentItemWhereInput! = {}): Int
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input OrderLineItemWhereUniqueInput {
+  id: ID
+}
+
+input OrderLineItemWhereInput {
+  AND: [OrderLineItemWhereInput!]
+  OR: [OrderLineItemWhereInput!]
+  NOT: [OrderLineItemWhereInput!]
+  id: IDFilter
+  quantity: IntFilter
+  title: StringFilter
+  sku: StringFilter
+  thumbnail: StringFilter
+  variantTitle: StringFilter
+  formattedUnitPrice: StringFilter
+  formattedTotal: StringFilter
+  order: OrderWhereInput
+  productVariant: ProductVariantWhereInput
+  moneyAmount: OrderMoneyAmountWhereInput
+  originalLineItem: LineItemWhereInput
+  fulfillmentItems: FulfillmentItemManyRelationFilter
+  createdAt: DateTimeFilter
+  updatedAt: DateTimeFilter
+}
+
+input OrderLineItemOrderByInput {
+  id: OrderDirection
+  quantity: OrderDirection
+  title: OrderDirection
+  sku: OrderDirection
+  thumbnail: OrderDirection
+  variantTitle: OrderDirection
+  formattedUnitPrice: OrderDirection
+  formattedTotal: OrderDirection
+  createdAt: OrderDirection
+  updatedAt: OrderDirection
+}
+
+input OrderLineItemUpdateInput {
+  quantity: Int
+  title: String
+  sku: String
+  thumbnail: String
+  metadata: JSON
+  productData: JSON
+  variantData: JSON
+  variantTitle: String
+  formattedUnitPrice: String
+  formattedTotal: String
+  order: OrderRelateToOneForUpdateInput
+  productVariant: ProductVariantRelateToOneForUpdateInput
+  moneyAmount: OrderMoneyAmountRelateToOneForUpdateInput
+  originalLineItem: LineItemRelateToOneForUpdateInput
+  fulfillmentItems: FulfillmentItemRelateToManyForUpdateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input OrderMoneyAmountRelateToOneForUpdateInput {
+  create: OrderMoneyAmountCreateInput
+  connect: OrderMoneyAmountWhereUniqueInput
+  disconnect: Boolean
+}
+
+input OrderLineItemUpdateArgs {
+  where: OrderLineItemWhereUniqueInput!
+  data: OrderLineItemUpdateInput!
+}
+
+input OrderLineItemCreateInput {
+  quantity: Int
+  title: String
+  sku: String
+  thumbnail: String
+  metadata: JSON
+  productData: JSON
+  variantData: JSON
+  variantTitle: String
+  formattedUnitPrice: String
+  formattedTotal: String
+  order: OrderRelateToOneForCreateInput
+  productVariant: ProductVariantRelateToOneForCreateInput
+  moneyAmount: OrderMoneyAmountRelateToOneForCreateInput
+  originalLineItem: LineItemRelateToOneForCreateInput
+  fulfillmentItems: FulfillmentItemRelateToManyForCreateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input OrderMoneyAmountRelateToOneForCreateInput {
+  create: OrderMoneyAmountCreateInput
+  connect: OrderMoneyAmountWhereUniqueInput
+}
+
+type OrderMoneyAmount {
+  id: ID!
+  amount: Int
+  originalAmount: Int
+  priceData: JSON
+  metadata: JSON
+  orderLineItem: OrderLineItem
+  currency: Currency
+  region: Region
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input OrderMoneyAmountWhereUniqueInput {
+  id: ID
+}
+
+input OrderMoneyAmountWhereInput {
+  AND: [OrderMoneyAmountWhereInput!]
+  OR: [OrderMoneyAmountWhereInput!]
+  NOT: [OrderMoneyAmountWhereInput!]
+  id: IDFilter
+  amount: IntFilter
+  originalAmount: IntFilter
+  orderLineItem: OrderLineItemWhereInput
+  currency: CurrencyWhereInput
+  region: RegionWhereInput
+  createdAt: DateTimeFilter
+  updatedAt: DateTimeFilter
+}
+
+input OrderMoneyAmountOrderByInput {
+  id: OrderDirection
+  amount: OrderDirection
+  originalAmount: OrderDirection
+  createdAt: OrderDirection
+  updatedAt: OrderDirection
+}
+
+input OrderMoneyAmountUpdateInput {
+  amount: Int
+  originalAmount: Int
+  priceData: JSON
+  metadata: JSON
+  orderLineItem: OrderLineItemRelateToOneForUpdateInput
+  currency: CurrencyRelateToOneForUpdateInput
+  region: RegionRelateToOneForUpdateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input OrderMoneyAmountUpdateArgs {
+  where: OrderMoneyAmountWhereUniqueInput!
+  data: OrderMoneyAmountUpdateInput!
+}
+
+input OrderMoneyAmountCreateInput {
+  amount: Int
+  originalAmount: Int
+  priceData: JSON
+  metadata: JSON
+  orderLineItem: OrderLineItemRelateToOneForCreateInput
+  currency: CurrencyRelateToOneForCreateInput
+  region: RegionRelateToOneForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -4551,6 +4762,7 @@ type PaymentProvider {
   refundPaymentFunction: String
   getPaymentStatusFunction: String
   generatePaymentLinkFunction: String
+  handleWebhookFunction: String
   regions(where: RegionWhereInput! = {}, orderBy: [RegionOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: RegionWhereUniqueInput): [Region!]
   regionsCount(where: RegionWhereInput! = {}): Int
   sessions(where: PaymentSessionWhereInput! = {}, orderBy: [PaymentSessionOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PaymentSessionWhereUniqueInput): [PaymentSession!]
@@ -4577,6 +4789,7 @@ input PaymentProviderWhereInput {
   refundPaymentFunction: StringFilter
   getPaymentStatusFunction: StringFilter
   generatePaymentLinkFunction: StringFilter
+  handleWebhookFunction: StringFilter
   regions: RegionManyRelationFilter
   sessions: PaymentSessionManyRelationFilter
   createdAt: DateTimeFilter
@@ -4593,6 +4806,7 @@ input PaymentProviderOrderByInput {
   refundPaymentFunction: OrderDirection
   getPaymentStatusFunction: OrderDirection
   generatePaymentLinkFunction: OrderDirection
+  handleWebhookFunction: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
 }
@@ -4608,6 +4822,7 @@ input PaymentProviderUpdateInput {
   refundPaymentFunction: String
   getPaymentStatusFunction: String
   generatePaymentLinkFunction: String
+  handleWebhookFunction: String
   regions: RegionRelateToManyForUpdateInput
   sessions: PaymentSessionRelateToManyForUpdateInput
   createdAt: DateTime
@@ -4630,6 +4845,7 @@ input PaymentProviderCreateInput {
   refundPaymentFunction: String
   getPaymentStatusFunction: String
   generatePaymentLinkFunction: String
+  handleWebhookFunction: String
   regions: RegionRelateToManyForCreateInput
   sessions: PaymentSessionRelateToManyForCreateInput
   createdAt: DateTime
@@ -5398,6 +5614,7 @@ input ProductCollectionCreateInput {
 type ProductImage {
   id: ID!
   image: ImageFieldOutput
+  imagePath: String
   altText: String
   products(where: ProductWhereInput! = {}, orderBy: [ProductOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ProductWhereUniqueInput): [Product!]
   productsCount(where: ProductWhereInput! = {}): Int
@@ -5415,6 +5632,7 @@ input ProductImageWhereInput {
   OR: [ProductImageWhereInput!]
   NOT: [ProductImageWhereInput!]
   id: IDFilter
+  imagePath: StringFilter
   altText: StringFilter
   products: ProductManyRelationFilter
   createdAt: DateTimeFilter
@@ -5423,6 +5641,7 @@ input ProductImageWhereInput {
 
 input ProductImageOrderByInput {
   id: OrderDirection
+  imagePath: OrderDirection
   altText: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
@@ -5430,6 +5649,7 @@ input ProductImageOrderByInput {
 
 input ProductImageUpdateInput {
   image: ImageFieldInput
+  imagePath: String
   altText: String
   products: ProductRelateToManyForUpdateInput
   metadata: JSON
@@ -5444,6 +5664,7 @@ input ProductImageUpdateArgs {
 
 input ProductImageCreateInput {
   image: ImageFieldInput
+  imagePath: String
   altText: String
   products: ProductRelateToManyForCreateInput
   metadata: JSON
@@ -7069,6 +7290,7 @@ input ShippingMethodTaxLineCreateInput {
 type ShippingOption {
   id: ID!
   name: String
+  uniqueKey: String
   priceType: ShippingOptionPriceTypeType
   amount: Int
   isReturn: Boolean
@@ -7100,6 +7322,7 @@ enum ShippingOptionPriceTypeType {
 
 input ShippingOptionWhereUniqueInput {
   id: ID
+  uniqueKey: String
 }
 
 input ShippingOptionWhereInput {
@@ -7108,6 +7331,7 @@ input ShippingOptionWhereInput {
   NOT: [ShippingOptionWhereInput!]
   id: IDFilter
   name: StringFilter
+  uniqueKey: StringFilter
   priceType: ShippingOptionPriceTypeTypeNullableFilter
   amount: IntNullableFilter
   isReturn: BooleanFilter
@@ -7139,6 +7363,7 @@ input ShippingOptionRequirementManyRelationFilter {
 input ShippingOptionOrderByInput {
   id: OrderDirection
   name: OrderDirection
+  uniqueKey: OrderDirection
   priceType: OrderDirection
   amount: OrderDirection
   isReturn: OrderDirection
@@ -7149,6 +7374,7 @@ input ShippingOptionOrderByInput {
 
 input ShippingOptionUpdateInput {
   name: String
+  uniqueKey: String
   priceType: ShippingOptionPriceTypeType
   amount: Int
   isReturn: Boolean
@@ -7180,6 +7406,7 @@ input ShippingOptionUpdateArgs {
 
 input ShippingOptionCreateInput {
   name: String
+  uniqueKey: String
   priceType: ShippingOptionPriceTypeType
   amount: Int
   isReturn: Boolean
@@ -8476,6 +8703,18 @@ type Mutation {
   updateOrderEvents(data: [OrderEventUpdateArgs!]!): [OrderEvent]
   deleteOrderEvent(where: OrderEventWhereUniqueInput!): OrderEvent
   deleteOrderEvents(where: [OrderEventWhereUniqueInput!]!): [OrderEvent]
+  createOrderLineItem(data: OrderLineItemCreateInput!): OrderLineItem
+  createOrderLineItems(data: [OrderLineItemCreateInput!]!): [OrderLineItem]
+  updateOrderLineItem(where: OrderLineItemWhereUniqueInput!, data: OrderLineItemUpdateInput!): OrderLineItem
+  updateOrderLineItems(data: [OrderLineItemUpdateArgs!]!): [OrderLineItem]
+  deleteOrderLineItem(where: OrderLineItemWhereUniqueInput!): OrderLineItem
+  deleteOrderLineItems(where: [OrderLineItemWhereUniqueInput!]!): [OrderLineItem]
+  createOrderMoneyAmount(data: OrderMoneyAmountCreateInput!): OrderMoneyAmount
+  createOrderMoneyAmounts(data: [OrderMoneyAmountCreateInput!]!): [OrderMoneyAmount]
+  updateOrderMoneyAmount(where: OrderMoneyAmountWhereUniqueInput!, data: OrderMoneyAmountUpdateInput!): OrderMoneyAmount
+  updateOrderMoneyAmounts(data: [OrderMoneyAmountUpdateArgs!]!): [OrderMoneyAmount]
+  deleteOrderMoneyAmount(where: OrderMoneyAmountWhereUniqueInput!): OrderMoneyAmount
+  deleteOrderMoneyAmounts(where: [OrderMoneyAmountWhereUniqueInput!]!): [OrderMoneyAmount]
   createPayment(data: PaymentCreateInput!): Payment
   createPayments(data: [PaymentCreateInput!]!): [Payment]
   updatePayment(where: PaymentWhereUniqueInput!, data: PaymentUpdateInput!): Payment
@@ -8730,8 +8969,7 @@ type Mutation {
   completeActiveCart(cartId: ID!): JSON
   addActiveCartShippingMethod(cartId: ID!, shippingMethodId: ID!): Cart
   initiatePaymentSession(cartId: ID!, paymentProviderId: String!): PaymentSession
-  handleStripeWebhook(event: JSON!, headers: JSON!): WebhookResult!
-  handlePayPalWebhook(event: JSON!, headers: JSON!): WebhookResult!
+  handlePaymentProviderWebhook(providerId: ID!, event: JSON!, headers: JSON!): WebhookResult!
   getAnalytics: JSON
   importInventory: Boolean
   getRatesForOrder(orderId: ID!, providerId: ID!, dimensions: DimensionsInput): [ShippingRate!]!
@@ -8878,6 +9116,12 @@ type Query {
   orderEvents(where: OrderEventWhereInput! = {}, orderBy: [OrderEventOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: OrderEventWhereUniqueInput): [OrderEvent!]
   orderEvent(where: OrderEventWhereUniqueInput!): OrderEvent
   orderEventsCount(where: OrderEventWhereInput! = {}): Int
+  orderLineItems(where: OrderLineItemWhereInput! = {}, orderBy: [OrderLineItemOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: OrderLineItemWhereUniqueInput): [OrderLineItem!]
+  orderLineItem(where: OrderLineItemWhereUniqueInput!): OrderLineItem
+  orderLineItemsCount(where: OrderLineItemWhereInput! = {}): Int
+  orderMoneyAmounts(where: OrderMoneyAmountWhereInput! = {}, orderBy: [OrderMoneyAmountOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: OrderMoneyAmountWhereUniqueInput): [OrderMoneyAmount!]
+  orderMoneyAmount(where: OrderMoneyAmountWhereUniqueInput!): OrderMoneyAmount
+  orderMoneyAmountsCount(where: OrderMoneyAmountWhereInput! = {}): Int
   payments(where: PaymentWhereInput! = {}, orderBy: [PaymentOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PaymentWhereUniqueInput): [Payment!]
   payment(where: PaymentWhereUniqueInput!): Payment
   paymentsCount(where: PaymentWhereInput! = {}): Int

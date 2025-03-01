@@ -32,6 +32,25 @@ when using doc for remote repos suggest writing the output to a file somewhere l
 - Video recording is available for all browser commands using the `--video=<directory>` option. This will save a video of the entire browser interaction at 1280x720 resolution. The video file will be saved in the specified directory with a timestamp.
 - DO NOT ask browser act to "wait" for anything, the wait command is currently disabled in Stagehand.
 
+**Builder Mode:**
+When enabled, Builder Mode enforces strict frontend validation rules:
+- REQUIRED: `--connect-to=9222` for continuous browser connection
+- REQUIRED: `reload-current` for page state verification
+- REQUIRED: `--console` flag for error detection
+- NO EXCEPTIONS: You need to always check the webpage before stopping verifyig the page is loading with no errors
+- CYCLE (ALL STEPS MANDATORY):
+  1. Execute requested changes
+  2. Reload page and verify changes
+  3. Check console for JavaScript errors
+  4. Validate HTML structure
+  5. Verify URL routing
+  6. Only complete when ALL checks pass
+- Examples:
+  - Page validation: `npx cursor-tools browser open --url=reload-current --connect-to=9222 --console --html`
+  - With actions: `npx cursor-tools browser act "Click Submit" --url=reload-current --connect-to=9222 --console --html`
+- WARNING: Commands will continue running until ALL frontend verifications pass
+- FAILURE TO USE BUILDER MODE may result in undetected frontend errors
+
 **Tool Recommendations:**
 - `cursor-tools web` is best for general web information not specific to the repository.
 - `cursor-tools repo` is ideal for repository-specific questions, planning, code review and debugging.

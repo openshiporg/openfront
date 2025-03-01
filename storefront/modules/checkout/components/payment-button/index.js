@@ -59,6 +59,7 @@ const PaymentButton = ({ cart, "data-testid": dataTestId }) => {
       return (
         <ManualTestPaymentButton 
           notReady={notReady} 
+          cart={cart}
           data-testid={dataTestId} 
         />
       )
@@ -163,8 +164,88 @@ const StripePaymentButton = ({
 }
 
 const PayPalPaymentButton = ({
+  notReady,
   cart,
-  notReady
+  "data-testid": dataTestId
+}) => {
+  const [submitting, setSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState(null)
+  const [{ isInitial, isPending }] = usePayPalScriptReducer()
+
+  const onPaymentCompleted = async () => {
+    await placeOrder(cart.id)
+      .catch((err) => {
+        setErrorMessage(err.message)
+      })
+      .finally(() => {
+        setSubmitting(false)
+      })
+  }
+
+  if (notReady || !cart) {
+    return null
+  }
+
+  if (isInitial || isPending) {
+    return (
+      <div className="flex items-center justify-center w-full h-12">
+        <Spinner />
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative">
+      <PayPalButtons
+        style={{ layout: "horizontal" }}
+        createOrder={async () => {
+          setSubmitting(true)
+          try {
+            const response = await fetch("/api/paypal/create-order", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ cartId: cart.id }),
+            })
+            const { orderID } = await response.json()
+            return orderID
+          } catch (error) {
+            setErrorMessage("Error creating PayPal order")
+            setSubmitting(false)
+            throw error
+          }
+        }}
+        onApprove={async (data, actions) => {
+          try {
+            await onPaymentCompleted()
+          } catch (error) {
+            setErrorMessage("Error processing PayPal payment")
+            throw error
+          }
+        }}
+        onError={(err) => {
+          setErrorMessage("PayPal payment failed")
+          setSubmitting(false)
+        }}
+        onCancel={() => {
+          setSubmitting(false)
+        }}
+      />
+      {submitting && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-50">
+          <Spinner />
+        </div>
+      )}
+      <ErrorMessage error={errorMessage} data-testid="paypal-payment-error-message" />
+    </div>
+  )
+}
+
+const ManualTestPaymentButton = ({
+  notReady,
+  cart,
+  "data-testid": dataTestId
 }) => {
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState(null)
@@ -179,65 +260,8 @@ const PayPalPaymentButton = ({
       })
   }
 
-  const session = cart.paymentCollection?.paymentSessions?.find(s => s.isSelected)
-
-  const handlePayment = async (
-    _data,
-    actions
-  ) => {
-    actions?.order
-      ?.authorize()
-      .then((authorization) => {
-        if (authorization.status !== "COMPLETED") {
-          setErrorMessage(`An error occurred, status: ${authorization.status}`)
-          return
-        }
-        onPaymentCompleted()
-      })
-      .catch(() => {
-        setErrorMessage(`An unknown error occurred, please try again.`)
-        setSubmitting(false)
-      })
-  }
-
-  const [{ isPending, isResolved }] = usePayPalScriptReducer()
-
-  if (isPending) {
-    return <Spinner />;
-  }
-
-  if (isResolved) {
-    return <>
-      <PayPalButtons
-        style={{ layout: "horizontal" }}
-        createOrder={async () => session.data.orderId}
-        onApprove={handlePayment}
-        disabled={notReady || submitting || isPending}
-        data-testid="paypal-payment-button" />
-      <ErrorMessage error={errorMessage} data-testid="paypal-payment-error-message" />
-    </>;
-  }
-}
-
-const ManualTestPaymentButton = ({
-  notReady
-}) => {
-  const [submitting, setSubmitting] = useState(false)
-  const [errorMessage, setErrorMessage] = useState(null)
-
-  const onPaymentCompleted = async () => {
-    await placeOrder()
-      .catch((err) => {
-        setErrorMessage(err.message)
-      })
-      .finally(() => {
-        setSubmitting(false)
-      })
-  }
-
   const handlePayment = () => {
     setSubmitting(true)
-
     onPaymentCompleted()
   }
 
@@ -247,8 +271,8 @@ const ManualTestPaymentButton = ({
       isLoading={submitting}
       onClick={handlePayment}
       size="large"
-      data-testid="manual-payment-button">
-      Place order
+      data-testid={dataTestId || "manual-payment-button"}>
+      {submitting ? "Processing..." : "Place order"}
     </Button>
     <ErrorMessage error={errorMessage} data-testid="manual-payment-error-message" />
   </>;

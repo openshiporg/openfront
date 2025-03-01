@@ -37,3 +37,4 @@ yarn-error.log*
 # keystone
 .keystone
 .aider*
+.repomix-output.txt

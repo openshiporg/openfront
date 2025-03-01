@@ -3,7 +3,6 @@ import { useMemo } from "react"
 
 import Thumbnail from "@storefront/modules/products/components/thumbnail"
 import LocalizedClientLink from "@storefront/modules/common/components/localized-client-link"
-import { formatAmount } from "@storefront/lib/util/prices"
 
 const OrderCard = ({
   order
@@ -27,12 +26,7 @@ const OrderCard = ({
           {new Date(order.createdAt).toDateString()}
         </span>
         <span className="px-2">
-          {/* {formatAmount({
-            amount: order.total,
-            region: order.region,
-            includeTaxes: false,
-          })} */}
-          {order.total}
+          {order.formattedTotal}
         </span>
         <span className="pl-2">{`${numberOfLines} ${
           numberOfLines > 1 ? "items" : "item"

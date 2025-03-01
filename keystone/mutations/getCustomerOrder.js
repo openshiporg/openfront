@@ -82,22 +82,19 @@ async function getCustomerOrder(root, { orderId, secretKey }, context) {
         id
         title
         quantity
-        unitPrice
-        total
-        productVariant {
-          id
-          title
-          sku
-          product {
-            thumbnail
-            title
-            handle
-          }
-        }
+        thumbnail
+        variantTitle
+        formattedUnitPrice
+        formattedTotal
+        variantData
+        productData
       }
       region {
         id
         name
+        currency {
+          code
+        }
       }
     `
   });

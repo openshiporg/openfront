@@ -1,11 +1,24 @@
 import React from "react";
 import { makeDataGetter } from "@keystone-6/core/admin-ui/utils";
 import { Button } from "@ui/button";
-import { Triangle, Circle, Square, Info } from "lucide-react";
+import {
+  Triangle,
+  Circle,
+  Square,
+  Info,
+  Check,
+  AlertCircle,
+  XCircle,
+  CheckCircle2,
+  ChevronDown,
+  MoreVertical,
+} from "lucide-react";
 import { Skeleton } from "@ui/skeleton";
 import { AdminLink } from "@keystone/themes/Tailwind/orion/components/AdminLink";
 import Image from "next/image";
 import { Badge } from "@ui/badge";
+import { ScrollArea } from "@ui/scroll-area";
+import { Separator } from "@ui/separator";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,11 +31,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@ui/tooltip";
-import { MoreHorizontal, PenSquare, Trash2 } from "lucide-react";
+import { PenSquare, Trash2 } from "lucide-react";
 import { DeleteButton } from "@keystone/themes/Tailwind/orion/components/EditItemDrawer";
 import { useDrawer } from "@keystone/themes/Tailwind/orion/components/Modals/drawer-context";
 import { cn } from "@keystone/utils/cn";
 import { CreateButtonLink } from "@keystone/themes/Tailwind/orion/components/CreateButtonLink";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@ui/accordion";
 
 export const ProductsTable = ({
   data,
@@ -53,7 +72,7 @@ export const ProductsTable = ({
   if (!data.items?.length) {
     return (
       <div>
-        <div className="flex flex-col items-center p-10 border-dashed border-2 rounded-lg m-5">
+        <div className="flex flex-col items-center p-10">
           <div className="flex opacity-40">
             <Triangle className="w-8 h-8 fill-indigo-200 stroke-indigo-400 dark:stroke-indigo-600 dark:fill-indigo-950" />
             <Circle className="w-8 h-8 fill-emerald-200 stroke-emerald-400 dark:stroke-emerald-600 dark:fill-emerald-950" />
@@ -65,7 +84,8 @@ export const ProductsTable = ({
                 No <span className="lowercase">{list.label}</span>{" "}
               </span>
               <span className="text-muted-foreground pb-4">
-                Found {searchParam ? `matching your search` : `matching your filters`}{" "}
+                Found{" "}
+                {searchParam ? `matching your search` : `matching your filters`}{" "}
               </span>
               <Button
                 variant="secondary"
@@ -86,7 +106,9 @@ export const ProductsTable = ({
               <span className="text-muted-foreground pb-4">
                 Get started by creating a new one.{" "}
               </span>
-              {showCreate && <CreateButtonLink href="/dashboard/admin/platform/products/new" />}
+              {showCreate && (
+                <CreateButtonLink href="/dashboard/admin/platform/products/new" />
+              )}
             </>
           )}
         </div>
@@ -94,129 +116,166 @@ export const ProductsTable = ({
     );
   }
 
-  const statusColors = {
-    draft: "bg-zinc-500/10 text-zinc-500/90 dark:bg-white/5 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700/50",
-    proposed: "bg-blue-500/15 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 border-blue-200 dark:border-blue-800/50",
-    published: "bg-green-500/15 text-green-700 dark:bg-green-500/10 dark:text-green-400 border-green-300 dark:border-green-900/50",
-    rejected: "bg-red-500/15 text-red-700 dark:bg-red-500/10 dark:text-red-400 border-red-200 dark:border-red-900/50",
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const statusIcons = {
+    draft: <AlertCircle className="h-3.5 w-3.5 text-zinc-400" />,
+    proposed: <Circle className="h-3.5 w-3.5 text-blue-500" />,
+    published: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />,
+    rejected: <XCircle className="h-3.5 w-3.5 text-red-500" />,
   };
 
   return (
-    <div className="divide-y border rounded-lg">
+    <Accordion type="single" collapsible className="w-full">
       {dataGetter.get("items").data.map((product) => (
-        <div
-          key={product.id}
-          className="group hover:bg-muted/40 transition-colors"
-        >
-          <div className="px-4 py-3 sm:py-4 flex flex-col sm:flex-row justify-between w-full">
-            <div className="flex flex-col items-start text-left gap-2 sm:gap-1.5">
-              <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-                <div className="flex items-center gap-3">
-                  {product.productImages?.[0] ? (
-                    <div className="relative h-12 w-12 overflow-hidden rounded-md border bg-gray-100">
-                      <Image
-                        src={product.productImages[0].image.url}
-                        alt={product.title}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="flex h-12 w-12 items-center justify-center rounded-md border bg-muted">
-                      <Square className="h-6 w-6 text-muted-foreground/50" />
-                    </div>
-                  )}
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <AdminLink
-                        href={`/platform/products/${product.id}`}
-                        className="font-medium hover:text-blue-600 dark:hover:text-blue-400"
-                      >
-                        {product.title}
-                      </AdminLink>
-                      {product.handle && (
-                        <TooltipProvider delayDuration={0}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="[&_svg]:size-3 w-5 h-5"
-                              >
-                                <Info/>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent className="px-2 py-1 text-xs">
-                              Handle: {product.handle}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+        <AccordionItem key={product.id} value={product.id} className="border-0">
+          <div className="px-4 py-2 flex justify-between w-full border-b dark:border-zinc-800">
+            <div className="flex items-center gap-3">
+              {product.thumbnail ? (
+                <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md border bg-gray-100">
+                  <Image
+                    src={product.thumbnail || "/images/placeholder.svg"}
+                    alt={product.title}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border bg-muted">
+                  <div className="h-6 w-6 text-muted-foreground/50" />
+                </div>
+              )}
+              <div className="flex flex-col min-w-0">
+                <div className="flex flex-col items-baseline gap-1">
+                  <AdminLink
+                    href={`/platform/products/${product.id}`}
+                    className="font-medium hover:underline text-xs sm:text-sm"
+                  >
+                    {product.title}
+                  </AdminLink>
+                  <div className="flex flex-wrap items-center gap-2 text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wide">
+                    <Badge
+                      className={cn(
+                        "py-0 text-[10px] sm:text-[11px] border uppercase font-medium tracking-wide rounded-full"
                       )}
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-0.5">
-                      <span className="font-medium">
-                        {product.productVariants?.length || 0}
-                      </span>{" "}
-                      variant{product.productVariants?.length !== 1 && "s"}
-                      {product.productVariants?.length > 0 && (
-                        <span className="ml-1 text-xs">
-                          (
-                          {product.productVariants.reduce(
-                            (total, variant) => total + (variant.inventoryQuantity || 0),
-                            0
-                          )}{" "}
-                          in stock)
-                        </span>
-                      )}
-                    </div>
+                      color={
+                        {
+                          draft: "zinc",
+                          proposed: "blue",
+                          published: "emerald",
+                          rejected: "red",
+                        }[product.status]
+                      }
+                    >
+                      {product.status}
+                    </Badge>
+                    <span className="truncate max-w-[120px] sm:max-w-none">{product.handle}</span>
+                    <span>•</span>
+                    <span>{product.productVariants?.length || 0} variants</span>
                   </div>
                 </div>
               </div>
             </div>
-
-            <div className="flex items-start gap-2 mt-4 sm:mt-0">
-              <Badge 
-                className={cn(
-                  "border text-[.65rem] py-0.5 px-1.5 font-medium", 
-                  statusColors[product.status]
-                )}
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="secondary"
+                size="icon"
+                className="border [&_svg]:size-3 h-6 w-6"
+                onClick={() => openEditDrawer(product.id, "Product")}
               >
-                {product.status.toUpperCase()}
-              </Badge>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-5 w-5 [&_svg]:size-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <MoreHorizontal />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={() => openEditDrawer(product.id, "Product")}
-                    className="gap-2 font-medium tracking-wide"
-                  >
-                    <PenSquare className="h-4 w-4" />
-                    EDIT PRODUCT
-                  </DropdownMenuItem>
-                  <DeleteButton
-                    itemLabel={product.title}
-                    itemId={product.id}
-                    list={list}
-                  >
-                    <DropdownMenuItem className="gap-2 font-medium tracking-wide">
-                      <Trash2 className="h-4 w-4" />
-                      DELETE PRODUCT
-                    </DropdownMenuItem>
-                  </DeleteButton>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                <MoreVertical className="stroke-muted-foreground" />
+              </Button>
+              <AccordionTrigger hideArrow className="py-0">
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="border [&_svg]:size-3 h-6 w-6"
+                >
+                  <ChevronDown />
+                </Button>
+              </AccordionTrigger>
             </div>
           </div>
-        </div>
+          <AccordionContent className="border-b">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 p-4 max-w-4xl">
+              {/* Variants */}
+              <div className="border-b md:border-b-0 md:border-r dark:border-zinc-800 pb-6 md:pb-0 md:pr-6">
+                <div className="mb-2 flex items-center justify-between">
+                  <h4 className="font-medium text-xs sm:text-sm text-gray-900 dark:text-gray-50">
+                    Product Variants
+                  </h4>
+                  <span className="font-medium text-xs sm:text-sm text-gray-900 dark:text-gray-50">
+                    Stock
+                  </span>
+                </div>
+                <ScrollArea className="max-h-[200px]">
+                  <div className="space-y-1">
+                    {product.productVariants?.map((variant) => (
+                      <div
+                        key={variant.id}
+                        className="flex items-center justify-between py-2 text-[10px] sm:text-sm text-muted-foreground border-b last:border-b-0 dark:border-zinc-800"
+                      >
+                        <span className="truncate mr-2">
+                          {variant.title}
+                          {variant.sku && (
+                            <span className="ml-2 text-[9px] sm:text-xs">
+                              (SKU: {variant.sku})
+                            </span>
+                          )}
+                        </span>
+                        <span className="shrink-0">{variant.inventoryQuantity || 0} in stock</span>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+
+              {/* Product Details */}
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <h4 className="font-medium text-xs sm:text-sm text-gray-900 dark:text-gray-50">
+                    Product Details
+                  </h4>
+                  <span className="font-medium text-xs sm:text-sm text-gray-900 dark:text-gray-50">
+                    Value
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between py-2 border-b dark:border-zinc-800">
+                    <span className="text-[10px] sm:text-sm text-muted-foreground">
+                      Handle
+                    </span>
+                    <span className="text-[10px] sm:text-sm text-muted-foreground truncate ml-2 text-right">
+                      {product.handle}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between py-2 border-b dark:border-zinc-800">
+                    <span className="text-[10px] sm:text-sm text-muted-foreground">
+                      Created
+                    </span>
+                    <span className="text-[10px] sm:text-sm text-muted-foreground">
+                      {formatDate(product.createdAt)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between py-2 border-b last:border-b-0 dark:border-zinc-800">
+                    <span className="text-[10px] sm:text-sm text-muted-foreground">
+                      Collections
+                    </span>
+                    <span className="text-[10px] sm:text-sm text-muted-foreground">
+                      {product.productCollections?.length || 0}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
       ))}
-    </div>
+    </Accordion>
   );
-}; 
+};

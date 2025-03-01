@@ -1,121 +1,82 @@
 "use client";
-
 import { useKeystone, useList } from "@keystone/keystoneProvider";
 import { useCreateItem } from "@keystone/utils/useCreateItem";
 import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { PageBreadcrumbs } from "@keystone/themes/Tailwind/orion/components/PageBreadcrumbs";
-import { Button } from "@ui/button";
-import { Save } from "lucide-react";
-import { GraphQLErrorNotice } from "@keystone/themes/Tailwind/orion/components/GraphQLErrorNotice";
+import { Check, Loader2 } from "lucide-react";
 import { Fields } from "@keystone/themes/Tailwind/orion/components/Fields";
+import { GraphQLErrorNotice } from "@keystone/themes/Tailwind/orion/components/GraphQLErrorNotice";
+import { Button } from "@ui/button";
+import { basePath } from "@keystone/index";
+import { PageBreadcrumbs } from "@keystone/themes/Tailwind/orion/components/PageBreadcrumbs";
 import { MediaTab } from "./components/MediaTab";
-import { VariantsTab } from "./components/VariantsTab";
+import { useToast } from "@ui/use-toast";
 
-export function getFilteredProps(props, modifications, defaultCollapse) {
-  const fieldKeysToShow = modifications.map((mod) => mod.key);
-  const breakGroups = modifications.reduce((acc, mod) => {
-    if (mod.breakGroup) {
-      acc.push(mod.breakGroup);
-    }
-    return acc;
-  }, []);
-
-  const newFieldModes = { ...props.fieldModes };
-
-  Object.keys(props.fields).forEach((key) => {
-    if (!fieldKeysToShow.includes(key)) {
-      newFieldModes[key] = "hidden";
-    } else {
-      newFieldModes[key] = props.fieldModes[key] || "edit";
-    }
-  });
-
-  const updatedFields = Object.keys(props.fields).reduce((obj, key) => {
-    const modification = modifications.find((mod) => mod.key === key);
-    if (modification) {
-      obj[key] = {
-        ...props.fields[key],
-        fieldMeta: {
-          ...props.fields[key].fieldMeta,
-          ...modification.fieldMeta,
-        },
-      };
-    } else {
-      obj[key] = props.fields[key];
-    }
-    return obj;
-  }, {});
-
-  const reorderedFields = modifications.reduce((obj, mod) => {
-    obj[mod.key] = updatedFields[mod.key];
-    return obj;
-  }, {});
-
-  const updatedGroups = props.groups.map((group) => {
-    if (breakGroups.includes(group.label)) {
-      return {
-        ...group,
-        fields: group.fields.filter(
-          (field) => !fieldKeysToShow.includes(field.path)
-        ),
-      };
-    }
-    return {
-      ...group,
-      collapsed: defaultCollapse,
-    };
-  });
-
-  return {
-    ...props,
-    fields: reorderedFields,
-    fieldModes: newFieldModes,
-    groups: updatedGroups,
-  };
-}
+// Define tabs and field groups
+const tabs = [
+  "General",
+  "Media",
+  "Discounts & Taxes",
+  "Organization",
+];
 
 const GENERAL_FIELDS = [
-  { key: "title" },
-  { key: "handle" },
-  { key: "description" },
-  { key: "subtitle" },
-  { key: "status" },
-  { key: "isGiftcard" },
+  "title",
+  "handle",
+  "description",
+  "subtitle",
+  "isGiftcard",
 ];
-
+const MEDIA_FIELDS = ["productImages"];
+const DISCOUNT_TAX_FIELDS = [
+  "discountable",
+  "discountConditions",
+  "discountRules",
+  "taxRates",
+];
 const ORGANIZATION_FIELDS = [
-  { 
-    key: "productCollections", 
-    fieldMeta: { hideButtons: true } 
-  },
-  { 
-    key: "productCategories", 
-    fieldMeta: { hideButtons: true } 
-  },
-  { 
-    key: "productTags", 
-    fieldMeta: { hideButtons: true } 
-  },
+  "status",
+  "productCollections",
+  "productCategories",
+  "productTags",
 ];
 
-const tabs = ["General", "Media", "Variants", "Pricing", "Inventory"];
-
-export default function CreateProductPage() {
+export default function CreateProductPage({ params }) {
   const list = useList("Product");
+  const variantList = useList("ProductVariant");
   const { createViewFieldModes } = useKeystone();
-  const { create, props, state, error } = useCreateItem(list);
+  const createItem = useCreateItem(list);
+  const createVariant = useCreateItem(variantList);
   const router = useRouter();
+  const adminPath = basePath;
+  const [isCreating, setIsCreating] = useState(false);
+  const { toast } = useToast();
 
+  // Tab state
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [hoverStyle, setHoverStyle] = useState({});
   const [activeStyle, setActiveStyle] = useState({ left: "0px", width: "0px" });
   const tabRefs = useRef([]);
 
-  const generalProps = getFilteredProps(props, GENERAL_FIELDS, false);
-  const organizationProps = getFilteredProps(props, ORGANIZATION_FIELDS, false);
+  // Simple function to get a subset of fields based on field keys
+  const getFieldsSubset = (fieldKeys) => {
+    const fields = {};
+    fieldKeys.forEach(key => {
+      if (list.fields[key]) {
+        fields[key] = list.fields[key];
+      }
+    });
+    return fields;
+  };
 
+  // Get field subsets for each tab
+  const generalFields = getFieldsSubset(GENERAL_FIELDS);
+  const mediaFields = getFieldsSubset(MEDIA_FIELDS);
+  const discountTaxFields = getFieldsSubset(DISCOUNT_TAX_FIELDS);
+  const organizationFields = getFieldsSubset(ORGANIZATION_FIELDS);
+
+  // Tab effects
   useEffect(() => {
     if (hoveredIndex !== null) {
       const hoveredElement = tabRefs.current[hoveredIndex];
@@ -140,116 +101,224 @@ export default function CreateProductPage() {
     }
   }, [activeIndex]);
 
-  useEffect(() => {
-    requestAnimationFrame(() => {
-      const firstElement = tabRefs.current[0];
-      if (firstElement) {
-        const { offsetLeft, offsetWidth } = firstElement;
-        setActiveStyle({
-          left: `${offsetLeft}px`,
-          width: `${offsetWidth}px`,
-        });
+  // Extract only the necessary props from createItem.props for a given set of fields
+  const getFieldProps = (fields) => {
+    // Create a new value object with only the fields we need
+    const filteredValue = {};
+    Object.keys(fields).forEach(key => {
+      if (createItem.props.value[key]) {
+        filteredValue[key] = createItem.props.value[key];
       }
     });
-  }, []);
 
-  const handleSave = async () => {
-    const item = await create();
-    if (item) {
-      router.push(`/dashboard/platform/products/${item.id}/variants`);
-    }
+    return {
+      value: filteredValue,
+      onChange: createItem.props.onChange,
+      forceValidation: createItem.props.forceValidation,
+      invalidFields: createItem.props.invalidFields || new Set(),
+    };
   };
 
+  // Render tab content based on active tab
   const renderTabContent = () => {
     switch (activeIndex) {
-      case 0:
-        return <Fields {...generalProps} />;
-      case 1:
-        return <MediaTab {...props} />;
-      case 2:
-        return <VariantsTab {...props} />;
-      case 3:
+      case 0: {
+        const fields = generalFields;
         return (
           <Fields
-            {...props}
-            fields={{
-              discountable: list.fields.discountable,
-              discountConditions: list.fields.discountConditions,
-              discountRules: list.fields.discountRules,
-              taxRates: list.fields.taxRates,
-            }}
+            fields={fields}
+            {...getFieldProps(fields)}
           />
         );
-      case 4:
+      }
+      case 1: {
+        const fields = mediaFields;
+        return (
+          <MediaTab
+            fields={fields}
+            {...getFieldProps(fields)}
+          />
+        );
+      }
+      case 2: {
+        const fields = discountTaxFields;
         return (
           <Fields
-            {...props}
-            fields={{
-              weight: list.fields.weight,
-              length: list.fields.length,
-              height: list.fields.height,
-              width: list.fields.width,
-              hsCode: list.fields.hsCode,
-              originCountry: list.fields.originCountry,
-              midCode: list.fields.midCode,
-              material: list.fields.material,
-            }}
+            fields={fields}
+            {...getFieldProps(fields)}
           />
         );
+      }
+      case 3: {
+        const fields = organizationFields;
+        return (
+          <Fields
+            fields={fields}
+            {...getFieldProps(fields)}
+          />
+        );
+      }
       default:
         return null;
     }
   };
 
+  // Handle product creation and default variant
+  const handleCreateProduct = async () => {
+    // Validate all fields across all tabs
+    const allFields = {
+      ...generalFields,
+      ...mediaFields,
+      ...discountTaxFields,
+      ...organizationFields
+    };
+    
+    // Force validation on all fields - FIXED: pass a function to onChange
+    createItem.props.onChange(oldValue => ({
+      ...oldValue,
+      forceValidation: true,
+    }));
+    
+    // Check for any invalid fields and redirect to the tab containing them
+    if (createItem.props.invalidFields && createItem.props.invalidFields.size > 0) {
+      // Find which tab contains the invalid fields
+      const invalidFieldNames = Array.from(createItem.props.invalidFields);
+      
+      if (invalidFieldNames.some(field => GENERAL_FIELDS.includes(field))) {
+        setActiveIndex(0);
+        toast({
+          title: "Required fields missing",
+          description: "Please fill out all required fields in the General tab",
+          variant: "destructive",
+        });
+        return;
+      } else if (invalidFieldNames.some(field => MEDIA_FIELDS.includes(field))) {
+        setActiveIndex(1);
+        toast({
+          title: "Required fields missing",
+          description: "Please fill out all required fields in the Media tab",
+          variant: "destructive",
+        });
+        return;
+      } else if (invalidFieldNames.some(field => DISCOUNT_TAX_FIELDS.includes(field))) {
+        setActiveIndex(2);
+        toast({
+          title: "Required fields missing",
+          description: "Please fill out all required fields in the Discounts & Taxes tab",
+          variant: "destructive",
+        });
+        return;
+      } else if (invalidFieldNames.some(field => ORGANIZATION_FIELDS.includes(field))) {
+        setActiveIndex(3);
+        toast({
+          title: "Required fields missing",
+          description: "Please fill out all required fields in the Organization tab",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
+    try {
+      setIsCreating(true);
+      
+      toast({
+        title: "Creating product...",
+        description: "Please wait while we create your product and default variant",
+      });
+      
+      // Create the product
+      const product = await createItem.create();
+      
+      if (product) {
+        // Create a default variant for this product
+        await createVariant.create({
+          title: `${product.title} - Default Variant`,
+          product: { connect: { id: product.id } },
+          sku: `${product.handle || 'SKU'}-001`,
+          // Set default inventory
+          inventoryQuantity: 0,
+          manageInventory: true,
+        });
+        
+        toast({
+          title: "Product created!",
+          description: `Successfully created "${product.title}" with a default variant`,
+          variant: "success",
+        });
+        
+        // Redirect to the product page
+        router.push(`${adminPath}/platform/products/${product.id}`);
+      }
+    } catch (error) {
+      console.error("Error creating product with default variant:", error);
+      toast({
+        title: "Error creating product",
+        description: error.message || "An unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const actions = (
+    <div className="flex items-center gap-2">
+      {isCreating && (
+        <div className="flex items-center text-xs text-muted-foreground mr-2">
+          <Loader2 className="animate-spin h-3 w-3 mr-1" />
+          Creating...
+        </div>
+      )}
+      <Button
+        className="relative pe-12"
+        size="sm"
+        isLoading={isCreating || createItem.state === "loading"}
+        onClick={handleCreateProduct}
+        disabled={isCreating || createItem.state === "loading"}
+      >
+        Create Product
+        <span className="pointer-events-none absolute inset-y-0 end-0 flex w-9 items-center justify-center bg-primary-foreground/15">
+          <Check className="opacity-60" size={16} strokeWidth={2} aria-hidden="true" />
+        </span>
+      </Button>
+    </div>
+  );
+
   return (
-    <div className="h-full">
+    <>
       <PageBreadcrumbs
         items={[
           {
             type: "link",
             label: "Dashboard",
-            href: "/",
+            href: "/dashboard",
           },
           {
             type: "model",
             label: list.label,
             href: `/dashboard/platform/products`,
-            showModelSwitcher: true,
+            showModelSwitcher: false,
           },
           {
             type: "page",
             label: "Create",
           },
         ]}
+        actions={actions}
       />
 
-      <main className="w-full max-w-[90rem] mx-auto p-4 md:p-6 flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <div className="flex-col items-center">
-            <h1 className="text-lg font-semibold md:text-2xl">
-              Create {list.singular}
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Create a new product with variants, images, and more
-            </p>
-          </div>
-          <Button
-            isLoading={state === "loading"}
-            onClick={handleSave}
-            size="default"
-            className="h-9"
-          >
-            <Save className="mr-2 h-4 w-4" />
-            Save and continue
-          </Button>
+      <main className="w-full max-w-5xl p-4 md:p-6 flex flex-col gap-6">
+        <div className="flex-col items-center">
+          <h1 className="text-lg font-semibold md:text-2xl">
+            Create Product
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Create and manage products in your catalog
+          </p>
         </div>
-
-        {error && (
-          <GraphQLErrorNotice
-            networkError={error?.networkError}
-            errors={error?.graphQLErrors}
-          />
-        )}
+        
+        
         {createViewFieldModes.state === "error" && (
           <GraphQLErrorNotice
             networkError={
@@ -264,9 +333,18 @@ export default function CreateProductPage() {
             }
           />
         )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
+        
+        {createViewFieldModes.state === "loading" ? (
+          <div label="Loading create form" />
+        ) : (
+          <div className="max-w-4xl">
+            {createItem.error && (
+              <GraphQLErrorNotice
+                networkError={createItem.error?.networkError}
+                errors={createItem.error?.graphQLErrors}
+              />
+            )}
+            
             <div className="border rounded-lg shadow-sm bg-background">
               <div className="border-b px-1">
                 <div className="relative">
@@ -311,23 +389,8 @@ export default function CreateProductPage() {
               <div className="p-4">{renderTabContent()}</div>
             </div>
           </div>
-          <div className="space-y-6">
-            <div className="rounded-lg border bg-background shadow-sm">
-              <div className="flex items-center justify-between border-b p-4">
-                <div className="space-y-0.5">
-                  <h2 className="text-base font-medium">Organization</h2>
-                  <p className="text-muted-foreground text-sm">
-                    Manage product organization and collections
-                  </p>
-                </div>
-              </div>
-              <div className="p-4">
-                <Fields {...organizationProps} />
-              </div>
-            </div>
-          </div>
-        </div>
+        )}
       </main>
-    </div>
+    </>
   );
 }

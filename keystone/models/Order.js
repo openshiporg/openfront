@@ -182,7 +182,7 @@ export const Order = list({
       many: true,
     }),
     lineItems: relationship({
-      ref: "LineItem.order",
+      ref: "OrderLineItem.order",
       many: true,
     }),
     discounts: relationship({
@@ -288,8 +288,15 @@ export const Order = list({
                   lineItems { 
                     id 
                     quantity
-                    productVariant {
-                      id
+                    title
+                    sku
+                    thumbnail
+                    variantTitle
+                    variantData
+                    productData
+                    moneyAmount {
+                      amount
+                      originalAmount
                     }
                   } 
                   region { 
@@ -306,17 +313,8 @@ export const Order = list({
 
               let subtotal = 0;
               for (const lineItem of order.lineItems) {
-                const prices = await sudoContext.query.MoneyAmount.findMany({
-                  where: {
-                    productVariant: { id: { equals: lineItem.productVariant.id } },
-                    region: { id: { equals: order.region.id } },
-                    currency: { code: { equals: order.region?.currency?.code } },
-                  },
-                  query: "calculatedPrice { calculatedAmount }",
-                });
-
-                const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
-                subtotal += price * lineItem.quantity;
+                const amount = lineItem.moneyAmount?.amount || 0;
+                subtotal += amount * lineItem.quantity;
               }
 
               const currencyCode = order.region?.currency?.code || "USD";
@@ -373,8 +371,15 @@ export const Order = list({
                   lineItems {
                     id
                     quantity
-                    productVariant {
-                      id
+                    title
+                    sku
+                    thumbnail
+                    variantTitle
+                    variantData
+                    productData
+                    moneyAmount {
+                      amount
+                      originalAmount
                     }
                   }
                   discounts {
@@ -401,17 +406,8 @@ export const Order = list({
               // Calculate subtotal for percentage discounts
               let subtotal = 0;
               for (const lineItem of order.lineItems || []) {
-                const prices = await sudoContext.query.MoneyAmount.findMany({
-                  where: {
-                    productVariant: { id: { equals: lineItem.productVariant.id } },
-                    region: { id: { equals: order.region.id } },
-                    currency: { code: { equals: order.region?.currency?.code } },
-                  },
-                  query: "calculatedPrice { calculatedAmount }",
-                });
-
-                const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
-                subtotal += price * lineItem.quantity;
+                const amount = lineItem.moneyAmount?.amount || 0;
+                subtotal += amount * lineItem.quantity;
               }
 
               // Calculate total discount amount
@@ -457,8 +453,15 @@ export const Order = list({
                   lineItems {
                     id
                     quantity
-                    productVariant {
-                      id
+                    title
+                    sku
+                    thumbnail
+                    variantTitle
+                    variantData
+                    productData
+                    moneyAmount {
+                      amount
+                      originalAmount
                     }
                   }
                   discounts {
@@ -481,17 +484,8 @@ export const Order = list({
               // Calculate subtotal
               let subtotal = 0;
               for (const lineItem of order.lineItems || []) {
-                const prices = await sudoContext.query.MoneyAmount.findMany({
-                  where: {
-                    productVariant: { id: { equals: lineItem.productVariant.id } },
-                    region: { id: { equals: order.region.id } },
-                    currency: { code: { equals: order.region?.currency?.code } },
-                  },
-                  query: "calculatedPrice { calculatedAmount }",
-                });
-
-                const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
-                subtotal += price * lineItem.quantity;
+                const amount = lineItem.moneyAmount?.amount || 0;
+                subtotal += amount * lineItem.quantity;
               }
 
               // Calculate discount
@@ -532,8 +526,15 @@ export const Order = list({
                   lineItems {
                     id
                     quantity
-                    productVariant {
-                      id
+                    title
+                    sku
+                    thumbnail
+                    variantTitle
+                    variantData
+                    productData
+                    moneyAmount {
+                      amount
+                      originalAmount
                     }
                   }
                   discounts {
@@ -559,17 +560,8 @@ export const Order = list({
               // Calculate subtotal
               let subtotal = 0;
               for (const lineItem of order.lineItems || []) {
-                const prices = await sudoContext.query.MoneyAmount.findMany({
-                  where: {
-                    productVariant: { id: { equals: lineItem.productVariant.id } },
-                    region: { id: { equals: order.region.id } },
-                    currency: { code: { equals: order.region?.currency?.code } },
-                  },
-                  query: "calculatedPrice { calculatedAmount }",
-                });
-
-                const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
-                subtotal += price * lineItem.quantity;
+                const amount = lineItem.moneyAmount?.amount || 0;
+                subtotal += amount * lineItem.quantity;
               }
 
               // Calculate discount
@@ -626,8 +618,15 @@ export const Order = list({
                   lineItems {
                     id
                     quantity
-                    productVariant {
-                      id
+                    title
+                    sku
+                    thumbnail
+                    variantTitle
+                    variantData
+                    productData
+                    moneyAmount {
+                      amount
+                      originalAmount
                     }
                   }
                   discounts {
@@ -653,46 +652,37 @@ export const Order = list({
               // Calculate subtotal
               let subtotal = 0;
               for (const lineItem of order.lineItems || []) {
-                const prices = await sudoContext.query.MoneyAmount.findMany({
-                  where: {
-                    productVariant: { id: { equals: lineItem.productVariant.id } },
-                    region: { id: { equals: order.region.id } },
-                    currency: { code: { equals: order.region?.currency?.code } },
-                  },
-                  query: "calculatedPrice { calculatedAmount }",
-                });
-
-              const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
-              subtotal += price * lineItem.quantity;
-            }
-
-            // Calculate discount
-            let totalDiscountAmount = 0;
-            for (const discount of order.discounts || []) {
-              if (!discount.discountRule?.type) continue;
-
-              switch (discount.discountRule.type) {
-                case "percentage":
-                  totalDiscountAmount += subtotal * (discount.discountRule.value / 100);
-                  break;
-                case "fixed":
-                  totalDiscountAmount += discount.discountRule.value * 
-                    (order.region?.currency?.noDivisionCurrency ? 1 : 100);
-                  break;
-                case "free_shipping":
-                  totalDiscountAmount += order.shippingMethods?.reduce(
-                    (total, method) => total + (method.price || 0),
-                    0
-                  ) || 0;
-                  break;
+                const amount = lineItem.moneyAmount?.amount || 0;
+                subtotal += amount * lineItem.quantity;
               }
-            }
 
-            // Calculate shipping
-            const shipping = order.shippingMethods?.reduce(
-              (sum, method) => sum + (method.price || 0),
-              0
-            ) || 0;
+              // Calculate discount
+              let totalDiscountAmount = 0;
+              for (const discount of order.discounts || []) {
+                if (!discount.discountRule?.type) continue;
+
+                switch (discount.discountRule.type) {
+                  case "percentage":
+                    totalDiscountAmount += subtotal * (discount.discountRule.value / 100);
+                    break;
+                  case "fixed":
+                    totalDiscountAmount += discount.discountRule.value * 
+                      (order.region?.currency?.noDivisionCurrency ? 1 : 100);
+                    break;
+                  case "free_shipping":
+                    totalDiscountAmount += order.shippingMethods?.reduce(
+                      (total, method) => total + (method.price || 0),
+                      0
+                    ) || 0;
+                    break;
+                }
+              }
+
+              // Calculate shipping
+              const shipping = order.shippingMethods?.reduce(
+                (sum, method) => sum + (method.price || 0),
+                0
+              ) || 0;
 
               // Calculate tax
               const taxableAmount = subtotal - totalDiscountAmount;
@@ -729,24 +719,12 @@ export const Order = list({
                         title
                         thumbnail
                         quantity
-                        unitPrice
-                        total
-                        productVariant {
-                          id
-                          sku
-                          title
-                          product {
-                            title
-                          }
-                          productOptionValues {
-                            id
-                            value
-                            productOption {
-                              id
-                              title
-                            }
-                          }
-                        }
+                        formattedUnitPrice
+                        formattedTotal
+                        sku
+                        variantTitle
+                        productData
+                        variantData
                       }
                     }
                   }
@@ -769,12 +747,14 @@ export const Order = list({
                   quantity: fi.quantity,
                   lineItem: {
                     id: fi.lineItem.id,
-                    title: fi.lineItem.productVariant?.product?.title || fi.lineItem.title,
+                    title: fi.lineItem.title,
                     thumbnail: fi.lineItem.thumbnail,
-                    sku: fi.lineItem.productVariant?.sku,
-                    unitPrice: fi.lineItem.unitPrice,
-                    total: fi.lineItem.total,
-                    productOptionValues: fi.lineItem.productVariant?.productOptionValues
+                    sku: fi.lineItem.sku,
+                    variantTitle: fi.lineItem.variantTitle,
+                    formattedUnitPrice: fi.lineItem.formattedUnitPrice,
+                    formattedTotal: fi.lineItem.formattedTotal,
+                    productData: fi.lineItem.productData,
+                    variantData: fi.lineItem.variantData
                   }
                 })) || []
               })) || [];
@@ -795,18 +775,15 @@ export const Order = list({
                     title
                     thumbnail
                     quantity
-                    unitPrice
-                    total
-                    productVariant {
-                      sku
-                      productOptionValues {
-                        id
-                        value
-                        productOption {
-                          id
-                          title
-                        }
-                      }
+                    formattedUnitPrice
+                    formattedTotal
+                    sku
+                    variantTitle
+                    productData
+                    variantData
+                    moneyAmount {
+                      amount
+                      originalAmount
                     }
                   }
                   fulfillments {
@@ -841,13 +818,16 @@ export const Order = list({
                   id: lineItem.id,
                   title: lineItem.title,
                   thumbnail: lineItem.thumbnail,
-                  sku: lineItem.productVariant?.sku || '',
+                  sku: lineItem.sku,
                   quantity: remainingQuantity,
                   totalQuantity: lineItem.quantity,
                   fulfilledQuantity,
-                  unitPrice: lineItem.unitPrice,
-                  total: lineItem.total,
-                  productVariant: lineItem.productVariant
+                  formattedUnitPrice: lineItem.formattedUnitPrice,
+                  formattedTotal: lineItem.formattedTotal,
+                  variantTitle: lineItem.variantTitle,
+                  productData: lineItem.productData,
+                  variantData: lineItem.variantData,
+                  moneyAmount: lineItem.moneyAmount
                 };
               }).filter(item => item.quantity > 0) || [];
 
@@ -1032,3 +1012,4 @@ export const Order = list({
 
   },
 });
+

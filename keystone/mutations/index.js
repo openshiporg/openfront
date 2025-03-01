@@ -20,8 +20,7 @@ import activeCartShippingOptions from '../queries/activeCartShippingOptions';
 import activeCartPaymentProviders from '../queries/activeCartPaymentProviders';
 import activeCartRegion from '../queries/activeCartRegion';
 import initiatePaymentSession from './initiatePaymentSession';
-import handleStripeWebhook from './handleStripeWebhook';
-import handlePayPalWebhook from './handlePayPalWebhook';
+import handlePaymentProviderWebhook from './handlePaymentProviderWebhook';
 import getCustomerOrder from "./getCustomerOrder";
 import getCustomerOrders from "./getCustomerOrders";
 import getAnalytics from './getAnalytics';
@@ -154,8 +153,7 @@ export const extendGraphqlSchema = (schema) =>
           cartId: ID!
           paymentProviderId: String!
         ): PaymentSession
-        handleStripeWebhook(event: JSON!, headers: JSON!): WebhookResult!
-        handlePayPalWebhook(event: JSON!, headers: JSON!): WebhookResult!
+        handlePaymentProviderWebhook(providerId: ID!, event: JSON!, headers: JSON!): WebhookResult!
         getAnalytics: JSON
         importInventory: Boolean
         getRatesForOrder(orderId: ID!, providerId: ID!, dimensions: DimensionsInput): [ShippingRate!]!
@@ -198,8 +196,7 @@ export const extendGraphqlSchema = (schema) =>
         completeActiveCart,
         addActiveCartShippingMethod,
         initiatePaymentSession,
-        handleStripeWebhook,
-        handlePayPalWebhook,
+        handlePaymentProviderWebhook,
         getAnalytics,
         importInventory,
         getRatesForOrder,

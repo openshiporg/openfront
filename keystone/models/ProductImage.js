@@ -17,11 +17,8 @@ export const ProductImage = list({
     },
   },
   fields: {
-    // image: cloudinaryImage({
-    //   cloudinary,
-    //   label: 'Source',
-    // }),
     image: image({ storage: "my_images" }),
+    imagePath: text(),
     altText: text(),
     products: relationship({ ref: "Product.productImages", many: true }),
     metadata: json(),
@@ -29,7 +26,7 @@ export const ProductImage = list({
   },
   ui: {
     listView: {
-      initialColumns: ["image", "altText", "product"],
+      initialColumns: ["image", "imagePath", "altText", "products"],
     },
   },
 });

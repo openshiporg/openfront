@@ -14,7 +14,7 @@ export default async function RelatedProducts({ product, countryCode }) {
   const setQueryParams = () => {
     const params = {};
 
-    if (product.productCollections[0].id) {
+    if (product.productCollections[0]?.id) {
       params.collectionId = product.productCollections[0].id;
     }
 

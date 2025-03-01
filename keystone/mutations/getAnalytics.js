@@ -41,15 +41,11 @@ async function getAnalytics(root, { timeframe = '7d' }, context) {
       lineItems {
         id
         quantity
-        unitPrice
-        productVariant {
-          id
-          title
-          product {
-            id
-            title
-            status
-          }
+        title
+        variantData
+        productData
+        moneyAmount {
+          amount
         }
       }
       payments {
@@ -176,15 +172,15 @@ async function getAnalytics(root, { timeframe = '7d' }, context) {
   const productMetrics = {};
   orders.forEach(order => {
     order.lineItems?.forEach(item => {
-      const productId = item.productVariant?.product?.id;
-      const productTitle = item.productVariant?.product?.title;
+      const productId = item.productData?.id;
+      const productTitle = item.productData?.title;
       if (!productId) return;
 
       if (!productMetrics[productId]) {
         productMetrics[productId] = {
           id: productId,
           title: productTitle,
-          status: item.productVariant?.product?.status,
+          status: item.productData?.status,
           quantity: 0,
           revenue: 0,
           orders: new Set(),
@@ -192,7 +188,7 @@ async function getAnalytics(root, { timeframe = '7d' }, context) {
       }
 
       productMetrics[productId].quantity += item.quantity;
-      productMetrics[productId].revenue += item.quantity * parseFloat(item.unitPrice || '0');
+      productMetrics[productId].revenue += item.quantity * (item.moneyAmount?.amount || 0);
       productMetrics[productId].orders.add(order.id);
     });
   });

@@ -24,11 +24,11 @@ import { useDrawer } from "@keystone/themes/Tailwind/orion/components/Modals/dra
 import { ArrowRight } from "lucide-react";
 
 const statusColors = {
-  pending: "cyan",
-  completed: "green",
-  archived: "zinc",
+  pending: "amber",
+  completed: "emerald",
+  archived: "gray",
   canceled: "red",
-  requires_action: "orange",
+  requires_action: "blue",
 };
 
 export const OrderDetailsComponent = ({
@@ -64,7 +64,7 @@ export const OrderDetailsComponent = ({
   return (
     <Accordion type="single" collapsible className="w-full">
       <AccordionItem value={order.id} className="border-0">
-        <div className="px-4 py-3 sm:py-4 flex flex-col sm:flex-row justify-between w-full border-b">
+        <div className="px-5 py-3 sm:py-4 flex flex-col sm:flex-row justify-between w-full border-b">
           <div className="flex flex-col items-start text-left gap-2 sm:gap-1.5">
             <div className="flex flex-wrap items-center gap-2 sm:gap-4">
               <AdminLink
@@ -121,8 +121,8 @@ export const OrderDetailsComponent = ({
           <div className="flex flex-col sm:items-end mt-4 sm:mt-0">
             <div className="flex flex-wrap items-center gap-2 sm:justify-end">
               <Badge
-                className="border py-1 text-xs tracking-wide font-medium"
                 color={statusColors[order.status]}
+                className="py-1 text-xs tracking-wide font-medium rounded-full px-3"
               >
                 {order.status.toUpperCase().replace("_", " ")}
               </Badge>
@@ -136,40 +136,14 @@ export const OrderDetailsComponent = ({
                 </Badge>
               )}
               {!removeEditItemButton && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      className="border [&_svg]:size-3 h-6 w-6"
-                    >
-                      <MoreVertical />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    {orderButtons.map((button) => (
-                      <DropdownMenuItem
-                        key={button.buttonText}
-                        onClick={button.onClick}
-                        className="gap-2 font-medium tracking-wide"
-                        disabled={loadingActions[button.buttonText]?.[order.id]}
-                      >
-                        {button.icon}
-                        {button.buttonText}
-                      </DropdownMenuItem>
-                    ))}
-                    <DeleteButton
-                      itemLabel={`#${order.displayId}`}
-                      itemId={order.id}
-                      list={list}
-                    >
-                      <DropdownMenuItem className="gap-2 font-medium tracking-wide">
-                        <TrashIcon className="h-4 w-4" />
-                        DELETE ORDER
-                      </DropdownMenuItem>
-                    </DeleteButton>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  className="border [&_svg]:size-3 h-6 w-6"
+                  onClick={() => openEditDrawer(order.id, "Order")}
+                >
+                  <MoreVertical className="stroke-muted-foreground" />
+                </Button>
               )}
               <AccordionTrigger hideArrow className="py-0">
                 <Button

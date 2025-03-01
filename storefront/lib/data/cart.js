@@ -6,6 +6,7 @@ import { gql } from "graphql-request";
 import { openfrontClient } from "../config";
 import { getAuthHeaders, getCartId, setCartId, removeCartId } from "./cookies";
 import { redirect } from "next/navigation";
+import { getUser } from "./user";
 
 const CART_QUERY = gql`
   query GetCart($cartId: ID!) {
@@ -876,10 +877,12 @@ export async function setAddresses(currentState, formData) {
   const selectedAddressId = formData.get("selectedAddressId");
   const hasModifiedFields = formData.get("hasModifiedFields") === "true";
   const sameAsBilling = formData.get("same_as_billing") === "on";
+  const email = formData.get("email");
 
-  const data = {
-    email: formData.get("email"),
-  };
+  const data = { email };
+
+  // Check if user is authenticated
+  const user = await getUser();
 
   // If we selected an address and haven't modified it, just connect it
   if (selectedAddressId && !hasModifiedFields) {
@@ -911,6 +914,20 @@ export async function setAddresses(currentState, formData) {
       }
     };
 
+    // If user is authenticated, create address with user connection
+    if (user) {
+      shippingAddress.user = { connect: { id: user.id } };
+    } else {
+      // For guest users, create a new user inline with the address
+      shippingAddress.user = { 
+        create: {
+          email,
+          hasAccount: false,
+          name: `${formData.get("shippingAddress.firstName")} ${formData.get("shippingAddress.lastName")}`,
+        }
+      };
+    }
+
     // Create shipping address first
     try {
       const { createAddress: newShippingAddress } =
@@ -919,6 +936,9 @@ export async function setAddresses(currentState, formData) {
             mutation CreateAddress($data: AddressCreateInput!) {
               createAddress(data: $data) {
                 id
+                user {
+                  id
+                }
                 country {
                   id
                   iso2
@@ -930,12 +950,17 @@ export async function setAddresses(currentState, formData) {
           {
             data: shippingAddress,
           },
-          getAuthHeaders()
+          user ? getAuthHeaders() : undefined
         );
 
       data.shippingAddress = {
         connect: { id: newShippingAddress.id },
       };
+
+      // Connect the guest user to the cart if one was created
+      if (!user && newShippingAddress.user?.id) {
+        data.user = { connect: { id: newShippingAddress.user.id } };
+      }
 
       if (sameAsBilling) {
         data.billingAddress = {
@@ -959,12 +984,23 @@ export async function setAddresses(currentState, formData) {
           }
         };
 
+        // Add user connection to billing address
+        if (user) {
+          billingAddress.user = { connect: { id: user.id } };
+        } else if (data.user) {
+          // If we have a guest user from shipping address, connect to it
+          billingAddress.user = data.user;
+        }
+
         const { createAddress: newBillingAddress } =
           await openfrontClient.request(
             gql`
               mutation CreateAddress($data: AddressCreateInput!) {
                 createAddress(data: $data) {
                   id
+                  user {
+                    id
+                  }
                   country {
                     id
                     iso2
@@ -976,7 +1012,7 @@ export async function setAddresses(currentState, formData) {
             {
               data: billingAddress,
             },
-            getAuthHeaders()
+            user ? getAuthHeaders() : undefined
           );
 
         data.billingAddress = {
@@ -996,7 +1032,7 @@ export async function setAddresses(currentState, formData) {
         cartId,
         data,
       },
-      getAuthHeaders()
+      user ? getAuthHeaders() : undefined
     );
 
     revalidateTag("cart");

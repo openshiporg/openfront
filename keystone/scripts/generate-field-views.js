@@ -17,7 +17,7 @@ const viewMappings = {
   [`@keystone-6/core/fields/types/float/views`]: `@keystone/views/Float`,
   [`@keystone-6/core/fields/types/image/views`]: `@keystone/views/Image`,
   [`@keystone-6/core/fields/types/virtual/views`]: `@keystone/views/Virtual`,
-  // [`@keystone-6/fields-document/views`]: `@keystone/views/FieldsDocument`,
+  [`@keystone-6/fields-document/views`]: `@keystone/views/FieldsDocument`,
 };
 
 export function areArraysEqual(a, b) {

@@ -34,6 +34,8 @@ import { NotificationProvider } from "./NotificationProvider";
 import { OAuth } from "./OAuth";
 import { Order } from "./Order";
 import { OrderEvent } from './OrderEvent';
+import { OrderLineItem } from "./OrderLineItem";
+import { OrderMoneyAmount } from "./OrderMoneyAmount";
 import { Payment } from "./Payment";
 import { PaymentCollection } from "./PaymentCollection";
 import { PaymentProvider } from "./PaymentProvider";
@@ -111,6 +113,8 @@ export const models = {
   OAuth,
   Order,
   OrderEvent,
+  OrderLineItem,
+  OrderMoneyAmount,
   Payment,
   PaymentCollection,
   PaymentProvider,

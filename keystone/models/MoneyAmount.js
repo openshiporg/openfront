@@ -19,6 +19,7 @@ export const MoneyAmount = list({
         isRequired: true,
       },
     }),
+    compareAmount: integer(),
     minQuantity: integer(),
     maxQuantity: integer(),
     productVariant: relationship({

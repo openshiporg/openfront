@@ -1,32 +1,21 @@
-import { useState } from "react";
-import { Plus } from "lucide-react";
-import { motion } from "framer-motion";
 import { Button } from "@ui/button";
+import { Plus } from "lucide-react";
+import { useState } from "react";
 import { Input } from "@ui/input";
+import { Label } from "@ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@ui/popover";
-import { cn } from "@keystone/utils/cn";
-
-const transitionProps = {
-  type: "spring",
-  stiffness: 500,
-  damping: 30,
-  mass: 0.5,
-};
 
 export function AddOptionPopover({ onAdd }) {
-  const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleAdd = () => {
     if (!title.trim()) return;
-
     onAdd({
-      title: title,
-      id: title.toLowerCase().replace(/\s+/g, "-"),
-      values: [{ value: "N/A", label: "N/A" }],
-      label: title,
+      id: `temp-${Date.now()}`, // Temporary ID until saved
+      title: title.trim(),
+      values: [],
     });
-    
     setTitle("");
     setIsOpen(false);
   };
@@ -34,45 +23,41 @@ export function AddOptionPopover({ onAdd }) {
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <motion.button
-          layout
-          whileHover={{
-            backgroundColor: "hsl(var(--muted))",
-          }}
-          whileTap={{
-            scale: 0.98,
-          }}
-          transition={transitionProps}
-          className={cn(
-            "inline-flex items-center px-4 py-2 rounded-full text-sm font-medium",
-            "whitespace-nowrap overflow-hidden ring-1 ring-inset",
-            "text-muted-foreground ring-border hover:text-foreground"
-          )}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 relative pe-12"
         >
-          <Plus className="w-4 h-4 mr-1" />
-          Add Option
-        </motion.button>
+          Add option
+          <span className="pointer-events-none absolute inset-y-0 end-0 flex w-9 items-center justify-center bg-primary-foreground/15">
+            <Plus className="opacity-60" size={16} strokeWidth={2} />
+          </span>
+        </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80">
-        <div className="space-y-4">
-          <div>
-            <h3 className="font-medium text-sm mb-1">Add Option</h3>
-            <p className="text-muted-foreground text-xs">
-              Create a new option type for your product
+      <PopoverContent className="w-80" align="start">
+        <div className="grid gap-4">
+          <div className="space-y-1">
+            <h4 className="font-medium leading-none text-sm">Add new option</h4>
+            <p className="text-xs text-muted-foreground">
+              Create a new product option like size or color
             </p>
           </div>
-          <div className="space-y-2">
+          <div className="grid gap-1.5">
+            <Label htmlFor="title" className="text-xs">
+              Option name
+            </Label>
             <Input
+              id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Material, Style, etc."
-              className="h-8 text-sm"
+              className="rounded-lg text-sm h-8"
+              placeholder="e.g. Size, Color, Material..."
             />
           </div>
           <div className="flex justify-end gap-2">
             <Button
-              size="sm"
               variant="outline"
+              size="sm"
               onClick={() => setIsOpen(false)}
             >
               Cancel
@@ -82,7 +67,7 @@ export function AddOptionPopover({ onAdd }) {
               onClick={handleAdd}
               disabled={!title.trim()}
             >
-              Add Option
+              Add option
             </Button>
           </div>
         </div>

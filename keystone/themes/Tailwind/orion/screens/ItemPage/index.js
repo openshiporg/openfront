@@ -451,7 +451,7 @@ const HeaderActions = memo(function HeaderActions({
             <Button className="group relative ps-12" size="sm">
               <span className="pointer-events-none absolute inset-y-0 start-0 flex w-9 items-center justify-center bg-primary-foreground/15">
                 <Undo2
-                  className="-me-1 ms-2 opacity-60 transition-transform group-hover:-translate-x-0.5"
+                  className="ms-1.5 opacity-60 transition-transform group-hover:-translate-x-0.5"
                   size={16}
                   strokeWidth={2}
                   aria-hidden="true"
@@ -673,7 +673,7 @@ export const ItemPageTemplate = ({ listKey, id }) => {
           )
         }
       />
-      <main className="w-full max-w-4xl mx-auto p-4 md:p-6 flex flex-col gap-4">
+      <main className="w-full max-w-4xl p-4 md:p-6 flex flex-col gap-4">
         <div className="flex-col items-center">
           <h1 className="text-lg font-semibold md:text-2xl">
             Manage{" "}

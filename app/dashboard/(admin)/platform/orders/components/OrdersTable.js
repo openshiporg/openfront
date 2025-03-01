@@ -8,13 +8,6 @@ import { Skeleton } from "@ui/skeleton";
 import { AdminLink } from "@keystone/themes/Tailwind/orion/components/AdminLink";
 import Image from "next/image";
 
-const formatCurrency = (amount, currency = "USD") => {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency,
-  }).format(amount);
-};
-
 export const OrdersTable = ({
   data,
   error,
@@ -110,20 +103,20 @@ export const OrdersTable = ({
           )}
           renderLineItem={(item) => (
             <div className="flex items-center gap-3">
-              {item.productVariant?.product?.thumbnail && (
+              {item.thumbnail && (
                 <div className="relative h-10 w-10 overflow-hidden rounded-md border bg-gray-100">
                   <Image
-                    src={item.productVariant.product.thumbnail}
-                    alt={item.productVariant.product.title}
+                    src={item.thumbnail}
+                    alt={item.title}
                     fill
                     className="object-cover"
                   />
                 </div>
               )}
               <div className="flex-1">
-                <div>{item.productVariant?.product?.title}</div>
+                <div>{item.title}</div>
                 <div className="text-sm text-gray-500">
-                  {item.quantity}x @ {formatCurrency(item.unitPrice)} = {formatCurrency(item.quantity * item.unitPrice)}
+                  {item.quantity}x @ {item.formattedUnitPrice} = {item.formattedTotal}
                 </div>
               </div>
             </div>

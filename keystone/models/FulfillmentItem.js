@@ -28,7 +28,7 @@ export const FulfillmentItem = list({
     }),
 
     lineItem: relationship({
-      ref: "LineItem.fulfillmentItems",
+      ref: "OrderLineItem.fulfillmentItems",
       many: false,
       validation: { isRequired: true },
     }),

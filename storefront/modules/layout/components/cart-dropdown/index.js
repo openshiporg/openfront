@@ -108,6 +108,7 @@ const CartDropdown = ({
                                     {item.title}
                                   </LocalizedClientLink>
                                 </h3>
+                                {item.productVariant.title && <p className="text-ui-fg-subtle">{item.productVariant.title}</p>}
                                 <LineItemOptions variant={item.productVariant} />
                                 <span>Quantity: {item.quantity}</span>
                               </div>

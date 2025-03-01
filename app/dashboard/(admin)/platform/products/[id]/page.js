@@ -53,9 +53,16 @@ import {
   DialogClose,
 } from "@ui/dialog";
 import { MediaTab } from "./components/MediaTab";
+import { VariantsTab } from "./components/VariantsTab";
 
 // Add these constants near the top after imports
-const tabs = ["General", "Media", "Variants", "Pricing", "Inventory"];
+const tabs = [
+  "General",
+  "Media",
+  "Variants",
+  "Discounts & Taxes",
+  "Organization",
+];
 const GENERAL_FIELDS = [
   "title",
   "handle",
@@ -64,23 +71,13 @@ const GENERAL_FIELDS = [
   "isGiftcard",
 ];
 const MEDIA_FIELDS = ["productImages"];
-const VARIANTS_FIELDS = ["productVariants", "options"];
-const PRICING_FIELDS = [
+const DISCOUNT_TAX_FIELDS = [
   "discountable",
   "discountConditions",
   "discountRules",
   "taxRates",
 ];
-const INVENTORY_FIELDS = [
-  "weight",
-  "length",
-  "height",
-  "width",
-  "hsCode",
-  "originCountry",
-  "midCode",
-  "material",
-];
+
 const ORGANIZATION_FIELDS = [
   "status",
   "productCollections",
@@ -483,7 +480,7 @@ const HeaderActions = memo(function HeaderActions({
             <Button className="group relative ps-12" size="sm">
               <span className="pointer-events-none absolute inset-y-0 start-0 flex w-9 items-center justify-center bg-primary-foreground/15">
                 <Undo2
-                  className="-me-1 ms-2 opacity-60 transition-transform group-hover:-translate-x-0.5"
+                  className="ms-1.5 opacity-60 transition-transform group-hover:-translate-x-0.5"
                   size={16}
                   strokeWidth={2}
                   aria-hidden="true"
@@ -573,6 +570,56 @@ export const ItemPageTemplate = ({ listKey, id }) => {
       query: gql`
         query ItemPage($id: ID!, $listKey: String!) {
           item: ${list.gqlNames.itemQueryName}(where: {id: $id}) {
+            id
+            title
+            productVariants {
+              id
+              title
+              sku
+              barcode
+              ean
+              upc
+              inventoryQuantity
+              manageInventory
+              allowBackorder
+              hsCode
+              originCountry
+              midCode
+              material
+              prices {
+                id
+                amount
+                compareAmount
+                region {
+                  id
+                  code
+                  name
+                  taxRate
+                  currency {
+                    code
+                    symbol
+                    name
+                    symbolNative
+                  }
+                }
+              }
+              productOptionValues {
+                id
+                value
+                productOption {
+                  id
+                  title
+                }
+              }
+            }
+            productOptions {
+              id
+              title
+              productOptionValues {
+                id
+                value
+              }
+            }
             ${selectedFields}
           }
           keystone {
@@ -663,7 +710,7 @@ export const ItemPageTemplate = ({ listKey, id }) => {
 
   // Add these state variables inside ItemPageTemplate before the useMemo
   const [hoveredIndex, setHoveredIndex] = useState(null);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(2);
   const [hoverStyle, setHoverStyle] = useState({});
   const [activeStyle, setActiveStyle] = useState({ left: "0px", width: "0px" });
   const tabRefs = useRef([]);
@@ -720,7 +767,8 @@ export const ItemPageTemplate = ({ listKey, id }) => {
                 <Alert variant="destructive">
                   <AlertTitle>System Error</AlertTitle>
                   <AlertDescription>
-                    {list.label} doesn&apos;t exist or you don&apos;t have access to it.
+                    {list.label} doesn&apos;t exist or you don&apos;t have
+                    access to it.
                   </AlertDescription>
                 </Alert>
                 {!data.keystone.adminMeta.list.hideCreate && (
@@ -740,8 +788,8 @@ export const ItemPageTemplate = ({ listKey, id }) => {
               <AlertTriangle className="h-4 w-4 stroke-red-900 dark:stroke-red-500" />
               <AlertTitle>System Error</AlertTitle>
               <AlertDescription>
-                The item with id &quot;{id}&quot; could not be found or you don&apos;t have
-                access to it.
+                The item with id &quot;{id}&quot; could not be found or you
+                don&apos;t have access to it.
               </AlertDescription>
             </Alert>
           )}
@@ -771,19 +819,11 @@ export const ItemPageTemplate = ({ listKey, id }) => {
           />
         );
       case 2:
-        return (
-          <Fields
-            fields={getFieldsSubset(VARIANTS_FIELDS)}
-            value={state.value}
-            onChange={handleValueChange}
-            forceValidation={forceValidation}
-            invalidFields={invalidFields}
-          />
-        );
+        return <VariantsTab product={data.item} />;
       case 3:
         return (
           <Fields
-            fields={getFieldsSubset(PRICING_FIELDS)}
+            fields={getFieldsSubset(DISCOUNT_TAX_FIELDS)}
             value={state.value}
             onChange={handleValueChange}
             forceValidation={forceValidation}
@@ -793,7 +833,7 @@ export const ItemPageTemplate = ({ listKey, id }) => {
       case 4:
         return (
           <Fields
-            fields={getFieldsSubset(INVENTORY_FIELDS)}
+            fields={getFieldsSubset(ORGANIZATION_FIELDS)}
             value={state.value}
             onChange={handleValueChange}
             forceValidation={forceValidation}
@@ -842,7 +882,7 @@ export const ItemPageTemplate = ({ listKey, id }) => {
           )
         }
       />
-      <main className="w-full max-w-[90rem] mx-auto p-4 md:p-6 flex flex-col gap-6">
+      <main className="w-full max-w-5xl p-4 md:p-6 flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <div className="flex-col items-center">
             <h1 className="text-lg font-semibold md:text-2xl">
@@ -863,72 +903,49 @@ export const ItemPageTemplate = ({ listKey, id }) => {
             <Alert variant="destructive">{metaQueryErrors[0].message}</Alert>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <div className="border rounded-lg shadow-sm bg-background">
-                <div className="border-b px-1">
-                  <div className="relative">
-                    {/* Hover Highlight */}
-                    <div
-                      className="absolute h-[28px] mt-1 transition-all duration-300 ease-out bg-muted/60 rounded-[6px] flex items-center"
-                      style={{
-                        ...hoverStyle,
-                        opacity: hoveredIndex !== null ? 1 : 0,
-                      }}
-                    />
-
-                    {/* Active Indicator */}
-                    <div
-                      className="absolute bottom-[-1px] h-[2px] bg-foreground transition-all duration-300 ease-out"
-                      style={activeStyle}
-                    />
-
-                    {/* Tabs */}
-                    <div className="relative flex space-x-[6px] items-center">
-                      {tabs.map((tab, index) => (
-                        <div
-                          key={index}
-                          ref={(el) => (tabRefs.current[index] = el)}
-                          className={`px-3 py-2 cursor-pointer transition-colors duration-300 ${
-                            index === activeIndex
-                              ? "text-foreground"
-                              : "text-muted-foreground"
-                          }`}
-                          onMouseEnter={() => setHoveredIndex(index)}
-                          onMouseLeave={() => setHoveredIndex(null)}
-                          onClick={() => setActiveIndex(index)}
-                        >
-                          <div className="text-sm font-medium leading-5 whitespace-nowrap flex items-center justify-center h-full">
-                            {tab}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="p-4">{renderTabContent()}</div>
-              </div>
-            </div>
-            <div className="space-y-6">
-              <div className="rounded-lg border bg-background shadow-sm">
-                <div className="flex items-center justify-between border-b p-4">
-                  <div className="space-y-0.5">
-                    <h2 className="text-base font-medium">Organization</h2>
-                    <p className="text-muted-foreground text-sm">
-                      Manage product organization and collections
-                    </p>
-                  </div>
-                </div>
-                <div className="p-4">
-                  <Fields
-                    fields={getFieldsSubset(ORGANIZATION_FIELDS)}
-                    value={state.value}
-                    onChange={handleValueChange}
-                    forceValidation={forceValidation}
-                    invalidFields={invalidFields}
+          <div className="max-w-4xl">
+            <div className="border rounded-lg shadow-sm bg-background">
+              <div className="border-b px-1">
+                <div className="relative">
+                  {/* Hover Highlight */}
+                  <div
+                    className="absolute h-[28px] mt-1 transition-all duration-300 ease-out bg-muted/60 rounded-[6px] flex items-center"
+                    style={{
+                      ...hoverStyle,
+                      opacity: hoveredIndex !== null ? 1 : 0,
+                    }}
                   />
+
+                  {/* Active Indicator */}
+                  <div
+                    className="absolute bottom-[-1px] h-[2px] bg-foreground transition-all duration-300 ease-out"
+                    style={activeStyle}
+                  />
+
+                  {/* Tabs */}
+                  <div className="relative flex space-x-[6px] items-center">
+                    {tabs.map((tab, index) => (
+                      <div
+                        key={index}
+                        ref={(el) => (tabRefs.current[index] = el)}
+                        className={`px-3 py-2 cursor-pointer transition-colors duration-300 ${
+                          index === activeIndex
+                            ? "text-foreground"
+                            : "text-muted-foreground"
+                        }`}
+                        onMouseEnter={() => setHoveredIndex(index)}
+                        onMouseLeave={() => setHoveredIndex(null)}
+                        onClick={() => setActiveIndex(index)}
+                      >
+                        <div className="text-sm font-medium leading-5 whitespace-nowrap flex items-center justify-center h-full">
+                          {tab}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
+              <div className="p-4">{renderTabContent()}</div>
             </div>
           </div>
         )}

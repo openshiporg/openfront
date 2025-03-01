@@ -197,6 +197,7 @@ export const retrievePricedProductByHandle = cache(async function ({
           image {
             url
           }
+          imagePath
         }
         productOptions {
           id
@@ -267,6 +268,7 @@ export const getProductByHandle = cache(async function ({ handle, regionId }) {
           image {
             url
           }
+          imagePath
         }
         productOptions {
           id

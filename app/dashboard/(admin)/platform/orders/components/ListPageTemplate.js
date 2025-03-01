@@ -1,48 +1,28 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Fragment, useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { gql, useQuery } from "@keystone-6/core/admin-ui/apollo";
 import { makeDataGetter } from "@keystone-6/core/admin-ui/utils";
 import { useList } from "@keystone/keystoneProvider";
 import { useFilter } from "@keystone/utils/useFilter";
 import { useFilters } from "@keystone/utils/useFilters";
 import { useQueryParamsFromLocalStorage } from "@keystone/utils/useQueryParamsFromLocalStorage";
-import { useSelectedFields } from "@keystone/utils/useSelectedFields";
 import { useSort } from "@keystone/utils/useSort";
 import {
   ArrowUpDown,
-  Circle,
   Search,
-  Square,
-  SquareArrowRight,
-  Triangle,
   PlusIcon,
-  Filter,
-  Columns3,
-  ChevronDown,
-  ListFilter,
   FilterIcon,
+  SlidersHorizontal,
 } from "lucide-react";
-import { CreateButtonLink } from "@keystone/themes/Tailwind/orion/components/CreateButtonLink";
-import { DeleteManyButton } from "@keystone/themes/Tailwind/orion/components/DeleteManyButton";
-import { FieldSelection } from "@keystone/themes/Tailwind/orion/components/FieldSelection";
 import { FilterAdd } from "@keystone/themes/Tailwind/orion/components/FilterAdd";
 import { FilterList } from "@keystone/themes/Tailwind/orion/components/FilterList";
-import { ListTable } from "@keystone/themes/Tailwind/orion/components/ListTable";
 import { SortSelection } from "@keystone/themes/Tailwind/orion/components/SortSelection";
-import { Button } from "@keystone/themes/Tailwind/orion/primitives/default/ui/button";
-import { Input } from "@keystone/themes/Tailwind/orion/primitives/default/ui/input";
-import { Badge } from "@keystone/themes/Tailwind/orion/primitives/default/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@ui/select";
+import { Button } from "@ui/button";
+import { Input } from "@ui/input";
+import { Badge } from "@ui/badge";
+
 import {
   Pagination,
   PaginationDropdown,
@@ -52,39 +32,9 @@ import {
 import { OrdersTable } from "./OrdersTable";
 import { PageBreadcrumbs } from "@keystone/themes/Tailwind/orion/components/PageBreadcrumbs";
 import { cn } from "@keystone/utils/cn";
-import { StatusSelect } from "./StatusSelect";
+import { StatusTabs } from "./StatusTabs";
+import { AdminLink } from "@keystone/themes/Tailwind/orion/components/AdminLink";
 
-const ColoredSquare = ({ className, children }) => (
-  <span
-    data-square
-    className={cn(
-      "flex size-5 items-center justify-center rounded text-xs font-medium",
-      className
-    )}
-    aria-hidden="true"
-  >
-    {children}
-  </span>
-);
-
-const DiamondPlus = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 20 20"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path
-      d="M10 4V16M4 10H16"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="text-muted-foreground"
-    />
-  </svg>
-);
 
 const listMetaGraphqlQuery = gql`
   query ($listKey: String!) {
@@ -107,12 +57,74 @@ const listMetaGraphqlQuery = gql`
   }
 `;
 
+const getCategory = (value) => {
+  if (value < 0.3) return "red";
+  if (value < 0.7) return "orange";
+  return "emerald";
+};
+
+const categoryConfig = {
+  red: {
+    activeClass: "bg-red-500 dark:bg-red-500",
+    bars: 1,
+  },
+  orange: {
+    activeClass: "bg-orange-500 dark:bg-orange-500",
+    bars: 2,
+  },
+  emerald: {
+    activeClass: "bg-emerald-500 dark:bg-emerald-500",
+    bars: 3,
+  },
+  gray: {
+    activeClass: "bg-gray-300 dark:bg-gray-800",
+    bars: 0,
+  },
+};
+
+function Indicator({ number }) {
+  const category = getCategory(number);
+  const config = categoryConfig[category];
+  const inactiveClass = "bg-gray-300 dark:bg-gray-800";
+
+  return (
+    <div className="flex gap-0.5">
+      {[0, 1, 2].map((index) => (
+        <div
+          key={index}
+          className={`h-3.5 w-1 rounded-sm ${
+            index < config.bars ? config.activeClass : inactiveClass
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function MetricCard({ metric }) {
+  return (
+    <div>
+      <dt className="text-sm text-gray-500 dark:text-gray-500">
+        {metric.label}
+      </dt>
+      <dd className="mt-1.5 flex items-center gap-2">
+        <Indicator number={metric.value} />
+        <p className="text-lg font-semibold text-gray-900 dark:text-gray-50">
+          {metric.percentage}{" "}
+          <span className="font-medium text-gray-400 dark:text-gray-600">
+            - {metric.fraction}
+          </span>
+        </p>
+      </dd>
+    </div>
+  );
+}
+
 export function ListPageTemplate({ listKey = "Order" }) {
   const list = useList(listKey);
   const { push } = useRouter();
   const searchParams = useSearchParams();
   const [loadingActions, setLoadingActions] = useState({});
-
 
   const query = {};
   for (let [key, value] of searchParams.entries()) {
@@ -243,28 +255,18 @@ export function ListPageTemplate({ listKey = "Order" }) {
             lineItems {
               id
               quantity
+              title
+              sku
+              thumbnail
               metadata
-              isReturn
-              isGiftcard
-              shouldMerge
-              allowDiscounts
-              hasShipping
-              unitPrice
-              originalPrice
-              total
-              percentageOff
-              productVariant {
-                id
-                title
-                sku
-                barcode
-                ean
-                upc
-                product {
-                  id
-                  title
-                  thumbnail
-                }
+              variantTitle
+              formattedUnitPrice
+              formattedTotal
+              variantData
+              productData
+              moneyAmount {
+                amount
+                originalAmount
               }
             }
           }
@@ -316,64 +318,50 @@ export function ListPageTemplate({ listKey = "Order" }) {
   const showCreate =
     !(metaQuery.data?.keystone.adminMeta.list?.hideCreate ?? true) || null;
 
-  // Custom field views for Order list
-  const fieldViews = {
-    status: {
-      render: ({ item }) => (
-        <div className="flex flex-col gap-1">
-          <Badge
-            color={
-              item.status === "PENDING"
-                ? "amber"
-                : item.status === "COMPLETED"
-                  ? "green"
-                  : item.status === "CANCELLED"
-                    ? "red"
-                    : "blue"
-            }
-          >
-            {item.status}
-          </Badge>
-        </div>
-      ),
-    },
-    user: {
-      render: ({ item }) => (
-        <div>
-          <div className="font-medium">{item.user?.name}</div>
-          <div className="text-muted-foreground text-xs">
-            {item.user?.email}
-          </div>
-          {item.user?.phone && (
-            <div className="text-muted-foreground text-xs">
-              {item.user.phone}
-            </div>
-          )}
-        </div>
-      ),
-    },
-    billingAddress: {
-      render: ({ item }) =>
-        item.billingAddress ? (
-          <div className="text-sm">
-            <div>{item.billingAddress.line1}</div>
-            {item.billingAddress.line2 && (
-              <div>{item.billingAddress.line2}</div>
-            )}
-            <div>
-              {item.billingAddress.city}, {item.billingAddress.state}{" "}
-              {item.billingAddress.postalCode}
-            </div>
-            <div className="text-muted-foreground">
-              {item.billingAddress.country}
-            </div>
-          </div>
-        ) : null,
-    },
+  // Analytics data for orders
+  const analyticsData = {
+    totalOrders: data?.count || 0,
+    completedOrders:
+      data?.items?.filter((item) => item.status === "COMPLETED").length || 0,
+    pendingOrders:
+      data?.items?.filter((item) => item.status === "PENDING").length || 0,
   };
 
+  const completedRatio =
+    (analyticsData.completedOrders / analyticsData.totalOrders) * 100 || 0;
+  const lineItemsCount =
+    data?.items?.reduce(
+      (acc, item) => acc + (item.lineItems?.length || 0),
+      0
+    ) || 0;
+
+  // Calculate metrics for orders
+  const metrics = [
+    {
+      label: "Completed Orders",
+      value: completedRatio / 100,
+      percentage: `${completedRatio.toFixed(1)}%`,
+      fraction: `${analyticsData.completedOrders}/${analyticsData.totalOrders}`,
+    },
+    {
+      label: "Processing Rate (24h)",
+      value: 0.55,
+      percentage: "55.0%",
+      fraction: "110/200",
+    },
+    {
+      label: "Fulfillment Coverage",
+      value: 0.75,
+      percentage: "75.0%",
+      fraction: "150/200",
+    },
+  ];
+
   return (
-    <div className="h-screen overflow-hidden">
+    <section
+      aria-label="Orders overview"
+      className="h-screen overflow-hidden flex flex-col"
+    >
       <PageBreadcrumbs
         items={[
           {
@@ -393,191 +381,170 @@ export function ListPageTemplate({ listKey = "Order" }) {
           },
         ]}
       />
-      {metaQuery.error ? (
-        "Error..."
-      ) : metaQuery.data ? (
-        <main className="w-full h-full max-w-4xl mx-auto p-4 md:p-6 flex flex-col gap-1">
-          <div className="flex flex-col gap-2">
-            {/* Title Section */}
-            <div className="flex flex-col">
-              <h1 className="text-2xl font-semibold">{list.label}</h1>
-              <p className="text-muted-foreground">
-                {list.description ||
-                  `Create and manage ${list.label.toLowerCase()}`}
-              </p>
-            </div>
 
-            <div className="flex flex-wrap items-center gap-2 mt-2">
-              {/* Left Side Controls */}
-              <div className="relative flex-1 min-w-72">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      {metaQuery.error ? (
+        <div className="p-4">Error loading orders...</div>
+      ) : !metaQuery.data ? (
+        <div className="p-4">Loading...</div>
+      ) : (
+        <div className="flex flex-col flex-1 min-h-0">
+          {/* Analytics Overview */}
+          <div className="border-b border-gray-200 dark:border-gray-800">
+            <div className="p-6">
+              <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-50">
+                Orders
+              </h1>
+              <dl className="mt-6 flex flex-wrap items-center gap-x-12 gap-y-8">
+                {metrics.map((metric) => (
+                  <MetricCard key={metric.label} metric={metric} />
+                ))}
+              </dl>
+            </div>
+          </div>
+
+          {/* Search and Filters - Fixed Position */}
+          <div className="flex items-center gap-2 p-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  updateSearch(searchString);
+                }}
+              >
                 <Input
                   type="search"
-                  className="pl-9 w-full h-9 rounded-lg placeholder:text-muted-foreground/80 text-sm"
+                  className="pl-9 w-full h-9 rounded-lg placeholder:text-muted-foreground/80 text-sm shadow-sm"
                   value={searchString}
                   onChange={(e) => updateSearchString(e.target.value)}
                   placeholder={`Search by email, idempotency key, external id, secret key, note`}
                 />
-              </div>
-              <StatusSelect />
+              </form>
+            </div>
 
+            <div className="flex items-center gap-2 ml-auto">
               <FilterAdd listKey={listKey} filterableFields={filterableFields}>
                 <Button
                   variant="outline"
                   size="icon"
                   className="lg:px-4 lg:py-2 lg:w-auto rounded-lg"
                 >
-                  <FilterIcon className="stroke-muted-foreground" />
+                  <SlidersHorizontal className="stroke-muted-foreground" />
                   <span className="hidden lg:inline">Filter</span>
                 </Button>
               </FilterAdd>
 
-              <Button
-                size="icon"
-                className="lg:px-4 lg:py-2 lg:w-auto rounded-lg"
-              >
-                <DiamondPlus className="h-4 w-4" />
-                <span className="hidden lg:inline">Create Order</span>
-              </Button>
-            </div>
-
-            {/* Filters and Sort Row */}
-            <div className="flex items-center gap-2">
               <SortSelection list={list} orderableFields={orderableFields}>
                 <Button
-                  variant="link"
-                  size="xs"
-                  className="uppercase py-1 px-0 text-xs text-muted-foreground [&_svg]:size-3"
+                  variant="outline"
+                  size="icon"
+                  className="lg:px-4 lg:py-2 lg:w-auto rounded-lg"
                 >
-                  Sorting by{" "}
-                  {sort ? (
-                    <>
-                      {list.fields[sort.field].label}
-                      {sort.direction === "ASC" ? (
-                        <Badge className="h-4 border py-0 px-1 text-[.5rem] leading-[.85rem] -mr-1">
-                          ASC
+                  <ArrowUpDown className="stroke-muted-foreground" />
+                  <span className="hidden lg:inline">
+                    {sort ? (
+                      <>
+                        {list.fields[sort.field].label}{" "}
+                        <Badge
+                          variant="blue"
+                          className="ml-1 text-[10px] px-1 py-0 font-medium"
+                        >
+                          {sort.direction}
                         </Badge>
-                      ) : (
-                        <Badge className="h-4 border py-0 px-1 text-[.5rem] leading-[.85rem] -mr-1">
-                          DESC
-                        </Badge>
-                      )}
-                    </>
-                  ) : (
-                    <>default</>
-                  )}
-                  <ChevronDown />
+                      </>
+                    ) : (
+                      "Sort"
+                    )}
+                  </span>
                 </Button>
               </SortSelection>
+
+              <AdminLink href={`/platform/orders/create`}>
+                <Button className="hidden sm:flex relative pe-12 rounded-lg">
+                  Create {list.singular}
+                  <span className="pointer-events-none absolute inset-y-0 end-0 flex w-9 items-center justify-center bg-primary-foreground/15">
+                    <PlusIcon
+                      className="opacity-60"
+                      size={16}
+                      strokeWidth={2}
+                      aria-hidden="true"
+                    />
+                  </span>
+                </Button>
+                <Button size="icon" className="sm:hidden">
+                  <PlusIcon />
+                </Button>
+              </AdminLink>
             </div>
           </div>
 
-          {/* Table Section */}
-          {data?.count ? (
-            <>
-              <div className="flex flex-col flex-1 min-h-0 mb-8">
-                <div className="border rounded-lg">
-                  <OrdersTable
-                    data={data}
-                    error={error}
-                    listKey={listKey}
-                    list={list}
-                    query={query}
-                    filters={filters}
-                    searchParam={searchParam}
-                    updateSearchString={updateSearchString}
-                    push={push}
-                    showCreate={showCreate}
-                    loadingActions={loadingActions}
-                  />
-                </div>
-              </div>
+          {/* Status Tabs - Fixed Position */}
+          <div className="px-4 pb-0 border-b bg-background">
+            <StatusTabs />
+          </div>
 
-              <div className="flex flex-wrap justify-between p-3 rounded-t-xl sticky z-20 mt-8 bg-muted/40 gap-2 -mb-4 md:-mb-6 shadow-md bottom-0 border border-b-0">
-                {selectedItemsState.selectedItems.size > 0 ? (
-                  <div className="w-full flex flex-wrap gap-4 items-center justify-between">
-                    <span className="text-xs sm:text-sm text-muted-foreground">
-                      <strong>{selectedItemsState.selectedItems.size}</strong>{" "}
-                      selected
-                    </span>
-                    <DeleteManyButton
-                      list={list}
-                      selectedItems={selectedItemsState.selectedItems}
-                      refetch={refetch}
-                    />
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-4">
-                      <PaginationStats
-                        list={list}
-                        total={data.count}
-                        currentPage={currentPage}
-                        pageSize={pageSize}
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <PaginationNavigation
-                        list={list}
-                        total={data.count}
-                        currentPage={currentPage}
-                        pageSize={pageSize}
-                      />
-                      <PaginationDropdown
-                        list={list}
-                        total={data.count}
-                        currentPage={currentPage}
-                        pageSize={pageSize}
-                      />
-                    </div>
-                  </>
-                )}
+          {/* Active Filters - Fixed Position */}
+          {filters.filters.length > 0 && (
+            <div className="flex gap-1.5 border-b border-gray-200 bg-muted/40 py-2 px-5 items-center dark:border-gray-800">
+              <div className="flex items-center gap-1.5 border-r border-muted-foreground/30 pr-2 mr-1.5">
+                <FilterIcon
+                  className="stroke-muted-foreground/50 size-4"
+                  strokeWidth={1.5}
+                />
               </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center p-10 border rounded-lg">
-              <div className="flex opacity-40">
-                <Triangle className="w-8 h-8 fill-indigo-200 stroke-indigo-400 dark:stroke-indigo-600 dark:fill-indigo-950" />
-                <Circle className="w-8 h-8 fill-emerald-200 stroke-emerald-400 dark:stroke-emerald-600 dark:fill-emerald-950" />
-                <Square className="w-8 h-8 fill-orange-300 stroke-orange-500 dark:stroke-amber-600 dark:fill-amber-950" />
-              </div>
-              {query.search || filters.filters.length ? (
-                <>
-                  <span className="pt-4 font-semibold">
-                    No <span className="lowercase">{list.label}</span>{" "}
-                  </span>
-                  <span className="text-muted-foreground pb-4">
-                    Found{" "}
-                    {searchParam
-                      ? `matching your search`
-                      : `matching your filters`}{" "}
-                  </span>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      updateSearchString("");
-                      const path = window.location.pathname;
-                      push(path);
-                    }}
-                  >
-                    Clear filters &amp; search
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <span className="pt-4 font-semibold">
-                    No <span className="lowercase">{list.label}</span>
-                  </span>
-                  <span className="text-muted-foreground pb-4">
-                    Get started by creating a new one.{" "}
-                  </span>
-                  {showCreate && <CreateButtonLink list={list} />}
-                </>
-              )}
+              <FilterList filters={filters.filters} list={list} />
             </div>
           )}
-        </main>
-      ) : null}
-    </div>
+
+          {/* Scrollable Orders List */}
+          <div className="flex-1 min-h-0 overflow-auto">
+            <div>
+              {data?.items && (
+                <OrdersTable
+                  data={data}
+                  error={error}
+                  listKey={listKey}
+                  list={list}
+                  handleOrderAction={() => {}}
+                  loadingActions={loadingActions}
+                  query={query}
+                  filters={filters}
+                  searchParam={searchParam}
+                  updateSearchString={updateSearchString}
+                  push={push}
+                  showCreate={showCreate}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Pagination - Fixed at Bottom */}
+          {data?.count > 0 && (
+            <div className="flex items-center justify-between gap-3 p-2 sm:p-4 border-t sticky bottom-0 shadow-sm z-10 bg-muted/40">
+              <PaginationStats
+                list={list}
+                total={data.count}
+                currentPage={currentPage}
+                pageSize={pageSize}
+              />
+              <div className="flex items-center gap-2">
+                <PaginationNavigation
+                  list={list}
+                  total={data.count}
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                />
+                <PaginationDropdown
+                  list={list}
+                  total={data.count}
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
   );
 }

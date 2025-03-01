@@ -5,7 +5,7 @@ const ImageGallery = ({ images }) => {
   return (
     <div className="flex items-start relative">
       <div className="flex flex-col flex-1 small:mx-16 gap-y-4">
-        {images.map(({ id, image }, index) => {
+        {images.map(({ id, image, imagePath }, index) => {
           return (
             <Container
               key={id}
@@ -13,7 +13,7 @@ const ImageGallery = ({ images }) => {
               id={id}
             >
               <Image
-                src={image.url}
+                src={image?.url || imagePath || "/images/placeholder.svg"}
                 priority={index <= 2 ? true : false}
                 className="absolute inset-0 rounded-rounded"
                 alt={`Product image ${index + 1}`}

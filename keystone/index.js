@@ -32,8 +32,14 @@ import {
   DollarSign,
   Truck,
   Settings,
+  TicketIcon
 } from "lucide-react";
-
+// import {
+//   TicketIcon,
+//   Square3Stack3DIcon,
+//   CircleStackIcon,
+//   Square2StackIcon,
+// } from "@heroicons/react/24/outline";
 const databaseURL = process.env.DATABASE_URL || "file:./keystone.db";
 
 const listKey = "User";
@@ -202,7 +208,7 @@ export const customNavItems = [
   {
     title: 'Orders',
     href: '/platform/orders',
-    icon: ShoppingBag,
+    icon: TicketIcon,
     color: 'text-blue-500'
   },
   {

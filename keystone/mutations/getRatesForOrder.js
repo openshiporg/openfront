@@ -41,14 +41,7 @@ async function getRatesForOrder(root, { orderId, providerId, dimensions }, conte
           lineItems {
             id
             quantity
-            productVariant {
-              id
-              measurements {
-                value
-                unit
-                type
-              }
-            }
+            variantData
           }
         `,
       }),
@@ -107,7 +100,7 @@ async function getRatesForOrder(root, { orderId, providerId, dimensions }, conte
       let dimensionUnit = null;
 
       order.lineItems.forEach(item => {
-        const variant = item.productVariant;
+        const variant = item.variantData;
         if (variant?.measurements?.length) {
           hasDimensions = true;
           variant.measurements.forEach(measurement => {

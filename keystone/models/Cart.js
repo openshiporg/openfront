@@ -450,6 +450,113 @@ export const Cart = list({
             },
           }),
         }),
+        rawSubtotal: virtual({
+          field: graphql.field({
+            type: graphql.String,
+            async resolve(item, args, context) {
+              const sudoContext = context.sudo();
+
+              const cart = await sudoContext.query.Cart.findOne({
+                where: { id: item.id },
+                query: `
+                  lineItems { 
+                    id 
+                    quantity
+                    productVariant {
+                      id
+                      title
+                      product {
+                        title
+                      }
+                    }
+                  } 
+                  region { 
+                    id
+                    currency { 
+                      code 
+                      noDivisionCurrency 
+                    }
+                  }
+                `,
+              });
+
+              if (!cart?.lineItems?.length) return "No items in cart";
+
+              let subtotal = 0;
+              const breakdown = [];
+
+              for (const lineItem of cart.lineItems) {
+                const prices = await sudoContext.query.MoneyAmount.findMany({
+                  where: {
+                    productVariant: { id: { equals: lineItem.productVariant.id } },
+                    region: { id: { equals: cart.region.id } },
+                    currency: { code: { equals: cart.region?.currency?.code } },
+                  },
+                  query: "id region { id } currency { code } calculatedPrice { calculatedAmount }",
+                });
+
+                console.log(prices);
+
+                const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
+                const itemTotal = price * lineItem.quantity;
+                subtotal += itemTotal;
+
+                const title = `${lineItem.productVariant.product?.title} - ${lineItem.productVariant.title}`;
+                breakdown.push(`${title}: ${price} × ${lineItem.quantity} = ${itemTotal}`);
+              }
+
+              return `Total: ${subtotal}\nBreakdown:\n${breakdown.join('\n')}`;
+            },
+          }),
+        }),
+        rawTotalBreakdown: virtual({
+          field: graphql.field({
+            type: graphql.String,
+            async resolve(item, args, context) {
+              const sudoContext = context.sudo();
+
+              const cart = await sudoContext.query.Cart.findOne({
+                where: { id: item.id },
+                query: `
+                  region {
+                    taxRate
+                    currency {
+                      code
+                      noDivisionCurrency
+                    }
+                  }
+                  lineItems {
+                    id
+                    quantity
+                    productVariant {
+                      id
+                    }
+                  }
+                  discounts {
+                    id
+                    discountRule {
+                      type
+                      value
+                    }
+                  }
+                  shippingMethods {
+                    price
+                  }
+                `,
+              });
+
+              if (!cart) return "Cart not found";
+
+              const subtotal = await calculateCartSubtotal(cart, context);
+              const discount = await calculateCartDiscount(cart, context);
+              const shipping = await calculateCartShipping(cart);
+              const tax = await calculateCartTax(cart, context);
+              const total = subtotal - discount + shipping + tax;
+
+              return `subtotal(${subtotal}) - discount(${discount}) + shipping(${shipping}) + tax(${tax}) = ${total}`;
+            },
+          }),
+        }),
         discount: virtual({
           field: graphql.field({
             type: graphql.String,

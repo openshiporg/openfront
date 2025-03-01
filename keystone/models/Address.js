@@ -17,7 +17,7 @@ const canManageAddresses = ({ session }) => {
 export const Address = list({
   access: {
     operation: {
-      create: isSignedIn,
+      create: () => true,
       query: isSignedIn,
       update: permissions.canManageUsers,
       delete: permissions.canManageUsers,

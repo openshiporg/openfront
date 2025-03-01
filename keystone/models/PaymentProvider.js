@@ -76,6 +76,12 @@ export const PaymentProvider = list({
         description: "Name of the adapter function to generate payment dashboard links",
       }
     }),
+    handleWebhookFunction: text({
+      validation: { isRequired: true },
+      ui: {
+        description: "Name of the adapter function to handle provider webhooks",
+      }
+    }),
     regions: relationship({
       ref: "Region.paymentProviders",
       many: true,
