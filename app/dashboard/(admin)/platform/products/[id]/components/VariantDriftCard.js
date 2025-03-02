@@ -535,8 +535,8 @@ export function VariantDriftCard({
                 <Info className="size-4 text-muted-foreground" />
               </TooltipTrigger>
               <TooltipContent className="text-xs max-w-[300px]">
-                We've found changes in option values that affect your variants.
-                Here's a summary of the variants that need to be added, removed,
+                We&apos;ve found changes in option values that affect your variants.
+                Here&apos;s a summary of the variants that need to be added, removed,
                 or unchanged.
               </TooltipContent>
             </Tooltip>

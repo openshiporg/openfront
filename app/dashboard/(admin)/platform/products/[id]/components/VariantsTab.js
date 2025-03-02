@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { useList } from "@keystone/keystoneProvider";
 import { Button } from "@ui/button";
 import {
@@ -448,52 +448,6 @@ const CREATE_PRODUCT_VARIANT = gql`
   }
 `;
 
-const findSimilarVariant = (optionValues, existingVariants) => {
-  // Sort option values by option title for consistent comparison
-  const sortedNewValues = [...optionValues].sort((a, b) =>
-    a.option.localeCompare(b.option)
-  );
-
-  let bestMatch = null;
-  let maxMatchScore = -1;
-
-  existingVariants.forEach((variant) => {
-    // Sort existing variant's option values
-    const sortedExistingValues = [...variant.productOptionValues].sort((a, b) =>
-      a.productOption.title.localeCompare(b.productOption.title)
-    );
-
-    // Calculate match score based on matching values
-    let matchScore = 0;
-    let exactMatches = 0;
-
-    sortedNewValues.forEach((newValue) => {
-      const matchingValue = sortedExistingValues.find(
-        (existingValue) => existingValue.productOption.title === newValue.option
-      );
-
-      if (matchingValue) {
-        // Exact value match gets highest score
-        if (matchingValue.value === newValue.value) {
-          matchScore += 100;
-          exactMatches++;
-        }
-      }
-    });
-
-    // Add bonus for having more exact matches
-    matchScore += exactMatches * 50;
-
-    // Update best match if this variant has a higher score
-    if (matchScore > maxMatchScore) {
-      maxMatchScore = matchScore;
-      bestMatch = variant;
-    }
-  });
-
-  return bestMatch;
-};
-
 export function VariantsTab({ product }) {
   const [activeTab, setActiveTab] = useState("options");
   const [selectedFilters, setSelectedFilters] = useState([]);
@@ -624,13 +578,109 @@ export function VariantsTab({ product }) {
     }));
   }, [regionsData]);
 
-  // Calculate variant drift whenever options change or on mount
-  useEffect(() => {
-    calculateVariantDrift(options);
-  }, [options, product.productVariants]);
+  // Wrap helper functions in useCallback
+  const normalizeOptionValues = useCallback((optionValues) => {
+    return [...optionValues].sort((a, b) => {
+      const aKey = a.productOption?.title || a.option;
+      const bKey = b.productOption?.title || b.option;
+      return aKey.localeCompare(bKey);
+    });
+  }, []);
 
-  // Updated to be a separate function that can be called independently
-  const calculateVariantDrift = (currentOptions) => {
+  const optionValuesMatch = useCallback((existing, candidate) => {
+    if (!existing || !candidate) return false;
+    const normalizedExisting = normalizeOptionValues(existing);
+    const normalizedCandidate = normalizeOptionValues(candidate);
+    if (normalizedExisting.length !== normalizedCandidate.length) return false;
+    return normalizedExisting.every((existingOv, index) => {
+      const candidateOv = normalizedCandidate[index];
+      const existingOption =
+        existingOv.productOption?.title || existingOv.option;
+      const candidateOption =
+        candidateOv.productOption?.title || candidateOv.option;
+      return (
+        existingOption === candidateOption &&
+        existingOv.value === candidateOv.value
+      );
+    });
+  }, [normalizeOptionValues]);
+
+  const generateCombinations = useCallback((arrays) => {
+    if (arrays.length === 0) return [[]];
+    const result = [];
+    const restCombinations = generateCombinations(arrays.slice(1));
+    arrays[0].forEach((item) => {
+      restCombinations.forEach((combination) => {
+        result.push([item, ...combination]);
+      });
+    });
+    return result;
+  }, []);
+
+  const findSimilarVariant = useCallback((optionValues, existingVariants) => {
+    // Sort option values by option title for consistent comparison
+    const sortedNewValues = [...optionValues].sort((a, b) =>
+      a.option.localeCompare(b.option)
+    );
+
+    let bestMatch = null;
+    let maxMatchScore = -1;
+
+    existingVariants.forEach((variant) => {
+      // Sort existing variant's option values
+      const sortedExistingValues = [...variant.productOptionValues].sort((a, b) =>
+        a.productOption.title.localeCompare(b.productOption.title)
+      );
+
+      // Calculate match score based on matching values
+      let matchScore = 0;
+      let exactMatches = 0;
+
+      sortedNewValues.forEach((newValue) => {
+        const matchingValue = sortedExistingValues.find(
+          (existingValue) => existingValue.productOption.title === newValue.option
+        );
+
+        if (matchingValue) {
+          // Exact value match gets highest score
+          if (matchingValue.value === newValue.value) {
+            matchScore += 100;
+            exactMatches++;
+          }
+        }
+      });
+
+      // Add bonus for having more exact matches
+      matchScore += exactMatches * 50;
+
+      // Update best match if this variant has a higher score
+      if (matchScore > maxMatchScore) {
+        maxMatchScore = matchScore;
+        bestMatch = variant;
+      }
+    });
+
+    return bestMatch;
+  }, []);
+
+  // Fix recursive reference in generateCombinations
+  const generateCombinationsRef = useRef(null);
+  useEffect(() => {
+    generateCombinationsRef.current = (arrays) => {
+      if (arrays.length === 0) return [[]];
+      const result = [];
+      const restCombinations = generateCombinationsRef.current(arrays.slice(1));
+      arrays[0].forEach((item) => {
+        restCombinations.forEach((combination) => {
+          result.push([item, ...combination]);
+        });
+      });
+      return result;
+    };
+  }, []);
+
+  // Update calculateVariantDrift to use the ref for generateCombinations
+  const calculateVariantDrift = useCallback((currentOptions) => {
     debug("Calculating variant drift", {
       currentOptions,
       existingVariants: product.productVariants,
@@ -647,7 +697,7 @@ export function VariantsTab({ product }) {
       }))
     );
 
-    const combinations = generateCombinations(optionValues);
+    const combinations = generateCombinationsRef.current(optionValues);
     debug("Generated combinations", combinations);
 
     // Identify variants to create (new combinations)
@@ -754,52 +804,12 @@ export function VariantsTab({ product }) {
     setVariantsToCreate(newVariants);
     setVariantsToDelete(variantsToRemove);
     setUnchangedVariants(unchangedVariants);
-    // setVariants([...unchangedVariants, ...newVariants]);
+  }, [product.productVariants, optionValuesMatch, findSimilarVariant]);
 
-    // If there are changes, switch to the variant drift tab
-    // if (newVariants.length > 0 || variantsToRemove.length > 0) {
-    //   setActiveTab("drift");
-    // }
-  };
-
-  // Helper functions remain the same...
-  const normalizeOptionValues = (optionValues) => {
-    return [...optionValues].sort((a, b) => {
-      const aKey = a.productOption?.title || a.option;
-      const bKey = b.productOption?.title || b.option;
-      return aKey.localeCompare(bKey);
-    });
-  };
-
-  const optionValuesMatch = (existing, candidate) => {
-    if (!existing || !candidate) return false;
-    const normalizedExisting = normalizeOptionValues(existing);
-    const normalizedCandidate = normalizeOptionValues(candidate);
-    if (normalizedExisting.length !== normalizedCandidate.length) return false;
-    return normalizedExisting.every((existingOv, index) => {
-      const candidateOv = normalizedCandidate[index];
-      const existingOption =
-        existingOv.productOption?.title || existingOv.option;
-      const candidateOption =
-        candidateOv.productOption?.title || candidateOv.option;
-      return (
-        existingOption === candidateOption &&
-        existingOv.value === candidateOv.value
-      );
-    });
-  };
-
-  const generateCombinations = (arrays) => {
-    if (arrays.length === 0) return [[]];
-    const result = [];
-    const restCombinations = generateCombinations(arrays.slice(1));
-    arrays[0].forEach((item) => {
-      restCombinations.forEach((combination) => {
-        result.push([item, ...combination]);
-      });
-    });
-    return result;
-  };
+  // Calculate variant drift whenever options change or on mount
+  useEffect(() => {
+    calculateVariantDrift(options);
+  }, [options, calculateVariantDrift]);
 
   // Updated to handle immediate option creation
   const handleAddOption = async (newOption) => {

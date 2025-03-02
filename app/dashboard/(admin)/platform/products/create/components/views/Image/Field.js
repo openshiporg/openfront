@@ -2,6 +2,7 @@
 
 import bytes from "bytes"
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
+import Image from "next/image"
 
 import { FieldContainer } from "@keystone/themes/Tailwind/orion/components/FieldContainer";
 import { FieldLabel } from "@keystone/themes/Tailwind/orion/components/FieldLabel";
@@ -40,7 +41,7 @@ export function Field({ autoFocus, field, value, onChange }) {
     })
   }
 
-  const inputKey = useMemo(() => Math.random(), [value])
+  const inputKey = useMemo(() => Math.random(), [])
   const accept = useMemo(
     () =>
       SUPPORTED_IMAGE_EXTENSIONS.map(ext =>
@@ -111,7 +112,7 @@ function ImgView({ errorMessage, value, onChange, field, inputRef }) {
                 Save to complete upload
               </div>
             )}
-            <img
+            <Image
               onLoad={event => {
                 if (value.kind === "upload") {
                   setImageDimensions({
@@ -123,6 +124,8 @@ function ImgView({ errorMessage, value, onChange, field, inputRef }) {
               className="object-contain w-full h-full"
               alt={`Image uploaded to ${field.path} field`}
               src={imageSrc}
+              width={500}
+              height={500}
             />
           </Fragment>
         )}
@@ -226,7 +229,7 @@ export function validateImage({ file, validity }) {
   }
   // check if the file is actually an image
   if (!file.type.includes("image")) {
-    return `Sorry, that file type isn't accepted. Please try ${SUPPORTED_IMAGE_EXTENSIONS.reduce(
+    return `Sorry, that file type isn&apos;t accepted. Please try ${SUPPORTED_IMAGE_EXTENSIONS.reduce(
       (acc, curr, currentIndex) => {
         if (currentIndex === SUPPORTED_IMAGE_EXTENSIONS.length - 1) {
           acc += ` or .${curr}`

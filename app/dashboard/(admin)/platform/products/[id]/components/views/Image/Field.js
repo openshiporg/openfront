@@ -40,7 +40,7 @@ export function Field({ autoFocus, field, value, onChange }) {
     })
   }
 
-  const inputKey = useMemo(() => Math.random(), [value])
+  const inputKey = useMemo(() => Math.random(), [])
   const accept = useMemo(
     () =>
       SUPPORTED_IMAGE_EXTENSIONS.map(ext =>
@@ -226,7 +226,7 @@ export function validateImage({ file, validity }) {
   }
   // check if the file is actually an image
   if (!file.type.includes("image")) {
-    return `Sorry, that file type isn't accepted. Please try ${SUPPORTED_IMAGE_EXTENSIONS.reduce(
+    return `Sorry, that file type isn&apos;t accepted. Please try ${SUPPORTED_IMAGE_EXTENSIONS.reduce(
       (acc, curr, currentIndex) => {
         if (currentIndex === SUPPORTED_IMAGE_EXTENSIONS.length - 1) {
           acc += ` or .${curr}`

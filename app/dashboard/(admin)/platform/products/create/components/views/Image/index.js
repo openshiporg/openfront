@@ -31,10 +31,12 @@ export const Cell = ({ item, field }) => {
   if (!data) return null;
   return (
     <div className="flex items-center h-6 w-6 leading-none">
-      <img
+      <Image
         alt={data.filename}
         className="max-h-full max-w-full"
         src={data.url}
+        width={24}
+        height={24}
       />
     </div>
   );
