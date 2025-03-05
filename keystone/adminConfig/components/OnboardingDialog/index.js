@@ -13,19 +13,22 @@ export const OnboardingDialog = ({ data }) => {
   const client = useApolloClient();
   const [open, setOpen] = useState(false);
 
-  // Check if we have the bare minimum setup by checking counts
-  const hasMinimumSetup =
-    data &&
-    data.Region > 0 &&
-    data.PaymentProvider > 0 &&
-    data.ShippingOption > 0 &&
-    data.ProductCategory > 0 &&
-    data.ProductCollection > 0 &&
-    data.Product > 0;
 
-  if (hasMinimumSetup) {
-    return null;
-  }
+  // if (!data) {
+  //   return null;
+  // }
+
+  // const needsOnboarding =
+  //   data.Region === 0 ||
+  //   data.PaymentProvider === 0 ||
+  //   data.ShippingOption === 0 ||
+  //   data.ProductCategory === 0 ||
+  //   data.ProductCollection === 0 ||
+  //   data.Product === 0;
+
+  // if (!needsOnboarding) {
+  //   return null;
+  // }
 
   const handleClose = async () => {
     // Close the dialog
@@ -44,8 +47,8 @@ export const OnboardingDialog = ({ data }) => {
           Onboarding
         </Button>
       </DialogTrigger>
-      <DialogContent className="gap-0 p-0 sm:max-w-xl">
-        <OnboardingContent data={data} onClose={handleClose} />
+      <DialogContent className="gap-0 p-0 sm:max-w-xl overflow-y-auto max-h-[80vh]">
+        <OnboardingContent data={data} onClose={handleClose} showFinalInfo={true} />
       </DialogContent>
     </Dialog>
   );

@@ -35,7 +35,6 @@ import { cn } from "@keystone/utils/cn";
 import { StatusTabs } from "./StatusTabs";
 import { AdminLink } from "@keystone/themes/Tailwind/orion/components/AdminLink";
 
-
 const listMetaGraphqlQuery = gql`
   query ($listKey: String!) {
     keystone {
@@ -389,16 +388,14 @@ export function ListPageTemplate({ listKey = "Order" }) {
       ) : (
         <div className="flex flex-col flex-1 min-h-0">
           {/* Analytics Overview */}
-          <div className="border-b border-gray-200 dark:border-gray-800">
-            <div className="p-6">
+          <div className="border-gray-200 dark:border-gray-800">
+            <div className="px-4 pt-4 pb-0">
               <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-50">
                 Orders
               </h1>
-              <dl className="mt-6 flex flex-wrap items-center gap-x-12 gap-y-8">
-                {metrics.map((metric) => (
-                  <MetricCard key={metric.label} metric={metric} />
-                ))}
-              </dl>
+              <p className="text-muted-foreground">
+                <span>Create and manage orders</span>
+              </p>
             </div>
           </div>
 
@@ -479,7 +476,7 @@ export function ListPageTemplate({ listKey = "Order" }) {
           </div>
 
           {/* Status Tabs - Fixed Position */}
-          <div className="px-4 pb-0 border-b bg-background">
+          <div className="pb-0 border-b bg-background">
             <StatusTabs />
           </div>
 
@@ -498,24 +495,22 @@ export function ListPageTemplate({ listKey = "Order" }) {
 
           {/* Scrollable Orders List */}
           <div className="flex-1 min-h-0 overflow-auto">
-            <div>
-              {data?.items && (
-                <OrdersTable
-                  data={data}
-                  error={error}
-                  listKey={listKey}
-                  list={list}
-                  handleOrderAction={() => {}}
-                  loadingActions={loadingActions}
-                  query={query}
-                  filters={filters}
-                  searchParam={searchParam}
-                  updateSearchString={updateSearchString}
-                  push={push}
-                  showCreate={showCreate}
-                />
-              )}
-            </div>
+            {data?.items && (
+              <OrdersTable
+                data={data}
+                error={error}
+                listKey={listKey}
+                list={list}
+                handleOrderAction={() => {}}
+                loadingActions={loadingActions}
+                query={query}
+                filters={filters}
+                searchParam={searchParam}
+                updateSearchString={updateSearchString}
+                push={push}
+                showCreate={showCreate}
+              />
+            )}
           </div>
 
           {/* Pagination - Fixed at Bottom */}

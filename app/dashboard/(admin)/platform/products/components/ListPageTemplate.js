@@ -785,16 +785,19 @@ export function ListPageTemplate({ listKey = "Product" }) {
       ) : (
         <div className="flex flex-col flex-1 min-h-0">
           {/* Analytics Overview */}
-          <div className="border-b border-gray-200 dark:border-gray-800">
-            <div className="p-6">
+          <div className="border-gray-200 dark:border-gray-800">
+            <div className="px-4 pt-4 pb-0">
               <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-50">
                 Products
               </h1>
-              <dl className="mt-6 flex flex-wrap items-center gap-x-12 gap-y-8">
+              <p className="text-muted-foreground">
+                <span>Create and manage products</span>
+              </p>
+              {/* <dl className="mt-6 flex flex-wrap items-center gap-x-12 gap-y-8">
                 {metrics.map((metric) => (
                   <MetricCard key={metric.label} metric={metric} />
                 ))}
-              </dl>
+              </dl> */}
             </div>
           </div>
 
@@ -875,7 +878,7 @@ export function ListPageTemplate({ listKey = "Product" }) {
           </div>
 
           {/* Status Tabs - Fixed Position */}
-          <div className="px-4 pb-0 border-b bg-background">
+          <div className="pb-0 border-b bg-background">
             <StatusTabs />
           </div>
 
@@ -894,23 +897,21 @@ export function ListPageTemplate({ listKey = "Product" }) {
 
           {/* Scrollable Products List */}
           <div className="flex-1 min-h-0 overflow-auto">
-            <div className="py-2">
-              {data?.items && (
-                <ProductsTable
-                  data={data}
-                  error={error}
-                  listKey={listKey}
-                  list={list}
-                  handleProductAction={() => {}}
-                  loadingActions={loadingActions}
-                  query={query}
-                  filters={filters}
-                  searchParam={searchParam}
-                  updateSearchString={updateSearchString}
-                  push={push}
-                />
-              )}
-            </div>
+            {data?.items && (
+              <ProductsTable
+                data={data}
+                error={error}
+                listKey={listKey}
+                list={list}
+                handleProductAction={() => {}}
+                loadingActions={loadingActions}
+                query={query}
+                filters={filters}
+                searchParam={searchParam}
+                updateSearchString={updateSearchString}
+                push={push}
+              />
+            )}
           </div>
 
           {/* Pagination - Fixed at Bottom */}

@@ -177,9 +177,9 @@ export function DeleteButton({ itemLabel, itemId, list, onClose, children }) {
   return (
     <Dialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
       <DialogTrigger asChild>
-        <TooltipProvider delayDuration={0}>
+        {/* <TooltipProvider delayDuration={0}>
           <Tooltip>
-            <TooltipTrigger asChild>
+            <TooltipTrigger asChild> */}
               <Button
                 variant="outline"
                 size="icon"
@@ -188,10 +188,10 @@ export function DeleteButton({ itemLabel, itemId, list, onClose, children }) {
               >
                 <Trash2 className="stroke-red-500" size={16} strokeWidth={2} aria-hidden="true" />
               </Button>
-            </TooltipTrigger>
+            {/* </TooltipTrigger>
             <TooltipContent className="px-2 py-1 text-xs">Delete item</TooltipContent>
           </Tooltip>
-        </TooltipProvider>
+        </TooltipProvider> */}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>

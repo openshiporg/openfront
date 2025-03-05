@@ -19,6 +19,11 @@ export default function ProductActions({ product, region, disabled }) {
   const countryCode = useParams().countryCode;
 
   const variants = product.productVariants;
+  
+  // Check if product has only one variant
+  const hasOnlyOneVariant = useMemo(() => {
+    return variants.length === 1;
+  }, [variants]);
 
   // initialize the option state
   useEffect(() => {
@@ -53,6 +58,11 @@ export default function ProductActions({ product, region, disabled }) {
 
   // memoized function to check if the current options are a valid variant
   const variant = useMemo(() => {
+    // If there's only one variant, return it directly
+    if (hasOnlyOneVariant && variants[0]?.id) {
+      return variants[0];
+    }
+    
     let variantId = undefined;
 
     for (const key of Object.keys(variantRecord)) {
@@ -62,7 +72,7 @@ export default function ProductActions({ product, region, disabled }) {
     }
 
     return variants.find((v) => v.id === variantId);
-  }, [options, variantRecord, variants]);
+  }, [options, variantRecord, variants, hasOnlyOneVariant]);
 
   // if product only has one variant, then select it
   useEffect(() => {
@@ -112,6 +122,9 @@ export default function ProductActions({ product, region, disabled }) {
 
   // Add isValidVariant check
   const isValidVariant = useMemo(() => {
+    // If there's only one variant, it's always valid
+    if (hasOnlyOneVariant) return true;
+    
     return variants.some((v) => {
       if (!v.productOptionValues?.length) return false;
       
@@ -122,7 +135,7 @@ export default function ProductActions({ product, region, disabled }) {
       
       return isEqual(temp, options);
     });
-  }, [variants, options]);
+  }, [variants, options, hasOnlyOneVariant]);
 
   return (
     <>
@@ -150,14 +163,14 @@ export default function ProductActions({ product, region, disabled }) {
         <ProductPrice product={product} variant={variant} region={region} />
         <Button
           onClick={handleAddToCart}
-          disabled={!inStock || !variant || !isValidVariant}
+          disabled={(!inStock || !variant || !isValidVariant) && !hasOnlyOneVariant}
           variant="primary"
           className="w-full h-10"
           isLoading={isAdding}
         >
-          {!variant
+          {!variant && !hasOnlyOneVariant
             ? "Select variant"
-            : !inStock || !isValidVariant
+            : !inStock
               ? "Out of stock"
               : "Add to cart"}
         </Button>

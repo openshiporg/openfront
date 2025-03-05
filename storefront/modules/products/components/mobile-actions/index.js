@@ -28,6 +28,11 @@ const MobileActions = ({
     variantId: variant?.id,
     region,
   })
+  
+  // Check if product has only one variant
+  const hasOnlyOneVariant = useMemo(() => {
+    return (product.productVariants?.length || 0) === 1
+  }, [product])
 
   const selectedPrice = useMemo(() => {
     if (!price) {
@@ -79,28 +84,33 @@ const MobileActions = ({
               <div></div>
             )}
           </div>
-          <div className="grid grid-cols-2 w-full gap-x-4">
-            <Button
-              onClick={open}
-              variant="secondary"
-              className="w-full"
-              data-testid="mobile-actions-button">
-              <div className="flex items-center justify-between w-full">
-                <span>
-                  {variant
-                    ? Object.values(options).join(" / ")
-                    : "Select Options"}
-                </span>
-                <ChevronDown />
-              </div>
-            </Button>
+          <div className={clx("grid w-full gap-x-4", {
+            "grid-cols-2": !hasOnlyOneVariant,
+            "grid-cols-1": hasOnlyOneVariant
+          })}>
+            {!hasOnlyOneVariant && (
+              <Button
+                onClick={open}
+                variant="secondary"
+                className="w-full"
+                data-testid="mobile-actions-button">
+                <div className="flex items-center justify-between w-full">
+                  <span>
+                    {variant
+                      ? Object.values(options).join(" / ")
+                      : "Select Options"}
+                  </span>
+                  <ChevronDown />
+                </div>
+              </Button>
+            )}
             <Button
               onClick={handleAddToCart}
-              disabled={!inStock || !variant}
+              disabled={!inStock || (!variant && !hasOnlyOneVariant)}
               className="w-full"
               isLoading={isAdding}
               data-testid="mobile-cart-button">
-              {!variant
+              {!variant && !hasOnlyOneVariant
                 ? "Select variant"
                 : !inStock
                 ? "Out of stock"

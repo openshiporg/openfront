@@ -177,7 +177,8 @@ export function InlineEdit({
                   tone: "positive",
                   message: "Saved successfully",
                 });
-                onSave(makeDataGetter(data, errors).get("item"));
+                const itemGetter = makeDataGetter(data, errors).get("item");
+                onSave(itemGetter);
               }
             })
             .catch((err) => {
@@ -290,7 +291,8 @@ export function InlineEdit({
                       tone: "positive",
                       message: "Saved successfully",
                     });
-                    onSave(makeDataGetter(data, errors).get("item"));
+                    const itemGetter = makeDataGetter(data, errors).get("item");
+                    onSave(itemGetter);
                     setEditDialogOpen(false);
                   }
                 })

@@ -14,6 +14,9 @@ import {
   PackageCheck,
   CircleSlash,
   AlertTriangle,
+  Circle,
+  Triangle,
+  Square,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -781,10 +784,11 @@ function UnfulfilledItems({
         ) : (
           <div className="flex h-44 items-center justify-center rounded-lg border bg-muted/40 p-4 my-3">
             <div className="text-center">
-              <PackageCheck
-                className="mx-auto h-7 w-7 text-muted-foreground/50"
-                aria-hidden={true}
-              />
+              <div className="relative h-11 w-11 mx-auto mb-2">
+                <Triangle className="absolute left-1 top-1 w-4 h-4 fill-indigo-200 stroke-indigo-400 dark:stroke-indigo-600 dark:fill-indigo-950 rotate-[90deg]" />
+                <Square className="absolute right-[.2rem] top-1 w-4 h-4 fill-orange-300 stroke-orange-500 dark:stroke-amber-600 dark:fill-amber-950 rotate-[30deg]" />
+                <Circle className="absolute bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 fill-emerald-200 stroke-emerald-400 dark:stroke-emerald-600 dark:fill-emerald-900" />  
+              </div>
               <p className="mt-2 text-sm font-medium">
                 All items have been fulfilled
               </p>

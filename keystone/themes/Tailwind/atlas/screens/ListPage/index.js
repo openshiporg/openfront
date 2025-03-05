@@ -470,49 +470,48 @@ export const ListPageTemplate = ({ listKey }) => {
             ) : (
               <div>
                 <div className="flex flex-col items-center p-10 border-dashed border-2 rounded-lg m-5">
-                  <div className="flex opacity-40">
-                    <Triangle className="w-8 h-8 fill-indigo-200 stroke-indigo-400 dark:stroke-indigo-600 dark:fill-indigo-950" />
-                    <Circle className="w-8 h-8 fill-emerald-200 stroke-emerald-400 dark:stroke-emerald-600 dark:fill-emerald-950" />
-                    <Square className="w-8 h-8 fill-orange-300 stroke-orange-500 dark:stroke-amber-600 dark:fill-amber-950" />
+                  <div className="text-center">
+                    <div className="relative mx-auto h-7 w-7">
+                      <Triangle className="absolute left-0 top-0 h-7 w-7 fill-indigo-200 stroke-indigo-400 dark:stroke-indigo-600 dark:fill-indigo-950 opacity-80" />
+                      <Square className="absolute left-0 top-0 h-7 w-7 fill-orange-300 stroke-orange-500 dark:stroke-amber-600 dark:fill-amber-950 opacity-80" />
+                      <Circle className="absolute left-0 top-0 h-7 w-7 fill-emerald-200 stroke-emerald-400 dark:stroke-emerald-600 dark:fill-emerald-950 opacity-80" />
+                    </div>
+                    <p className="mt-2 text-sm font-medium">
+                      No <span className="lowercase">{list.label}</span>
+                    </p>
+                    {query.search || filters.filters.length ? (
+                      <>
+                        <span className="pt-4 font-semibold">
+                          Found{" "}
+                          {searchParam
+                            ? `matching your search`
+                            : `matching your filters`}{" "}
+                        </span>
+                        <Button
+                          variant="secondary"
+                          onClick={() => {
+                            updateSearchString("");
+                            const { search, ...queries } = query;
+                            // const newQueryString = new URLSearchParams(
+                            //   // queries
+                            // ).toString();
+                            // push(`?${newQueryString}`);
+                            const path = window.location.pathname; // Get the current path
+                            push(path); // Navigate to the current path without query params
+                          }}
+                        >
+                          Clear filters &amp; search
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="pt-4 font-semibold">
+                          Get started by creating a new one.{" "}
+                        </span>
+                        {showCreate && <CreateButtonLink list={list} />}
+                      </>
+                    )}
                   </div>
-                  {query.search || filters.filters.length ? (
-                    <>
-                      <span className="pt-4 font-semibold">
-                        No <span className="lowercase"> {list.label} </span>{" "}
-                      </span>
-                      <span className="text-muted-foreground pb-4">
-                        Found{" "}
-                        {searchParam
-                          ? `matching your search`
-                          : `matching your filters`}{" "}
-                      </span>
-                      <Button
-                        variant="secondary"
-                        onClick={() => {
-                          updateSearchString("");
-                          const { search, ...queries } = query;
-                          // const newQueryString = new URLSearchParams(
-                          //   // queries
-                          // ).toString();
-                          // push(`?${newQueryString}`);
-                          const path = window.location.pathname; // Get the current path
-                          push(path); // Navigate to the current path without query params
-                        }}
-                      >
-                        Clear filters &amp; search
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="pt-4 font-semibold">
-                        No <span className="lowercase"> {list.label} </span>
-                      </span>
-                      <span className="text-muted-foreground pb-4">
-                        Get started by creating a new one.{" "}
-                      </span>
-                      {showCreate && <CreateButtonLink list={list} />}
-                    </>
-                  )}
                 </div>
               </div>
             )}

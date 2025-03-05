@@ -30,7 +30,7 @@ export const STORE_TEMPLATES = {
   },
 };
 
-const PAYMENT_PROVIDERS = {
+export const PAYMENT_PROVIDERS = {
   pp_stripe_stripe: {
     envRequirements: ["NEXT_PUBLIC_STRIPE_KEY", "STRIPE_SECRET_KEY"],
     envDescriptions: {

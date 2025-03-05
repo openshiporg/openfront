@@ -67,7 +67,14 @@ export const Field = ({
           field={field}
           id={value.id}
           value={value}
-          onChange={onChange}
+          onChange={(newValue) => {
+            // Ensure itemsBeingEdited and itemBeingCreated are properly reset
+            onChange({
+              ...newValue,
+              itemsBeingEdited: new Set(),
+              itemBeingCreated: false
+            });
+          }}
           foreignList={foreignList}
           localList={localList}
           onCreateItem={(callback) => {
@@ -112,6 +119,8 @@ export const Field = ({
                   ...value,
                   currentIds,
                   initialIds,
+                  itemsBeingEdited: new Set(),
+                  itemBeingCreated: false
                 };
 
                 onChange(newValue);

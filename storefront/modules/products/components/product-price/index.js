@@ -1,4 +1,5 @@
 import { clx } from "@medusajs/ui"
+import { useMemo } from "react"
 
 import { getProductPrice } from "@storefront/lib/util/get-product-price"
 
@@ -14,6 +15,11 @@ export default function ProductPrice({
   })
 
   const selectedPrice = variant ? variantPrice : cheapestPrice
+  
+  // Check if product has only one variant
+  const hasOnlyOneVariant = useMemo(() => {
+    return (product.productVariants?.length || 0) === 1
+  }, [product])
 
   if (!selectedPrice) {
     return <div className="block w-32 h-9 bg-gray-100 animate-pulse" />;
@@ -32,7 +38,7 @@ export default function ProductPrice({
         className={clx("text-xl-semi", {
           "text-ui-fg-interactive": isOnSale,
         })}>
-        {!variant && "From "}
+        {!variant && !hasOnlyOneVariant && "From "}
         {formattedPrice}
       </span>
       {isOnSale && (

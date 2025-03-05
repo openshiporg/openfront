@@ -222,6 +222,8 @@ export function Cards({
                           onChange({
                             ...value,
                             currentIds: newCurrentIds,
+                            itemsBeingEdited: new Set(),
+                            itemBeingCreated: false
                           });
                           setHideConnectItemsLabel("Done");
                         }

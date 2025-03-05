@@ -5,8 +5,6 @@ import { useRef, useState } from "react";
 import { gql, useQuery } from "@keystone-6/core/admin-ui/apollo";
 import { Badge } from "@ui/badge";
 import { RotateCcw, Check, Archive, X, AlertTriangle } from "lucide-react";
-import { ScrollArea, ScrollBar } from "@ui/scroll-area";
-import { cn } from "@keystone/utils/cn";
 
 const STATUS_COUNTS_QUERY = gql`
   query GetOrderStatusCounts {
@@ -53,7 +51,11 @@ export function StatusTabs() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const [hoveredIndex, setHoveredIndex] = useState(null);
+  const [, updateScroll] = useState(0);
+
   const tabRefs = useRef([]);
+  const scrollContainerRef = useRef(null);
+
   const { data: statusCounts, loading } = useQuery(STATUS_COUNTS_QUERY);
 
   const statuses = [
@@ -111,13 +113,22 @@ export function StatusTabs() {
     router.push(`${pathname}?${params.toString()}`);
   };
 
+  const handleScroll = () => {
+    updateScroll(n => n + 1);
+  };
+
+  const activeIndex = currentStatus === "all" ? 0 : statuses.findIndex((s) => s.value === currentStatus) + 1;
+  const activeTabOffsetLeft = tabRefs.current[activeIndex]?.offsetLeft || 0;
+  const activeTabWidth = tabRefs.current[activeIndex]?.offsetWidth || 0;
+  const scrollOffset = scrollContainerRef.current ? scrollContainerRef.current.scrollLeft : 0;
+
   return (
     <div className="relative">
       {/* Hover Highlight */}
       <div
-        className="absolute h-[28px] mt-1 transition-all duration-300 ease-out bg-muted/60 rounded-[6px] flex items-center"
+        className="absolute h-[28px] mt-1 transition-all duration-300 ease-out bg-muted/60 rounded-[6px] flex items-center ml-4"
         style={{
-          left: `${hoveredIndex !== null ? tabRefs.current[hoveredIndex]?.offsetLeft : 0}px`,
+          left: `${hoveredIndex !== null ? tabRefs.current[hoveredIndex]?.offsetLeft - scrollOffset : 0}px`,
           width: `${hoveredIndex !== null ? tabRefs.current[hoveredIndex]?.offsetWidth : 0}px`,
           opacity: hoveredIndex !== null ? 1 : 0,
         }}
@@ -125,15 +136,15 @@ export function StatusTabs() {
 
       {/* Active Indicator */}
       <div
-        className="absolute bottom-[-1px] h-[2px] bg-foreground transition-all duration-300 ease-out"
+        className="absolute bottom-[-1px] h-[2px] bg-foreground transition-all duration-300 ease-out ml-4"
         style={{
-          left: `${tabRefs.current[currentStatus === "all" ? 0 : statuses.findIndex((s) => s.value === currentStatus) + 1]?.offsetLeft || 0}px`,
-          width: `${tabRefs.current[currentStatus === "all" ? 0 : statuses.findIndex((s) => s.value === currentStatus) + 1]?.offsetWidth || 0}px`,
+          left: `${activeTabOffsetLeft - scrollOffset}px`,
+          width: `${activeTabWidth}px`,
         }}
       />
 
-      {/* Tabs */}
-      <ScrollArea className="w-full" orientation="horizontal">
+      {/* Tabs - re-enabled scroll area with onScroll handler */}
+      <div ref={scrollContainerRef} onScroll={handleScroll} className="w-full overflow-x-auto no-scrollbar px-4">
         <div className="relative flex space-x-[6px] items-center pb-1">
           <div
             ref={(el) => (tabRefs.current[0] = el)}
@@ -175,17 +186,6 @@ export function StatusTabs() {
                 onClick={() => handleStatusChange(status.value)}
               >
                 <div className="text-sm font-medium leading-5 whitespace-nowrap flex items-center justify-center h-full">
-                  {/* <div
-                    className={cn(
-                      "mr-1.5 h-4 w-4 rounded-full flex items-center justify-center",
-                      statusConfig[status.value].color,
-                      currentStatus === status.value
-                        ? "opacity-100"
-                        : "opacity-50"
-                    )}
-                  >
-                    <StatusIcon className="h-2.5 w-2.5 text-white stroke-[2.5]" />
-                  </div> */}
                   <Badge color={statusConfig[status.value].color} className="mr-2 rounded-full border-2 w-3 h-3 p-0" />
                   {status.label}
                   <span className="ml-2 rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
@@ -196,8 +196,7 @@ export function StatusTabs() {
             );
           })}
         </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+      </div>
     </div>
   );
 }

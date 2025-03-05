@@ -118,7 +118,8 @@ export function InlineCreate({
             tone: "positive",
             message: "Saved successfully",
           });
-          onCreate(makeDataGetter(data, errors).get("item"));
+          const dataGetter = makeDataGetter(data, errors).get("item");
+          onCreate(dataGetter);
           resetForm();
           setCreateDialogOpen(false);
         }

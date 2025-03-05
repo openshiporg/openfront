@@ -71,46 +71,43 @@ export const ProductsTable = ({
 
   if (!data.items?.length) {
     return (
-      <div>
-        <div className="flex flex-col items-center p-10">
-          <div className="flex opacity-40">
-            <Triangle className="w-8 h-8 fill-indigo-200 stroke-indigo-400 dark:stroke-indigo-600 dark:fill-indigo-950" />
-            <Circle className="w-8 h-8 fill-emerald-200 stroke-emerald-400 dark:stroke-emerald-600 dark:fill-emerald-950" />
-            <Square className="w-8 h-8 fill-orange-300 stroke-orange-500 dark:stroke-amber-600 dark:fill-amber-950" />
+      <div className="h-full flex">
+        <div className="flex flex-col items-center justify-center rounded-lg border bg-muted/40 p-10 m-5 flex-1">
+          <div className="text-center">
+            <div className="relative h-11 w-11 mx-auto mb-2">
+              <Triangle className="absolute left-1 top-1 w-4 h-4 fill-indigo-200 stroke-indigo-400 dark:stroke-indigo-600 dark:fill-indigo-950 rotate-[90deg]" />
+              <Square className="absolute right-[.2rem] top-1 w-4 h-4 fill-orange-300 stroke-orange-500 dark:stroke-amber-600 dark:fill-amber-950 rotate-[30deg]" />
+              <Circle className="absolute bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 fill-emerald-200 stroke-emerald-400 dark:stroke-emerald-600 dark:fill-emerald-900" />
+            </div>
+            <p className="mt-2 text-sm font-medium">
+              No <span className="lowercase">{list.label}</span>
+            </p>
+            {query.search || filters.filters.length ? (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Found matching your {searchParam ? "search" : "filters"}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 mt-2"
+                  onClick={() => {
+                    updateSearchString("");
+                    const path = window.location.pathname;
+                    push(path);
+                  }}
+                >
+                  Clear filters & search
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Get started by creating a new one.
+                </p>
+              </>
+            )}
           </div>
-          {query.search || filters.filters.length ? (
-            <>
-              <span className="pt-4 font-semibold">
-                No <span className="lowercase">{list.label}</span>{" "}
-              </span>
-              <span className="text-muted-foreground pb-4">
-                Found{" "}
-                {searchParam ? `matching your search` : `matching your filters`}{" "}
-              </span>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  updateSearchString("");
-                  const path = window.location.pathname;
-                  push(path);
-                }}
-              >
-                Clear filters &amp; search
-              </Button>
-            </>
-          ) : (
-            <>
-              <span className="pt-4 font-semibold">
-                No <span className="lowercase">{list.label}</span>
-              </span>
-              <span className="text-muted-foreground pb-4">
-                Get started by creating a new one.{" "}
-              </span>
-              {showCreate && (
-                <CreateButtonLink href="/dashboard/admin/platform/products/new" />
-              )}
-            </>
-          )}
         </div>
       </div>
     );
@@ -174,9 +171,14 @@ export const ProductsTable = ({
                     >
                       {product.status}
                     </Badge>
-                    <span className="truncate max-w-[120px] sm:max-w-none">{product.handle}</span>
+                    <span className="truncate max-w-[120px] sm:max-w-none">
+                      {product.handle}
+                    </span>
                     <span>•</span>
-                    <span>{product.productVariants?.length || 0} variants</span>
+                    <span>
+                      {product.productVariants?.length || 0} variant
+                      {product.productVariants?.length > 1 && "s"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -228,7 +230,9 @@ export const ProductsTable = ({
                             </span>
                           )}
                         </span>
-                        <span className="shrink-0">{variant.inventoryQuantity || 0} in stock</span>
+                        <span className="shrink-0">
+                          {variant.inventoryQuantity || 0} in stock
+                        </span>
                       </div>
                     ))}
                   </div>

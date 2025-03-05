@@ -2,7 +2,6 @@
 
 import bytes from "bytes"
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
-import Image from "next/image"
 
 import { FieldContainer } from "@keystone/themes/Tailwind/orion/components/FieldContainer";
 import { FieldLabel } from "@keystone/themes/Tailwind/orion/components/FieldLabel";
@@ -112,7 +111,7 @@ function ImgView({ errorMessage, value, onChange, field, inputRef }) {
                 Save to complete upload
               </div>
             )}
-            <Image
+            <img
               onLoad={event => {
                 if (value.kind === "upload") {
                   setImageDimensions({
@@ -124,8 +123,6 @@ function ImgView({ errorMessage, value, onChange, field, inputRef }) {
               className="object-contain w-full h-full"
               alt={`Image uploaded to ${field.path} field`}
               src={imageSrc}
-              width={500}
-              height={500}
             />
           </Fragment>
         )}
