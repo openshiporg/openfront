@@ -27,7 +27,8 @@
       "Bash(touch:*)",
       "Bash(npm run build:*)",
       "Bash(npx tsc:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }

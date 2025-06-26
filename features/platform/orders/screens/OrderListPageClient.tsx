@@ -16,6 +16,7 @@ import { PageContainer } from '../../../dashboard/components/PageContainer'
 import { PlatformFilterBar } from '../components/PlatformFilterBar'
 import { StatusTabs } from '../components/StatusTabs'
 import { OrderDetailsComponent } from '../components/OrderDetailsComponent'
+import { Pagination } from '../../../dashboard/components/Pagination'
 import { useDashboard } from '../../../dashboard/context/DashboardProvider'
 import { useSelectedFields } from '../../../dashboard/hooks/useSelectedFields'
 import { useSort } from '../../../dashboard/hooks/useSort'
@@ -164,11 +165,25 @@ export function OrderListPageClient({
           <EmptyState isFiltered={isFiltered} />
         </div>
       ) : (
-        <div className="grid grid-cols-1 divide-y">
-          {data?.items?.map((order: any) => (
-            <OrderDetailsComponent key={order.id} order={order} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 divide-y">
+            {data?.items?.map((order: any) => (
+              <OrderDetailsComponent key={order.id} order={order} />
+            ))}
+          </div>
+          
+          {/* Pagination */}
+          {data && data.count > pageSize && (
+            <div className="px-4 md:px-6 py-4">
+              <Pagination
+                currentPage={currentPage}
+                total={data.count}
+                pageSize={pageSize}
+                list={{ singular: 'order', plural: 'orders' }}
+              />
+            </div>
+          )}
+        </>
       )}
     </PageContainer>
   )

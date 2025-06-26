@@ -3,7 +3,7 @@
  * Based on dashboard ListPage but hardcoded for orders
  */
 
-import { getListItemsAction } from '../actions/getListItemsAction'
+import { getListItemsAction } from '../../utils/getListItemsAction'
 import { getListByPath } from '../../../dashboard/actions/getListByPath'
 import { getAdminMetaAction } from '../../../dashboard/actions'
 import { buildOrderByClause } from '../../../dashboard/lib/buildOrderByClause'
@@ -156,6 +156,7 @@ export async function OrderListPage({ searchParams }: PageProps) {
       thumbnail
       formattedUnitPrice
       formattedTotal
+      variantTitle
       variantData
       productData
     }

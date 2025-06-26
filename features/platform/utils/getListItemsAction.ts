@@ -4,9 +4,9 @@
 
 'use server'
 
-import { keystoneClient } from '../../../dashboard/lib/keystoneClient'
-import { getListByPath } from '../../../dashboard/actions/getListByPath'
-import { getFieldTypeFromViewsIndex } from '../../../dashboard/views/getFieldTypeFromViewsIndex'
+import { keystoneClient } from '@/features/dashboard/lib/keystoneClient'
+import { getListByPath } from '@/features/dashboard/actions/getListByPath'
+import { getFieldTypeFromViewsIndex } from '@/features/dashboard/views/getFieldTypeFromViewsIndex'
 
 interface ListItemsVariables extends Record<string, unknown> {
   where?: any

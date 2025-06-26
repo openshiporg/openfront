@@ -18,6 +18,7 @@ interface LineItem {
   thumbnail?: string;
   formattedUnitPrice?: string;
   formattedTotal?: string;
+  variantTitle?: string;
   variantData?: any;
   productData?: any;
 }
@@ -100,6 +101,11 @@ export const ProductDetailsCollapsible = ({
                   <span className="text-sm font-medium">
                     {item.title}
                   </span>
+                  {item.variantTitle && (
+                    <div className="text-xs text-muted-foreground font-medium">
+                      {item.variantTitle}
+                    </div>
+                  )}
                   <div className="text-xs text-muted-foreground">
                     {item.sku ? `SKU: ${item.sku}` : item.variantData?.sku ? `SKU: ${item.variantData.sku}` : ''}
                     {item.variantData?.barcode && (
