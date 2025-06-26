@@ -62,7 +62,7 @@ export async function ItemPage({ params }: ItemPageParams) {
   // Add validation data to the enhanced list
   if (validationResponse.success && enhancedList.fields) {
     Object.keys(enhancedList.fields).forEach(fieldPath => {
-      const validation = validationResponse.data[fieldPath]
+      const validation = validationResponse.data?.[fieldPath]
       if (validation && enhancedList.fields[fieldPath]) {
         enhancedList.fields[fieldPath].itemView = {
           ...enhancedList.fields[fieldPath].itemView,

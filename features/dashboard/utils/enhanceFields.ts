@@ -33,7 +33,7 @@ export function enhanceFields(rawFields: Record<string, any>, listKey: string) {
       // Handle custom views if they exist (Keystone logic)
       if (field.customViewsIndex !== null && field.customViewsIndex !== undefined) {
         const customViewsSource = getFieldViews(field.customViewsIndex) as any
-        const allowedExportsOnCustomViews = new Set(views.allowedExportsOnCustomViews || [])
+        const allowedExportsOnCustomViews = new Set((views as any).allowedExportsOnCustomViews || [])
         
         for (const exportName in customViewsSource) {
           if (allowedExportsOnCustomViews.has(exportName)) {
@@ -63,7 +63,7 @@ export function enhanceFields(rawFields: Record<string, any>, listKey: string) {
           isNonNull: field.isNonNull || [],
         },
         views,
-        controller: views.controller({
+        controller: (views as any).controller({
           listKey: listKey,
           fieldMeta: field.fieldMeta,
           label: field.label,

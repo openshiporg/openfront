@@ -155,9 +155,9 @@ export function FilterAdd({ list, children }: FilterAddProps) {
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(filterableFields[state.fieldPath].controller.filter.types).map(([filterType, { label }]) => (
+                      {Object.entries(filterableFields[state.fieldPath].controller.filter.types).map(([filterType, filterConfig]) => (
                         <SelectItem key={filterType} value={filterType}>
-                          {label}
+                          {(filterConfig as any).label}
                         </SelectItem>
                       ))}
                     </SelectContent>

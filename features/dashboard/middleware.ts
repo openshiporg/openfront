@@ -49,7 +49,7 @@ export async function checkInitStatus(request: NextRequest) {
 
   try {
     const client = await createMiddlewareGraphQLClient(headers);
-    const data = await client.request(query);
+    const data = await client.request(query) as { redirectToInit: boolean };
     return data.redirectToInit;
   } catch (error) {
     console.error("Error checking init status:", error);
@@ -79,7 +79,10 @@ export async function getAuthenticatedUser(request: NextRequest) {
 
   try {
     const client = await createMiddlewareGraphQLClient(headers);
-    const data = await client.request(query);
+    const data = await client.request(query) as { 
+      authenticatedItem: any; 
+      redirectToInit: boolean 
+    };
     
     return {
       user: data.authenticatedItem,

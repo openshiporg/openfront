@@ -16,57 +16,49 @@ interface ListCardProps {
   list: any
   count?: number | null
   hideCreate?: boolean
-  countQuery?: string
 }
 
-function ListCard({ list, count, hideCreate = false, countQuery }: ListCardProps) {
+function ListCard({ list, count, hideCreate = false }: ListCardProps) {
   const isSingleton = list.isSingleton || false
   const href = `/dashboard/${list.path}${isSingleton ? '/1' : ''}`
 
   return (
-    <div className="space-y-2">
-      {countQuery && !isSingleton && (
-        <div className="px-2 py-1 bg-muted/30 rounded text-xs font-mono text-muted-foreground border">
-          {countQuery}
-        </div>
-      )}
-      <Card className={cn(
-        'relative bg-gradient-to-bl from-background to-muted/80 shadow-xs hover:bg-muted transition-colors'
-      )}>
-        <Link href={href}>
-          <CardContent className="p-4">
-            <h3 className="text-sm font-semibold text-foreground">
-              {list.label}
-            </h3>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {isSingleton 
-                ? 'Singleton' 
-                : count === null || count === undefined
-                  ? 'Unknown'
-                  : `${count} item${count !== 1 ? 's' : ''}`
-              }
-            </p>
-          </CardContent>
-        </Link>
-        
-        {!hideCreate && !isSingleton && (
-          <Link 
-            href={`/dashboard/${list.path}/create`}
-            className="absolute top-3 right-3"
+    <Card className={cn(
+      'relative bg-gradient-to-bl from-background to-muted/80 shadow-xs hover:bg-muted transition-colors'
+    )}>
+      <Link href={href}>
+        <CardContent className="p-4">
+          <h3 className="text-sm font-semibold text-foreground">
+            {list.label}
+          </h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {isSingleton 
+              ? 'Singleton' 
+              : count === null || count === undefined
+                ? 'Unknown'
+                : `${count} item${count !== 1 ? 's' : ''}`
+            }
+          </p>
+        </CardContent>
+      </Link>
+      
+      {!hideCreate && !isSingleton && (
+        <Link 
+          href={`/dashboard/${list.path}/create`}
+          className="absolute top-3 right-3"
+        >
+          <Button
+            variant="outline" 
+            size="icon"
+            className="h-7 w-7"
+            title={`Add ${list.singular?.toLowerCase() || 'item'}`}
           >
-            <Button
-              variant="outline" 
-              size="icon"
-              className="h-7 w-7"
-              title={`Add ${list.singular?.toLowerCase() || 'item'}`}
-            >
-              <PlusIcon className="h-4 w-4" />
-              <span className="sr-only">Create new {list.label}</span>
-            </Button>
-          </Link>
-        )}
-      </Card>
-    </div>
+            <PlusIcon className="h-4 w-4" />
+            <span className="sr-only">Create new {list.label}</span>
+          </Button>
+        </Link>
+      )}
+    </Card>
   )
 }
 
@@ -104,21 +96,9 @@ export async function HomePage() {
   // Lists are already enhanced with gqlNames from getAdminMetaAction
   const enhancedLists = lists.filter((list: any) => !list.isHidden)
 
-  // Fetch list counts server-side and generate query strings
+  // Fetch list counts server-side
   let countData: Record<string, number> = {}
-  let queryStrings: Record<string, string> = {}
-  
   if (enhancedLists.length > 0) {
-    // Generate count query strings for each list (replicating getListCounts logic)
-    const listsToCount = enhancedLists.filter((list: any) => !list.isSingleton)
-    
-    listsToCount.forEach((list: any) => {
-      const graphqlNames = list.graphql?.names
-      if (graphqlNames) {
-        queryStrings[list.key] = JSON.stringify(graphqlNames, null, 2)
-      }
-    })
-
     const countResponse = await getListCounts(enhancedLists)
     if (countResponse.success && countResponse.data) {
       countData = countResponse.data
@@ -161,7 +141,6 @@ export async function HomePage() {
                 list={list}
                 count={countData[list.key] ?? null}
                 hideCreate={list.hideCreate ?? false}
-                countQuery={queryStrings[list.key]}
               />
             ))}
           </div>

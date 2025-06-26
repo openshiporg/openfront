@@ -106,7 +106,12 @@ export function useCreateItem(list: any, enhancedFields: Record<string, any>) {
         setState(prev => ({ 
           ...prev, 
           state: 'error',
-          error: { graphQLErrors: result.errors }
+          error: { 
+            graphQLErrors: result.errors.map((err: any) => ({
+              ...err,
+              path: err.path?.map((p: any) => String(p))
+            }))
+          }
         }))
         return null
       }

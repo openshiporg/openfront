@@ -19,7 +19,7 @@ async function createGraphQLClient(): Promise<GraphQLClient> {
   const authHeaders = await getAuthHeaders();
   return new GraphQLClient(endpoint, {
     credentials: 'include',
-    headers: authHeaders ? authHeaders : undefined,
+    headers: authHeaders || {},
   });
 }
 
@@ -43,7 +43,7 @@ function formatGraphQLErrors(error: ClientError): { message: string; errors?: an
     const code = extensions.code || '';
     
     // Get original error if available
-    const originalError = extensions.originalError?.message || extensions.exception?.message || '';
+    const originalError = (extensions.originalError as any)?.message || (extensions.exception as any)?.message || '';
     
     // Include validation errors if present
     const validation = extensions.validation || {};

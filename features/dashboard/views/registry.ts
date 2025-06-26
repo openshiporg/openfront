@@ -114,10 +114,10 @@ interface ServerImplementation {
 }
 
 export interface FieldImplementation {
-  client?: any
-  server?: any
-  graphql?: any
-  filterTypes?: any
+  Field: (props: any) => React.ReactElement | null
+  Cell: (props: any) => React.ReactElement | null
+  controller: (args: any) => any
+  allowedExportsOnCustomViews?: string[]
 }
 
 // Define the field types registry structure

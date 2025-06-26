@@ -16,6 +16,7 @@
     "@keystone-6/core": "^6.5.1",
     "@keystone-6/document-renderer": "^1.1.2",
     "@keystone-6/fields-document": "^9.1.1",
+    "@number-flow/react": "^0.5.10",
     "@paypal/react-paypal-js": "^8.8.3",
     "@prisma/client": "^6.10.1",
     "@radix-ui/react-accordion": "^1.2.11",

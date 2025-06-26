@@ -157,3 +157,26 @@ export type FieldProps<FieldControllerFn extends (...args: any) => FieldControll
   value: ReturnType<ReturnType<FieldControllerFn>['deserialize']>
   itemValue: Item
 }
+
+export type CellComponent<
+  FieldControllerFn extends (...args: any) => FieldController<any, any> = () => FieldController<
+    any,
+    any
+  >,
+> = {
+  (props: {
+    value: any
+    field: ReturnType<FieldControllerFn>
+    item: Record<string, unknown>
+  }): ReactElement | null
+}
+
+export type FieldViews = Record<
+  string,
+  {
+    Field: (props: FieldProps<any>) => ReactElement | null
+    Cell: CellComponent
+    controller: (args: FieldControllerConfig<any>) => FieldController<unknown, JSONValue>
+    allowedExportsOnCustomViews?: string[]
+  }
+>

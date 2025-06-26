@@ -8,7 +8,7 @@ import { keystoneClient } from '../lib/keystoneClient'
 import { getListByPath } from './getListByPath'
 import { getFieldTypeFromViewsIndex } from '../views/getFieldTypeFromViewsIndex'
 
-interface ListItemsVariables {
+interface ListItemsVariables extends Record<string, unknown> {
   where?: any
   take: number
   skip: number
