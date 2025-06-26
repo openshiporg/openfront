@@ -44,9 +44,10 @@ interface FieldsProps {
   forceValidation?: boolean
   invalidFields?: ReadonlySet<string>
   isRequireds?: Record<string, any>
+  view?: 'createView' | 'itemView'
 }
 
-export function Fields({ fields, value, onChange, forceValidation, invalidFields, isRequireds }: FieldsProps) {
+export function Fields({ fields, value, onChange, forceValidation, invalidFields, isRequireds, view = 'itemView' }: FieldsProps) {
   // Create serialized data exactly like Keystone for testFilter
   const serialized = useMemo(() => {
     const result: Record<string, unknown> = {}
@@ -61,8 +62,19 @@ export function Fields({ fields, value, onChange, forceValidation, invalidFields
       {Object.entries(fields).map(([fieldPath, field]) => {
         const fieldValue = value[fieldPath]
         
-        // Get field mode from itemView - following Keystone pattern
-        const fieldMode = field.itemView?.fieldMode || 'edit'
+        // Get field mode from the appropriate view - following Keystone pattern
+        const fieldModeFilter = field[view]?.fieldMode || 'edit'
+        let fieldMode: 'read' | 'edit' | 'hidden'
+        
+        if (typeof fieldModeFilter === 'string') {
+          fieldMode = fieldModeFilter as 'read' | 'edit' | 'hidden'
+        } else {
+          // Handle conditional field modes
+          if (testFilter(fieldModeFilter?.edit, serialized)) fieldMode = 'edit'
+          else if (view === 'itemView' && testFilter(fieldModeFilter?.read, serialized)) fieldMode = 'read'
+          else fieldMode = 'hidden'
+        }
+        
         const isReadOnly = fieldMode === 'read' || fieldMode === 'hidden'
         
         if (fieldMode === 'hidden') {

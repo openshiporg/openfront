@@ -8,6 +8,9 @@ import React, { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { FieldContainer } from '@/components/ui/field-container'
+import { FieldLabel } from '@/components/ui/field-label'
+import { FieldDescription } from '@/components/ui/field-description'
 import { CalendarIcon } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
@@ -106,21 +109,23 @@ export function Field({
 
   if (isReadOnly) {
     return (
-      <div className="space-y-2">
-        <Label>{field.label}</Label>
+      <FieldContainer>
+        <FieldLabel>{field.label}</FieldLabel>
+        {field.description && (
+          <FieldDescription>{field.description}</FieldDescription>
+        )}
         <Input
           readOnly
+          tabIndex={-1}
           value={
             dateValue
               ? dateValue.toLocaleString()
               : 'yyyy-mm-dd --:--:--'
           }
-          className="bg-muted"
+          className="bg-muted cursor-default"
+          onFocus={(e) => e.target.blur()}
         />
-        {field.description && (
-          <p className="text-sm text-muted-foreground">{field.description}</p>
-        )}
-      </div>
+      </FieldContainer>
     )
   }
 

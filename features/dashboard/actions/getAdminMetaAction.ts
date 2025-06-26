@@ -5,7 +5,7 @@
 'use server'
 
 import { keystoneClient } from '../lib/keystoneClient'
-import { getGqlNames } from '../lib/getGqlNames'
+import { getGraphQLNames } from '../lib/getGqlNames'
 
 export async function getAdminMetaAction(listKey?: string) {
   try {
@@ -119,10 +119,7 @@ export async function getAdminMetaAction(listKey?: string) {
 
     // Enhance all lists with gqlNames before returning
     const enhancedLists = adminMeta.lists.map((list: any) => {
-      const gqlNames = getGqlNames({
-        listKey: list.key,
-        pluralGraphQLName: list.plural || list.listQueryName || `${list.key}s`
-      })
+      const gqlNames = getGraphQLNames(list.key, { plural: list.plural })
       
       return {
         ...list,

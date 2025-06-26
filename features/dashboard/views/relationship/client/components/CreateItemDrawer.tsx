@@ -1,129 +1,117 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Fields } from "@/features/dashboard/components/Fields";
-import { useInvalidFields } from "@/features/dashboard/utils/useInvalidFields";
+import { getList } from "@/features/dashboard/actions/getList";
+import { enhanceFields } from "@/features/dashboard/utils/enhanceFields";
+import { useCreateItem } from "@/features/dashboard/utils/useCreateItem";
 
 interface CreateItemDrawerProps {
   listKey: string;
-  list: any;
   isOpen: boolean;
   onClose: () => void;
   onCreate: (data: Record<string, unknown>) => void;
 }
 
-export function CreateItemDrawer({ listKey, list, isOpen, onClose, onCreate }: CreateItemDrawerProps) {
-  const [value, setValue] = useState(() => {
-    const result: Record<string, unknown> = {};
-    
-    // Initialize with default values from field controllers
-    Object.keys(list.fields).forEach(fieldKey => {
-      const field = list.fields[fieldKey];
-      if (field.controller?.defaultValue !== undefined) {
-        result[fieldKey] = field.controller.defaultValue;
-      }
-    });
-    
-    return result;
-  });
+export function CreateItemDrawer({ listKey, isOpen, onClose, onCreate }: CreateItemDrawerProps) {
+  // Use SWR to fetch list data (same pattern as relationship field)
+  const { data: list, error, isLoading } = useSWR(
+    `list-${listKey}`,
+    async () => await getList(listKey),
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60000, // Cache for 1 minute
+    }
+  );
 
-  const [forceValidation, setForceValidation] = useState(false);
+  // Create enhanced fields like the create page does
+  const enhancedFields = useMemo(() => {
+    if (!list) return {};
+    return enhanceFields(list.fields || {}, list.key);
+  }, [list]);
 
-  // Get fields that can be created (not read-only, not hidden)
-  const createFields = useMemo(() => {
-    const result: Record<string, any> = {};
-    
-    Object.entries(list.fields).forEach(([fieldKey, field]) => {
-      const createView = (field as any).views?.Cell || (field as any).itemView;
-      const fieldMode = createView?.fieldMode || 'edit';
-      
-      // Only include fields that can be edited
-      if (fieldMode === 'edit') {
-        result[fieldKey] = field;
-      }
-    });
-    
-    return result;
-  }, [list.fields]);
+  // Use the create item hook with enhanced fields (same as create page)
+  const createItem = useCreateItem(list, enhancedFields);
 
-  // Get validation state - use simplified version since we don't have isRequireds here
-  const invalidFields = useInvalidFields(createFields, value, {});
-
-  const onSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    setForceValidation(true);
+    if (!createItem) return;
     
-    // Check if there are any invalid fields
-    if (invalidFields.size > 0) {
-      return;
+    // Use the createItem hook's create method (same as create page)
+    const item = await createItem.create();
+    if (item?.id) {
+      onCreate(item);
+      onClose();
     }
-
-    // Create the "built" item data that matches Keystone's pattern
-    const builtItemData: Record<string, unknown> = {};
-    
-    // Serialize each field value using its controller
-    Object.entries(createFields).forEach(([fieldKey, field]) => {
-      const fieldValue = value[fieldKey];
-      if (field.controller?.serialize && fieldValue !== undefined) {
-        try {
-          const serialized = field.controller.serialize(fieldValue);
-          Object.assign(builtItemData, serialized);
-        } catch (error) {
-          console.error(`Error serializing field ${fieldKey}:`, error);
-        }
-      }
-    });
-
-    onCreate(builtItemData);
-    onClose();
   };
 
   const handleCancel = () => {
-    // Reset form state
-    setValue(() => {
-      const result: Record<string, unknown> = {};
-      Object.keys(list.fields).forEach(fieldKey => {
-        const field = list.fields[fieldKey];
-        if (field.controller?.defaultValue !== undefined) {
-          result[fieldKey] = field.controller.defaultValue;
-        }
-      });
-      return result;
-    });
-    setForceValidation(false);
     onClose();
   };
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <Drawer open={isOpen} onOpenChange={(open) => !open && handleCancel()}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Loading...</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 py-8 text-center">
+            Loading form...
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  // Show error state if no list
+  if (error || !list || !createItem) {
+    return (
+      <Drawer open={isOpen} onOpenChange={(open) => !open && handleCancel()}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Error</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 py-8 text-center text-red-600">
+            {error ? `Error loading ${listKey}: ${error.message}` : `Could not load form for ${listKey}`}
+          </div>
+          <DrawerFooter>
+            <Button onClick={handleCancel}>Close</Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && handleCancel()}>
-      <DrawerContent className="max-h-[80vh]">
-        <form onSubmit={onSubmit}>
-          <DrawerHeader>
-            <DrawerTitle>Add {list.singular}</DrawerTitle>
-            <DrawerDescription>
-              Create a new {list.singular.toLowerCase()}
-            </DrawerDescription>
-          </DrawerHeader>
-
-          <div className="px-4 overflow-y-auto flex-1">
+      <DrawerContent className="flex flex-col">
+        <DrawerHeader className="flex-shrink-0">
+          <DrawerTitle>Add {list.singular}</DrawerTitle>
+          <DrawerDescription>
+            Create a new {list.singular.toLowerCase()}
+          </DrawerDescription>
+        </DrawerHeader>
+        
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="flex-1 overflow-y-auto px-4">
             <Fields
-              list={list}
-              fields={createFields}
-              value={value}
-              onChange={setValue}
-              forceValidation={forceValidation}
-              invalidFields={invalidFields}
+              {...createItem.props}
+              fields={enhancedFields}
+              view="createView"
             />
           </div>
 
-          <DrawerFooter>
+          <DrawerFooter className="flex-shrink-0">
             <div className="flex gap-2 justify-end">
               <Button type="button" variant="outline" onClick={handleCancel}>
                 Cancel
               </Button>
-              <Button type="submit">
-                Add {list.singular}
+              <Button type="submit" disabled={createItem.state === 'loading'}>
+                {createItem.state === 'loading' ? 'Creating...' : `Add ${list.singular}`}
               </Button>
             </div>
           </DrawerFooter>

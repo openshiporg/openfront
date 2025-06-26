@@ -10,10 +10,11 @@ import { keystoneClient } from '../lib/keystoneClient'
 export async function getListCounts(
   lists: Array<{
     key: string;
-    listQueryName?: string;
     isSingleton?: boolean;
-    gqlNames?: {
-      listQueryCountName?: string;
+    graphql?: {
+      names: {
+        listQueryCountName: string;
+      };
     };
   }>
 ) {
@@ -25,19 +26,7 @@ export async function getListCounts(
 
     // Build a query to get counts for all non-singleton lists at once
     const countQueries = listsToCount.map((list) => {
-      // Try multiple ways to derive the count query name
-      let countName: string
-      
-      if (list.gqlNames?.listQueryCountName) {
-        countName = list.gqlNames.listQueryCountName
-      } else if (list.listQueryName) {
-        // If we have listQueryName, derive count name from it
-        countName = list.listQueryName + 'Count'
-      } else {
-        // Fallback to key-based naming
-        countName = `${list.key.toLowerCase()}sCount`
-      }
-      
+      const countName = list.graphql?.names?.listQueryCountName
       return `${list.key}: ${countName}`
     })
 

@@ -142,7 +142,7 @@ export function CreatePageClient({ listKey, list }: CreatePageClientProps) {
 
               {/* Sidebar Fields (if any) */}
               {Object.keys(fieldsSplit.sidebarFields).length > 0 && (
-                <Fields {...createItem.props} fields={fieldsSplit.sidebarFields} />
+                <Fields {...createItem.props} fields={fieldsSplit.sidebarFields} view="createView" />
               )}
             </div>
 
@@ -227,7 +227,7 @@ export function CreatePageClient({ listKey, list }: CreatePageClientProps) {
 
             {/* Main Fields */}
             {Object.keys(fieldsSplit.mainFields).length > 0 && (
-              <Fields {...createItem.props} fields={fieldsSplit.mainFields} />
+              <Fields {...createItem.props} fields={fieldsSplit.mainFields} view="createView" />
             )}
           </div>
         </div>

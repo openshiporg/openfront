@@ -8,7 +8,6 @@ import { RelationshipSelect } from "./components/RelationshipSelect";
 import { Cards } from "./components/Cards";
 import { CreateItemDrawer } from "./components/CreateItemDrawer";
 import { Button } from "@/components/ui/button";
-import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -218,35 +217,35 @@ export function ClientField({
           {foreignList && (
             <Fragment>
               {!field?.hideCreate && onChange !== undefined && (
-                <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-                  <DrawerTrigger asChild>
-                    <Button variant="outline">
-                      Create related {foreignList.singular}
-                    </Button>
-                  </DrawerTrigger>
-                  <DrawerContent>
-                    <CreateItemDrawer
-                      listKey={foreignList.key}
-                      onClose={() => {
-                        setIsDrawerOpen(false);
-                      }}
-                      onCreate={(val) => {
-                        setIsDrawerOpen(false);
-                        if (value?.kind === "many") {
-                          onChange({
-                            ...value,
-                            value: [...(value?.value ?? []), val],
-                          });
-                        } else if (value?.kind === "one") {
-                          onChange({
-                            ...value,
-                            value: val,
-                          });
-                        }
-                      }}
-                    />
-                  </DrawerContent>
-                </Drawer>
+                <>
+                  <Button 
+                    variant="outline"
+                    onClick={() => setIsDrawerOpen(true)}
+                  >
+                    Create related {foreignList.singular}
+                  </Button>
+                  <CreateItemDrawer
+                    listKey={foreignList.key}
+                    isOpen={isDrawerOpen}
+                    onClose={() => {
+                      setIsDrawerOpen(false);
+                    }}
+                    onCreate={(val) => {
+                      setIsDrawerOpen(false);
+                      if (value?.kind === "many") {
+                        onChange({
+                          ...value,
+                          value: [...(value?.value ?? []), val],
+                        });
+                      } else if (value?.kind === "one") {
+                        onChange({
+                          ...value,
+                          value: val,
+                        });
+                      }
+                    }}
+                  />
+                </>
               )}
 
               {onChange !== undefined &&

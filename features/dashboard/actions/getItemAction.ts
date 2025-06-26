@@ -31,6 +31,7 @@ const FIELD_GRAPHQL_SELECTIONS: Record<string, (fieldPath: string, fieldMeta?: a
   timestamp: (fieldPath) => fieldPath,
   id: (fieldPath) => fieldPath,
   decimal: (fieldPath) => fieldPath,
+  virtual: (fieldPath, fieldMeta) => `${fieldPath}${fieldMeta?.query}`,
   // Add more field types as needed
 }
 

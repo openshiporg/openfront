@@ -1,5 +1,7 @@
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { FieldContainer } from '@/components/ui/field-container'
+import { FieldLabel } from '@/components/ui/field-label'
+import { FieldDescription } from '@/components/ui/field-description'
 import type {
   CellComponent,
   FieldController,
@@ -18,27 +20,27 @@ function stringify(value: unknown) {
 }
 
 export function Field(props: FieldProps<typeof controller>) {
-  const { autoFocus, field, value } = props
+  const { field, value } = props
   if (value === createViewValue) return null
 
   return (
-    <div className="space-y-2">
-      <Label htmlFor={field.path}>
+    <FieldContainer>
+      <FieldLabel>
         {field.label}
-        {field.description && (
-          <span className="text-sm text-muted-foreground block">
-            {field.description}
-          </span>
-        )}
-      </Label>
+      </FieldLabel>
+      {field.description && (
+        <FieldDescription>
+          {field.description}
+        </FieldDescription>
+      )}
       <Input
-        id={field.path}
-        autoFocus={autoFocus}
         readOnly={true}
+        tabIndex={-1}
         value={stringify(value)}
-        className="bg-muted"
+        className="bg-muted cursor-default"
+        onFocus={(e) => e.target.blur()}
       />
-    </div>
+    </FieldContainer>
   )
 }
 
