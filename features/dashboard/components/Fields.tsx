@@ -58,7 +58,7 @@ export function Fields({ fields, value, onChange, forceValidation, invalidFields
   }, [fields, value])
 
   return (
-    <div className="space-y-6">
+    <div className="grid w-full items-center gap-4">
       {Object.entries(fields).map(([fieldPath, field]) => {
         const fieldValue = value[fieldPath]
         
