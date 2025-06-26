@@ -3,44 +3,33 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { RotateCcw, Check, Archive, X, AlertTriangle } from "lucide-react";
 
 const statusConfig = {
-  pending: {
-    label: "Pending",
-    icon: RotateCcw,
-    color: "blue"
-  },
-  completed: {
-    label: "Completed",
-    icon: Check,
-    color: "emerald"
-  },
-  archived: {
-    label: "Archived",
-    icon: Archive,
+  draft: {
+    label: "Draft",
     color: "zinc"
   },
-  canceled: {
-    label: "Canceled",
-    icon: X,
-    color: "rose"
+  proposed: {
+    label: "Proposed",
+    color: "blue"
   },
-  requires_action: {
-    label: "Requires Action",
-    icon: AlertTriangle,
-    color: "orange"
+  published: {
+    label: "Published",
+    color: "emerald"
+  },
+  rejected: {
+    label: "Rejected",
+    color: "rose"
   },
 } as const;
 
 interface StatusTabsProps {
   statusCounts: {
     all: number;
-    pending: number;
-    requires_action: number;
-    completed: number;
-    archived: number;
-    canceled: number;
+    draft: number;
+    proposed: number;
+    published: number;
+    rejected: number;
   };
 }
 
@@ -55,32 +44,15 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const statuses = [
-    { value: "pending", label: "Pending", count: statusCounts.pending },
-    {
-      value: "requires_action",
-      label: "Requires Action",
-      count: statusCounts.requires_action,
-    },
-    {
-      value: "completed",
-      label: "Completed",
-      count: statusCounts.completed,
-    },
-    {
-      value: "archived",
-      label: "Archived",
-      count: statusCounts.archived,
-    },
-    {
-      value: "canceled",
-      label: "Canceled",
-      count: statusCounts.canceled,
-    },
+    { value: "draft", label: "Draft", count: statusCounts.draft },
+    { value: "proposed", label: "Proposed", count: statusCounts.proposed },
+    { value: "published", label: "Published", count: statusCounts.published },
+    { value: "rejected", label: "Rejected", count: statusCounts.rejected },
   ] as const;
 
-  // Get current status from URL - reverse engineer from !status_matches parameter
+  // Get current status from URL
   const statusFilter = searchParams.get("!status_matches");
-  let currentStatus = "all"; // Default to "all" when no filter
+  let currentStatus = "all";
 
   if (statusFilter) {
     try {
@@ -89,12 +61,16 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
         currentStatus = typeof parsed[0] === 'string' ? parsed[0] : parsed[0].value;
       }
     } catch (e) {
-      // Invalid JSON in URL, ignore and stay with "all"
+      // Invalid JSON in URL, ignore
     }
   }
 
   const handleStatusChange = (status: string) => {
     const params = new URLSearchParams(searchParams.toString());
+    
+    // Reset to page 1 when changing status
+    params.set("page", "1");
+    
     if (status === "all") {
       params.delete("!status_matches");
     } else {
@@ -145,14 +121,13 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
             onClick={() => handleStatusChange("all")}
           >
             <div className="text-sm font-medium leading-5 whitespace-nowrap flex items-center justify-center h-full gap-2">
-              All Orders
+              All Products
               <span className="rounded-sm bg-background border shadow-xs px-1.5 py-0 text-[10px] leading-[14px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 inline-flex items-center h-[18px]">
                 {statusCounts.all}
               </span>
             </div>
           </div>
           {statuses.map((status, index) => {
-            const StatusIcon = statusConfig[status.value as keyof typeof statusConfig].icon;
             return (
               <div
                 key={status.value}

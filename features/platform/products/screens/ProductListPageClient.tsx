@@ -1,6 +1,6 @@
 /**
- * OrderListPageClient - Client Component  
- * Based on dashboard ListPageClient but hardcoded for orders
+ * ProductListPageClient - Client Component  
+ * Based on dashboard ListPageClient but hardcoded for products
  */
 
 'use client'
@@ -15,14 +15,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { PageContainer } from '../../../dashboard/components/PageContainer'
 import { PlatformFilterBar } from '../../components/PlatformFilterBar'
 import { StatusTabs } from '../components/StatusTabs'
-import { OrderDetailsComponent } from '../components/OrderDetailsComponent'
 import { Pagination } from '../../../dashboard/components/Pagination'
 import { FilterList } from '../../../dashboard/components/FilterList'
 import { useDashboard } from '../../../dashboard/context/DashboardProvider'
 import { useSelectedFields } from '../../../dashboard/hooks/useSelectedFields'
 import { useSort } from '../../../dashboard/hooks/useSort'
 
-interface OrderListPageClientProps {
+interface ProductListPageClientProps {
   list: any
   initialData: { items: any[], count: number }
   initialError: string | null
@@ -31,14 +30,13 @@ interface OrderListPageClientProps {
     pageSize: number  
     search: string
   }
-  statusCounts?: {
-    pending: number
-    requires_action: number
-    completed: number
-    archived: number
-    canceled: number
-    all: number
-  }
+  statusCounts: {
+    all: number;
+    draft: number;
+    proposed: number;
+    published: number;
+    rejected: number;
+  } | null
 }
 
 function EmptyState({ isFiltered }: { isFiltered: boolean }) {
@@ -66,13 +64,13 @@ function EmptyState({ isFiltered }: { isFiltered: boolean }) {
 }
 
 
-export function OrderListPageClient({ 
+export function ProductListPageClient({ 
   list, 
   initialData, 
   initialError, 
   initialSearchParams,
   statusCounts
-}: OrderListPageClientProps) {
+}: ProductListPageClientProps) {
   const router = useRouter()
   const { basePath } = useDashboard()
   // Hooks for sorting and field selection
@@ -115,16 +113,16 @@ export function OrderListPageClient({
   const breadcrumbs = [
     { type: 'link' as const, label: 'Dashboard', href: basePath },
     { type: 'page' as const, label: 'Platform' },
-    { type: 'page' as const, label: 'Orders' }
+    { type: 'page' as const, label: 'Products' }
   ]
 
   const header = (
     <div>
       <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-50">
-        Orders
+        Products
       </h1>
       <p className="text-muted-foreground">
-        Create and manage orders
+        Create and manage products
       </p>
     </div>
   )
@@ -135,13 +133,13 @@ export function OrderListPageClient({
   const isEmpty = data?.count === 0 && !isFiltered
 
   return (
-    <PageContainer title="Orders" header={header} breadcrumbs={breadcrumbs}>
-      {/* Filter Bar - includes search, filters, sorting, field selection, and create button */}
+    <PageContainer title="Products" header={header} breadcrumbs={breadcrumbs}>
+      {/* Filter Bar - includes search, filters, sorting, and create button */}
       <div className="px-4 md:px-6">
         <PlatformFilterBar list={list} />
       </div>
 
-      {/* Status Tabs - abstracted status filtering */}
+      {/* Status Tabs */}
       {statusCounts && (
         <div className="border-b">
           <StatusTabs statusCounts={statusCounts} />
@@ -153,7 +151,7 @@ export function OrderListPageClient({
         <FilterList list={list} />
       </div>
 
-      {/* Data table - full width */}
+      {/* Products list */}
       {error ? (
         <div className="px-4 md:px-6">
           <Alert variant="destructive">
@@ -172,10 +170,20 @@ export function OrderListPageClient({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 divide-y">
-            {data?.items?.map((order: any) => (
-              <OrderDetailsComponent key={order.id} order={order} />
-            ))}
+          {/* TODO: Replace with ProductDetailsComponent when available */}
+          <div className="px-4 md:px-6">
+            <div className="grid gap-4">
+              {data?.items?.map((product: any) => (
+                <div key={product.id} className="border rounded-lg p-4">
+                  <h3 className="font-semibold">{product.title}</h3>
+                  <p className="text-sm text-muted-foreground">{product.handle}</p>
+                  <p className="text-sm text-muted-foreground">Status: {product.status}</p>
+                  {product.description && (
+                    <p className="text-sm text-muted-foreground">Has description</p>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
           
           {/* Pagination */}
@@ -185,7 +193,7 @@ export function OrderListPageClient({
                 currentPage={currentPage}
                 total={data.count}
                 pageSize={pageSize}
-                list={{ singular: 'order', plural: 'orders' }}
+                list={{ singular: 'product', plural: 'products' }}
               />
             </div>
           )}

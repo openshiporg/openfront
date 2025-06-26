@@ -41,15 +41,20 @@ Replace the dynamic `listKey` parameter with your specific entity:
 const listKey = 'orders'; // Hardcode your entity key
 ```
 
-### Step 3: Create Platform Filter Bar
+### Step 3: Use Shared Platform Filter Bar
 
-Copy the dashboard's `FilterBar` and remove field selection:
+Use the shared `PlatformFilterBar` from `platform/components`:
 
 ```typescript
-// components/PlatformFilterBar.tsx
-// Copy from dashboard/components/FilterBar.tsx
-// Remove FieldSelection component and import
-// Keep FilterAdd, SortSelection, FilterList for full functionality
+// Import shared component
+import { PlatformFilterBar } from '../../components/PlatformFilterBar'
+
+// This component provides:
+// ✅ Search functionality
+// ✅ Filter controls (FilterAdd)
+// ✅ Sort controls (SortSelection)  
+// ✅ Active filter display (FilterList)
+// ❌ Field selection (removed for platform pages)
 ```
 
 ### Step 4: Custom GraphQL Selection
@@ -105,7 +110,16 @@ const response = await getListItemsAction(
 )
 ```
 
-### Step 5: Replace ListTable with Custom Components
+### Step 5: Copy Existing Detail Components
+
+If you have existing detail components from Dasher 7 or other sources:
+
+1. **Copy the detail components** to your `components/` folder
+2. **Update import paths** to use OpenFrontFinal2 structure
+3. **Adapt components** that use external utilities not available in this project
+4. **Test component rendering** with your GraphQL data structure
+
+### Step 6: Replace ListTable with Custom Components
 
 Instead of the generic `ListTable`, use your custom display components:
 
@@ -121,7 +135,7 @@ Instead of the generic `ListTable`, use your custom display components:
 </div>
 ```
 
-### Step 6: Add Status Tabs (Optional)
+### Step 7: Add Status Tabs (Optional)
 
 For entities with status fields, add status filtering:
 
@@ -133,7 +147,7 @@ import { getYourStatusCounts } from '../actions'
 <StatusTabs statusCounts={statusCounts} />
 ```
 
-### Step 7: Add Pagination
+### Step 8: Add Pagination
 
 Import and use the dashboard's pagination:
 
@@ -148,23 +162,45 @@ Import and use the dashboard's pagination:
 )}
 ```
 
+### Step 9: Create App Router Page
+
+Create the Next.js app page to expose your platform list:
+
+```typescript
+// app/dashboard/(admin)/platform/your-entity/page.tsx
+import { YourListPage } from "@/features/platform/your-entity/screens/YourListPage";
+
+export default YourListPage;
+```
+
+**File Location**: `app/dashboard/(admin)/platform/products/page.tsx`
+
+This creates the route: `/dashboard/platform/products`
+
 ## File Structure
 
 ```
 features/platform/
 ├── utils/
 │   └── getListItemsAction.ts        # Shared list fetching utility
+├── components/
+│   └── PlatformFilterBar.tsx        # Shared FilterBar without field selection
 ├── orders/                          # Example platform page
 │   ├── screens/
 │   │   ├── OrderListPage.tsx        # Server component
 │   │   └── OrderListPageClient.tsx  # Client component
 │   ├── components/
-│   │   ├── PlatformFilterBar.tsx    # Dashboard FilterBar without field selection
-│   │   ├── StatusTabs.tsx           # Status filtering tabs
+│   │   ├── StatusTabs.tsx           # Order-specific status filtering tabs
 │   │   └── OrderDetailsComponent.tsx # Custom display component
 │   └── actions/
 │       └── index.ts                 # Status counts and other actions
 └── BUILDER.md                       # This guide
+
+app/dashboard/(admin)/platform/
+├── orders/
+│   └── page.tsx                     # Route: /dashboard/platform/orders
+└── products/
+    └── page.tsx                     # Route: /dashboard/platform/products
 ```
 
 ## Key Components
@@ -187,9 +223,9 @@ export async function getListItemsAction(
 - **Without custom selection**: Uses dashboard's automatic field detection
 - **With custom selection**: Uses your provided GraphQL selection string
 
-### PlatformFilterBar
+### PlatformFilterBar (Shared Component)
 
-Dashboard's `FilterBar` without field selection - gives you:
+Located in `platform/components/PlatformFilterBar.tsx`, this is the dashboard's `FilterBar` without field selection - gives you:
 - ✅ Search functionality
 - ✅ Filter controls (FilterAdd)
 - ✅ Sort controls (SortSelection)
@@ -223,7 +259,8 @@ To create a new platform page:
 4. **Modify** the `customGraphQLSelection` for your entity's fields
 5. **Replace** `OrderDetailsComponent` with your custom display component
 6. **Update** status counts function if your entity has status
-7. **Test** all functionality (search, filter, sort, paginate)
+7. **Create app page** at `app/dashboard/(admin)/platform/your-entity/page.tsx`
+8. **Test** all functionality (search, filter, sort, paginate)
 
 ## Notes
 

@@ -10,14 +10,14 @@ import {
   ArrowUpDown,
   CirclePlus,
 } from "lucide-react"
-import { FilterAdd } from "../../../dashboard/components/FilterAdd"
-import { FilterList } from "../../../dashboard/components/FilterList"
-import { SortSelection } from "../../../dashboard/components/SortSelection"
+import { FilterAdd } from "../../dashboard/components/FilterAdd"
+import { FilterList } from "../../dashboard/components/FilterList"
+import { SortSelection } from "../../dashboard/components/SortSelection"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 import Link from "next/link"
-import { useDashboard } from '../../../dashboard/context/DashboardProvider'
-import { enhanceFields } from '../../../dashboard/utils/enhanceFields'
+import { useDashboard } from '../../dashboard/context/DashboardProvider'
+import { enhanceFields } from '../../dashboard/utils/enhanceFields'
 
 interface PlatformFilterBarProps {
   list: any
@@ -142,8 +142,6 @@ export function PlatformFilterBar({ list }: PlatformFilterBarProps) {
         </div>
       </div>
 
-      {/* Active Filters */}
-      <FilterList list={list} />
     </div>
   )
 }
