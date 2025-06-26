@@ -253,16 +253,16 @@ export function controller(
         return `${operator} ${value}`
       },
       types: {
-        equals: { label: 'Is exactly', initialValue: null },
-        not: { label: 'Is not exactly', initialValue: null },
-        gt: { label: 'Is greater than', initialValue: null },
-        lt: { label: 'Is less than', initialValue: null },
-        gte: { label: 'Is greater than or equal to', initialValue: null },
-        lte: { label: 'Is less than or equal to', initialValue: null },
-        empty: { label: 'Is empty', initialValue: null },
-        not_empty: { label: 'Is not empty', initialValue: null },
-      },
-    },
+        equals: { label: 'Is exactly', initialValue: '' },
+        not: { label: 'Is not exactly', initialValue: '' },
+        gt: { label: 'Is greater than', initialValue: '' },
+        lt: { label: 'Is less than', initialValue: '' },
+        gte: { label: 'Is greater than or equal to', initialValue: '' },
+        lte: { label: 'Is less than or equal to', initialValue: '' },
+        empty: { label: 'Is empty', initialValue: '' },
+        not_empty: { label: 'Is not empty', initialValue: '' },
+      } as any,
+    } as any,
   }
 }
 

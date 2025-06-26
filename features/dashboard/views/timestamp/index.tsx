@@ -130,14 +130,19 @@ export function Field({
   }
 
   return (
-    <div className="space-y-2">
-      <Label>{field.label}</Label>
+    <FieldContainer>
+      <FieldLabel className={validationMessage ? "text-red-600" : ""}>
+        {field.label}
+      </FieldLabel>
+      {field.description && (
+        <FieldDescription>{field.description}</FieldDescription>
+      )}
       <Popover>
         <PopoverTrigger asChild>
           <Button
             variant={"outline"}
             className={cn(
-              "w-full justify-start text-left font-normal",
+              "justify-start text-left font-normal",
               !dateValue && "text-muted-foreground",
               validationMessage && "border-red-500"
             )}
@@ -187,13 +192,10 @@ export function Field({
           )}
         </PopoverContent>
       </Popover>
-      {field.description && (
-        <p className="text-sm text-muted-foreground">{field.description}</p>
-      )}
       {validationMessage && (
-        <p className="text-sm text-red-600" role="alert">{validationMessage}</p>
+        <div className="text-sm text-red-600" role="alert">{validationMessage}</div>
       )}
-    </div>
+    </FieldContainer>
   )
 }
 
@@ -262,7 +264,7 @@ export function controller(config: FieldControllerConfig<TimestampFieldMeta>): F
               <Button
                 variant={"outline"}
                 className={cn(
-                  "w-full justify-start text-left font-normal",
+                  "justify-start text-left font-normal",
                   !dateValue && "text-muted-foreground"
                 )}
                 autoFocus={autoFocus}

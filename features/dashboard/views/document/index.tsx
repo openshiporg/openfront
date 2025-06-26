@@ -112,14 +112,6 @@ export function Field({
           />
         </ForceValidationProvider>
       </div>
-      
-      {/* Debug: Show current document value */}
-      <div className="mt-4 p-3 bg-muted rounded-md border border-border">
-        <div className="text-xs font-medium text-muted-foreground mb-2">Document Value (Debug):</div>
-        <pre className="text-xs text-foreground bg-background p-2 rounded border border-border overflow-auto max-h-40">
-          {JSON.stringify(value, null, 2)}
-        </pre>
-      </div>
     </FieldContainer>
   )
 }
@@ -235,7 +227,9 @@ export function Cell({ item, field, linkTo }: any) {
     return linkTo ? (
       <CellLink {...linkTo}></CellLink>
     ) : (
-      <CellContainer></CellContainer>
+      <CellContainer>
+        <span className="text-muted-foreground">—</span>
+      </CellContainer>
     )
   }
   

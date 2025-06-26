@@ -273,3 +273,19 @@ export function Field({
     </FieldContainer>
   )
 }
+
+interface CellProps {
+  item: Record<string, any>
+  field: any
+}
+
+export function Cell({ item, field }: CellProps) {
+  const value = item[field.path]
+  return (
+    <span className="text-sm font-mono">
+      {value !== null && value !== undefined ? value.toString() : <span className="text-muted-foreground">—</span>}
+    </span>
+  )
+}
+
+Cell.supportsLinkTo = false

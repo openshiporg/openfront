@@ -220,7 +220,7 @@ export function Cards({
       {/* Create Item Drawer */}
       <CreateItemDrawer
         listKey={foreignList.key}
-        list={foreignList}
+
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onCreate={handleCreateItem}

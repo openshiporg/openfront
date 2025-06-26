@@ -142,6 +142,7 @@ export function ClientField({
       <Fragment>
         {foreignList && localList && (
           <Cards
+            list={localList}
             field={{
               refListKey: field.refListKey,
               refLabelField: field.refLabelField || 'id',
@@ -150,11 +151,11 @@ export function ClientField({
               label: field.label,
               displayOptions: field.displayOptions
             }}
-            id={value?.id}
+
             value={value}
             onChange={onChange}
             foreignList={foreignList}
-            localList={localList}
+
             forceValidation={forceValidation}
           />
         )}

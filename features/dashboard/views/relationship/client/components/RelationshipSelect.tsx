@@ -126,7 +126,7 @@ export function RelationshipSelect({
       );
 
       if (result.success) {
-        const responseData = result.data ?? { items: [], count: 0 }; // Default if data is null/undefined
+        const responseData = result.success && 'data' in result ? (result.data ?? { items: [], count: 0 }) : { items: [], count: 0 };
         const newOptions = (responseData.items ?? []).map((item: any) => ({
           value: item.id,
           label: item[labelField],
@@ -186,7 +186,7 @@ export function RelationshipSelect({
 
     if (result.success) {
       // Map items safely, providing default empty array
-      return (result.data?.items ?? []).map((item: any) => ({
+      return (result.success && 'data' in result ? (result.data?.items ?? []) : []).map((item: any) => ({
         value: item.id,
         label: item[labelField],
         data: item,

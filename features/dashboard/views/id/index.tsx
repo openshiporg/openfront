@@ -152,7 +152,7 @@ export function controller(
       parseGraphQL: (value: any) => {
         return Object.entries(value).flatMap(([type, filterValue]) => {
           if (!filterValue) return []
-          if (type === 'equals') return { type: 'is', value: filterValue as string }
+          if (type === 'equals') return { type: 'is', value: (filterValue as string) || '' }
           if (type === 'notIn') return { type: 'not_in', value: Array.isArray(filterValue) ? filterValue.join(', ') : filterValue }
           if (type === 'in') return { type: 'in', value: Array.isArray(filterValue) ? filterValue.join(', ') : filterValue }
           if (type === 'not' && (filterValue as any)?.equals) {
@@ -174,7 +174,7 @@ export function controller(
         in: { label: 'Is one of', initialValue: '' },
         not_in: { label: 'Is not one of', initialValue: '' },
       },
-    },
+    } as any,
   }
 }
 

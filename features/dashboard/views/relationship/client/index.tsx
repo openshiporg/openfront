@@ -64,12 +64,16 @@ export const Cell = ({ field, item }: { field: any; item: any }) => {
 
   const data = item[field.path];
   if (!data) {
-    return <CellContainer></CellContainer>;
+    return <CellContainer>
+      <span className="text-muted-foreground">—</span>
+    </CellContainer>;
   }
 
   const items = (Array.isArray(data) ? data : [data]).filter((item) => item);
   if (items.length === 0) {
-    return <CellContainer></CellContainer>;
+    return <CellContainer>
+      <span className="text-muted-foreground">—</span>
+    </CellContainer>;
   }
 
   const displayItems = items.length < 5 ? items : items.slice(0, 3);
@@ -181,7 +185,7 @@ function useRelationshipFilterValues({
 
       if (result.success) {
         // Return the items array directly on success, default to empty array
-        return result.data?.items ?? [];
+        return result.success && 'data' in result ? (result.data?.items ?? []) : [];
       } else {
         console.error("Error fetching relationship filter values:", result.error);
         // Throw error for SWR to catch

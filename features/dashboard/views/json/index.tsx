@@ -6,6 +6,9 @@ import React from 'react'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { FieldContainer } from '@/components/ui/field-container'
+import { FieldLabel } from '@/components/ui/field-label'
+import { FieldDescription } from '@/components/ui/field-description'
 import type {
   FieldController,
   FieldControllerConfig,
@@ -41,8 +44,13 @@ export function Field({
   const errorMessage = forceValidation ? 'Invalid JSON' : undefined
 
   return (
-    <div className="space-y-2">
-      <Label>{field.label}</Label>
+    <FieldContainer>
+      <FieldLabel className={errorMessage ? "text-red-600" : ""}>
+        {field.label}
+      </FieldLabel>
+      {field.description && (
+        <FieldDescription>{field.description}</FieldDescription>
+      )}
       <Textarea
         autoFocus={autoFocus}
         readOnly={isReadOnly}
@@ -52,13 +60,10 @@ export function Field({
         rows={8}
         placeholder='{\n  "key": "value"\n}'
       />
-      {field.description && (
-        <p className="text-sm text-muted-foreground">{field.description}</p>
-      )}
       {errorMessage && (
-        <p className="text-sm text-red-600" role="alert">{errorMessage}</p>
+        <div className="text-sm text-red-600" role="alert">{errorMessage}</div>
       )}
-    </div>
+    </FieldContainer>
   )
 }
 
