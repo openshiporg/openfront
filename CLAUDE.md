@@ -117,6 +117,84 @@ This is a Next.js 15 + KeystoneJS 6 application with a **dual dashboard architec
 - `/features/dashboard2/views/relationship/` - Current relationship implementation
 - `/features/dashboard2/views/password/` - Current password implementation
 
+## Platform Pages Migration Pattern
+
+**Purpose**: This pattern enables migration of Dasher 7 platform pages to OpenFrontFinal2 while maintaining existing dashboard functionality.
+
+### Architecture Pattern
+Platform pages use the **Dashboard Extension Pattern**:
+- **Base Structure**: Uses OpenFrontFinal2's dashboard list page as foundation
+- **Specialized Components**: Replaces field selection with platform-specific UI components
+- **Enhanced Filtering**: Abstracts common filters (like status) into dedicated tab components
+- **Component Reuse**: Most UI components can be copied directly if they don't use external utilities
+
+### Key Components
+
+#### PlatformFilterBar
+- **Based on**: Dashboard FilterBar but without field selection
+- **Features**: Search, sorting, filtering, custom create button via render prop
+- **Usage**: `<PlatformFilterBar list={list} customCreateButton={<CustomButton />} />`
+
+#### StatusTabs
+- **Purpose**: Abstract status filtering into visual tabs with counts
+- **Integration**: Changes URL parameters exactly like dashboard filtering
+- **Benefits**: Better UX for status-based filtering, shows counts per status
+
+#### List Page Structure
+```
+OrderListPage (Server Component)
+├── Parse search params (status, search, pagination, sort)
+├── Fetch data using platform actions
+├── Get status counts for tabs
+└── Pass to OrderListPageClient
+
+OrderListPageClient (Client Component)
+├── PlatformFilterBar (search, sort, create)
+├── StatusTabs (status filtering with counts)
+└── OrderDetailsComponent (renders each order)
+```
+
+### Migration Steps
+
+1. **Copy Dashboard List Pages**:
+   - Use `ListPage/index.tsx` as server component template
+   - Use `ListPageClient.tsx` as client component template
+   - Adapt imports and list key ("orders" vs dynamic)
+
+2. **Create Platform-Specific Actions**:
+   - Copy action patterns from Dasher 7
+   - Adapt GraphQL queries to match OpenFrontFinal2 schema
+   - Maintain same function signatures for compatibility
+
+3. **Port UI Components**:
+   - Copy components directly if they don't use external utilities
+   - Adapt import paths to OpenFrontFinal2 structure
+   - Components that can be copied as-is: OrderDetailsComponent, ProductDetailsCollapsible, etc.
+
+4. **Integrate Platform Components**:
+   - Replace Dashboard FilterBar with PlatformFilterBar
+   - Add StatusTabs for status-based filtering
+   - Use custom create buttons (like OrderCreateButton)
+
+### Component Compatibility
+
+**Can Copy Directly**:
+- UI components using only @/components/ui
+- Components with self-contained logic
+- Components using standard React hooks
+
+**Require Adaptation**:
+- Components using Dasher 7-specific utilities
+- Components with hardcoded import paths
+- Components using external APIs that differ between projects
+
+### Benefits
+
+- **Maintains Dashboard Functionality**: Core dashboard remains unchanged
+- **Code Reuse**: Maximum reuse of existing Dasher 7 UI components
+- **Consistent UX**: Platform pages feel integrated with dashboard
+- **Scalable**: Pattern can be applied to other platform pages (products, customers, etc.)
+
 ## Development Notes
 
 - GraphQL endpoint available at `/api/graphql`
