@@ -102,8 +102,6 @@ export const renderLeaf = (props: RenderLeafProps) => {
   const hasDoubleWrappedLeaf = props.leaf && (props.leaf as any).leaf
 
   if (hasDoubleWrappedLeaf) {
-    console.log('Fixing double-wrapped leaf:', props.leaf)
-
     // Create completely new props with fixed structure
     const fixedProps: RenderLeafProps = {
       ...props,

@@ -6,8 +6,6 @@ import { keystoneClient } from '../lib/keystoneClient'
 // Server actions following Keystone's exact mutation pattern
 export async function updateItemAction(listKey: string, id: string, data: Record<string, unknown>) {
   try {
-    console.log('UPDATE_ITEM_ACTION:', { listKey, id, data })
-    
     // Build GraphQL mutation following Keystone's exact pattern
     const mutation = `
       mutation ($id: ID!, $data: ${listKey}UpdateInput!) {
@@ -47,8 +45,6 @@ export async function updateItemAction(listKey: string, id: string, data: Record
 
 export async function createItemAction(listKey: string, data: Record<string, unknown>, selectedFields: string = 'id') {
   try {
-    console.log('CREATE_ITEM_ACTION:', { listKey, data })
-    
     // Build GraphQL mutation following Keystone's exact pattern
     const mutation = `
       mutation ($data: ${listKey}CreateInput!) {
@@ -87,8 +83,6 @@ export async function createItemAction(listKey: string, data: Record<string, unk
 
 export async function deleteItemAction(listKey: string, id: string) {
   try {
-    console.log('DELETE_ITEM_ACTION:', { listKey, id })
-    
     // Build GraphQL mutation following Keystone's exact pattern
     const mutation = `
       mutation ($id: ID!) {
