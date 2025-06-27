@@ -1,19 +1,19 @@
 /**
- * ProductListPage - Server Component
- * Uses dedicated Products actions for consistent data fetching
+ * ClaimListPage - Server Component
+ * Uses dedicated Claims actions for consistent data fetching
  */
 
 import { getListByPath } from '../../../dashboard/actions/getListByPath'
 import { getAdminMetaAction } from '../../../dashboard/actions'
 import { notFound } from 'next/navigation'
-import { ProductListPageClient } from './ProductListPageClient'
-import { getFilteredProducts, getProductStatusCounts } from '../actions'
+import { ClaimListPageClient } from './ClaimListPageClient'
+import { getFilteredClaims, getClaimStatusCounts } from '../actions'
 
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export async function ProductListPage({ searchParams }: PageProps) {
+export async function ClaimListPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const searchParamsObj = Object.fromEntries(
     Object.entries(resolvedSearchParams).map(([key, value]) => [
@@ -22,8 +22,8 @@ export async function ProductListPage({ searchParams }: PageProps) {
     ])
   );
 
-  // Hardcode the list key for products
-  const listKeyPath = 'products';
+  // Hardcode the list key for claims
+  const listKeyPath = 'claim-orders';
 
   // Get the list by path using our cached function
   const list = await getListByPath(listKeyPath);
@@ -37,26 +37,12 @@ export async function ProductListPage({ searchParams }: PageProps) {
   const pageSize = parseInt(searchParamsObj.pageSize?.toString() || list.pageSize?.toString() || '50', 10)
   const searchString = searchParamsObj.search?.toString() || ''
   
-  // Extract status filter from URL params
-  const statusFilter = searchParamsObj['!status_matches']
-  let status = 'all'
-  if (statusFilter) {
-    try {
-      const parsed = JSON.parse(decodeURIComponent(statusFilter.toString()))
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        status = typeof parsed[0] === 'string' ? parsed[0] : parsed[0].value
-      }
-    } catch (e) {
-      // Invalid JSON, ignore
-    }
-  }
-
   // Extract sort parameter
   const sortBy = searchParamsObj.sortBy?.toString()
 
-  // Use dedicated Products actions
-  const response = await getFilteredProducts(
-    status === 'all' ? undefined : status,
+  // Use dedicated Claims actions (no status filtering since ClaimOrder doesn't have status)
+  const response = await getFilteredClaims(
+    undefined, // No status filtering
     searchString || undefined,
     currentPage,
     pageSize,
@@ -69,7 +55,7 @@ export async function ProductListPage({ searchParams }: PageProps) {
   if (response.success) {
     fetchedData = response.data
   } else {
-    console.error('Error fetching products:', response.error)
+    console.error('Error fetching claims:', response.error)
     error = response.error
   }
 
@@ -83,22 +69,16 @@ export async function ProductListPage({ searchParams }: PageProps) {
   const enhancedList = adminMetaList || list
 
   // Get status counts using dedicated action
-  const statusCountsResponse = await getProductStatusCounts()
+  const statusCountsResponse = await getClaimStatusCounts()
   
-  let statusCounts = {
-    all: 0,
-    draft: 0,
-    proposed: 0,
-    published: 0,
-    rejected: 0
-  }
+  let statusCounts = {"all":0}
 
   if (statusCountsResponse.success) {
     statusCounts = statusCountsResponse.data
   }
 
   return (
-    <ProductListPageClient
+    <ClaimListPageClient
       list={enhancedList}
       initialData={fetchedData}
       initialError={error}
@@ -112,4 +92,4 @@ export async function ProductListPage({ searchParams }: PageProps) {
   )
 }
 
-export default ProductListPage
+export default ClaimListPage

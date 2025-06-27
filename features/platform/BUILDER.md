@@ -34,11 +34,11 @@ Platform pages use the **Dashboard Extension Pattern** - they copy the dashboard
 
 ### Step 2: Hardcode the List Key
 
-Replace the dynamic `listKey` parameter with your specific entity:
+Replace the dynamic `listKeyPath` parameter with your specific entity url path:
 
 ```typescript
 // In server component
-const listKey = 'orders'; // Hardcode your entity key
+const listKeyPath = 'orders'; // Hardcode your entity key
 ```
 
 ### Step 3: Use Shared Platform Filter Bar

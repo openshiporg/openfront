@@ -1,19 +1,19 @@
 /**
- * ProductListPage - Server Component
- * Uses dedicated Products actions for consistent data fetching
+ * PriceListListPage - Server Component
+ * Uses dedicated PriceLists actions for consistent data fetching
  */
 
 import { getListByPath } from '../../../dashboard/actions/getListByPath'
 import { getAdminMetaAction } from '../../../dashboard/actions'
 import { notFound } from 'next/navigation'
-import { ProductListPageClient } from './ProductListPageClient'
-import { getFilteredProducts, getProductStatusCounts } from '../actions'
+import { PriceListListPageClient } from './PriceListListPageClient'
+import { getFilteredPriceLists, getPriceListStatusCounts } from '../actions'
 
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export async function ProductListPage({ searchParams }: PageProps) {
+export async function PriceListListPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const searchParamsObj = Object.fromEntries(
     Object.entries(resolvedSearchParams).map(([key, value]) => [
@@ -22,8 +22,8 @@ export async function ProductListPage({ searchParams }: PageProps) {
     ])
   );
 
-  // Hardcode the list key for products
-  const listKeyPath = 'products';
+  // Hardcode the list key for pricelists
+  const listKeyPath = 'price-lists';
 
   // Get the list by path using our cached function
   const list = await getListByPath(listKeyPath);
@@ -54,8 +54,8 @@ export async function ProductListPage({ searchParams }: PageProps) {
   // Extract sort parameter
   const sortBy = searchParamsObj.sortBy?.toString()
 
-  // Use dedicated Products actions
-  const response = await getFilteredProducts(
+  // Use dedicated PriceLists actions
+  const response = await getFilteredPriceLists(
     status === 'all' ? undefined : status,
     searchString || undefined,
     currentPage,
@@ -69,7 +69,7 @@ export async function ProductListPage({ searchParams }: PageProps) {
   if (response.success) {
     fetchedData = response.data
   } else {
-    console.error('Error fetching products:', response.error)
+    console.error('Error fetching pricelists:', response.error)
     error = response.error
   }
 
@@ -83,22 +83,16 @@ export async function ProductListPage({ searchParams }: PageProps) {
   const enhancedList = adminMetaList || list
 
   // Get status counts using dedicated action
-  const statusCountsResponse = await getProductStatusCounts()
+  const statusCountsResponse = await getPriceListStatusCounts()
   
-  let statusCounts = {
-    all: 0,
-    draft: 0,
-    proposed: 0,
-    published: 0,
-    rejected: 0
-  }
+  let statusCounts = {"active":0,"all":0,"inactive":0}
 
   if (statusCountsResponse.success) {
     statusCounts = statusCountsResponse.data
   }
 
   return (
-    <ProductListPageClient
+    <PriceListListPageClient
       list={enhancedList}
       initialData={fetchedData}
       initialError={error}
@@ -112,4 +106,4 @@ export async function ProductListPage({ searchParams }: PageProps) {
   )
 }
 
-export default ProductListPage
+export default PriceListListPage

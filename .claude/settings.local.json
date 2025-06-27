@@ -28,7 +28,10 @@
       "Bash(npm run build:*)",
       "Bash(npx tsc:*)",
       "Bash(sed:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(npx tsx:*)",
+      "mcp__mcp-midscene__midscene_navigate",
+      "mcp__mcp-midscene__midscene_screenshot"
     ],
     "deny": []
   }

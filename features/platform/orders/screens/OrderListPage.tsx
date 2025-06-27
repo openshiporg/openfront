@@ -26,10 +26,10 @@ export async function OrderListPage({ searchParams }: PageProps) {
   );
 
   // Hardcode the list key for orders
-  const listKey = 'orders';
+  const listKeyPath = 'orders';
 
   // Get the list by path using our cached function
-  const list = await getListByPath(listKey);
+  const list = await getListByPath(listKeyPath);
 
   if (!list) {
     notFound()
@@ -163,7 +163,7 @@ export async function OrderListPage({ searchParams }: PageProps) {
   `
 
   // Use dashboard action with custom GraphQL selection
-  const response = await getListItemsAction(listKey, variables, selectedFields, cacheOptions, customGraphQLSelection)
+  const response = await getListItemsAction(listKeyPath, variables, selectedFields, cacheOptions, customGraphQLSelection)
 
   let fetchedData: { items: any[], count: number } = { items: [], count: 0 }
   let error: string | null = null

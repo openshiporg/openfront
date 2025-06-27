@@ -1,19 +1,19 @@
 /**
- * ProductListPage - Server Component
- * Uses dedicated Products actions for consistent data fetching
+ * CollectionListPage - Server Component
+ * Uses dedicated Collections actions for consistent data fetching
  */
 
 import { getListByPath } from '../../../dashboard/actions/getListByPath'
 import { getAdminMetaAction } from '../../../dashboard/actions'
 import { notFound } from 'next/navigation'
-import { ProductListPageClient } from './ProductListPageClient'
-import { getFilteredProducts, getProductStatusCounts } from '../actions'
+import { CollectionListPageClient } from './CollectionListPageClient'
+import { getFilteredCollections, getCollectionStatusCounts } from '../actions'
 
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export async function ProductListPage({ searchParams }: PageProps) {
+export async function CollectionListPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const searchParamsObj = Object.fromEntries(
     Object.entries(resolvedSearchParams).map(([key, value]) => [
@@ -22,8 +22,8 @@ export async function ProductListPage({ searchParams }: PageProps) {
     ])
   );
 
-  // Hardcode the list key for products
-  const listKeyPath = 'products';
+  // Hardcode the list key for collections
+  const listKeyPath = 'product-collections';
 
   // Get the list by path using our cached function
   const list = await getListByPath(listKeyPath);
@@ -36,40 +36,33 @@ export async function ProductListPage({ searchParams }: PageProps) {
   const currentPage = parseInt(searchParamsObj.page?.toString() || '1', 10) || 1
   const pageSize = parseInt(searchParamsObj.pageSize?.toString() || list.pageSize?.toString() || '50', 10)
   const searchString = searchParamsObj.search?.toString() || ''
-  
-  // Extract status filter from URL params
-  const statusFilter = searchParamsObj['!status_matches']
-  let status = 'all'
-  if (statusFilter) {
-    try {
-      const parsed = JSON.parse(decodeURIComponent(statusFilter.toString()))
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        status = typeof parsed[0] === 'string' ? parsed[0] : parsed[0].value
-      }
-    } catch (e) {
-      // Invalid JSON, ignore
+
+  // Extract sort parameter and convert to Dasher7 format
+  const sortBy = searchParamsObj.sortBy?.toString()
+  let sort: { field: string; direction: string } | undefined
+  if (sortBy) {
+    if (sortBy.startsWith('-')) {
+      sort = { field: sortBy.substring(1), direction: 'DESC' }
+    } else {
+      sort = { field: sortBy, direction: 'ASC' }
     }
   }
 
-  // Extract sort parameter
-  const sortBy = searchParamsObj.sortBy?.toString()
-
-  // Use dedicated Products actions
-  const response = await getFilteredProducts(
-    status === 'all' ? undefined : status,
+  // Use dedicated Collections actions (matching Dasher7 signature)
+  const response = await getFilteredCollections(
     searchString || undefined,
     currentPage,
     pageSize,
-    sortBy
+    sort
   )
 
   let fetchedData: { items: any[], count: number } = { items: [], count: 0 }
   let error: string | null = null
 
   if (response.success) {
-    fetchedData = response.data
+    fetchedData = { items: response.data.items || [], count: response.data.count || 0 }
   } else {
-    console.error('Error fetching products:', response.error)
+    console.error('Error fetching collections:', response.error)
     error = response.error
   }
 
@@ -82,23 +75,17 @@ export async function ProductListPage({ searchParams }: PageProps) {
   // Create enhanced list with validation data
   const enhancedList = adminMetaList || list
 
-  // Get status counts using dedicated action
-  const statusCountsResponse = await getProductStatusCounts()
+  // Get status counts using dedicated action (collections only have total count)
+  const statusCountsResponse = await getCollectionStatusCounts()
   
-  let statusCounts = {
-    all: 0,
-    draft: 0,
-    proposed: 0,
-    published: 0,
-    rejected: 0
-  }
+  let statusCounts = { all: 0 }
 
   if (statusCountsResponse.success) {
-    statusCounts = statusCountsResponse.data
+    statusCounts = { all: statusCountsResponse.data.all || 0 }
   }
 
   return (
-    <ProductListPageClient
+    <CollectionListPageClient
       list={enhancedList}
       initialData={fetchedData}
       initialError={error}
@@ -112,4 +99,4 @@ export async function ProductListPage({ searchParams }: PageProps) {
   )
 }
 
-export default ProductListPage
+export default CollectionListPage

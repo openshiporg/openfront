@@ -118,3 +118,47 @@ export async function deleteItemAction(listKey: string, id: string) {
     }
   }
 }
+
+export async function deleteManyItemsAction(
+  listKey: string, 
+  ids: string[], 
+  gqlNames: { deleteManyMutationName: string; whereUniqueInputName: string }
+) {
+  try {
+    // Build GraphQL mutation using the provided gqlNames
+    const mutation = `
+      mutation ($where: [${gqlNames.whereUniqueInputName}!]!) {
+        items: ${gqlNames.deleteManyMutationName}(where: $where) {
+          id
+        }
+      }
+    `
+    
+    const response = await keystoneClient(mutation, {
+      where: ids.map((id) => ({ id }))
+    })
+    
+    if (!response.success) {
+      // Return Apollo-style errors array from GraphQL response
+      return {
+        errors: response.errors || [{ message: response.error || 'Bulk delete failed', path: undefined }],
+        data: null
+      }
+    }
+    
+    // Revalidate paths on successful delete
+    revalidatePath(`/dashboard/(admin)/${listKey}`)
+    
+    // Return Apollo-style response with empty errors array on success
+    return {
+      errors: [] as Array<{ message: string; path?: (string | number)[] }>,
+      data: response.data
+    }
+  } catch (error) {
+    // Return error in Apollo format
+    return {
+      errors: [{ message: error instanceof Error ? error.message : 'Bulk delete failed', path: undefined }],
+      data: null
+    }
+  }
+}
