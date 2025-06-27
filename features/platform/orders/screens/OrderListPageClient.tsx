@@ -174,7 +174,7 @@ export function OrderListPageClient({
         <>
           <div className="grid grid-cols-1 divide-y">
             {data?.items?.map((order: any) => (
-              <OrderDetailsComponent key={order.id} order={order} />
+              <OrderDetailsComponent key={order.id} order={order} list={list} />
             ))}
           </div>
           

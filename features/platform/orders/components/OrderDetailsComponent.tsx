@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Accordion,
   AccordionItem,
@@ -9,10 +9,11 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, MoreVertical, PenSquare } from "lucide-react";
+import { MoreVertical } from "lucide-react";
 import Link from "next/link";
 import { ProductDetailsCollapsible } from "./ProductDetailsCollapsible";
 import { ArrowRight } from "lucide-react";
+import { EditItemDrawer } from "../../components/EditItemDrawer";
 
 const statusColors = {
   pending: "blue",
@@ -24,6 +25,7 @@ const statusColors = {
 
 interface OrderDetailsComponentProps {
   order: any;
+  list: any;
   loadingActions?: Record<string, Record<string, boolean>>;
   removeEditItemButton?: boolean;
   renderButtons?: () => React.ReactNode;
@@ -31,10 +33,12 @@ interface OrderDetailsComponentProps {
 
 export const OrderDetailsComponent = ({
   order,
+  list,
   loadingActions = {},
   removeEditItemButton,
   renderButtons,
 }: OrderDetailsComponentProps) => {
+  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const currentAction = Object.entries(loadingActions).find(
     ([_, value]) => value[order.id]
   )?.[0];
@@ -131,11 +135,9 @@ export const OrderDetailsComponent = ({
                       variant="secondary"
                       size="icon"
                       className="border [&_svg]:size-3 h-6 w-6"
-                      asChild
+                      onClick={() => setIsEditDrawerOpen(true)}
                     >
-                      <Link href={`/dashboard/orders/${order.id}`}>
-                        <MoreVertical className="stroke-muted-foreground" />
-                      </Link>
+                      <MoreVertical className="stroke-muted-foreground" />
                     </Button>
                   )}
                   <Button
@@ -163,6 +165,14 @@ export const OrderDetailsComponent = ({
           </AccordionContent>
         </AccordionItem>
       </Accordion>
+
+      <EditItemDrawer
+        list={list}
+        item={order}
+        itemId={order.id}
+        open={isEditDrawerOpen}
+        onClose={() => setIsEditDrawerOpen(false)}
+      />
     </>
   );
 };

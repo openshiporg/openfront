@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { PageContainer } from '../../../dashboard/components/PageContainer'
 import { PlatformFilterBar } from '../../components/PlatformFilterBar'
 import { StatusTabs } from '../components/StatusTabs'
+import { ProductDetailsComponent } from '../components/ProductDetailsComponent'
 import { Pagination } from '../../../dashboard/components/Pagination'
 import { FilterList } from '../../../dashboard/components/FilterList'
 import { useDashboard } from '../../../dashboard/context/DashboardProvider'
@@ -170,20 +171,11 @@ export function ProductListPageClient({
         </div>
       ) : (
         <>
-          {/* TODO: Replace with ProductDetailsComponent when available */}
-          <div className="px-4 md:px-6">
-            <div className="grid gap-4">
-              {data?.items?.map((product: any) => (
-                <div key={product.id} className="border rounded-lg p-4">
-                  <h3 className="font-semibold">{product.title}</h3>
-                  <p className="text-sm text-muted-foreground">{product.handle}</p>
-                  <p className="text-sm text-muted-foreground">Status: {product.status}</p>
-                  {product.description && (
-                    <p className="text-sm text-muted-foreground">Has description</p>
-                  )}
-                </div>
-              ))}
-            </div>
+          {/* Products list */}
+          <div className="space-y-0">
+            {data?.items?.map((product: any) => (
+              <ProductDetailsComponent key={product.id} product={product} list={list} />
+            ))}
           </div>
           
           {/* Pagination */}
