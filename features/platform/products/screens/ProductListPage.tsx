@@ -1,16 +1,13 @@
 /**
  * ProductListPage - Server Component
- * Based on dashboard ListPage but hardcoded for products
+ * Uses dedicated Products actions for consistent data fetching
  */
 
-import { getListItemsAction } from '../../utils/getListItemsAction'
 import { getListByPath } from '../../../dashboard/actions/getListByPath'
 import { getAdminMetaAction } from '../../../dashboard/actions'
-import { buildOrderByClause } from '../../../dashboard/lib/buildOrderByClause'
-import { buildWhereClause } from '../../../dashboard/lib/buildWhereClause'
-import { keystoneClient } from '../../../dashboard/lib/keystoneClient'
 import { notFound } from 'next/navigation'
 import { ProductListPageClient } from './ProductListPageClient'
+import { getFilteredProducts, getProductStatusCounts } from '../actions'
 
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -39,72 +36,32 @@ export async function ProductListPage({ searchParams }: PageProps) {
   const currentPage = parseInt(searchParamsObj.page?.toString() || '1', 10) || 1
   const pageSize = parseInt(searchParamsObj.pageSize?.toString() || list.pageSize?.toString() || '50', 10)
   const searchString = searchParamsObj.search?.toString() || ''
-
-  // Build dynamic orderBy clause using Keystone's defaults
-  const orderBy = buildOrderByClause(list, searchParamsObj)
-
-  // Build filters from URL params using Keystone's approach
-  const filterWhere = buildWhereClause(list, searchParamsObj)
-
-  // Build search where clause using dashboard1's proper implementation
-  const searchParameters = searchString ? { search: searchString } : {}
-  const searchWhere = buildWhereClause(list, searchParameters)
-
-  // Combine search and filters - following Keystone's pattern
-  const whereConditions = []
-  if (Object.keys(searchWhere).length > 0) {
-    whereConditions.push(searchWhere)
-  }
-  if (Object.keys(filterWhere).length > 0) {
-    whereConditions.push(filterWhere)
-  }
-
-  const where = whereConditions.length > 0 ? { AND: whereConditions } : {}
-
-  // Build GraphQL variables - following the same pattern as existing code
-  const variables = {
-    where,
-    take: pageSize,
-    skip: (currentPage - 1) * pageSize,
-    orderBy
-  }
-
-  // Fetch list items data with cache options
-  const cacheOptions = {
-    next: {
-      tags: [`list-${list.key}`],
-      revalidate: 300, // 5 minutes
-    },
-  }
-
-  // Hardcode selected fields for products
-  const selectedFields = [
-    'id',
-    'title',
-    'handle',
-    'status',
-    'description',
-    'thumbnail',
-    'createdAt',
-    'updatedAt'
-  ]
-
-  // Custom GraphQL selection for products with correct schema fields
-  const customGraphQLSelection = `
-    id
-    title
-    handle
-    status
-    description {
-      document
+  
+  // Extract status filter from URL params
+  const statusFilter = searchParamsObj['!status_matches']
+  let status = 'all'
+  if (statusFilter) {
+    try {
+      const parsed = JSON.parse(decodeURIComponent(statusFilter.toString()))
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        status = typeof parsed[0] === 'string' ? parsed[0] : parsed[0].value
+      }
+    } catch (e) {
+      // Invalid JSON, ignore
     }
-    thumbnail
-    createdAt
-    updatedAt
-  `
+  }
 
-  // Use dashboard action with custom GraphQL selection
-  const response = await getListItemsAction(listKey, variables, selectedFields, cacheOptions, customGraphQLSelection)
+  // Extract sort parameter
+  const sortBy = searchParamsObj.sortBy?.toString()
+
+  // Use dedicated Products actions
+  const response = await getFilteredProducts(
+    status === 'all' ? undefined : status,
+    searchString || undefined,
+    currentPage,
+    pageSize,
+    sortBy
+  )
 
   let fetchedData: { items: any[], count: number } = { items: [], count: 0 }
   let error: string | null = null
@@ -112,7 +69,7 @@ export async function ProductListPage({ searchParams }: PageProps) {
   if (response.success) {
     fetchedData = response.data
   } else {
-    console.error('Error fetching list items:', response.error)
+    console.error('Error fetching products:', response.error)
     error = response.error
   }
 
@@ -125,18 +82,8 @@ export async function ProductListPage({ searchParams }: PageProps) {
   // Create enhanced list with validation data
   const enhancedList = adminMetaList || list
 
-  // Get status counts using proper GraphQL count queries (like orders)
-  const statusCountsQuery = `
-    query GetProductStatusCounts {
-      draft: productsCount(where: { status: { equals: draft } })
-      proposed: productsCount(where: { status: { equals: proposed } })
-      published: productsCount(where: { status: { equals: published } })
-      rejected: productsCount(where: { status: { equals: rejected } })
-      all: productsCount
-    }
-  `;
-
-  const statusCountsResponse = await keystoneClient(statusCountsQuery, {}, cacheOptions);
+  // Get status counts using dedicated action
+  const statusCountsResponse = await getProductStatusCounts()
   
   let statusCounts = {
     all: 0,

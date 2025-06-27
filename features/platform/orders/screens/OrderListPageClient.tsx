@@ -14,7 +14,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { PageContainer } from '../../../dashboard/components/PageContainer'
 import { PlatformFilterBar } from '../../components/PlatformFilterBar'
-import { StatusTabs } from '../components/StatusTabs'
+import { StatusTabs } from '../../components/StatusTabs'
 import { OrderDetailsComponent } from '../components/OrderDetailsComponent'
 import { Pagination } from '../../../dashboard/components/Pagination'
 import { FilterList } from '../../../dashboard/components/FilterList'
@@ -144,7 +144,17 @@ export function OrderListPageClient({
       {/* Status Tabs - abstracted status filtering */}
       {statusCounts && (
         <div className="border-b">
-          <StatusTabs statusCounts={statusCounts} />
+          <StatusTabs 
+            statusCounts={statusCounts} 
+            statusConfig={{
+              pending: { label: "Pending", color: "blue" },
+              completed: { label: "Completed", color: "emerald" },
+              archived: { label: "Archived", color: "zinc" },
+              canceled: { label: "Canceled", color: "rose" },
+              requires_action: { label: "Requires Action", color: "orange" },
+            }}
+            entityName="Orders"
+          />
         </div>
       )}
 

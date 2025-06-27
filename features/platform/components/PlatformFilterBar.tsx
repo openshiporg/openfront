@@ -21,9 +21,10 @@ import { enhanceFields } from '../../dashboard/utils/enhanceFields'
 
 interface PlatformFilterBarProps {
   list: any
+  customCreateButton?: React.ReactNode
 }
 
-export function PlatformFilterBar({ list }: PlatformFilterBarProps) {
+export function PlatformFilterBar({ list, customCreateButton }: PlatformFilterBarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -128,16 +129,18 @@ export function PlatformFilterBar({ list }: PlatformFilterBarProps) {
           </SortSelection>
 
           {!list.hideCreate && (
-            <Link
-              href={`${basePath}/platform/orders/create`}
-              className={cn(
-                buttonVariants({ size: "icon" }),
-                "lg:px-4 lg:py-2 lg:w-auto rounded-lg"
-              )}
-            >
-              <CirclePlus />
-              <span className="hidden lg:inline">Create Order</span>
-            </Link>
+            customCreateButton || (
+              <Link
+                href={`${basePath}/platform/${list.path}/create`}
+                className={cn(
+                  buttonVariants({ size: "icon" }),
+                  "lg:px-4 lg:py-2 lg:w-auto rounded-lg"
+                )}
+              >
+                <CirclePlus />
+                <span className="hidden lg:inline">Create {list.singular}</span>
+              </Link>
+            )
           )}
         </div>
       </div>

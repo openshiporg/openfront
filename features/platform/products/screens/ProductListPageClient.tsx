@@ -14,7 +14,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { PageContainer } from '../../../dashboard/components/PageContainer'
 import { PlatformFilterBar } from '../../components/PlatformFilterBar'
-import { StatusTabs } from '../components/StatusTabs'
+import { StatusTabs } from '../../components/StatusTabs'
 import { ProductDetailsComponent } from '../components/ProductDetailsComponent'
 import { Pagination } from '../../../dashboard/components/Pagination'
 import { FilterList } from '../../../dashboard/components/FilterList'
@@ -143,7 +143,16 @@ export function ProductListPageClient({
       {/* Status Tabs */}
       {statusCounts && (
         <div className="border-b">
-          <StatusTabs statusCounts={statusCounts} />
+          <StatusTabs 
+            statusCounts={statusCounts}
+            statusConfig={{
+              draft: { label: "Draft", color: "zinc" },
+              proposed: { label: "Proposed", color: "blue" },
+              published: { label: "Published", color: "emerald" },
+              rejected: { label: "Rejected", color: "rose" },
+            }}
+            entityName="Products"
+          />
         </div>
       )}
 
@@ -171,8 +180,8 @@ export function ProductListPageClient({
         </div>
       ) : (
         <>
-          {/* Products list */}
-          <div className="space-y-0">
+          {/* Data table - full width */}
+          <div className="grid grid-cols-1 divide-y">
             {data?.items?.map((product: any) => (
               <ProductDetailsComponent key={product.id} product={product} list={list} />
             ))}

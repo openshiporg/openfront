@@ -3,37 +3,18 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-
-const statusConfig = {
-  draft: {
-    label: "Draft",
-    color: "zinc"
-  },
-  proposed: {
-    label: "Proposed",
-    color: "blue"
-  },
-  published: {
-    label: "Published",
-    color: "emerald"
-  },
-  rejected: {
-    label: "Rejected",
-    color: "rose"
-  },
-} as const;
-
-interface StatusTabsProps {
-  statusCounts: {
-    all: number;
-    draft: number;
-    proposed: number;
-    published: number;
-    rejected: number;
-  };
+export interface StatusConfig {
+  label: string;
+  color: string;
 }
 
-export function StatusTabs({ statusCounts }: StatusTabsProps) {
+export interface StatusTabsProps {
+  statusCounts: Record<string, number> & { all: number };
+  statusConfig: Record<string, StatusConfig>;
+  entityName: string; // e.g., "Orders", "Products"
+}
+
+export function StatusTabs({ statusCounts, statusConfig, entityName }: StatusTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams()!;
   const pathname = usePathname();
@@ -43,16 +24,16 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
   const tabRefs = useRef<Array<HTMLDivElement | null>>([]);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const statuses = [
-    { value: "draft", label: "Draft", count: statusCounts.draft },
-    { value: "proposed", label: "Proposed", count: statusCounts.proposed },
-    { value: "published", label: "Published", count: statusCounts.published },
-    { value: "rejected", label: "Rejected", count: statusCounts.rejected },
-  ] as const;
+  // Create statuses array from config
+  const statuses = Object.entries(statusConfig).map(([value, config]) => ({
+    value,
+    label: config.label,
+    count: statusCounts[value] || 0
+  }));
 
-  // Get current status from URL
+  // Get current status from URL - reverse engineer from !status_matches parameter
   const statusFilter = searchParams.get("!status_matches");
-  let currentStatus = "all";
+  let currentStatus = "all"; // Default to "all" when no filter
 
   if (statusFilter) {
     try {
@@ -61,7 +42,7 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
         currentStatus = typeof parsed[0] === 'string' ? parsed[0] : parsed[0].value;
       }
     } catch (e) {
-      // Invalid JSON in URL, ignore
+      // Invalid JSON in URL, ignore and stay with "all"
     }
   }
 
@@ -121,13 +102,15 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
             onClick={() => handleStatusChange("all")}
           >
             <div className="text-sm font-medium leading-5 whitespace-nowrap flex items-center justify-center h-full gap-2">
-              All Products
+              All {entityName}
               <span className="rounded-sm bg-background border shadow-xs px-1.5 py-0 text-[10px] leading-[14px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 inline-flex items-center h-[18px]">
                 {statusCounts.all}
               </span>
             </div>
           </div>
           {statuses.map((status, index) => {
+            const config = statusConfig[status.value];
+            
             return (
               <div
                 key={status.value}
@@ -143,7 +126,7 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
               >
                 <div className="text-sm font-medium leading-5 whitespace-nowrap flex items-center justify-center h-full gap-2">
                   {status.label}
-                  <Badge color={statusConfig[status.value as keyof typeof statusConfig].color} className="px-1.5 py-0 text-[10px] leading-[14px] rounded-sm shadow-xs inline-flex items-center h-[18px]">
+                  <Badge color={config.color} className="px-1.5 py-0 text-[10px] leading-[14px] rounded-sm shadow-xs inline-flex items-center h-[18px]">
                     {status.count}
                   </Badge>
                 </div>
