@@ -13,7 +13,7 @@ import { MoreVertical } from "lucide-react";
 import Link from "next/link";
 import { ProductDetailsCollapsible } from "./ProductDetailsCollapsible";
 import { ArrowRight } from "lucide-react";
-import { EditItemDrawer } from "../../components/EditItemDrawer";
+import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 
 const statusColors = {
   pending: "blue",
@@ -166,9 +166,8 @@ export const OrderDetailsComponent = ({
         </AccordionItem>
       </Accordion>
 
-      <EditItemDrawer
-        list={list}
-        item={order}
+      <EditItemDrawerClientWrapper
+        listKey="orders"
         itemId={order.id}
         open={isEditDrawerOpen}
         onClose={() => setIsEditDrawerOpen(false)}

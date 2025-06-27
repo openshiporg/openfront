@@ -131,8 +131,7 @@ export function ProductCategoryDetailsComponent({
       </Accordion>
 
       <EditItemDrawer
-        list={list}
-        item={productcategory}
+        listKey="product-categories"
         itemId={productcategory.id}
         open={isEditDrawerOpen}
         onClose={() => setIsEditDrawerOpen(false)}

@@ -808,8 +808,7 @@ export function ${entitySingular}DetailsComponent({
       </Accordion>
 
       <EditItemDrawer
-        list={list}
-        item={${entitySingular.toLowerCase()}}
+        listKey="${listPath}"
         itemId={${entitySingular.toLowerCase()}.id}
         open={isEditDrawerOpen}
         onClose={() => setIsEditDrawerOpen(false)}

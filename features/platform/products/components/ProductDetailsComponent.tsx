@@ -303,8 +303,7 @@ export function ProductDetailsComponent({
       </Accordion>
 
       <EditItemDrawer
-        list={list}
-        item={product}
+        listKey="products"
         itemId={product.id}
         open={isEditDrawerOpen}
         onClose={() => setIsEditDrawerOpen(false)}

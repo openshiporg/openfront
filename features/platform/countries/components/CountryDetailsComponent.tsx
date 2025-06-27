@@ -149,8 +149,7 @@ export function CountryDetailsComponent({
       </Accordion>
 
       <EditItemDrawer
-        list={list}
-        item={country}
+        listKey="countries"
         itemId={country.id}
         open={isEditDrawerOpen}
         onClose={() => setIsEditDrawerOpen(false)}

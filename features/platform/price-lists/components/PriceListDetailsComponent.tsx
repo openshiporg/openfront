@@ -134,8 +134,7 @@ export function PriceListDetailsComponent({
       </Accordion>
 
       <EditItemDrawer
-        list={list}
-        item={pricelist}
+        listKey="price-lists"
         itemId={pricelist.id}
         open={isEditDrawerOpen}
         onClose={() => setIsEditDrawerOpen(false)}
