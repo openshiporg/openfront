@@ -277,7 +277,7 @@ export async function get${entitySingular}StatusCounts() {
   const statusKeys = ${JSON.stringify(Object.keys(parsedStatusConfig))};
   
   const statusQueries = statusKeys.map(status => 
-    \`\${status}: \${camelCase}Count(where: { status: { equals: \${status} } })\`
+    \`\${status}: ${camelCase}Count(where: { status: { equals: "\${status}" } })\`
   ).join('\\n      ');
   
   const query = \`
