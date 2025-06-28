@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { EditItemDrawer } from "../../components/EditItemDrawer";
+import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 
 
 interface ExtendedOrder {
@@ -355,8 +355,8 @@ export function OrderPageClient({
                   className="text-muted-foreground h-6 font-semibold text-[11px] uppercase px-1.5 tracking-wide"
                   onClick={() => setEditDrawerConfig({
                     open: true,
-                    listKey: listKey,
-                    itemId: order.id as string,
+                    listKey: "users",
+                    itemId: order.user?.id as string,
                     fields: ["email"]
                   })}
                 >
@@ -386,7 +386,7 @@ export function OrderPageClient({
                     className="text-muted-foreground h-6 font-semibold text-[11px] uppercase px-1.5 tracking-wide"
                     onClick={() => setEditDrawerConfig({
                       open: true,
-                      listKey: "Address",
+                      listKey: "addresses",
                       itemId: order.shippingAddress!.id as string,
                       fields: [
                         "firstName",
@@ -477,7 +477,7 @@ export function OrderPageClient({
       
       {/* Single Edit Drawer */}
       {editDrawerConfig.open && editDrawerConfig.itemId && (
-        <EditItemDrawer
+        <EditItemDrawerClientWrapper
           listKey={editDrawerConfig.listKey}
           itemId={editDrawerConfig.itemId}
           open={editDrawerConfig.open}
