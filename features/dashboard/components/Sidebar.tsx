@@ -39,11 +39,18 @@ import { AdminMeta } from '../hooks/useAdminMeta'
 import { Home, Database, ChevronRight, Package } from 'lucide-react'
 import { Logo, LogoIcon } from '@/features/dashboard/components/Logo'
 import { UserProfileClient } from './UserProfileClient'
+import { OnboardingCards } from '@/features/platform/onboarding/components/OnboardingCards'
+import OnboardingDialog from '@/features/platform/onboarding/components/OnboardingDialog'
+import { dismissOnboarding } from '@/features/platform/onboarding/actions/onboarding'
+import { platformNavGroups, getPlatformNavItemsWithBasePath } from '@/features/platform/lib/navigation'
+import { useDashboard } from '../context/DashboardProvider'
 
 interface User {
   id: string;
   email: string;
   name?: string;
+  onboardingStatus?: string;
+  role?: any;
 }
 
 interface SidebarProps {
@@ -54,6 +61,8 @@ interface SidebarProps {
 export function Sidebar({ adminMeta, user }: SidebarProps) {
   const { isMobile, setOpenMobile } = useSidebar()
   const pathname = usePathname()
+  const [isOnboardingDialogOpen, setIsOnboardingDialogOpen] = React.useState(false)
+  const { basePath } = useDashboard()
 
   const lists = adminMeta?.lists || {}
   const listsArray = Object.values(lists)
@@ -79,20 +88,23 @@ export function Sidebar({ adminMeta, user }: SidebarProps) {
   )
 
   // Convert lists to sidebar links format
-  const sidebarLinks = listsArray.map((list: any) => ({
+  const modelLinks = listsArray.map((list: any) => ({
     title: list.label,
     href: `/dashboard/${list.path}`
   }))
 
-  // Dashboard items for the collapsible menu
-  const dashboardItems = [
-    {
-      title: "Models",
-      items: sidebarLinks,
-      isActive: false,
-      icon: Package,
-    },
-  ]
+  // Platform navigation groups with proper basePath
+  const platformItemsWithBasePath = getPlatformNavItemsWithBasePath(basePath)
+  const platformItems = platformNavGroups.map((group) => ({
+    title: group.title,
+    items: platformItemsWithBasePath.filter(item => item.group === group.id).map(item => ({
+      title: item.title,
+      href: item.href,
+      icon: item.icon
+    })),
+    isActive: platformItemsWithBasePath.filter(item => item.group === group.id).some(item => isLinkActive(item.href)),
+    icon: group.icon,
+  }))
 
   return (
     <SidebarComponent collapsible="icon">
@@ -124,29 +136,28 @@ export function Sidebar({ adminMeta, user }: SidebarProps) {
           </SidebarMenu>
         </SidebarGroup>
 
-        {/* Models Dropdown - Collapsible */}
-        {dashboardItems.map((dashboardItem) => (
-          <SidebarGroup key={dashboardItem.title}>
-            <SidebarGroupLabel>{dashboardItem.title}</SidebarGroupLabel>
-            <div className="max-h-full overflow-y-auto group-has-[[data-collapsible=icon]]/sidebar-wrapper:hidden">
+        {/* Platform Routes */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Platform</SidebarGroupLabel>
+          {platformItems.map((platformItem) => (
+            <div key={platformItem.title} className="max-h-full overflow-y-auto group-has-[[data-collapsible=icon]]/sidebar-wrapper:hidden">
               <Collapsible
-                key={dashboardItem.title}
                 asChild
-                defaultOpen={dashboardItem.isActive}
+                defaultOpen={platformItem.isActive}
                 className="group/collapsible"
               >
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton>
-                      <dashboardItem.icon className="h-4 w-4" />
-                      <span>{dashboardItem.title}</span>
-                      <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                      <platformItem.icon className="h-4 w-4" />
+                      <span>{platformItem.title}</span>
+                      <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <SidebarMenuSub>
-                      {dashboardItem.items.map((link) => {
-                        const handleClick = (e: React.MouseEvent) => {
+                      {platformItem.items.map((link) => {
+                        const handleClick = () => {
                           setOpenMobile(false)
                         }
 
@@ -168,14 +179,16 @@ export function Sidebar({ adminMeta, user }: SidebarProps) {
                 </SidebarMenuItem>
               </Collapsible>
             </div>
+          ))}
 
-            {/* Models Dropdown - Icon Mode */}
-            <div className="hidden group-has-[[data-collapsible=icon]]/sidebar-wrapper:block">
-              <DropdownMenu>
+          {/* Platform Dropdown - Icon Mode */}
+          <div className="hidden group-has-[[data-collapsible=icon]]/sidebar-wrapper:block">
+            {platformItems.map((platformItem) => (
+              <DropdownMenu key={platformItem.title}>
                 <SidebarMenuItem>
                   <DropdownMenuTrigger asChild>
                     <SidebarMenuButton className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
-                      <dashboardItem.icon className="h-4 w-4" />
+                      <platformItem.icon className="h-4 w-4" />
                     </SidebarMenuButton>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
@@ -184,8 +197,8 @@ export function Sidebar({ adminMeta, user }: SidebarProps) {
                     className="min-w-56"
                   >
                     <div className="max-h-[calc(100vh-16rem)] overflow-y-auto py-1">
-                      {dashboardItem.items.map((link) => {
-                        const handleClick = (e: React.MouseEvent) => {
+                      {platformItem.items.map((link) => {
+                        const handleClick = () => {
                           setOpenMobile(false)
                         }
 
@@ -212,16 +225,133 @@ export function Sidebar({ adminMeta, user }: SidebarProps) {
                   </DropdownMenuContent>
                 </SidebarMenuItem>
               </DropdownMenu>
-            </div>
-          </SidebarGroup>
-        ))}
+            ))}
+          </div>
+        </SidebarGroup>
+
+        {/* Models */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Models</SidebarGroupLabel>
+          <div className="max-h-full overflow-y-auto group-has-[[data-collapsible=icon]]/sidebar-wrapper:hidden">
+            <Collapsible
+              asChild
+              defaultOpen={modelLinks.some(link => isLinkActive(link.href))}
+              className="group/collapsible"
+            >
+              <SidebarMenuItem>
+                <CollapsibleTrigger asChild>
+                  <SidebarMenuButton>
+                    <Package className="h-4 w-4" />
+                    <span>Models</span>
+                    <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                  </SidebarMenuButton>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <SidebarMenuSub>
+                    {modelLinks.map((link) => {
+                      const handleClick = () => {
+                        setOpenMobile(false)
+                      }
+
+                      return (
+                        <SidebarMenuSubItem key={link.href}>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={isLinkActive(link.href)}
+                          >
+                            <Link href={link.href} onClick={handleClick}>
+                              <span>{link.title}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      )
+                    })}
+                  </SidebarMenuSub>
+                </CollapsibleContent>
+              </SidebarMenuItem>
+            </Collapsible>
+          </div>
+
+          {/* Models Dropdown - Icon Mode */}
+          <div className="hidden group-has-[[data-collapsible=icon]]/sidebar-wrapper:block">
+            <DropdownMenu>
+              <SidebarMenuItem>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+                    <Package className="h-4 w-4" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  side={isMobile ? "bottom" : "right"}
+                  align={isMobile ? "end" : "start"}
+                  className="min-w-56"
+                >
+                  <div className="max-h-[calc(100vh-16rem)] overflow-y-auto py-1">
+                    {modelLinks.map((link) => {
+                      const handleClick = () => {
+                        setOpenMobile(false)
+                      }
+
+                      return (
+                        <DropdownMenuItem
+                          asChild
+                          key={link.href}
+                          className={
+                            isLinkActive(link.href)
+                              ? "bg-blue-50 text-blue-600"
+                              : ""
+                          }
+                        >
+                          <Link href={link.href} onClick={handleClick}>
+                            <span>{link.title}</span>
+                            {isLinkActive(link.href) && (
+                              <div className="ml-auto h-2 w-2 rounded-full bg-blue-600" />
+                            )}
+                          </Link>
+                        </DropdownMenuItem>
+                      )
+                    })}
+                  </div>
+                </DropdownMenuContent>
+              </SidebarMenuItem>
+            </DropdownMenu>
+          </div>
+        </SidebarGroup>
       </SidebarContent>
       
       <SidebarFooter>
+        {/* Onboarding Cards */}
+        <div className="w-full mb-2 overflow-visible">
+          <OnboardingCards
+            steps={[{
+              href: '#onboarding',
+              title: 'Welcome to Openfront',
+              description: 'Your store is empty. Click get started to configure your store with products, categories, and regions.',
+            }]}
+            onboardingStatus={user?.onboardingStatus}
+            userRole={user?.role}
+            onDismiss={async () => {
+              try {
+                await dismissOnboarding();
+              } catch (error) {
+                console.error('Error dismissing onboarding:', error);
+              }
+            }}
+            onOpenDialog={() => setIsOnboardingDialogOpen(true)}
+          />
+        </div>
+        
+        {/* User Profile */}
         {user && <UserProfileClient user={user} />}
       </SidebarFooter>
       
       <SidebarRail />
+      
+      {/* Onboarding Dialog */}
+      <OnboardingDialog
+        isOpen={isOnboardingDialogOpen}
+        onClose={() => setIsOnboardingDialogOpen(false)}
+      />
     </SidebarComponent>
   )
 }

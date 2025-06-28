@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Logo } from "@/features/dashboard/components/Logo";
-import { Sparkles, Rocket } from "lucide-react";
+import { Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export interface OnboardingStep {
@@ -84,7 +83,7 @@ export function OnboardingCards({
   onOpenDialog: () => void;
   userRole?: any;
 }) {
-  const [dismissedSteps, setDismissedSteps] = React.useState<string[]>([]);
+  const [dismissedSteps] = React.useState<string[]>([]);
   const cards = steps.filter(({ href }) => !dismissedSteps.includes(href));
   const cardCount = cards.length;
   const [showCompleted, setShowCompleted] = React.useState(cardCount > 0);
@@ -107,12 +106,11 @@ export function OnboardingCards({
 
   return cards.length || showCompleted ? (
     <div className="w-full">
-      {cards.map(({ href, title, description }, idx) => (
+      {cards.map(({ href, title, description }) => (
         <OnboardingCard
           key={href}
           title={title}
           description={description}
-          href={href}
           onDismiss={onDismiss}
           onOpenDialog={onOpenDialog}
         />
@@ -125,13 +123,11 @@ function OnboardingCard({
   title,
   description,
   onDismiss,
-  href,
   onOpenDialog,
 }: {
   title: string;
   description: string;
   onDismiss?: () => void;
-  href?: string;
   onOpenDialog: () => void;
 }) {
   const [isHovered, setIsHovered] = React.useState(false);
