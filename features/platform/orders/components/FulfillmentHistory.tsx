@@ -15,7 +15,7 @@ import {
 // Local types for FulfillmentHistory component
 interface FulfillmentHistoryOrder {
   id: string;
-  unfulfilled: Array<{
+  unfulfilled?: Array<{
     id: string;
     quantity: number;
   }>;
@@ -23,8 +23,8 @@ interface FulfillmentHistoryOrder {
 
 interface FulfillmentHistoryFulfillment {
   id: string;
-  createdAt: Date;
-  canceledAt: Date | null;
+  createdAt: string;
+  canceledAt?: string;
   items?: Array<{
     id: string;
     quantity: number;
@@ -76,7 +76,7 @@ export function FulfillmentHistory({
   );
 
   // Calculate totals from unfulfilled items
-  const totalUnfulfilled = order.unfulfilled.reduce(
+  const totalUnfulfilled = (order.unfulfilled || []).reduce(
     (sum: number, item: { quantity: number }) => sum + item.quantity,
     0
   );

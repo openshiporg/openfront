@@ -3,18 +3,50 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-export interface StatusConfig {
-  label: string;
-  color: string;
+import { RotateCcw, Check, Archive, X, AlertTriangle } from "lucide-react";
+
+const statusConfig = {
+  pending: {
+    label: "Pending",
+    icon: RotateCcw,
+    color: "blue"
+  },
+  completed: {
+    label: "Completed",
+    icon: Check,
+    color: "emerald"
+  },
+  archived: {
+    label: "Archived",
+    icon: Archive,
+    color: "zinc"
+  },
+  canceled: {
+    label: "Canceled",
+    icon: X,
+    color: "rose"
+  },
+  requires_action: {
+    label: "Requires Action",
+    icon: AlertTriangle,
+    color: "orange"
+  },
+} as const;
+
+interface StatusTabsProps {
+  statusCounts: {
+    all: number;
+    pending: number;
+    requires_action: number;
+    completed: number;
+    archived: number;
+    canceled: number;
+  };
+  statusConfig?: Record<string, { label: string; color: string }>;
+  entityName?: string;
 }
 
-export interface StatusTabsProps {
-  statusCounts: Record<string, number> & { all: number };
-  statusConfig: Record<string, StatusConfig>;
-  entityName: string; // e.g., "Orders", "Products"
-}
-
-export function StatusTabs({ statusCounts, statusConfig, entityName }: StatusTabsProps) {
+export function StatusTabs({ statusCounts, entityName = "Items" }: StatusTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams()!;
   const pathname = usePathname();
@@ -24,38 +56,57 @@ export function StatusTabs({ statusCounts, statusConfig, entityName }: StatusTab
   const tabRefs = useRef<Array<HTMLDivElement | null>>([]);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Create statuses array from config
-  const statuses = Object.entries(statusConfig).map(([value, config]) => ({
-    value,
-    label: config.label,
-    count: statusCounts[value] || 0
-  }));
+  const statuses = [
+    { value: "pending", label: "Pending", count: statusCounts.pending },
+    {
+      value: "requires_action",
+      label: "Requires Action",
+      count: statusCounts.requires_action,
+    },
+    {
+      value: "completed",
+      label: "Completed",
+      count: statusCounts.completed,
+    },
+    {
+      value: "archived",
+      label: "Archived",
+      count: statusCounts.archived,
+    },
+    {
+      value: "canceled",
+      label: "Canceled",
+      count: statusCounts.canceled,
+    },
+  ] as const;
 
-  // Get current status from URL - reverse engineer from !status_matches parameter
+  // Get current status from URL
   const statusFilter = searchParams.get("!status_matches");
-  let currentStatus = "all"; // Default to "all" when no filter
+  let currentStatus = "all";
 
   if (statusFilter) {
     try {
       const parsed = JSON.parse(decodeURIComponent(statusFilter));
       if (Array.isArray(parsed) && parsed.length > 0) {
-        currentStatus = typeof parsed[0] === 'string' ? parsed[0] : parsed[0].value;
+        currentStatus = parsed[0].value;
       }
     } catch (e) {
-      // Invalid JSON in URL, ignore and stay with "all"
+      // Invalid JSON in URL, ignore
     }
   }
 
   const handleStatusChange = (status: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    
-    // Reset to page 1 when changing status
-    params.set("page", "1");
-    
     if (status === "all") {
       params.delete("!status_matches");
     } else {
-      params.set("!status_matches", JSON.stringify([status]));
+      const filterValue = [
+        {
+          label: statusConfig[status as keyof typeof statusConfig].label,
+          value: status,
+        },
+      ];
+      params.set("!status_matches", JSON.stringify(filterValue));
     }
     router.push(`${pathname}?${params.toString()}`);
   };
@@ -109,8 +160,7 @@ export function StatusTabs({ statusCounts, statusConfig, entityName }: StatusTab
             </div>
           </div>
           {statuses.map((status, index) => {
-            const config = statusConfig[status.value];
-            
+            const StatusIcon = statusConfig[status.value as keyof typeof statusConfig].icon;
             return (
               <div
                 key={status.value}
@@ -126,7 +176,7 @@ export function StatusTabs({ statusCounts, statusConfig, entityName }: StatusTab
               >
                 <div className="text-sm font-medium leading-5 whitespace-nowrap flex items-center justify-center h-full gap-2">
                   {status.label}
-                  <Badge color={config.color} className="px-1.5 py-0 text-[10px] leading-[14px] rounded-sm shadow-xs inline-flex items-center h-[18px]">
+                  <Badge color={statusConfig[status.value as keyof typeof statusConfig].color} className="px-1.5 py-0 text-[10px] leading-[14px] rounded-sm shadow-xs inline-flex items-center h-[18px]">
                     {status.count}
                   </Badge>
                 </div>

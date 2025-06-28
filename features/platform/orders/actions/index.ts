@@ -699,3 +699,61 @@ export async function completeAdminCart(cartId: string) {
   
   return response;
 }
+
+/**
+ * Cancel a fulfillment
+ */
+export async function cancelFulfillment(fulfillmentId: string) {
+  const mutation = `
+    mutation CancelFulfillment($id: ID!, $data: FulfillmentUpdateInput!) {
+      updateFulfillment(
+        where: { id: $id }
+        data: $data
+      ) {
+        id
+        canceledAt
+      }
+    }
+  `;
+
+  const response = await keystoneClient(mutation, { 
+    id: fulfillmentId,
+    data: {
+      canceledAt: new Date().toISOString()
+    }
+  });
+
+  if (response.success) {
+    revalidatePath('/dashboard/platform/orders/[id]');
+  }
+
+  return response;
+}
+
+/**
+ * Toggle shipping provider active status
+ */
+export async function toggleProvider(providerId: string) {
+  const mutation = `
+    mutation ToggleProvider($id: ID!) {
+      updateShippingProvider(
+        where: { id: $id }
+        data: {
+          isActive: { set: false }
+        }
+      ) {
+        id
+        isActive
+      }
+    }
+  `;
+
+  const response = await keystoneClient(mutation, { id: providerId });
+
+  // Revalidate the path only on success
+  if (response.success) {
+    revalidatePath('/dashboard/platform/orders/[id]');
+  }
+
+  return response;
+}
