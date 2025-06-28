@@ -3,10 +3,8 @@
 import React from "react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { CreditCard, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { RiLoader2Fill } from "@remixicon/react";
 
 interface PaymentMethod {
   id: string;
@@ -18,8 +16,6 @@ interface AdminPaymentSelectionProps {
   availablePaymentMethods: PaymentMethod[];
   selectedPaymentMethod: string;
   onPaymentMethodChange: (method: string) => void;
-  onSubmit: () => Promise<void>;
-  isLoading?: boolean;
 }
 
 const paymentInfoMap: Record<string, { title: string; icon: React.ReactNode }> = {
@@ -32,8 +28,6 @@ export function AdminPaymentSelection({
   availablePaymentMethods,
   selectedPaymentMethod,
   onPaymentMethodChange,
-  onSubmit,
-  isLoading = false,
 }: AdminPaymentSelectionProps) {
   return (
     <div className="space-y-4">
@@ -49,8 +43,8 @@ export function AdminPaymentSelection({
               id={method.id}
               className="sr-only"
             />
-            <Label
-              htmlFor={method.id}
+            <div
+              onClick={() => onPaymentMethodChange(method.code)}
               className={cn(
                 "flex items-center justify-between text-sm font-normal cursor-pointer py-4 border rounded-md px-4 transition-colors",
                 {
@@ -82,20 +76,10 @@ export function AdminPaymentSelection({
               <div className="flex items-center">
                 {paymentInfoMap[method.code]?.icon || <CreditCard className="h-5 w-5" />}
               </div>
-            </Label>
+            </div>
           </div>
         ))}
       </RadioGroup>
-
-      <Button
-        onClick={onSubmit}
-        className="w-full"
-        size="lg"
-        disabled={!selectedPaymentMethod || isLoading}
-      >
-        {isLoading && <RiLoader2Fill className="mr-2 h-4 w-4 animate-spin" />}
-        Place Order
-      </Button>
     </div>
   );
 }

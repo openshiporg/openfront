@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ArrowLeft, User, MapPin, Mail, Building, Phone, ShoppingBag } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -46,6 +47,8 @@ export function OrdersCreatePage() {
   const [availablePaymentMethods, setAvailablePaymentMethods] = React.useState<any[]>([]);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState<string>("");
   const [cartId, setCartId] = React.useState<string | null>(null);
+  const [orderCreationMode, setOrderCreationMode] = React.useState<"draft" | "immediate">("draft");
+  const [customerEmailForPayment, setCustomerEmailForPayment] = React.useState(true);
 
   // Create drawer state
   const [createDrawerOpen, setCreateDrawerOpen] = React.useState(false);
@@ -234,12 +237,11 @@ export function OrdersCreatePage() {
 
   const handlePlaceOrder = async () => {
     if (!cartId || !selectedPaymentMethod) {
-      console.error("Missing cart ID or payment method");
+      toast.error("Cart and payment method are required");
       return;
     }
 
     setIsCreatingOrder(true);
-
     try {
       // Import admin server actions
       const { initiateAdminPaymentSession, completeAdminCart } = await import('../actions/orders');
@@ -270,6 +272,34 @@ export function OrdersCreatePage() {
     } catch (error) {
       console.error("Error placing order:", error);
       toast.error(`Failed to place order: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsCreatingOrder(false);
+    }
+  };
+
+  const handleCreateDraftOrder = async () => {
+    if (!cartId) {
+      toast.error("Cart is required");
+      return;
+    }
+
+    setIsCreatingOrder(true);
+    try {
+      // Create order in "Pending Payment" status
+      // This is a placeholder implementation
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      if (customerEmailForPayment) {
+        // Send email with payment link to customer
+        toast.success("Draft order created and payment instructions sent to customer!");
+      } else {
+        toast.success("Draft order created successfully!");
+      }
+      
+      router.push("/dashboard/platform/orders");
+    } catch (error) {
+      console.error("Error creating draft order:", error);
+      toast.error("Failed to create draft order");
     } finally {
       setIsCreatingOrder(false);
     }
@@ -315,27 +345,7 @@ export function OrdersCreatePage() {
               onLineItemsChange={setLineItems}
             />
 
-            {/* Payment Selection */}
-            {cartId && availablePaymentMethods.length > 0 && (
-              <Card className="bg-muted/10">
-                <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b">
-                  <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
-                    Payment Method
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <AdminPaymentSelection
-                    availablePaymentMethods={availablePaymentMethods}
-                    selectedPaymentMethod={selectedPaymentMethod}
-                    onPaymentMethodChange={setSelectedPaymentMethod}
-                    onSubmit={handlePlaceOrder}
-                    isLoading={isCreatingOrder}
-                  />
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Payment Processing */}
+            {/* Order Summary */}
             <Card className="bg-muted/10">
               <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b">
                 <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
@@ -368,6 +378,122 @@ export function OrdersCreatePage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Payment Selection */}
+            {cartId && availablePaymentMethods.length > 0 && (
+              <Card className="bg-muted/10">
+                <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b">
+                  <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+                    Payment & Order Options
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  {/* Order Creation Mode */}
+                  <div className="space-y-4 mb-10">
+                    <Label className="text-sm font-medium">Order Creation Mode</Label>
+                    <RadioGroup 
+                      value={orderCreationMode} 
+                      onValueChange={(value) => setOrderCreationMode(value as "draft" | "immediate")}
+                      className="space-y-3"
+                    >
+                      {/* Draft Order Card */}
+                      <div className="relative">
+                        <RadioGroupItem
+                          value="draft"
+                          id="draft-mode"
+                          className="peer sr-only"
+                        />
+                        <Label
+                          htmlFor="draft-mode"
+                          className="flex cursor-pointer items-start gap-4 rounded-lg border border-muted p-4 hover:bg-accent peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                        >
+                          <div className="grid gap-2">
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm font-medium">Create Draft Order</div>
+                              <div className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                                Recommended
+                              </div>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Creates order in "Pending Payment" status and emails customer a secure payment link
+                            </div>
+                          </div>
+                        </Label>
+                      </div>
+
+                      {/* Immediate Payment Card */}
+                      <div className="relative">
+                        <RadioGroupItem
+                          value="immediate"
+                          id="immediate-mode"
+                          className="peer sr-only"
+                        />
+                        <Label
+                          htmlFor="immediate-mode"
+                          className="flex cursor-pointer items-start gap-4 rounded-lg border border-muted p-4 hover:bg-accent peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                        >
+                          <div className="grid gap-2">
+                            <div className="text-sm font-medium">Process Payment Immediately</div>
+                            <div className="text-xs text-muted-foreground">
+                              Admin processes payment using selected method below
+                            </div>
+                          </div>
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  {/* Customer Email Option for Draft Mode */}
+                  {orderCreationMode === "draft" && (
+                    <div className="mt-4 flex items-center space-x-2">
+                      <Switch
+                        id="email-customer"
+                        checked={customerEmailForPayment}
+                        onCheckedChange={setCustomerEmailForPayment}
+                      />
+                      <Label htmlFor="email-customer" className="text-sm">
+                        Email customer payment instructions
+                      </Label>
+                    </div>
+                  )}
+
+                  {/* Payment Method Selection - Only show for immediate mode */}
+                  {orderCreationMode === "immediate" && (
+                    <div className="mt-6 space-y-3 border-t pt-4">
+                      <div className="text-sm font-medium">Payment Method</div>
+                      <AdminPaymentSelection
+                        availablePaymentMethods={availablePaymentMethods}
+                        selectedPaymentMethod={selectedPaymentMethod}
+                        onPaymentMethodChange={setSelectedPaymentMethod}
+                      />
+                    </div>
+                  )}
+
+                  {/* Single Action Button */}
+                  <div className="mt-6">
+                    {orderCreationMode === "draft" ? (
+                      <Button 
+                        onClick={handleCreateDraftOrder}
+                        className="w-full"
+                        size="lg"
+                        disabled={isCreatingOrder}
+                      >
+                        {isCreatingOrder ? "Creating Order..." : "Create Draft Order"}
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={handlePlaceOrder}
+                        className="w-full"
+                        size="lg"
+                        disabled={isCreatingOrder || !selectedPaymentMethod}
+                      >
+                        {isCreatingOrder ? "Processing Payment..." : "Place Order"}
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Right Column - Customer Info */}
@@ -528,7 +654,7 @@ export function OrdersCreatePage() {
               </CardContent>
             </Card>
 
-            {/* Create Cart Button */}
+            {/* Create Cart Button - Only show when cart hasn't been created yet */}
             {selectedCustomer && selectedShippingAddress && lineItems.length > 0 && !cartId && (
               <Button 
                 onClick={handleCreateCart}

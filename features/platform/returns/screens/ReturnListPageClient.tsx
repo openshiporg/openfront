@@ -196,6 +196,7 @@ export function ReturnListPageClient({
                 total={data.count}
                 pageSize={pageSize}
                 list={{ singular: 'return', plural: 'returns' }}
+                onPageChange={handlePageChange}
               />
             </div>
           )}

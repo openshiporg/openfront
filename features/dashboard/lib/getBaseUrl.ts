@@ -30,11 +30,6 @@ export async function getBaseUrl(): Promise<string> {
     }
   }
 
-  // Development fallback
-  if (process.env.NODE_ENV === 'development') {
-    return 'http://localhost:3000';
-  }
-
   // Production fallback - return empty string and let relative URLs work
   return '';
 }

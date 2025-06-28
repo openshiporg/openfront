@@ -88,7 +88,8 @@ export function StatusTabs({ statusCounts, entityName = "Items" }: StatusTabsPro
     try {
       const parsed = JSON.parse(decodeURIComponent(statusFilter));
       if (Array.isArray(parsed) && parsed.length > 0) {
-        currentStatus = parsed[0].value;
+        // Handle both old object format and new string format
+        currentStatus = typeof parsed[0] === "object" ? parsed[0].value : parsed[0];
       }
     } catch (e) {
       // Invalid JSON in URL, ignore
@@ -100,13 +101,8 @@ export function StatusTabs({ statusCounts, entityName = "Items" }: StatusTabsPro
     if (status === "all") {
       params.delete("!status_matches");
     } else {
-      const filterValue = [
-        {
-          label: statusConfig[status as keyof typeof statusConfig].label,
-          value: status,
-        },
-      ];
-      params.set("!status_matches", JSON.stringify(filterValue));
+      // Just use the status value directly, not an object
+      params.set("!status_matches", JSON.stringify([status]));
     }
     router.push(`${pathname}?${params.toString()}`);
   };
