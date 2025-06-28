@@ -15,7 +15,7 @@ import { CustomerSearchCombobox } from "../components/CustomerSearchCombobox";
 import { AddressSelectCombobox } from "../components/AddressSelectCombobox";
 import { LineItemsManager } from "../components/LineItemsManager";
 import { AdminPaymentSelection } from "../components/AdminPaymentSelection";
-import { CreateItemDrawer } from "@/features/dashboard/views/relationship/client/components/CreateItemDrawer";
+import { CreateItemDrawer } from "@/features/platform/components/CreateItemDrawer";
 import { getCustomer } from "../actions/customers";
 import { getRegionByCountry, getActiveCartPaymentProviders } from "../actions/regions";
 
@@ -669,14 +669,12 @@ export function OrdersCreatePage() {
       </div>
 
       {/* Create Item Drawer */}
-      {createDrawerListKey && (
-        <CreateItemDrawer
-          listKey={createDrawerListKey}
-          isOpen={createDrawerOpen}
-          onClose={handleDrawerClose}
-          onCreate={handleItemCreated}
-        />
-      )}
+      <CreateItemDrawer
+        listKey={createDrawerListKey || ""}
+        open={createDrawerOpen && !!createDrawerListKey}
+        onClose={handleDrawerClose}
+        onCreate={handleItemCreated}
+      />
     </div>
     </>
   );
