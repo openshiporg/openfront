@@ -936,6 +936,7 @@ input AddressRelateToOneForCreateInput {
 type ClaimImage {
   id: ID!
   image: ImageFieldOutput
+  url: String
   altText: String
   claimItem: ClaimItem
   metadata: JSON
@@ -968,6 +969,7 @@ input ClaimImageWhereInput {
   OR: [ClaimImageWhereInput!]
   NOT: [ClaimImageWhereInput!]
   id: IDFilter
+  url: StringFilter
   altText: StringFilter
   claimItem: ClaimItemWhereInput
   createdAt: DateTimeFilter
@@ -976,6 +978,7 @@ input ClaimImageWhereInput {
 
 input ClaimImageOrderByInput {
   id: OrderDirection
+  url: OrderDirection
   altText: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
@@ -983,6 +986,7 @@ input ClaimImageOrderByInput {
 
 input ClaimImageUpdateInput {
   image: ImageFieldInput
+  url: String
   altText: String
   claimItem: ClaimItemRelateToOneForUpdateInput
   metadata: JSON
@@ -1010,6 +1014,7 @@ input ClaimImageUpdateArgs {
 
 input ClaimImageCreateInput {
   image: ImageFieldInput
+  url: String
   altText: String
   claimItem: ClaimItemRelateToOneForCreateInput
   metadata: JSON
@@ -1390,6 +1395,7 @@ input ReturnRelateToOneForCreateInput {
 type ClaimTag {
   id: ID!
   value: String
+  description: String
   metadata: JSON
   claimItems(where: ClaimItemWhereInput! = {}, orderBy: [ClaimItemOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ClaimItemWhereUniqueInput): [ClaimItem!]
   claimItemsCount(where: ClaimItemWhereInput! = {}): Int
@@ -1407,6 +1413,7 @@ input ClaimTagWhereInput {
   NOT: [ClaimTagWhereInput!]
   id: IDFilter
   value: StringFilter
+  description: StringFilter
   claimItems: ClaimItemManyRelationFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
@@ -1415,12 +1422,14 @@ input ClaimTagWhereInput {
 input ClaimTagOrderByInput {
   id: OrderDirection
   value: OrderDirection
+  description: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
 }
 
 input ClaimTagUpdateInput {
   value: String
+  description: String
   metadata: JSON
   claimItems: ClaimItemRelateToManyForUpdateInput
   createdAt: DateTime
@@ -1434,6 +1443,7 @@ input ClaimTagUpdateArgs {
 
 input ClaimTagCreateInput {
   value: String
+  description: String
   metadata: JSON
   claimItems: ClaimItemRelateToManyForCreateInput
   createdAt: DateTime

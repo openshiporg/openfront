@@ -53,19 +53,19 @@ export const platformNavItems: PlatformNavItem[] = [
     group: 'orders'
   },
   {
-    title: 'Returns',
-    href: '/platform/returns',
-    color: 'red',
-    description: 'Process customer returns, refunds, and exchange requests.',
-    icon: ArrowLeftRight,
-    group: 'orders'
-  },
-  {
     title: 'Claims',
     href: '/platform/claims',
     color: 'rose',
-    description: 'Handle customer claims, disputes, and resolution processes.',
+    description: 'Process claims queue, bulk operations, and resolution workflows.',
     icon: ShieldCheck,
+    group: 'orders'
+  },
+  {
+    title: 'Returns',
+    href: '/platform/returns',
+    color: 'orange',
+    description: 'Handle return requests, processing, and refunds.',
+    icon: ArrowLeftRight,
     group: 'orders'
   },
 

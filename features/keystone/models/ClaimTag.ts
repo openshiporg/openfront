@@ -22,6 +22,7 @@ export const ClaimTag = list({
         isRequired: true,
       },
     }),
+    description: text(),
     metadata: json(),
     claimItems: relationship({
       ref: "ClaimItem.claimTags",

@@ -101,9 +101,9 @@ export const ProductDetailsCollapsible = ({
                   <span className="text-sm font-medium">
                     {item.title}
                   </span>
-                  {item.variantTitle && (
+                  {item.variantData?.title && (
                     <div className="text-xs text-muted-foreground font-medium">
-                      {item.variantTitle}
+                      {item.variantData.title}
                     </div>
                   )}
                   <div className="text-xs text-muted-foreground">

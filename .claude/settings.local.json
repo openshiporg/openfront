@@ -31,7 +31,8 @@
       "Bash(mv:*)",
       "Bash(npx tsx:*)",
       "mcp__mcp-midscene__midscene_navigate",
-      "mcp__mcp-midscene__midscene_screenshot"
+      "mcp__mcp-midscene__midscene_screenshot",
+      "Bash(gh api:*)"
     ],
     "deny": []
   }

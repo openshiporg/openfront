@@ -8,12 +8,23 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { MoreVertical } from "lucide-react";
 import Link from "next/link";
 import { ProductDetailsCollapsible } from "./ProductDetailsCollapsible";
 import { ArrowRight } from "lucide-react";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
+import { ReturnsSection } from "./ReturnsSection";
+import { ClaimsSection } from "./ClaimsSection";
+import { CreateClaimModal } from "./modals/CreateClaimModal";
+import { CreateReturnModal } from "./modals/CreateReturnModal";
+import { OrderSectionTabs } from "./OrderSectionTabs";
 
 const statusColors = {
   pending: "blue",
@@ -39,6 +50,8 @@ export const OrderDetailsComponent = ({
   renderButtons,
 }: OrderDetailsComponentProps) => {
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+  const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
   const currentAction = Object.entries(loadingActions).find(
     ([_, value]) => value[order.id]
   )?.[0];
@@ -119,6 +132,22 @@ export const OrderDetailsComponent = ({
                 >
                   {order.status.toUpperCase().replace("_", " ")}
                 </Badge>
+                {order.returns?.length > 0 && (
+                  <Badge
+                    color="blue"
+                    className="text-[.6rem] sm:text-[.7rem] py-0 px-2 sm:px-3 tracking-wide font-medium rounded-md border h-6"
+                  >
+                    {order.returns.length} RETURN{order.returns.length > 1 ? 'S' : ''}
+                  </Badge>
+                )}
+                {order.claimOrders?.length > 0 && (
+                  <Badge
+                    color="purple"
+                    className="text-[.6rem] sm:text-[.7rem] py-0 px-2 sm:px-3 tracking-wide font-medium rounded-md border h-6"
+                  >
+                    {order.claimOrders.length} CLAIM{order.claimOrders.length > 1 ? 'S' : ''}
+                  </Badge>
+                )}
                 {currentAction && (
                   <Badge
                     color="zinc"
@@ -130,16 +159,28 @@ export const OrderDetailsComponent = ({
                 )}
                 {/* Single buttons container */}
                 <div className="absolute bottom-3 right-5 sm:static flex items-center gap-2">
-                  {!removeEditItemButton && (
-                    <Button
-                      variant="secondary"
-                      size="icon"
-                      className="border [&_svg]:size-3 h-6 w-6"
-                      onClick={() => setIsEditDrawerOpen(true)}
-                    >
-                      <MoreVertical className="stroke-muted-foreground" />
-                    </Button>
-                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="border [&_svg]:size-3 h-6 w-6"
+                      >
+                        <MoreVertical className="stroke-muted-foreground" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setIsEditDrawerOpen(true)}>
+                        Edit Order
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setIsClaimModalOpen(true)}>
+                        Start Claim
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setIsReturnModalOpen(true)}>
+                        Start Return
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Button
                     variant="secondary"
                     size="icon"
@@ -154,13 +195,8 @@ export const OrderDetailsComponent = ({
             </div>
           </div>
           <AccordionContent className="pb-0">
-            <div className="divide-y">
-              <ProductDetailsCollapsible
-                orderId={order.id}
-                title="Line Item"
-                totalItems={order.lineItems?.length || 0}
-                lineItems={order.lineItems || []}
-              />
+            <div className="p-4">
+              <OrderSectionTabs order={order} />
             </div>
           </AccordionContent>
         </AccordionItem>
@@ -172,6 +208,19 @@ export const OrderDetailsComponent = ({
         open={isEditDrawerOpen}
         onClose={() => setIsEditDrawerOpen(false)}
       />
+
+      <CreateClaimModal
+        isOpen={isClaimModalOpen}
+        onClose={() => setIsClaimModalOpen(false)}
+        order={order}
+      />
+
+      <CreateReturnModal
+        isOpen={isReturnModalOpen}
+        onClose={() => setIsReturnModalOpen(false)}
+        order={order}
+      />
+
     </>
   );
 };

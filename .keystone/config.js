@@ -5097,6 +5097,12 @@ var ClaimImage = (0, import_core6.list)({
     //   label: 'Source',
     // }),
     image: (0, import_fields9.image)({ storage: "my_images" }),
+    url: (0, import_fields9.text)({
+      label: "Image URL",
+      ui: {
+        description: "Direct URL to the image file"
+      }
+    }),
     altText: (0, import_fields9.text)(),
     claimItem: (0, import_fields9.relationship)({ ref: "ClaimItem.claimImages" }),
     metadata: (0, import_fields9.json)(),
@@ -5321,6 +5327,7 @@ var ClaimTag = (0, import_core9.list)({
         isRequired: true
       }
     }),
+    description: (0, import_fields12.text)(),
     metadata: (0, import_fields12.json)(),
     claimItems: (0, import_fields12.relationship)({
       ref: "ClaimItem.claimTags",

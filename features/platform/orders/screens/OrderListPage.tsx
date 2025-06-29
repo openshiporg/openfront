@@ -96,7 +96,9 @@ export async function OrderListPage({ searchParams }: PageProps) {
     'user',
     'shippingAddress',
     'billingAddress',
-    'lineItems'
+    'lineItems',
+    'returns',
+    'claimOrders'
   ]
 
   // Custom GraphQL selection for orders with all nested fields
@@ -159,6 +161,63 @@ export async function OrderListPage({ searchParams }: PageProps) {
       variantTitle
       variantData
       productData
+      moneyAmount {
+        id
+        amount
+        originalAmount
+      }
+    }
+    returns {
+      id
+      status
+      refundAmount
+      receivedAt
+      createdAt
+      updatedAt
+      returnItems {
+        id
+        quantity
+        note
+        lineItem {
+          id
+          title
+        }
+        returnReason {
+          id
+          label
+          value
+        }
+      }
+    }
+    claimOrders {
+      id
+      type
+      paymentStatus
+      fulfillmentStatus
+      refundAmount
+      canceledAt
+      createdAt
+      updatedAt
+      claimItems {
+        id
+        reason
+        quantity
+        note
+        lineItem {
+          id
+          title
+        }
+        claimImages {
+          id
+          url
+          altText
+        }
+        claimTags {
+          id
+          value
+          description
+        }
+      }
     }
   `
 

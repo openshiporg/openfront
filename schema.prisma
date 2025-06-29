@@ -134,6 +134,7 @@ model ClaimImage {
   image_width     Int?
   image_height    Int?
   image_extension String?
+  url             String     @default("")
   altText         String     @default("")
   claimItem       ClaimItem? @relation("ClaimImage_claimItem", fields: [claimItemId], references: [id])
   claimItemId     String?    @map("claimItem")
@@ -194,12 +195,13 @@ model ClaimOrder {
 }
 
 model ClaimTag {
-  id         String      @id @default(cuid())
-  value      String      @default("")
-  metadata   Json?
-  claimItems ClaimItem[] @relation("ClaimItem_claimTags")
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @default(now()) @updatedAt
+  id          String      @id @default(cuid())
+  value       String      @default("")
+  description String      @default("")
+  metadata    Json?
+  claimItems  ClaimItem[] @relation("ClaimItem_claimTags")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @default(now()) @updatedAt
 }
 
 model Country {

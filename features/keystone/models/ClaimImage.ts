@@ -34,6 +34,12 @@ export const ClaimImage = list({
     //   label: 'Source',
     // }),
     image: image({ storage: 'my_images' }),
+    url: text({
+      label: 'Image URL',
+      ui: {
+        description: 'Direct URL to the image file'
+      }
+    }),
     altText: text(),
     claimItem: relationship({ ref: 'ClaimItem.claimImages' }),
     metadata: json(),
