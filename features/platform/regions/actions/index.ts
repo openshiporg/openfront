@@ -6,7 +6,29 @@ import { keystoneClient } from "../../../dashboard/lib/keystoneClient";
 // Interface for region data (exported for potential use in other files)
 export interface Region {
   id: string;
-  title: string;
+  name: string;
+  code?: string;
+  createdAt: string;
+  updatedAt?: string;
+  taxRate?: number;
+  automaticTaxes?: boolean;
+  currency?: {
+    id: string;
+    code: string;
+    symbol: string;
+    symbolNative: string;
+  };
+  countries?: Array<{
+    id: string;
+    iso2: string;
+    displayName: string;
+  }>;
+  paymentProviders?: Array<{
+    id: string;
+    name: string;
+    code: string;
+    isInstalled: boolean;
+  }>;
   [key: string]: unknown;
 }
 
@@ -19,7 +41,16 @@ export async function getRegions(
   skip: number = 0,
   orderBy: Array<Record<string, string>> = [{ createdAt: 'desc' }],
   selectedFields: string = `
-    id name currency countries
+    id name code createdAt updatedAt taxRate automaticTaxes
+    currency {
+      id code symbol symbolNative
+    }
+    countries {
+      id iso2 displayName
+    }
+    paymentProviders {
+      id name code isInstalled
+    }
   `
 ) {
   const query = `
@@ -77,8 +108,8 @@ export async function getFilteredRegions(
   // Search filtering (adjust fields as needed)
   if (search?.trim()) {
     where.OR = [
-      { title: { contains: search, mode: 'insensitive' } },
-      // Add more searchable fields as needed
+      { name: { contains: search, mode: 'insensitive' } },
+      { code: { contains: search, mode: 'insensitive' } },
     ];
   }
 
@@ -116,7 +147,10 @@ export async function getRegion(id: string) {
   const query = `
     query GetRegion($id: ID!) {
       region(where: { id: $id }) {
-        id name currency countries
+        id name code createdAt taxRate automaticTaxes
+        currency { id code symbol symbolNative }
+        countries { id iso2 displayName }
+        paymentProviders { id name code isInstalled }
       }
     }
   `;

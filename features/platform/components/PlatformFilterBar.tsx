@@ -22,9 +22,18 @@ import { enhanceFields } from '../../dashboard/utils/enhanceFields'
 interface PlatformFilterBarProps {
   list: any
   customCreateButton?: React.ReactNode
+  createMode?: 'button' | 'dropdown'
+  onCreateClick?: (mode?: 'scratch' | 'popular') => void
+  createLabel?: string
 }
 
-export function PlatformFilterBar({ list, customCreateButton }: PlatformFilterBarProps) {
+export function PlatformFilterBar({ 
+  list, 
+  customCreateButton, 
+  createMode = 'button',
+  onCreateClick,
+  createLabel 
+}: PlatformFilterBarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -130,16 +139,26 @@ export function PlatformFilterBar({ list, customCreateButton }: PlatformFilterBa
 
           {!list.hideCreate && (
             customCreateButton || (
-              <Link
-                href={`${basePath}/platform/${list.path}/create`}
-                className={cn(
-                  buttonVariants({ size: "icon" }),
-                  "lg:px-4 lg:py-2 lg:w-auto rounded-lg"
-                )}
-              >
-                <CirclePlus />
-                <span className="hidden lg:inline">Create {list.singular}</span>
-              </Link>
+              (createMode === 'dropdown' && onCreateClick) ? (
+                <Button
+                  onClick={() => onCreateClick?.()}
+                  className="lg:px-4 lg:py-2 lg:w-auto rounded-lg"
+                >
+                  <CirclePlus />
+                  <span className="hidden lg:inline">{createLabel || `Create ${list.singular}`}</span>
+                </Button>
+              ) : (
+                <Link
+                  href={`${basePath}/platform/${list.path}/create`}
+                  className={cn(
+                    buttonVariants({ size: "icon" }),
+                    "lg:px-4 lg:py-2 lg:w-auto rounded-lg"
+                  )}
+                >
+                  <CirclePlus />
+                  <span className="hidden lg:inline">Create {list.singular}</span>
+                </Link>
+              )
             )
           )}
         </div>

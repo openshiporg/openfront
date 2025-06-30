@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { MoreVertical, Package, Layers, Archive } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { EditItemDrawer } from "../../components/EditItemDrawer";
+import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 
 const statusColors = {
   draft: "zinc",
@@ -302,7 +302,7 @@ export function ProductDetailsComponent({
         </AccordionItem>
       </Accordion>
 
-      <EditItemDrawer
+      <EditItemDrawerClientWrapper
         listKey="products"
         itemId={product.id}
         open={isEditDrawerOpen}

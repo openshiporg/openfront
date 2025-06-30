@@ -1,3 +1,3 @@
-import { RegionListPage } from "@/features/platform/regions/screens/RegionListPage";
+import { RegionalSettingsPage } from "@/features/platform/regions/screens/RegionalSettingsPage";
 
-export default RegionListPage;
+export default RegionalSettingsPage;

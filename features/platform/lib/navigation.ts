@@ -6,8 +6,6 @@ import {
   BadgeDollarSign,
   BarChart3,
   LayoutList,
-  ArrowLeftRight,
-  ShieldCheck,
   Truck,
   Settings,
   Ticket,
@@ -48,24 +46,8 @@ export const platformNavItems: PlatformNavItem[] = [
     title: 'Orders',
     href: '/platform/orders',
     color: 'blue',
-    description: 'Manage customer orders, track fulfillment, and process payments.',
+    description: 'Manage customer orders, returns, claims, and fulfillment.',
     icon: Ticket,
-    group: 'orders'
-  },
-  {
-    title: 'Claims',
-    href: '/platform/claims',
-    color: 'rose',
-    description: 'Process claims queue, bulk operations, and resolution workflows.',
-    icon: ShieldCheck,
-    group: 'orders'
-  },
-  {
-    title: 'Returns',
-    href: '/platform/returns',
-    color: 'orange',
-    description: 'Handle return requests, processing, and refunds.',
-    icon: ArrowLeftRight,
     group: 'orders'
   },
 
@@ -88,18 +70,10 @@ export const platformNavItems: PlatformNavItem[] = [
   },
   {
     title: 'Collections',
-    href: '/platform/collections',
+    href: '/platform/product-collections',
     color: 'amber',
     description: 'Organize products into marketing collections.',
     icon: Grid3x3,
-    group: 'catalog'
-  },
-  {
-    title: 'Inventory',
-    href: '/platform/inventory',
-    color: 'teal',
-    description: 'Track stock levels, manage warehouses, and monitor inventory.',
-    icon: Boxes,
     group: 'catalog'
   },
 
@@ -115,27 +89,11 @@ export const platformNavItems: PlatformNavItem[] = [
 
   // Marketing & Growth
   {
-    title: 'Discounts',
-    href: '/platform/discounts',
+    title: 'Pricing & Promotions',
+    href: '/platform/pricing',
     color: 'pink',
-    description: 'Create promotional codes, sales campaigns, and discount rules.',
+    description: 'Manage discounts, price lists, gift cards, and promotional campaigns.',
     icon: Tag,
-    group: 'marketing'
-  },
-  {
-    title: 'Gift Cards',
-    href: '/platform/gift-cards',
-    color: 'orange',
-    description: 'Issue and manage gift cards for customer purchases and rewards.',
-    icon: Gift,
-    group: 'marketing'
-  },
-  {
-    title: 'Price Lists',
-    href: '/platform/price-lists',
-    color: 'emerald',
-    description: 'Configure pricing strategies and customer-specific price tiers.',
-    icon: BadgeDollarSign,
     group: 'marketing'
   },
   {
@@ -157,52 +115,20 @@ export const platformNavItems: PlatformNavItem[] = [
     group: 'operations'
   },
   {
-    title: 'Payment Providers',
-    href: '/platform/payment-providers',
-    color: 'violet',
-    description: 'Manage payment gateways and processing configurations.',
-    icon: CreditCard,
-    group: 'operations'
-  },
-  {
-    title: 'Regions',
+    title: 'Regional Settings',
     href: '/platform/regions',
     color: 'blue',
-    description: 'Manage geographical regions, currencies, and tax configurations.',
+    description: 'Manage regions, countries, currencies, and tax configurations.',
     icon: Globe,
-    group: 'operations'
-  },
-  {
-    title: 'Countries',
-    href: '/platform/countries', 
-    color: 'slate',
-    description: 'Manage countries and regional assignments.',
-    icon: MapPin,
-    group: 'operations'
-  },
-  {
-    title: 'Currencies',
-    href: '/platform/currencies',
-    color: 'yellow',
-    description: 'Configure supported currencies and exchange rates.',
-    icon: DollarSign,
     group: 'operations'
   },
 
   // System & Settings
   {
-    title: 'Stores',
-    href: '/platform/stores',
-    color: 'emerald',
-    description: 'Configure store settings and templates.',
-    icon: Store,
-    group: 'system'
-  },
-  {
-    title: 'Settings',
-    href: '/platform/settings',
+    title: 'System Configuration',
+    href: '/platform/system',
     color: 'zinc',
-    description: 'Configure platform settings, integrations, and system preferences.',
+    description: 'Configure system settings, stores, and payment providers.',
     icon: Settings,
     group: 'system'
   },

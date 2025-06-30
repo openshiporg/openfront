@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MoreVertical } from "lucide-react";
 import Link from "next/link";
-import { EditItemDrawer } from "../../components/EditItemDrawer";
+import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 
 const statusColors = {
   "has_account": "emerald",
@@ -143,9 +143,8 @@ export function UserDetailsComponent({
         </AccordionItem>
       </Accordion>
 
-      <EditItemDrawer
-        list={list}
-        item={user}
+      <EditItemDrawerClientWrapper
+        listKey="users"
         itemId={user.id}
         open={isEditDrawerOpen}
         onClose={() => setIsEditDrawerOpen(false)}

@@ -195,9 +195,7 @@ export const OrderDetailsComponent = ({
             </div>
           </div>
           <AccordionContent className="pb-0">
-            <div className="p-4">
-              <OrderSectionTabs order={order} />
-            </div>
+            <OrderSectionTabs order={order} />
           </AccordionContent>
         </AccordionItem>
       </Accordion>

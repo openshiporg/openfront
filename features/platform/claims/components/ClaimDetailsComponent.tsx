@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MoreVertical } from "lucide-react";
 import Link from "next/link";
-import { EditItemDrawer } from "../../components/EditItemDrawer";
+import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 
 const statusColors = {
   "active": "emerald",
@@ -126,9 +126,8 @@ export function ClaimDetailsComponent({
         </AccordionItem>
       </Accordion>
 
-      <EditItemDrawer
-        list={list}
-        item={claim}
+      <EditItemDrawerClientWrapper
+        listKey="claims"
         itemId={claim.id}
         open={isEditDrawerOpen}
         onClose={() => setIsEditDrawerOpen(false)}
