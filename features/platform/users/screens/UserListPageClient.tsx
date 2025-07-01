@@ -14,7 +14,7 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { PageContainer } from '../../../dashboard/components/PageContainer'
 import { PlatformFilterBar } from '../../components/PlatformFilterBar'
-import { StatusTabs } from '../../components/StatusTabs'
+import { StatusTabs } from '../components/StatusTabs'
 import { UserDetailsComponent } from '../components/UserDetailsComponent'
 import { Pagination } from '../../../dashboard/components/Pagination'
 import { FilterList } from '../../../dashboard/components/FilterList'
@@ -32,9 +32,9 @@ interface UserListPageClientProps {
     search: string
   }
   statusCounts: {
-    has_account: number
+    withAccount: number
     all: number
-    no_account: number
+    withoutAccount: number
   } | null
 }
 
@@ -140,20 +140,7 @@ export function UserListPageClient({
       {/* Status Tabs */}
       {statusCounts && (
         <div className="border-b">
-          <StatusTabs 
-            statusCounts={statusCounts}
-            statusConfig={{
-                      "has_account": {
-                                "label": "Has Account",
-                                "color": "emerald"
-                      },
-                      "no_account": {
-                                "label": "No Account",
-                                "color": "zinc"
-                      }
-            }}
-            entityName="Customers"
-          />
+          <StatusTabs statusCounts={statusCounts} />
         </div>
       )}
 

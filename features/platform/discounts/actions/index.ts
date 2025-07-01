@@ -3,15 +3,43 @@
 import { revalidatePath } from 'next/cache';
 import { keystoneClient } from "../../../dashboard/lib/keystoneClient";
 
-// Interface for discount data (exported for potential use in other files)
 export interface Discount {
   id: string;
   code: string;
-  [key: string]: unknown;
+  isDynamic?: boolean;
+  isDisabled?: boolean;
+  stackable?: boolean;
+  startsAt?: string;
+  endsAt?: string;
+  usageLimit?: number;
+  usageCount?: number;
+  validDuration?: number;
+  createdAt: string;
+  updatedAt?: string;
+  discountRule?: {
+    id: string;
+    type: 'percentage' | 'fixed' | 'free_shipping';
+    value: number;
+    description?: string;
+    allocation?: 'total' | 'item';
+  };
+  orders?: Array<{
+    id: string;
+    displayId: string;
+    createdAt: string;
+    status: string;
+    total: number;
+    currency: { code: string; symbol: string };
+    user: {
+      id: string;
+      name: string;
+      email: string;
+    };
+  }>;
 }
 
 /**
- * Get list of discounts
+ * Get list of discounts with enhanced fields
  */
 export async function getDiscounts(
   where: Record<string, unknown> = {},
@@ -20,6 +48,14 @@ export async function getDiscounts(
   orderBy: Array<Record<string, string>> = [{ createdAt: 'desc' }],
   selectedFields: string = `
     id code isDynamic isDisabled stackable startsAt endsAt usageLimit usageCount validDuration createdAt updatedAt
+    discountRule {
+      id type value description allocation
+    }
+    orders {
+      id displayId createdAt status total
+      currency { code symbol }
+      user { id name email }
+    }
   `
 ) {
   const query = `
@@ -60,24 +96,28 @@ export async function getDiscounts(
  * Get filtered discounts with search and pagination
  */
 export async function getFilteredDiscounts(
-  isDisabled?: boolean,
+  status?: string,
   search?: string,
   page: number = 1,
   pageSize: number = 10,
   sort?: string
 ) {
-  // Build where clause
   const where: Record<string, any> = {};
   
-  // Status filtering using isDisabled boolean
-  if (isDisabled !== undefined) {
-    where.isDisabled = { equals: isDisabled };
+  // Status filtering - using correct boolean values from Dasher7
+  if (status && status !== 'all') {
+    if (status === 'active') {
+      where.isDisabled = { equals: false };
+    } else if (status === 'disabled') {
+      where.isDisabled = { equals: true };
+    }
   }
   
   // Search filtering
   if (search?.trim()) {
     where.OR = [
-      { code: { contains: search, mode: 'insensitive' } }
+      { code: { contains: search, mode: 'insensitive' } },
+      { discountRule: { description: { contains: search, mode: 'insensitive' } } },
     ];
   }
 
@@ -92,7 +132,6 @@ export async function getFilteredDiscounts(
     }
   }
 
-  // Calculate pagination
   const skip = (page - 1) * pageSize;
 
   try {
@@ -109,49 +148,12 @@ export async function getFilteredDiscounts(
 }
 
 /**
- * Get a single discount by ID
- */
-export async function getDiscount(id: string) {
-  const query = `
-    query GetDiscount($id: ID!) {
-      discount(where: { id: $id }) {
-        id code isDynamic isDisabled stackable startsAt endsAt usageLimit usageCount validDuration createdAt updatedAt
-      }
-    }
-  `;
-
-  const response = await keystoneClient(query, { id });
-
-  if (response.success) {
-    if (!response.data.discount) {
-      return {
-        success: false,
-        error: 'Discount not found',
-        data: null,
-      };
-    }
-
-    return {
-      success: true,
-      data: response.data.discount,
-    };
-  } else {
-    console.error('Error fetching discount:', response.error);
-    return {
-      success: false,
-      error: response.error || 'Failed to fetch discount',
-      data: null,
-    };
-  }
-}
-
-/**
- * Get discount status counts for StatusTabs
+ * Get discount status counts for StatusTabs - matching Dasher7 pattern
  */
 export async function getDiscountStatusCounts() {
   const query = `
     query GetDiscountStatusCounts {
-      enabled: discountsCount(where: { isDisabled: { equals: false } })
+      active: discountsCount(where: { isDisabled: { equals: false } })
       disabled: discountsCount(where: { isDisabled: { equals: true } })
       all: discountsCount
     }
@@ -163,54 +165,21 @@ export async function getDiscountStatusCounts() {
     return {
       success: true,
       data: {
-        enabled: response.data.enabled || 0,
+        all: response.data.all || 0,
+        active: response.data.active || 0,
         disabled: response.data.disabled || 0,
-        all: response.data.all || 0
-      }
+      },
     };
   } else {
     console.error('Error fetching discount status counts:', response.error);
     return {
       success: false,
       error: response.error || 'Failed to fetch discount status counts',
-      data: { enabled: 0, disabled: 0, all: 0 }
-    };
-  }
-}
-
-/**
- * Update discount disabled status
- */
-export async function updateDiscountStatus(id: string, isDisabled: boolean) {
-  const mutation = `
-    mutation UpdateDiscountStatus($id: ID!, $data: DiscountUpdateInput!) {
-      updateDiscount(where: { id: $id }, data: $data) {
-        id
-        isDisabled
-      }
-    }
-  `;
-
-  const response = await keystoneClient(mutation, {
-    id,
-    data: { isDisabled },
-  });
-
-  if (response.success) {
-    // Revalidate the discount page to reflect the status change
-    revalidatePath(`/dashboard/platform/discounts/${id}`);
-    revalidatePath('/dashboard/platform/discounts');
-
-    return {
-      success: true,
-      data: response.data.updateDiscount,
-    };
-  } else {
-    console.error('Error updating discount status:', response.error);
-    return {
-      success: false,
-      error: response.error || 'Failed to update discount status',
-      data: null,
+      data: {
+        all: 0,
+        active: 0,
+        disabled: 0,
+      },
     };
   }
 }
