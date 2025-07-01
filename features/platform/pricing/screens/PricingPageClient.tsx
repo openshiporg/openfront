@@ -51,10 +51,14 @@ export function PricingPageClient({
 
   return (
     <PageContainer
-      header={{
-        title: "Pricing & Promotions",
-        description: "Manage discounts, price lists, and gift cards for your store",
-      }}
+      header={
+        <>
+          <h1 className="text-2xl font-semibold tracking-tight">Pricing & Promotions</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage discounts, price lists, and gift cards for your store
+          </p>
+        </>
+      }
     >
       <PricingTabs
         initialTab={initialTab}

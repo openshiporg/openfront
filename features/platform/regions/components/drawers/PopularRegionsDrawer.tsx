@@ -15,7 +15,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { Globe, MapPin, DollarSign, Percent, X, CheckCircle2, Loader2, Sparkles } from "lucide-react";
-import { POPULAR_REGIONS, createPopularRegion } from "../../actions/popular-regions";
+import { POPULAR_REGIONS } from "../../constants/popular-regions";
+import { createPopularRegion } from "../../actions/popular-regions";
 
 interface PopularRegionsDrawerProps {
   open: boolean;

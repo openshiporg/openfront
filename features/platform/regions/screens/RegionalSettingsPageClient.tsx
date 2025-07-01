@@ -51,10 +51,14 @@ export function RegionalSettingsPageClient({
 
   return (
     <PageContainer
-      header={{
-        title: "Regional Settings",
-        description: "Manage regions, countries, and currencies for your store",
-      }}
+      header={
+        <>
+          <h1 className="text-2xl font-semibold tracking-tight">Regional Settings</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage regions, countries, and currencies for your store
+          </p>
+        </>
+      }
     >
       <RegionalSettingsTabs
         initialTab={initialTab}

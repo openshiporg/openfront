@@ -1,5 +1,403 @@
 # Detail Components Plan
 
+## 🎯 Ready-to-Implement Detail Components
+
+Based on the battle-tested OrderDetailsComponent and ProductDetailsComponent patterns, here are the complete specifications for all remaining platform entity detail components:
+
+### 1. AnalyticsDetailsComponent
+
+**Summary Header**:
+- **Primary**: Metric name (link to detail page)
+- **Secondary**: Time period, calculation method, last updated date
+- **Metadata**: Current value, percentage change, trend direction
+- **Status Badge**: `trending_up` (green), `trending_down` (red), `stable` (blue)
+
+**Expanded Sections**:
+- **Metric Details**: Chart visualization, data points, calculation formula
+- **Historical Data**: Time series data with trend analysis
+- **Related Metrics**: Connected analytics with correlation indicators
+
+```typescript
+interface Analytics {
+  id: string;
+  name: string;
+  value: number;
+  previousValue: number;
+  changePercentage: number;
+  period: 'daily' | 'weekly' | 'monthly' | 'quarterly';
+  calculationMethod: string;
+  updatedAt: string;
+  chartData: Array<{
+    date: string;
+    value: number;
+  }>;
+  relatedMetrics: Array<{
+    id: string;
+    name: string;
+    correlation: number;
+  }>;
+}
+```
+
+### 2. ClaimDetailsComponent
+
+**Summary Header**:
+- **Primary**: Claim ID with "CLAIM" badge (link to detail page)
+- **Secondary**: Order reference link, creation date, claim type
+- **Metadata**: Claimed amount, refund status, items count
+- **Status Badge**: `pending` (yellow), `approved` (green), `rejected` (red), `resolved` (blue)
+
+**Expanded Sections**:
+- **Claim Information**: Type, amount, reason, customer message
+- **Claimed Items**: Product cards with quantities and refund amounts
+- **Resolution Details**: Admin notes, refund transactions, fulfillment updates
+
+```typescript
+interface Claim {
+  id: string;
+  displayId: string;
+  type: 'replace' | 'refund';
+  status: 'pending' | 'approved' | 'rejected' | 'resolved';
+  claimedAmount: number;
+  refundAmount?: number;
+  createdAt: string;
+  order: {
+    id: string;
+    displayId: string;
+    user: { name: string; email: string };
+  };
+  claimItems: Array<{
+    id: string;
+    quantity: number;
+    reason: string;
+    note?: string;
+    lineItem: {
+      id: string;
+      title: string;
+      unitPrice: number;
+      productVariant: {
+        product: { title: string; thumbnail?: string };
+      };
+    };
+  }>;
+  currency: { code: string; symbol: string };
+}
+```
+
+### 3. ReturnDetailsComponent
+
+**Summary Header**:
+- **Primary**: Return ID with "RETURN" badge (link to detail page)
+- **Secondary**: Order reference link, creation date, return status
+- **Metadata**: Return amount, shipping status, items count
+- **Status Badge**: `requested` (yellow), `received` (blue), `completed` (green), `canceled` (red)
+
+**Expanded Sections**:
+- **Return Information**: Status, shipping details, return reason
+- **Returned Items**: Product cards with condition notes and refund amounts
+- **Processing Timeline**: Status updates, shipping tracking, refund processing
+
+```typescript
+interface Return {
+  id: string;
+  displayId: string;
+  status: 'requested' | 'received' | 'completed' | 'canceled';
+  returnAmount: number;
+  refundAmount?: number;
+  createdAt: string;
+  receivedAt?: string;
+  order: {
+    id: string;
+    displayId: string;
+    user: { name: string; email: string };
+  };
+  returnItems: Array<{
+    id: string;
+    quantity: number;
+    condition: 'new' | 'used' | 'damaged';
+    note?: string;
+    lineItem: {
+      id: string;
+      title: string;
+      unitPrice: number;
+      productVariant: {
+        product: { title: string; thumbnail?: string };
+      };
+    };
+  }>;
+  shippingMethod?: {
+    name: string;
+    trackingNumber?: string;
+  };
+  currency: { code: string; symbol: string };
+}
+```
+
+### 4. SystemDetailsComponent
+
+**Summary Header**:
+- **Primary**: Setting name with "SYSTEM" badge (link to detail page)
+- **Secondary**: Setting category, last modified date, environment
+- **Metadata**: Value type, scope, default value status
+- **Status Badge**: `active` (green), `disabled` (zinc), `deprecated` (orange)
+
+**Expanded Sections**:
+- **Setting Information**: Description, value type, validation rules
+- **Current Configuration**: Active value, environment overrides, inheritance
+- **Change History**: Modification log with user attribution and timestamps
+
+```typescript
+interface SystemSetting {
+  id: string;
+  name: string;
+  key: string;
+  value: any;
+  defaultValue: any;
+  valueType: 'string' | 'number' | 'boolean' | 'json' | 'array';
+  category: string;
+  description?: string;
+  scope: 'global' | 'tenant' | 'user';
+  isActive: boolean;
+  isDeprecated: boolean;
+  updatedAt: string;
+  updatedBy?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  validationRules?: {
+    required: boolean;
+    minLength?: number;
+    maxLength?: number;
+    pattern?: string;
+  };
+  changeHistory: Array<{
+    id: string;
+    oldValue: any;
+    newValue: any;
+    changedAt: string;
+    changedBy: { name: string; email: string };
+    reason?: string;
+  }>;
+}
+```
+
+### 5. CollectionDetailsComponent ⭐ **ENHANCED VISUAL**
+
+**Summary Header**:
+- **Primary**: Collection title with "COLLECTION" badge (link to detail page)
+- **Secondary**: Handle, creation date, visibility status
+- **Metadata**: Products count, published status, featured status
+- **Status Badge**: `published` (green), `draft` (zinc), `scheduled` (blue)
+
+**Expanded Sections**:
+- **Collection Information**: Description, SEO metadata, visibility settings
+- **Products**: Enhanced product grid with thumbnails, prices, stock status
+- **Collection Rules**: Automated inclusion rules, manual selections
+
+```typescript
+interface Collection {
+  id: string;
+  title: string;
+  handle: string;
+  description?: string;
+  isPublished: boolean;
+  isFeatured: boolean;
+  createdAt: string;
+  publishedAt?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  featuredImage?: string;
+  products: Array<{
+    id: string;
+    title: string;
+    handle: string;
+    status: string;
+    thumbnail?: string;
+    price?: number;
+    compareAtPrice?: number;
+    inventoryQuantity?: number;
+    productType?: { value: string };
+  }>;
+  collectionRules?: Array<{
+    field: string;
+    operator: string;
+    value: string;
+  }>;
+  currency: { code: string; symbol: string };
+}
+```
+
+### 6. CategoryDetailsComponent ⭐ **HIERARCHICAL DISPLAY**
+
+**Summary Header**:
+- **Primary**: Category name with hierarchy breadcrumb (link to detail page)
+- **Secondary**: Handle, creation date, parent category
+- **Metadata**: Products count, subcategories count, depth level
+- **Status Badge**: `active` (green), `inactive` (zinc), `internal` (blue)
+
+**Expanded Sections**:
+- **Category Hierarchy**: Parent/child relationships with visual tree
+- **Products**: Product grid with category-specific filters
+- **Category Management**: Visibility settings, SEO configuration
+
+```typescript
+interface ProductCategory {
+  id: string;
+  name: string;
+  handle: string;
+  description?: string;
+  isActive: boolean;
+  isInternal: boolean;
+  rank: number;
+  createdAt: string;
+  parentCategory?: {
+    id: string;
+    name: string;
+    handle: string;
+  };
+  categoryChildren: Array<{
+    id: string;
+    name: string;
+    handle: string;
+    productsCount: number;
+    isActive: boolean;
+  }>;
+  products: Array<{
+    id: string;
+    title: string;
+    handle: string;
+    status: string;
+    thumbnail?: string;
+    inventoryQuantity?: number;
+  }>;
+  categoryPath: Array<{
+    id: string;
+    name: string;
+    handle: string;
+  }>;
+}
+```
+
+### 7. ShippingDetailsComponent ⭐ **COMPREHENSIVE CONFIGURATION**
+
+**Summary Header**:
+- **Primary**: Shipping option name with region badge (link to detail page)
+- **Secondary**: Provider name, creation date, price type
+- **Metadata**: Price amount, requirements count, tax rates
+- **Status Badge**: `active` (green), `disabled` (zinc), `admin_only` (orange)
+
+**Expanded Sections**:
+- **Shipping Configuration**: Price details, calculation method, provider settings
+- **Requirements & Restrictions**: Order minimums, weight limits, geographic restrictions
+- **Tax & Fulfillment**: Tax rates, fulfillment provider integration, tracking settings
+
+```typescript
+interface ShippingOption {
+  id: string;
+  name: string;
+  priceType: 'flat_rate' | 'calculated';
+  amount?: number;
+  isReturn: boolean;
+  adminOnly: boolean;
+  isActive: boolean;
+  createdAt: string;
+  region: {
+    id: string;
+    name: string;
+    currency: { code: string; symbol: string };
+  };
+  fulfillmentProvider: {
+    id: string;
+    name: string;
+    isInstalled: boolean;
+  };
+  shippingProfile: {
+    id: string;
+    name: string;
+    type: string;
+  };
+  requirements: Array<{
+    type: 'min_subtotal' | 'max_subtotal' | 'weight' | 'dimensions';
+    amount?: number;
+    unit?: string;
+  }>;
+  taxRates: Array<{
+    id: string;
+    name: string;
+    rate: number;
+    region: { name: string };
+  }>;
+  metadata?: Record<string, any>;
+}
+```
+
+### 8. InventoryDetailsComponent ⭐ **STOCK MANAGEMENT**
+
+**Summary Header**:
+- **Primary**: Product variant title with SKU (link to product)
+- **Secondary**: Product name, last updated date, inventory policy
+- **Metadata**: Current stock, reserved quantity, locations count
+- **Status Badge**: `in_stock` (green), `low_stock` (yellow), `out_of_stock` (red), `discontinued` (zinc)
+
+**Expanded Sections**:
+- **Stock Levels**: Available, reserved, incoming with location breakdown
+- **Inventory History**: Stock movements, adjustments, transfers
+- **Location Management**: Warehouse-specific quantities, reorder points
+
+```typescript
+interface InventoryItem {
+  id: string;
+  sku: string;
+  hsCode?: string;
+  weight?: number;
+  dimensions?: {
+    length: number;
+    width: number;
+    height: number;
+    unit: string;
+  };
+  origin: {
+    countryCode: string;
+    province?: string;
+  };
+  midCode?: string;
+  material?: string;
+  updatedAt: string;
+  productVariant: {
+    id: string;
+    title: string;
+    inventoryQuantity: number;
+    manageInventory: boolean;
+    allowBackorder: boolean;
+    product: {
+      id: string;
+      title: string;
+      thumbnail?: string;
+    };
+  };
+  inventoryLevels: Array<{
+    id: string;
+    stockedQuantity: number;
+    reservedQuantity: number;
+    incomingQuantity: number;
+    salesChannel: {
+      id: string;
+      name: string;
+      isActive: boolean;
+    };
+  }>;
+  stockMovements: Array<{
+    id: string;
+    quantity: number;
+    type: 'adjustment' | 'sale' | 'return' | 'transfer';
+    createdAt: string;
+    reason?: string;
+    reference?: string;
+  }>;
+}
+```
+
 ## Overview
 
 This plan provides complete specifications for creating rich detail components for all platform entities. Each component follows the proven OrderDetailsComponent and ProductDetailsComponent patterns with entity-specific data and functionality.
