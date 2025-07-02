@@ -1,45 +1,47 @@
-/**
- * UserListPageClient - Client Component  
- * Based on dashboard ListPageClient but hardcoded for users
- */
+'use client';
 
-'use client'
-
-import React, { useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import React, { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   SearchX,
   Table as TableIcon,
   Plus 
-} from 'lucide-react'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import { PageContainer } from '../../../dashboard/components/PageContainer'
-import { PlatformFilterBar } from '../../components/PlatformFilterBar'
-import { StatusTabs } from '../components/StatusTabs'
-import { UserDetailsComponent } from '../components/UserDetailsComponent'
-import { Pagination } from '../../../dashboard/components/Pagination'
-import { FilterList } from '../../../dashboard/components/FilterList'
-import { CreateItemDrawer } from '@/features/platform/components/CreateItemDrawer'
-import { useDashboard } from '../../../dashboard/context/DashboardProvider'
-import { useSelectedFields } from '../../../dashboard/hooks/useSelectedFields'
-import { useSort } from '../../../dashboard/hooks/useSort'
+} from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { PageContainer } from '../../../dashboard/components/PageContainer';
+import { PlatformFilterBar } from '../../components/PlatformFilterBar';
+import { StatusTabs } from '../../components/StatusTabs';
+import { InventoryDetailsComponent } from '../components/InventoryDetailsComponent';
+import { Pagination } from '../../../dashboard/components/Pagination';
+import { FilterList } from '../../../dashboard/components/FilterList';
+import { CreateItemDrawer } from '@/features/platform/components/CreateItemDrawer';
+import { useDashboard } from '../../../dashboard/context/DashboardProvider';
 
-interface UserListPageClientProps {
-  list: any
-  initialData: { items: any[], count: number }
-  initialError: string | null
+interface InventoryListPageClientProps {
+  list: any;
+  initialData: { items: any[], count: number };
+  initialError: string | null;
   initialSearchParams: {
-    page: number
-    pageSize: number  
-    search: string
-  }
+    page: number;
+    pageSize: number;
+    search: string;
+  };
   statusCounts: {
-    withAccount: number
-    all: number
-    withoutAccount: number
-  } | null
+    all: number;
+    in_stock: number;
+    low_stock: number;
+    out_of_stock: number;
+    backordered: number;
+  } | null;
 }
+
+const statusConfig = {
+  in_stock: { label: "In Stock", color: "emerald" },
+  low_stock: { label: "Low Stock", color: "yellow" },
+  out_of_stock: { label: "Out of Stock", color: "red" },
+  backordered: { label: "Backordered", color: "purple" }
+};
 
 function EmptyState({ isFiltered }: { isFiltered: boolean }) {
   return (
@@ -49,57 +51,53 @@ function EmptyState({ isFiltered }: { isFiltered: boolean }) {
           <SearchX className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">No results found</h3>
           <p className="text-muted-foreground">
-            No items found. Try adjusting your search or filters.
+            No inventory items found. Try adjusting your search or filters.
           </p>
         </>
       ) : (
         <>
           <TableIcon className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No items yet</h3>
+          <h3 className="text-lg font-semibold mb-2">No inventory yet</h3>
           <p className="text-muted-foreground">
-            Add the first item to see it here.
+            Add the first inventory item to see it here.
           </p>
         </>
       )}
     </div>
-  )
+  );
 }
 
-export function UserListPageClient({ 
+export function InventoryListPageClient({ 
   list, 
   initialData, 
   initialError, 
   initialSearchParams,
   statusCounts
-}: UserListPageClientProps) {
-  const router = useRouter()
-  const { basePath } = useDashboard()
-  const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false)
-  
-  // Hooks for sorting and field selection
-  const selectedFields = useSelectedFields(list)
-  const sort = useSort(list)
+}: InventoryListPageClientProps) {
+  const router = useRouter();
+  const { basePath } = useDashboard();
+  const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
 
   // Extract data from props
-  const data = initialData
-  const error = initialError
-  const currentPage = initialSearchParams.page
-  const pageSize = initialSearchParams.pageSize
-  const searchString = initialSearchParams.search
+  const data = initialData;
+  const error = initialError;
+  const currentPage = initialSearchParams.page;
+  const pageSize = initialSearchParams.pageSize;
+  const searchString = initialSearchParams.search;
 
-  // Handle page change - simplified since FilterBar handles search/filters
+  // Handle page change
   const handlePageChange = useCallback((newPage: number) => {
-    const params = new URLSearchParams(window.location.search)
+    const params = new URLSearchParams(window.location.search);
     
     if (newPage && newPage > 1) {
-      params.set('page', newPage.toString())
+      params.set('page', newPage.toString());
     } else {
-      params.delete('page')
+      params.delete('page');
     }
     
-    const newUrl = params.toString() ? `?${params.toString()}` : ''
-    router.push(newUrl)
-  }, [router])
+    const newUrl = params.toString() ? `?${params.toString()}` : '';
+    router.push(newUrl);
+  }, [router]);
 
   if (!list) {
     return (
@@ -110,34 +108,34 @@ export function UserListPageClient({
           </AlertDescription>
         </Alert>
       </PageContainer>
-    )
+    );
   }
 
   const breadcrumbs = [
     { type: 'link' as const, label: 'Dashboard', href: basePath },
     { type: 'page' as const, label: 'Platform' },
-    { type: 'page' as const, label: 'Users' }
-  ]
+    { type: 'page' as const, label: 'Inventory' }
+  ];
 
   const header = (
     <div>
       <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-50">
-        Users
+        Inventory
       </h1>
       <p className="text-muted-foreground">
-        Create and manage users
+        Manage inventory levels and stock tracking
       </p>
     </div>
-  )
+  );
 
-  // Check if we have any active filters (search or actual filters)
-  const hasFilters = !!searchString
-  const isFiltered = hasFilters
-  const isEmpty = data?.count === 0 && !isFiltered
+  // Check if we have any active filters
+  const hasFilters = !!searchString;
+  const isFiltered = hasFilters;
+  const isEmpty = data?.count === 0 && !isFiltered;
 
   return (
-    <PageContainer title="Users" header={header} breadcrumbs={breadcrumbs}>
-      {/* Filter Bar - includes search, filters, sorting, and create button */}
+    <PageContainer title="Inventory" header={header} breadcrumbs={breadcrumbs}>
+      {/* Filter Bar with custom create button */}
       <div className="px-4 md:px-6">
         <PlatformFilterBar 
           list={list}
@@ -158,7 +156,11 @@ export function UserListPageClient({
       {/* Status Tabs */}
       {statusCounts && (
         <div className="border-b">
-          <StatusTabs statusCounts={statusCounts} />
+          <StatusTabs 
+            statusCounts={statusCounts}
+            statusConfig={statusConfig}
+            entityName="Items"
+          />
         </div>
       )}
 
@@ -167,12 +169,12 @@ export function UserListPageClient({
         <FilterList list={list} />
       </div>
 
-      {/* Users list */}
+      {/* Inventory list */}
       {error ? (
         <div className="px-4 md:px-6">
           <Alert variant="destructive">
             <AlertDescription>
-              Failed to load items: {error}
+              Failed to load inventory: {error}
             </AlertDescription>
           </Alert>
         </div>
@@ -186,10 +188,10 @@ export function UserListPageClient({
         </div>
       ) : (
         <>
-          {/* Data grid - full width */}
+          {/* Data grid */}
           <div className="grid grid-cols-1 divide-y">
-            {data?.items?.map((user: any) => (
-              <UserDetailsComponent key={user.id} user={user} list={list} />
+            {data?.items?.map((item: any) => (
+              <InventoryDetailsComponent key={item.id} inventory={item} list={list} />
             ))}
           </div>
           
@@ -200,7 +202,7 @@ export function UserListPageClient({
                 currentPage={currentPage}
                 total={data.count}
                 pageSize={pageSize}
-                list={{ singular: 'user', plural: 'users' }}
+                list={{ singular: 'item', plural: 'items' }}
               />
             </div>
           )}
@@ -217,5 +219,5 @@ export function UserListPageClient({
         }}
       />
     </PageContainer>
-  )
+  );
 }

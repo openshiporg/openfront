@@ -144,6 +144,136 @@ The splice pattern is battle-tested and ready for rapid deployment:
 
 The pattern is battle-tested and consistent. New platform pages can be created in minutes rather than hours.
 
+## 🎨 Drawer-Based Creation Pattern (REQUIRED)
+
+**IMPORTANT**: All platform pages (except Orders and Products) must use drawer-based creation instead of separate create pages.
+
+### Why Drawers Instead of Pages?
+
+- **Orders & Products**: Have dedicated ID pages due to complexity (exceptions)
+- **All Other Entities**: Use CreateItemDrawer for inline creation
+- **Consistent UX**: Edit (via MoreVertical menu) and Create both use drawers
+- **Better Mobile Experience**: Drawers work well on all screen sizes
+
+### Implementation Pattern
+
+#### 1. **PlatformFilterBar with Custom Button**
+```typescript
+// In ListPageClient.tsx
+const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
+
+<PlatformFilterBar 
+  list={list}
+  customCreateButton={
+    <Button 
+      onClick={() => setIsCreateDrawerOpen(true)}
+      variant="default"
+      size="sm"
+    >
+      <Plus className="mr-2 h-4 w-4" />
+      <span className="hidden lg:inline">Create {list.singular}</span>
+      <span className="lg:hidden">Create</span>
+    </Button>
+  }
+/>
+```
+
+#### 2. **CreateItemDrawer Integration**
+```typescript
+// Import at top of file
+import { CreateItemDrawer } from '@/features/platform/components/CreateItemDrawer';
+
+// In component JSX (usually at bottom)
+<CreateItemDrawer
+  listKey={list.key}
+  open={isCreateDrawerOpen}
+  onClose={() => setIsCreateDrawerOpen(false)}
+  onCreate={(newItem) => {
+    // Option 1: Simple refresh
+    window.location.reload();
+    
+    // Option 2: Optimistic update (if using SWR/React Query)
+    // mutate();
+    
+    // Option 3: Show success toast
+    // toast.success(`${list.singular} created successfully`);
+  }}
+/>
+```
+
+#### 3. **Complete Client Component Example**
+```typescript
+'use client';
+
+import { useState } from 'react';
+import { PlatformFilterBar } from '../../components/PlatformFilterBar';
+import { CreateItemDrawer } from '@/features/platform/components/CreateItemDrawer';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
+
+export function EntityListPageClient({ list, initialData, statusCounts }) {
+  const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
+  
+  return (
+    <>
+      <PlatformFilterBar 
+        list={list}
+        customCreateButton={
+          <Button onClick={() => setIsCreateDrawerOpen(true)} size="sm">
+            <Plus className="mr-2 h-4 w-4" />
+            <span className="hidden lg:inline">Create {list.singular}</span>
+            <span className="lg:hidden">Create</span>
+          </Button>
+        }
+      />
+      
+      {/* Status tabs, content, etc. */}
+      
+      <CreateItemDrawer
+        listKey={list.key}
+        open={isCreateDrawerOpen}
+        onClose={() => setIsCreateDrawerOpen(false)}
+        onCreate={() => window.location.reload()}
+      />
+    </>
+  );
+}
+```
+
+### ⚠️ Critical Drawer Pattern Rules
+
+1. **NO Create Pages**: Don't create `/create` routes for entities (except Orders/Products)
+2. **ListKey Format**: Must match exact Keystone schema naming (e.g., "User", "giftCards")
+3. **Shared Component**: CreateItemDrawer is already implemented at `/features/platform/components/CreateItemDrawer`
+4. **Auto Fields**: Drawer automatically generates form fields from Keystone schema
+5. **Consistent Buttons**: Use same button styling as Orders/Products for visual consistency
+
+### 📋 Entity-Specific Notes
+
+| Entity | Create Method | Notes |
+|--------|--------------|-------|
+| **Orders** | Dedicated Page | `/platform/orders/create` (complex multi-step) |
+| **Products** | Dedicated Page | `/platform/products/create` (variant management) |
+| **Users** | CreateItemDrawer | Simple user fields |
+| **Inventory** | CreateItemDrawer | Stock entry fields |
+| **Regions** | CreateItemDrawer | Geographic fields |
+| **All Others** | CreateItemDrawer | Standard drawer pattern |
+
+### 🔧 PlatformFilterBar Props
+
+The PlatformFilterBar must be updated to support custom buttons:
+
+```typescript
+interface PlatformFilterBarProps {
+  list: ListConfig;
+  customCreateButton?: React.ReactNode;  // Custom button element
+  createMode?: 'link' | 'custom';        // How to handle create action
+  onCreateClick?: () => void;            // Callback for create clicks
+}
+```
+
+When `customCreateButton` is provided, it replaces the default link-based create button.
+
 ## Development Commands
 
 - `npm run dev` - Build Keystone + migrate + start Next.js dev server

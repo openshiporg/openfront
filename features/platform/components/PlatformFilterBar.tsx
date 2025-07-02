@@ -101,7 +101,7 @@ export function PlatformFilterBar({
           >
             <Input
               type="search"
-              className="pl-9 w-full h-10 rounded-lg placeholder:text-muted-foreground/80 text-sm"
+              className="pl-9 w-full h-10 rounded-lg placeholder:text-muted-foreground/80"
               value={searchString}
               onChange={(e) => setSearchString(e.target.value)}
               placeholder={`Search by ${
