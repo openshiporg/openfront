@@ -130,13 +130,14 @@ export function ShippingProviderDetailsComponent({
         </AccordionItem>
       </Accordion>
 
-      <EditItemDrawer
-        list={list}
-        item={shippingprovider}
-        itemId={shippingprovider.id}
-        open={isEditDrawerOpen}
-        onClose={() => setIsEditDrawerOpen(false)}
-      />
+      {isEditDrawerOpen && (
+        <EditItemDrawerClient
+          list={list}
+          item={shippingprovider}
+          itemId={shippingprovider.id}
+          onClose={() => setIsEditDrawerOpen(false)}
+        />
+      )}
     </>
   );
 }

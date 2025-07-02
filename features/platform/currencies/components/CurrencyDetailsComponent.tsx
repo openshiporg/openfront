@@ -132,12 +132,14 @@ export function CurrencyDetailsComponent({
         </AccordionItem>
       </Accordion>
 
-      <EditItemDrawer
-        listKey="currencies"
-        itemId={currency.id}
-        open={isEditDrawerOpen}
-        onClose={() => setIsEditDrawerOpen(false)}
-      />
+      {isEditDrawerOpen && (
+        <EditItemDrawerClient
+          list={list}
+          item={currency}
+          itemId={currency.id}
+          onClose={() => setIsEditDrawerOpen(false)}
+        />
+      )}
     </>
   );
 }

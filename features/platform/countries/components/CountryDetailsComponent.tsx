@@ -148,12 +148,14 @@ export function CountryDetailsComponent({
         </AccordionItem>
       </Accordion>
 
-      <EditItemDrawer
-        listKey="countries"
-        itemId={country.id}
-        open={isEditDrawerOpen}
-        onClose={() => setIsEditDrawerOpen(false)}
-      />
+      {isEditDrawerOpen && (
+        <EditItemDrawerClient
+          list={list}
+          item={country}
+          itemId={country.id}
+          onClose={() => setIsEditDrawerOpen(false)}
+        />
+      )}
     </>
   );
 }

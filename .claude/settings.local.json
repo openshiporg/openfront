@@ -38,7 +38,10 @@
       "Bash(brew install:*)",
       "Bash(/opt/homebrew/opt/postgresql@17/bin/pg_dump \"postgres://neondb_owner:npg_oKDHzOg7f9Jl@ep-square-flower-a4kd0zrp-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&options=endpoint%3Dep-square-flower-a4kd0zrp\" -f neon_database_dump.sql)",
       "Bash(/opt/homebrew/opt/postgresql@17/bin/pg_dump:*)",
-      "Bash(/opt/homebrew/opt/postgresql@17/bin/psql:*)"
+      "Bash(/opt/homebrew/opt/postgresql@17/bin/psql:*)",
+      "Bash(for:*)",
+      "Bash(do echo \"=== $file ===\")",
+      "Bash(done)"
     ],
     "deny": []
   }
