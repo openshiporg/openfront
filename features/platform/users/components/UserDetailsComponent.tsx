@@ -7,11 +7,17 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, ChevronsUpDown } from "lucide-react";
 import Link from "next/link";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
+import { ItemPagination } from "../../orders/components/ItemPagination";
 
 const statusColors = {
   "has_account": "emerald",
@@ -29,6 +35,14 @@ interface User {
     id: string;
     name: string;
   };
+  orders?: Array<{
+    id: string;
+    displayId: string;
+    email: string;
+    total?: string;
+    status: string;
+    lineItems?: Array<{ id: string }>;
+  }>;
   createdAt: string;
   updatedAt?: string;
 }
@@ -43,6 +57,9 @@ export function UserDetailsComponent({
   list,
 }: UserDetailsComponentProps) {
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+  const [isOrdersOpen, setIsOrdersOpen] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   return (
     <>
@@ -138,6 +155,19 @@ export function UserDetailsComponent({
                   )}
                 </div>
               </div>
+              
+              {/* Orders Collapsible Section */}
+              {user.orders && user.orders.length > 0 && (
+                <OrdersCollapsibleSection
+                  userId={user.id}
+                  orders={user.orders}
+                  isOpen={isOrdersOpen}
+                  setIsOpen={setIsOrdersOpen}
+                  currentPage={currentPage}
+                  setCurrentPage={setCurrentPage}
+                  itemsPerPage={itemsPerPage}
+                />
+              )}
             </div>
           </AccordionContent>
         </AccordionItem>
@@ -152,3 +182,124 @@ export function UserDetailsComponent({
     </>
   );
 }
+
+// Orders Collapsible Section Component
+interface OrdersCollapsibleSectionProps {
+  userId: string;
+  orders: Array<{
+    id: string;
+    displayId: string;
+    email: string;
+    total?: string;
+    status: string;
+    lineItems?: Array<{ id: string }>;
+  }>;
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  currentPage: number;
+  setCurrentPage: (page: number) => void;
+  itemsPerPage: number;
+}
+
+const OrdersCollapsibleSection = ({
+  userId,
+  orders,
+  isOpen,
+  setIsOpen,
+  currentPage,
+  setCurrentPage,
+  itemsPerPage,
+}: OrdersCollapsibleSectionProps) => {
+  const totalItems = orders.length;
+
+  // Calculate pagination
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedOrders = orders.slice(startIndex, endIndex);
+
+  const triggerClassName =
+    "flex items-center rounded-sm shadow-sm uppercase tracking-wide border max-w-fit gap-2 text-nowrap pl-2.5 pr-1 py-[3px] text-sm font-medium text-purple-500 bg-white border-purple-200 hover:bg-purple-100 hover:text-purple-700 focus:z-10 focus:ring-2 focus:ring-purple-700 focus:text-purple-700 dark:bg-purple-950 dark:border-purple-900 dark:text-purple-300 dark:hover:text-white dark:hover:bg-purple-700 dark:focus:ring-purple-500 dark:focus:text-white";
+
+  const statusColors = {
+    pending: "bg-yellow-50 text-yellow-800 border-yellow-200",
+    processing: "bg-blue-50 text-blue-800 border-blue-200",
+    shipped: "bg-purple-50 text-purple-800 border-purple-200",
+    delivered: "bg-green-50 text-green-800 border-green-200",
+    cancelled: "bg-red-50 text-red-800 border-red-200",
+  } as const;
+
+  return (
+    <Collapsible
+      open={isOpen}
+      onOpenChange={setIsOpen}
+      className="flex flex-col gap-2 py-3 px-4 md:px-6 bg-purple-50/30 dark:bg-purple-900/10 border-b"
+    >
+      <div className="flex items-center gap-2">
+        <CollapsibleTrigger asChild>
+          <button type="button" className={triggerClassName}>
+            {totalItems} Order{totalItems !== 1 ? "s" : ""}
+            <ChevronsUpDown className="h-4 w-4" />
+          </button>
+        </CollapsibleTrigger>
+        {isOpen && totalItems > 5 && (
+          <ItemPagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        )}
+      </div>
+      <CollapsibleContent className="space-y-2">
+        {isOpen && (
+          <>
+            {totalItems > 5 && (
+              <div className="text-xs text-muted-foreground">
+                Showing {startIndex + 1}-{Math.min(endIndex, totalItems)} of{" "}
+                {totalItems} orders
+              </div>
+            )}
+            {paginatedOrders.map((order) => (
+              <div
+                key={order.id}
+                className="border p-2 bg-background rounded-sm flex flex-col sm:flex-row gap-4 relative"
+              >
+                <div className="grid flex-grow">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Link
+                      href={`/dashboard/platform/orders/${order.id}`}
+                      className="text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400"
+                    >
+                      #{order.displayId}
+                    </Link>
+                    <Badge
+                      className={`text-[.6rem] py-0 px-2 tracking-wide font-medium rounded-md border h-5 ${
+                        statusColors[order.status as keyof typeof statusColors] ||
+                        "bg-gray-50 text-gray-800 border-gray-200"
+                      }`}
+                    >
+                      {order.status.toUpperCase()}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground mb-1">
+                    Customer: {order.email}
+                  </div>
+                  <div className="flex items-center gap-4 text-xs">
+                    {order.total && (
+                      <span className="font-medium">Total: {order.total}</span>
+                    )}
+                    {order.lineItems && (
+                      <span className="text-muted-foreground">
+                        {order.lineItems.length} item{order.lineItems.length !== 1 ? "s" : ""}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </>
+        )}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};

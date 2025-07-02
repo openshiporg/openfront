@@ -7,7 +7,19 @@ import { keystoneClient } from "../../../dashboard/lib/keystoneClient";
 export interface Collection {
   id: string;
   title: string;
-  [key: string]: unknown;
+  handle: string;
+  metadata?: any;
+  createdAt: string;
+  updatedAt: string;
+  products?: Product[];
+}
+
+export interface Product {
+  id: string;
+  title: string;
+  status: string;
+  thumbnail?: string;
+  productVariants?: { id: string }[];
 }
 
 /**
@@ -25,6 +37,15 @@ export async function getCollections(
     metadata
     createdAt
     updatedAt
+    products {
+      id
+      title
+      status
+      thumbnail
+      productVariants {
+        id
+      }
+    }
   `
 ) {
   const query = `
@@ -100,6 +121,15 @@ export async function getFilteredCollections(
         metadata
         createdAt
         updatedAt
+        products {
+          id
+          title
+          status
+          thumbnail
+          productVariants {
+            id
+          }
+        }
       }
       count: productCollectionsCount(where: $where)
     }
@@ -118,11 +148,20 @@ export async function getCollection(id: string) {
     query GetCollection($id: ID!) {
       collection(where: { id: $id }) {
         id
-    title
-    handle
-    metadata
-    createdAt
-    updatedAt
+        title
+        handle
+        metadata
+        createdAt
+        updatedAt
+        products {
+          id
+          title
+          status
+          thumbnail
+          productVariants {
+            id
+          }
+        }
       }
     }
   `;

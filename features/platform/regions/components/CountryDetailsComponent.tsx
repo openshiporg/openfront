@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical, MapPin, Edit, Trash } from "lucide-react";
 import Link from "next/link";
-import { EditItemDrawerClient } from "../../components/EditItemDrawerClient";
+import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 import { Country } from "../actions/country-actions";
 
 interface CountryDetailsComponentProps {
@@ -155,14 +155,12 @@ export function CountryDetailsComponent({ country, list }: CountryDetailsCompone
         </AccordionItem>
       </Accordion>
 
-      {isEditDrawerOpen && (
-        <EditItemDrawerClient
-          list={list}
-          item={country}
-          itemId={country.id}
-          onClose={() => setIsEditDrawerOpen(false)}
-        />
-      )}
+      <EditItemDrawerClientWrapper
+        listKey="countries"
+        itemId={country.id}
+        open={isEditDrawerOpen}
+        onClose={() => setIsEditDrawerOpen(false)}
+      />
     </>
   );
 }

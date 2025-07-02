@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MoreVertical } from "lucide-react";
 import Link from "next/link";
-import { EditItemDrawerClient } from "../../components/EditItemDrawerClient";
+import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 
 const statusColors = {
   "active": "emerald",
@@ -132,14 +132,12 @@ export function CurrencyDetailsComponent({
         </AccordionItem>
       </Accordion>
 
-      {isEditDrawerOpen && (
-        <EditItemDrawerClient
-          list={list}
-          item={currency}
-          itemId={currency.id}
-          onClose={() => setIsEditDrawerOpen(false)}
-        />
-      )}
+      <EditItemDrawerClientWrapper
+        listKey="currencies"
+        itemId={currency.id}
+        open={isEditDrawerOpen}
+        onClose={() => setIsEditDrawerOpen(false)}
+      />
     </>
   );
 }

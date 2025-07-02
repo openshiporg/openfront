@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MoreVertical } from "lucide-react";
 import Link from "next/link";
-import { EditItemDrawerClient } from "../../components/EditItemDrawerClient";
+import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 
 const statusColors = {
   "active": "emerald",
@@ -130,14 +130,12 @@ export function ShippingProviderDetailsComponent({
         </AccordionItem>
       </Accordion>
 
-      {isEditDrawerOpen && (
-        <EditItemDrawerClient
-          list={list}
-          item={shippingprovider}
-          itemId={shippingprovider.id}
-          onClose={() => setIsEditDrawerOpen(false)}
-        />
-      )}
+      <EditItemDrawerClientWrapper
+        listKey="shippingProviders"
+        itemId={shippingprovider.id}
+        open={isEditDrawerOpen}
+        onClose={() => setIsEditDrawerOpen(false)}
+      />
     </>
   );
 }

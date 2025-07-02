@@ -15,6 +15,14 @@ export interface User {
     id: string;
     name: string;
   };
+  orders?: Array<{
+    id: string;
+    displayId: string;
+    email: string;
+    total?: string;
+    status: string;
+    lineItems?: Array<{ id: string }>;
+  }>;
   [key: string]: unknown;
 }
 
@@ -36,6 +44,16 @@ export async function getUsers(
     role {
       id
       name
+    }
+    orders {
+      id
+      displayId
+      email
+      total
+      status
+      lineItems {
+        id
+      }
     }
     createdAt
     updatedAt
@@ -149,6 +167,16 @@ export async function getUser(id: string) {
         role {
           id
           name
+        }
+        orders {
+          id
+          displayId
+          email
+          total
+          status
+          lineItems {
+            id
+          }
         }
         createdAt
         updatedAt

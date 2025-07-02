@@ -13,6 +13,7 @@ import { MoreVertical, Package, Layers, Archive } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
+import { ProductSectionTabs } from "./ProductSectionTabs";
 
 const statusColors = {
   draft: "zinc",
@@ -211,93 +212,15 @@ export function ProductDetailsComponent({
             </div>
           </div>
           <AccordionContent className="pb-0">
-            <div className="divide-y">
-              {/* Variants Section */}
-              <div className="px-4 md:px-6 py-4">
-                <h4 className="text-sm font-medium mb-3">
-                  Variants & Inventory
-                </h4>
-                {product.productVariants &&
-                product.productVariants.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {product.productVariants.map((variant) => (
-                      <div
-                        key={variant.id}
-                        className="border rounded-lg p-3 bg-muted/30"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">
-                              {variant.title}
-                            </p>
-                            {variant.sku && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                SKU: {variant.sku}
-                              </p>
-                            )}
-                          </div>
-                          {variant.manageInventory && (
-                            <Badge
-                              variant={
-                                variant.inventoryQuantity === 0
-                                  ? "destructive"
-                                  : "secondary"
-                              }
-                              className="text-xs"
-                            >
-                              {variant.inventoryQuantity || 0} in stock
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No variants configured
-                  </p>
-                )}
+            {variantCount > 0 ? (
+              <ProductSectionTabs product={product} />
+            ) : (
+              <div className="px-4 md:px-6 py-4 border-b">
+                <p className="text-sm text-muted-foreground">
+                  No variants configured
+                </p>
               </div>
-
-              {/* Organization Section */}
-              {product.productCategories?.length ||
-              product.productCollections?.length ? (
-                <div className="px-4 md:px-6 py-4">
-                  <h4 className="text-sm font-medium mb-3">Organization</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {product.productCategories?.map((category) => (
-                      <Badge key={category.id} variant="secondary">
-                        {category.title}
-                      </Badge>
-                    ))}
-                    {product.productCollections?.map((collection) => (
-                      <Badge key={collection.id} variant="outline">
-                        {collection.title}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {/* Product Settings */}
-              <div className="px-4 md:px-6 py-4">
-                <h4 className="text-sm font-medium mb-3">Product Settings</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Discountable:</span>
-                    <span className="ml-2 font-medium">
-                      {product.discountable ? "Yes" : "No"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Gift Card:</span>
-                    <span className="ml-2 font-medium">
-                      {product.isGiftcard ? "Yes" : "No"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            )}
           </AccordionContent>
         </AccordionItem>
       </Accordion>

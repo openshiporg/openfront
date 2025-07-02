@@ -20,6 +20,15 @@ export async function getProductCategories(
   orderBy: Array<Record<string, string>> = [{ createdAt: 'desc' }],
   selectedFields: string = `
     id title handle isInternal isActive parentCategory { id title } createdAt updatedAt
+    products {
+      id
+      title
+      status
+      thumbnail
+      productVariants {
+        id
+      }
+    }
   `
 ) {
   const query = `
@@ -117,6 +126,15 @@ export async function getProductCategory(id: string) {
     query GetProductCategory($id: ID!) {
       productcategory(where: { id: $id }) {
         id title handle isInternal isActive parentCategory { id title } createdAt updatedAt
+        products {
+          id
+          title
+          status
+          thumbnail
+          productVariants {
+            id
+          }
+        }
       }
     }
   `;
