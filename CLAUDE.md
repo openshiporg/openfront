@@ -575,6 +575,145 @@ const ORDER_STATUS_CONFIG = {
 
 **Ready for Rapid Scaling**: The pattern supports immediate migration of the remaining 14 platform entities with true consistency and reusability.
 
+## 🎨 DetailsComponent Pattern - Line Items UI
+
+**Purpose**: Standardized UI pattern for displaying related items (variants, products, orders) within detail components using a collapsible, paginated interface similar to OrderDetailsComponent's line items.
+
+### Core UI Structure
+
+```
+EntityDetailsComponent (Main Accordion Item)
+└── EntitySectionTabs (Container for sections)
+    └── RelatedItemsContent (Collapsible section with pagination)
+        ├── CollapsibleTrigger (Colored button showing count)
+        ├── ItemPagination (Inline pagination controls)
+        └── Item Cards (Individual item display)
+```
+
+### Implementation Pattern
+
+#### 1. **CollapsibleContent Component**
+```typescript
+// Standard structure for any related items section
+<CollapsibleContent
+  entityId={entity.id}
+  totalItems={itemsCount}
+  items={entity.relatedItems || []}
+  renderItem={(item) => <ItemCard item={item} />}
+  triggerLabel="Related Items"
+  colorScheme="blue" // blue, emerald, purple, orange
+/>
+```
+
+#### 2. **Color Scheme by Entity**
+- **Orders/Line Items**: Blue (`blue-500`, `bg-blue-50/30`)
+- **Products/Variants**: Emerald (`emerald-500`, `bg-emerald-50/30`)
+- **Users/Orders**: Purple (`purple-500`, `bg-purple-50/30`)
+- **Categories/Products**: Orange (`orange-500`, `bg-orange-50/30`)
+- **Collections/Products**: Indigo (`indigo-500`, `bg-indigo-50/30`)
+
+#### 3. **Trigger Button Styling**
+```typescript
+const triggerClassName = 
+  "flex items-center rounded-sm shadow-sm uppercase tracking-wide border max-w-fit gap-2 text-nowrap pl-2.5 pr-1 py-[3px] text-sm font-medium text-{color}-500 bg-white border-{color}-200 hover:bg-{color}-100 hover:text-{color}-700 dark:bg-{color}-950 dark:border-{color}-900 dark:text-{color}-300";
+```
+
+#### 4. **Pagination Rules**
+- Show pagination only when items > 5
+- Display format: "Page X / Y"
+- Inline with trigger button
+- Items per page: 5 (hardcoded for consistency)
+
+### Required Updates
+
+#### 1. **ProductDetailsComponent** ✅ Fixed
+- Show variants using emerald color scheme
+- Display: SKU, inventory quantity, manage inventory status
+- Pagination for > 5 variants
+
+#### 2. **CollectionDetailsComponent** (NEW)
+- Create new component to replace JSON display
+- Show products using indigo color scheme
+- Display: Product thumbnail, title, status, variants count
+
+#### 3. **CategoryDetailsComponent**
+- Update to use orange color scheme
+- Show products with same layout as collections
+- Add proper pagination
+
+#### 4. **UserDetailsComponent**
+- Add orders section using purple color scheme
+- Display: Order number, total, status, line items count
+- Integrate with existing user info
+
+### Implementation Example
+
+```typescript
+// In ProductDetailsComponent.tsx
+import { VariantsContent } from './VariantsContent';
+
+<AccordionContent>
+  <ProductSectionTabs productId={product.id}>
+    <VariantsContent
+      productId={product.id}
+      totalItems={product.productVariants?.length || 0}
+      variants={product.productVariants || []}
+    />
+  </ProductSectionTabs>
+</AccordionContent>
+```
+
+### Key Features
+1. **Consistent Layout**: All entities use same collapsible card pattern
+2. **Visual Hierarchy**: Color coding by entity type
+3. **Performance**: Pagination prevents UI overload
+4. **Mobile Friendly**: Responsive flex layouts
+5. **Expandable**: Sections start expanded, user can collapse
+
+### GraphQL Requirements
+
+Ensure all queries include necessary relationships:
+```graphql
+# Products must include
+productVariants {
+  id
+  title
+  sku
+  inventoryQuantity
+  manageInventory
+}
+
+# Categories/Collections must include
+products {
+  id
+  title
+  status
+  thumbnail
+  productVariants {
+    id
+  }
+}
+
+# Users must include
+orders {
+  id
+  displayId
+  email
+  total
+  status
+  lineItems {
+    id
+  }
+}
+```
+
+### Status Display
+- ✅ **Fixed**: Product variants/stock count now shows correctly
+- 🔄 **In Progress**: Implementing line items UI pattern across all detail components
+- 📋 **TODO**: Collections need proper component instead of JSON
+- 📋 **TODO**: Categories need products section
+- 📋 **TODO**: Users need orders section
+
 ## Development Notes
 
 - GraphQL endpoint available at `/api/graphql`

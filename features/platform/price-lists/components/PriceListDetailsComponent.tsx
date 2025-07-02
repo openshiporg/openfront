@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MoreVertical } from "lucide-react";
 import Link from "next/link";
-import { EditItemDrawer } from "../../components/EditItemDrawer";
+import { EditItemDrawerClient } from "../../components/EditItemDrawerClient";
 
 const statusColors = {
   "active": "emerald",
@@ -133,12 +133,14 @@ export function PriceListDetailsComponent({
         </AccordionItem>
       </Accordion>
 
-      <EditItemDrawer
-        listKey="price-lists"
-        itemId={pricelist.id}
-        open={isEditDrawerOpen}
-        onClose={() => setIsEditDrawerOpen(false)}
-      />
+      {isEditDrawerOpen && (
+        <EditItemDrawerClient
+          list={list}
+          item={pricelist}
+          itemId={pricelist.id}
+          onClose={() => setIsEditDrawerOpen(false)}
+        />
+      )}
     </>
   );
 }

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreVertical, MapPin, Edit, Trash } from "lucide-react";
 import Link from "next/link";
-import { EditItemDrawer } from "../../components/EditItemDrawer";
+import { EditItemDrawerClient } from "../../components/EditItemDrawerClient";
 import { Country } from "../actions/country-actions";
 
 interface CountryDetailsComponentProps {

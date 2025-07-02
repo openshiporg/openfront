@@ -20,7 +20,10 @@ import {
   Grid3x3,
   Package2,
   Store,
-  Layers
+  Layers,
+  RefreshCw,
+  Building,
+  ShieldCheck
 } from 'lucide-react';
 
 export interface PlatformNavItem {
@@ -48,6 +51,14 @@ export const platformNavItems: PlatformNavItem[] = [
     color: 'blue',
     description: 'Manage customer orders, returns, claims, and fulfillment.',
     icon: Ticket,
+    group: 'orders'
+  },
+  {
+    title: 'Claims',
+    href: '/platform/claims',
+    color: 'orange',
+    description: 'Handle order claims, disputes, and issue resolution.',
+    icon: ShieldCheck,
     group: 'orders'
   },
 
@@ -89,11 +100,27 @@ export const platformNavItems: PlatformNavItem[] = [
 
   // Marketing & Growth
   {
-    title: 'Pricing & Promotions',
-    href: '/platform/pricing',
+    title: 'Discounts',
+    href: '/platform/discounts',
     color: 'pink',
-    description: 'Manage discounts, price lists, gift cards, and promotional campaigns.',
+    description: 'Manage discount codes, promotional campaigns, and coupon rules.',
     icon: Tag,
+    group: 'marketing'
+  },
+  {
+    title: 'Price Lists',
+    href: '/platform/price-lists',
+    color: 'emerald',
+    description: 'Create and manage customer-specific pricing and price lists.',
+    icon: BadgeDollarSign,
+    group: 'marketing'
+  },
+  {
+    title: 'Gift Cards',
+    href: '/platform/gift-cards',
+    color: 'rose',
+    description: 'Manage gift card creation, balance tracking, and redemption.',
+    icon: Gift,
     group: 'marketing'
   },
   {
@@ -115,20 +142,60 @@ export const platformNavItems: PlatformNavItem[] = [
     group: 'operations'
   },
   {
-    title: 'Regional Settings',
+    title: 'Shipping Providers',
+    href: '/platform/shipping-providers',
+    color: 'cyan',
+    description: 'Manage shipping provider configurations and settings.',
+    icon: Package2,
+    group: 'operations'
+  },
+  {
+    title: 'Regions',
     href: '/platform/regions',
     color: 'blue',
     description: 'Manage regions, countries, currencies, and tax configurations.',
     icon: Globe,
     group: 'operations'
   },
+  {
+    title: 'Countries',
+    href: '/platform/countries',
+    color: 'teal',
+    description: 'Manage country configurations and settings.',
+    icon: MapPin,
+    group: 'operations'
+  },
+  {
+    title: 'Currencies',
+    href: '/platform/currencies',
+    color: 'green',
+    description: 'Manage currency configurations and exchange rates.',
+    icon: DollarSign,
+    group: 'operations'
+  },
 
   // System & Settings
+  {
+    title: 'Stores',
+    href: '/platform/stores',
+    color: 'violet',
+    description: 'Manage store configurations and multi-store settings.',
+    icon: Store,
+    group: 'system'
+  },
+  {
+    title: 'Payment Providers',
+    href: '/platform/payment-providers',
+    color: 'slate',
+    description: 'Configure payment gateways and provider settings.',
+    icon: CreditCard,
+    group: 'system'
+  },
   {
     title: 'System Configuration',
     href: '/platform/system',
     color: 'zinc',
-    description: 'Configure system settings, stores, and payment providers.',
+    description: 'Configure system settings and general configurations.',
     icon: Settings,
     group: 'system'
   },

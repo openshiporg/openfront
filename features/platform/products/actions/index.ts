@@ -31,6 +31,29 @@ export async function getProducts(
     thumbnail
     createdAt
     updatedAt
+    productVariants {
+      id
+      title
+      sku
+      inventoryQuantity
+      manageInventory
+    }
+    productImages {
+      id
+      image {
+        url
+      }
+      imagePath
+      altText
+    }
+    productCategories {
+      id
+      title
+    }
+    productCollections {
+      id
+      title
+    }
   `
 ) {
   const query = `
@@ -145,6 +168,29 @@ export async function getProduct(id: string) {
         thumbnail
         createdAt
         updatedAt
+        productVariants {
+          id
+          title
+          sku
+          inventoryQuantity
+          manageInventory
+        }
+        productImages {
+          id
+          image {
+            url
+          }
+          imagePath
+          altText
+        }
+        productCategories {
+          id
+          title
+        }
+        productCollections {
+          id
+          title
+        }
       }
     }
   `;
