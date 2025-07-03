@@ -4,7 +4,7 @@ import { useState } from "react";
 import { StatusTabs } from "../../components/StatusTabs";
 import { PlatformFilterBar } from "../../components/PlatformFilterBar";
 import { RegionDetailsComponent } from "./RegionDetailsComponent";
-import { CreateItemDrawer } from "@/features/platform/components/CreateItemDrawer";
+import { CreateItemDrawerClientWrapper } from "@/features/platform/components/CreateItemDrawerClientWrapper";
 import { PopularRegionsDrawer } from "./drawers/PopularRegionsDrawer";
 import { CreateRegionDropdown } from "./CreateRegionDropdown";
 import { Region } from "../actions";
@@ -71,7 +71,7 @@ export function RegionList({ data, statusCounts, list }: RegionListProps) {
       </div>
 
       {/* Create Drawers */}
-      <CreateItemDrawer
+      <CreateItemDrawerClientWrapper
         listKey="Region"
         open={isCreateDrawerOpen}
         onClose={() => setIsCreateDrawerOpen(false)}

@@ -15,7 +15,7 @@ import { StatusTabs } from '../../components/StatusTabs';
 import { InventoryDetailsComponent } from '../components/InventoryDetailsComponent';
 import { Pagination } from '../../../dashboard/components/Pagination';
 import { FilterList } from '../../../dashboard/components/FilterList';
-import { CreateItemDrawer } from '@/features/platform/components/CreateItemDrawer';
+import { CreateItemDrawerClientWrapper } from '@/features/platform/components/CreateItemDrawerClientWrapper';
 import { useDashboard } from '../../../dashboard/context/DashboardProvider';
 
 interface InventoryListPageClientProps {
@@ -210,7 +210,7 @@ export function InventoryListPageClient({
       )}
 
       {/* Create Item Drawer */}
-      <CreateItemDrawer
+      <CreateItemDrawerClientWrapper
         listKey={list.key}
         open={isCreateDrawerOpen}
         onClose={() => setIsCreateDrawerOpen(false)}

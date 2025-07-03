@@ -206,19 +206,31 @@ function ErrorDialog({ error, onClose }: { error: Error; onClose: () => void }) 
   )
 }
 
-// Deserialize item data exactly like dashboard does
+// Helper function to deserialize item data using enhanced fields - EXACTLY like dashboard
 function deserializeItemToValue(
   enhancedFields: Record<string, any>,
   item: Record<string, unknown | null>
 ) {
-  const value: Record<string, any> = {}
+  const result: Record<string, unknown | null> = {}
   
   Object.entries(enhancedFields).forEach(([fieldPath, field]) => {
-    const itemValue = item[fieldPath]
-    value[fieldPath] = field.controller.deserialize(itemValue)
+    try {
+      // Enhanced fields already have controllers
+      const controller = field.controller
+      
+      // Create itemForField with only the GraphQL fields this controller needs
+      const itemForField: Record<string, unknown> = {}
+      // For now, just use the field path as the GraphQL field
+      itemForField[field.path] = item?.[field.path] ?? null
+      
+      // Call deserialize with the properly structured data
+      result[fieldPath] = controller.deserialize(itemForField)
+    } catch (error) {
+      console.error(`Error deserializing field ${fieldPath}:`, error)
+    }
   })
   
-  return value
+  return result
 }
 
 // Main ProductItemPageClient component

@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
-import { ChevronUp, ChevronDown, Package, ArrowUpRight } from 'lucide-react';
+import { ChevronUp, ChevronDown, ArrowUpRight } from 'lucide-react';
+import { ProductImage } from '../../components/ProductImage';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -127,18 +127,14 @@ export function FulfillmentHistory({
         key={item.id}
         className="flex items-start space-x-4 border-t first:border-t-0 p-2"
       >
-        <div className="h-16 w-16 bg-muted/10 rounded-md flex-shrink-0 flex items-center justify-center">
-          {item.lineItem.thumbnail ? (
-            <Image
-              src={item.lineItem.thumbnail}
-              alt={item.lineItem.title}
-              width={64}
-              height={64}
-              className="object-cover rounded-md"
-            />
-          ) : (
-            <Package className="h-8 w-8 text-muted-foreground/50" />
-          )}
+        <div className="h-16 w-16 flex-shrink-0">
+          <ProductImage
+            src={item.lineItem.thumbnail}
+            alt={item.lineItem.title}
+            width={64}
+            height={64}
+            className="h-16 w-16"
+          />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex justify-between items-start gap-4">

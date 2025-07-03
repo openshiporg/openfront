@@ -18,7 +18,7 @@ import { MoreVertical, ChevronsUpDown, Package } from "lucide-react";
 import Link from "next/link";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 import { ItemPagination } from "../../orders/components/ItemPagination";
-import Image from "next/image";
+import { ProductImage } from "../../components/ProductImage";
 
 interface Product {
   id: string;
@@ -206,23 +206,21 @@ export function CollectionDetailsComponent({
                         {paginatedProducts.map((product) => (
                           <div
                             key={product.id}
-                            className="border p-2 bg-background rounded-sm flex flex-col sm:flex-row gap-4 relative"
+                            className="border p-2 bg-background rounded-sm flex flex-row gap-4 relative"
                           >
-                            {product.thumbnail && (
-                              <div className="flex-shrink-0">
-                                <Image
-                                  src={product.thumbnail}
-                                  alt={product.title}
-                                  width={48}
-                                  height={48}
-                                  className="size-12 rounded-lg object-cover"
-                                />
-                              </div>
-                            )}
-                            <div className="grid flex-grow">
+                            <div className="flex-shrink-0">
+                              <ProductImage
+                                src={product.thumbnail}
+                                alt={product.title}
+                                width={48}
+                                height={48}
+                                className="size-12"
+                              />
+                            </div>
+                            <div className="grid flex-grow min-w-0">
                               <Link
                                 href={`/dashboard/platform/products/${product.id}`}
-                                className="text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400"
+                                className="text-sm font-medium hover:text-blue-600 dark:hover:text-blue-400 truncate"
                               >
                                 {product.title}
                               </Link>

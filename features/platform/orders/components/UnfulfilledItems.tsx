@@ -1,5 +1,5 @@
-import Image from 'next/image';
-import { Package, Plus, Minus } from 'lucide-react';
+import { Plus, Minus } from 'lucide-react';
+import { ProductImage } from '../../components/ProductImage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { UnfulfilledItemProps, UnfulfilledItemsProps } from '../types';
@@ -13,18 +13,14 @@ function UnfulfilledItem({
 }: UnfulfilledItemProps) {
   return (
     <div className="flex items-start space-x-4 p-2 border-t first:border-t-0">
-      <div className="h-16 w-16 bg-muted/10 rounded-md flex-shrink-0 flex items-center justify-center">
-        {item.thumbnail ? (
-          <Image
-            src={item.thumbnail}
-            alt={item.title}
-            width={64}
-            height={64}
-            className="object-cover rounded-md"
-          />
-        ) : (
-          <Package className="h-8 w-8 text-muted-foreground/50" />
-        )}
+      <div className="h-16 w-16 flex-shrink-0">
+        <ProductImage
+          src={item.thumbnail}
+          alt={item.title}
+          width={64}
+          height={64}
+          className="h-16 w-16"
+        />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex justify-between items-start gap-4">

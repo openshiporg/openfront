@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
-import Image from "next/image";
+import { ProductImage } from "../../components/ProductImage";
 
 // Status configuration for styling
 type BadgeColorType = "white" | "red" | "orange" | "amber" | "yellow" | "lime" | "green" | "emerald" | "teal" | "cyan" | "sky" | "blue" | "indigo" | "violet" | "purple" | "fuchsia" | "pink" | "rose" | "zinc" | undefined;
@@ -172,16 +172,15 @@ export function OrderListItem({ order }: OrderListItemProps) {
           <div className="space-y-3">
             {order.lineItems.map((item) => (
               <div key={item.id} className="flex items-start gap-3">
-                {item.thumbnail && (
-                  <div className="relative h-12 w-12 overflow-hidden rounded-md border bg-gray-100">
-                    <Image
-                      src={item.thumbnail}
-                      alt={item.title}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                )}
+                <div className="h-12 w-12 flex-shrink-0">
+                  <ProductImage
+                    src={item.thumbnail}
+                    alt={item.title}
+                    width={48}
+                    height={48}
+                    className="h-12 w-12"
+                  />
+                </div>
                 <div className="flex-1">
                   <div className="font-medium">{item.title}</div>
                   {item.variant ? (

@@ -9,10 +9,10 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreVertical, Package, Layers, Archive } from "lucide-react";
+import { MoreVertical, Layers, Archive } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
+import { ProductImage } from "../../components/ProductImage";
 import { ProductSectionTabs } from "./ProductSectionTabs";
 
 const statusColors = {
@@ -95,20 +95,14 @@ export function ProductDetailsComponent({
           <div className="px-4 md:px-6 py-3 md:py-4 flex justify-between w-full border-b relative min-h-[120px]">
             <div className="flex items-start gap-4">
               {/* Product Image */}
-              <div className="w-16 h-16 md:w-20 md:h-20 flex-shrink-0 bg-muted rounded-lg overflow-hidden">
-                {imageUrl ? (
-                  <Image
-                    src={imageUrl}
-                    alt={product.title}
-                    width={80}
-                    height={80}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Package className="w-8 h-8 text-muted-foreground" />
-                  </div>
-                )}
+              <div className="w-16 h-16 md:w-20 md:h-20 flex-shrink-0 overflow-hidden">
+                <ProductImage
+                  src={imageUrl}
+                  alt={product.title}
+                  width={80}
+                  height={80}
+                  className="w-full h-full"
+                />
               </div>
 
               {/* Product Info */}

@@ -4,26 +4,27 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 
-const statusConfig = {
-  active: {
-    label: "Active",
-    color: "emerald"
-  },
-  inactive: {
-    label: "Inactive",
-    color: "zinc"
-  },
-} as const;
-
 interface StatusTabsProps {
   statusCounts: {
     all: number;
     active: number;
     inactive: number;
   };
+  statusConfig?: {
+    active: { label: string; color: string };
+    inactive: { label: string; color: string };
+  };
+  entityName?: string;
 }
 
-export function StatusTabs({ statusCounts }: StatusTabsProps) {
+export function StatusTabs({ 
+  statusCounts, 
+  statusConfig = {
+    active: { label: "Active", color: "emerald" },
+    inactive: { label: "Inactive", color: "zinc" }
+  },
+  entityName = "Categories"
+}: StatusTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams()!;
   const pathname = usePathname();
@@ -46,11 +47,16 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
     try {
       const parsed = JSON.parse(decodeURIComponent(statusFilter));
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // For product categories, we need to check boolean values
-        if (parsed[0].value === true) {
-          currentStatus = "active";
-        } else if (parsed[0].value === false) {
-          currentStatus = "inactive";
+        // Handle both string format and object format
+        if (typeof parsed[0] === "string") {
+          currentStatus = parsed[0];
+        } else if (typeof parsed[0] === "object" && parsed[0].value !== undefined) {
+          // For product categories, we need to check boolean values
+          if (parsed[0].value === true) {
+            currentStatus = "active";
+          } else if (parsed[0].value === false) {
+            currentStatus = "inactive";
+          }
         }
       }
     } catch (e) {
@@ -120,7 +126,7 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
             onClick={() => handleStatusChange("all")}
           >
             <div className="text-sm font-medium leading-5 whitespace-nowrap flex items-center justify-center h-full gap-2">
-              All Categories
+              All {entityName}
               <span className="rounded-sm bg-background border shadow-xs px-1.5 py-0 text-[10px] leading-[14px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 inline-flex items-center h-[18px]">
                 {statusCounts.all}
               </span>

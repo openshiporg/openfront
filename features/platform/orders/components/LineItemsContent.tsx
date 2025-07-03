@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/collapsible";
 import { ChevronsUpDown } from "lucide-react";
 import { ItemPagination } from "./ItemPagination";
-import Image from "next/image";
+import { ProductImage } from "../../components/ProductImage";
 
 interface LineItem {
   id: string;
@@ -82,17 +82,15 @@ export const LineItemsContent = ({
                 key={item.id}
                 className="border p-2 bg-background rounded-sm flex flex-col sm:flex-row gap-4 relative"
               >
-                {item.thumbnail && (
-                  <div className="flex-shrink-0">
-                    <Image
-                      src={item.thumbnail}
-                      alt={item.title}
-                      width={48}
-                      height={48}
-                      className="size-12 rounded-lg object-cover"
-                    />
-                  </div>
-                )}
+                <div className="flex-shrink-0">
+                  <ProductImage
+                    src={item.thumbnail}
+                    alt={item.title}
+                    width={48}
+                    height={48}
+                    className="size-12"
+                  />
+                </div>
                 <div className="grid flex-grow">
                   <span className="text-sm font-medium">{item.title}</span>
                   {item.variantData?.title && (

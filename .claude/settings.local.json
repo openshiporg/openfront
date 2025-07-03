@@ -41,7 +41,8 @@
       "Bash(/opt/homebrew/opt/postgresql@17/bin/psql:*)",
       "Bash(for:*)",
       "Bash(do echo \"=== $file ===\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(true)"
     ],
     "deny": []
   }

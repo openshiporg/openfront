@@ -54,9 +54,18 @@ export async function ProductCategoryListPage({ searchParams }: PageProps) {
   // Extract sort parameter
   const sortBy = searchParamsObj.sortBy?.toString()
 
+  // Convert status string to boolean for the action
+  let isActive: boolean | undefined;
+  if (status === 'active') {
+    isActive = true;
+  } else if (status === 'inactive') {
+    isActive = false;
+  }
+  // If status is 'all', isActive remains undefined
+
   // Use dedicated ProductCategories actions
   const response = await getFilteredProductCategories(
-    status === 'all' ? undefined : status,
+    isActive,
     searchString || undefined,
     currentPage,
     pageSize,
