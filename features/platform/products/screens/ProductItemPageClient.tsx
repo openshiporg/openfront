@@ -671,7 +671,7 @@ export function ProductItemPageClient({ list, item, itemId }: ProductItemPageCli
           {/* Main content with tabs */}
           <div className="space-y-6">
             {/* Section Select Dropdown */}
-            <div className="mb-6">
+            <div className="mb-4">
               <Label htmlFor="section-select" className="text-sm font-medium mb-2 block">
                 Product Section
               </Label>
@@ -691,9 +691,15 @@ export function ProductItemPageClient({ list, item, itemId }: ProductItemPageCli
                     return (
                       <SelectItem key={tab.id} value={tab.id}>
                         <span className="flex items-center gap-3">
-                          <Icon className={`h-4 w-4 ${
-                            hasError ? 'text-red-600' : 'text-gray-500'
-                          }`} />
+                          <div className={`p-2 rounded-lg border ${
+                            hasError 
+                              ? 'border-red-300 bg-red-50 dark:bg-red-950/30' 
+                              : 'border-blue-300 bg-blue-50 dark:bg-blue-950/30'
+                          }`}>
+                            <Icon className={`h-4 w-4 ${
+                              hasError ? 'text-red-600' : 'text-blue-600'
+                            }`} />
+                          </div>
                           <span>
                             <span className={`block font-medium ${
                               hasError ? 'text-red-900 dark:text-red-100' : 'text-gray-900 dark:text-gray-100'
