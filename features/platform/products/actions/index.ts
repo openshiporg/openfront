@@ -172,8 +172,45 @@ export async function getProduct(id: string) {
           id
           title
           sku
+          barcode
+          ean
+          upc
           inventoryQuantity
+          allowBackorder
           manageInventory
+          hsCode
+          originCountry
+          midCode
+          material
+          metadata
+          productOptionValues {
+            id
+            value
+            productOption {
+              id
+              title
+            }
+          }
+          prices {
+            id
+            amount
+            compareAmount
+            currency {
+              code
+              symbol
+              symbolNative
+            }
+            region {
+              id
+              code
+              name
+              currency {
+                code
+                symbol
+                symbolNative
+              }
+            }
+          }
         }
         productImages {
           id
@@ -190,6 +227,15 @@ export async function getProduct(id: string) {
         productCollections {
           id
           title
+        }
+        productOptions {
+          id
+          title
+          productOptionValues {
+            id
+            value
+            metadata
+          }
         }
       }
     }
@@ -408,6 +454,46 @@ export async function deleteProduct(id: string) {
       success: false,
       error: response.error || 'Failed to delete product',
       data: null,
+    };
+  }
+}
+
+/**
+ * Get regions for pricing and currency
+ */
+export async function getRegions() {
+  const query = `
+    query GetRegions {
+      regions {
+        id
+        code
+        name
+        taxRate
+        currency {
+          code
+          symbol
+          symbolNative
+          name
+        }
+      }
+    }
+  `;
+
+  const response = await keystoneClient(query);
+  
+  if (response.success) {
+    return {
+      success: true,
+      data: {
+        regions: response.data.regions || [],
+      },
+    };
+  } else {
+    console.error('Error fetching regions:', response.error);
+    return {
+      success: false,
+      error: response.error || 'Failed to fetch regions',
+      data: { regions: [] },
     };
   }
 }

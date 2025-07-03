@@ -27,15 +27,27 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { 
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger 
+} from '@/components/ui/tabs'
+import { 
   AlertCircle,
   Check,
   Copy,
   Loader2,
   Undo2,
   X,
+  Package,
+  Image,
+  Box,
+  Tag,
+  Building,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { updateItemAction, deleteItemAction } from '../../../dashboard/actions/item-actions'
+import { VariantsTab } from '../components/VariantsTab'
 
 interface ProductItemPageClientProps {
   list: any
@@ -358,18 +370,122 @@ export function ProductItemPageClient({ list, item, itemId }: ProductItemPageCli
     toast.success('ID copied to clipboard')
   }, [itemId])
 
-  // Split fields by position for sidebar/main layout
+  // Tab configuration following Dasher7 pattern
+  const tabs = [
+    {
+      id: "general",
+      label: "General", 
+      icon: Package,
+      description: "Basic product information like title, description, and handle",
+    },
+    {
+      id: "media",
+      label: "Media",
+      icon: Image, 
+      description: "Product images and gallery",
+    },
+    {
+      id: "variants",
+      label: "Variants",
+      icon: Box,
+      description: "Product variations, options, and inventory", 
+    },
+    {
+      id: "discounts",
+      label: "Discounts & Taxes",
+      icon: Tag,
+      description: "Pricing rules, discounts, and tax settings",
+    },
+    {
+      id: "organization", 
+      label: "Organization",
+      icon: Building,
+      description: "Categories, collections, tags, and status",
+    }
+  ]
+
+  // Field distribution by tab following Dasher7 pattern
+  const GENERAL_FIELDS = new Set(['title', 'handle', 'description', 'subtitle', 'isGiftcard'])
+  const MEDIA_FIELDS = new Set(['productImages'])
+  const VARIANT_FIELDS = new Set(['productVariants'])
+  const DISCOUNT_TAX_FIELDS = new Set(['discountable', 'discountConditions', 'discountRules', 'taxRates'])
+  const ORGANIZATION_FIELDS = new Set(['status', 'productCollections', 'productCategories', 'productTags'])
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState('general')
+
+  // Split fields by tab and position
   const fieldsSplit = useMemo(() => {
     const sidebarFields: Record<string, any> = {}
-    const mainFields: Record<string, any> = {}
+    const generalFields: Record<string, any> = {}
+    const mediaFields: Record<string, any> = {}
+    const variantFields: Record<string, any> = {}
+    const discountTaxFields: Record<string, any> = {}
+    const organizationFields: Record<string, any> = {}
     
     Object.entries(enhancedFields).forEach(([key, field]) => {
-      // For now, put all fields in main - you can add logic here for sidebar fields
-      mainFields[key] = field
+      const fieldPath = field.path
+      
+      // Distribute fields by tab
+      if (GENERAL_FIELDS.has(fieldPath)) {
+        generalFields[key] = field
+      } else if (MEDIA_FIELDS.has(fieldPath)) {
+        mediaFields[key] = field
+      } else if (VARIANT_FIELDS.has(fieldPath)) {
+        variantFields[key] = field
+      } else if (DISCOUNT_TAX_FIELDS.has(fieldPath)) {
+        discountTaxFields[key] = field
+      } else if (ORGANIZATION_FIELDS.has(fieldPath)) {
+        organizationFields[key] = field
+      } else {
+        // Default to general tab for unknown fields
+        generalFields[key] = field
+      }
     })
     
-    return { sidebarFields, mainFields }
+    return { 
+      sidebarFields, 
+      generalFields, 
+      mediaFields, 
+      variantFields, 
+      discountTaxFields, 
+      organizationFields 
+    }
   }, [enhancedFields])
+
+  // Get tab error count - check for invalid fields in each tab
+  const getTabErrorCount = useCallback((tabId: string) => {
+    let fieldsToCheck: Record<string, any> = {}
+    
+    switch (tabId) {
+      case 'general':
+        fieldsToCheck = fieldsSplit.generalFields
+        break
+      case 'media':
+        fieldsToCheck = fieldsSplit.mediaFields
+        break
+      case 'variants':
+        fieldsToCheck = fieldsSplit.variantFields
+        break
+      case 'discounts':
+        fieldsToCheck = fieldsSplit.discountTaxFields
+        break
+      case 'organization':
+        fieldsToCheck = fieldsSplit.organizationFields
+        break
+      default:
+        return 0
+    }
+
+    let errorCount = 0
+    Object.keys(fieldsToCheck).forEach(fieldKey => {
+      if (invalidFields.has(fieldKey)) {
+        errorCount++
+      }
+    })
+    
+    return errorCount
+  }, [fieldsSplit, invalidFields])
 
   // Platform-specific breadcrumb items
   const breadcrumbItems = [
@@ -550,20 +666,153 @@ export function ProductItemPageClient({ list, item, itemId }: ProductItemPageCli
             </div>
           </div>
 
-          {/* Main content */}
+          {/* Main content with tabs */}
           <div className="space-y-6">
-            {/* Main Fields */}
-            {Object.keys(fieldsSplit.mainFields).length > 0 && (
-              <Fields
-                list={list}
-                fields={fieldsSplit.mainFields}
-                value={value}
-                onChange={setValue}
-                forceValidation={forceValidation}
-                invalidFields={invalidFields}
-                isRequireds={isRequireds}
-              />
-            )}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              {/* Tab Navigation - Desktop (visible on lg+) */}
+              <div className="hidden lg:block space-y-4 mb-6">
+                <div className="grid grid-cols-1 gap-3">
+                  {tabs.map((tab) => {
+                    const Icon = tab.icon
+                    const isActive = activeTab === tab.id
+                    const errorCount = getTabErrorCount(tab.id)
+                    const hasError = errorCount > 0
+
+                    return (
+                      <div
+                        key={tab.id}
+                        className={`cursor-pointer transition-all rounded-lg border p-4 ${
+                          isActive 
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30' 
+                            : hasError
+                            ? 'border-red-300 bg-red-50 dark:bg-red-950/30'
+                            : 'border-gray-200 bg-white dark:bg-gray-950 hover:border-gray-300'
+                        }`}
+                        onClick={() => setActiveTab(tab.id)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Icon className={`h-4 w-4 ${
+                              isActive 
+                                ? 'text-blue-600' 
+                                : hasError 
+                                ? 'text-red-600' 
+                                : 'text-gray-500'
+                            }`} />
+                            <div>
+                              <div className={`font-medium text-sm ${
+                                isActive 
+                                  ? 'text-blue-900 dark:text-blue-100' 
+                                  : hasError 
+                                  ? 'text-red-900 dark:text-red-100' 
+                                  : 'text-gray-900 dark:text-gray-100'
+                              }`}>
+                                {tab.label}
+                              </div>
+                              <div className={`text-xs ${
+                                isActive 
+                                  ? 'text-blue-700 dark:text-blue-300' 
+                                  : hasError 
+                                  ? 'text-red-700 dark:text-red-300' 
+                                  : 'text-gray-500 dark:text-gray-400'
+                              }`}>
+                                {tab.description}
+                              </div>
+                            </div>
+                          </div>
+                          {hasError && (
+                            <Badge variant="destructive" className="text-xs">
+                              {errorCount} ERROR{errorCount > 1 ? 'S' : ''}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Tab Navigation - Mobile (visible on < lg) */}
+              <div className="lg:hidden mb-6">
+                <TabsList className="grid w-full grid-cols-5">
+                  {tabs.map((tab) => {
+                    const Icon = tab.icon
+                    const errorCount = getTabErrorCount(tab.id)
+                    const hasError = errorCount > 0
+
+                    return (
+                      <TabsTrigger key={tab.id} value={tab.id} className="relative">
+                        <Icon className="h-4 w-4" />
+                        {hasError && (
+                          <div className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full" />
+                        )}
+                      </TabsTrigger>
+                    )
+                  })}
+                </TabsList>
+              </div>
+
+              {/* Tab Content */}
+              <TabsContent value="general" className="space-y-6">
+                {Object.keys(fieldsSplit.generalFields).length > 0 && (
+                  <Fields
+                    list={list}
+                    fields={fieldsSplit.generalFields}
+                    value={value}
+                    onChange={setValue}
+                    forceValidation={forceValidation}
+                    invalidFields={invalidFields}
+                    isRequireds={isRequireds}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="media" className="space-y-6">
+                {Object.keys(fieldsSplit.mediaFields).length > 0 && (
+                  <Fields
+                    list={list}
+                    fields={fieldsSplit.mediaFields}
+                    value={value}
+                    onChange={setValue}
+                    forceValidation={forceValidation}
+                    invalidFields={invalidFields}
+                    isRequireds={isRequireds}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="variants" className="space-y-6">
+                <VariantsTab product={item} />
+              </TabsContent>
+
+              <TabsContent value="discounts" className="space-y-6">
+                {Object.keys(fieldsSplit.discountTaxFields).length > 0 && (
+                  <Fields
+                    list={list}
+                    fields={fieldsSplit.discountTaxFields}
+                    value={value}
+                    onChange={setValue}
+                    forceValidation={forceValidation}
+                    invalidFields={invalidFields}
+                    isRequireds={isRequireds}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="organization" className="space-y-6">
+                {Object.keys(fieldsSplit.organizationFields).length > 0 && (
+                  <Fields
+                    list={list}
+                    fields={fieldsSplit.organizationFields}
+                    value={value}
+                    onChange={setValue}
+                    forceValidation={forceValidation}
+                    invalidFields={invalidFields}
+                    isRequireds={isRequireds}
+                  />
+                )}
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </main>
