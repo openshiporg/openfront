@@ -26,12 +26,14 @@ import {
   AlertDialogTrigger 
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
-import { 
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger 
-} from '@/components/ui/tabs'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { 
   AlertCircle,
   Check,
@@ -668,151 +670,117 @@ export function ProductItemPageClient({ list, item, itemId }: ProductItemPageCli
 
           {/* Main content with tabs */}
           <div className="space-y-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              {/* Tab Navigation - Desktop (visible on lg+) */}
-              <div className="hidden lg:block space-y-4 mb-6">
-                <div className="grid grid-cols-1 gap-3">
-                  {tabs.map((tab) => {
-                    const Icon = tab.icon
-                    const isActive = activeTab === tab.id
-                    const errorCount = getTabErrorCount(tab.id)
-                    const hasError = errorCount > 0
-
-                    return (
-                      <div
-                        key={tab.id}
-                        className={`cursor-pointer transition-all rounded-lg border p-4 ${
-                          isActive 
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30' 
-                            : hasError
-                            ? 'border-red-300 bg-red-50 dark:bg-red-950/30'
-                            : 'border-gray-200 bg-white dark:bg-gray-950 hover:border-gray-300'
-                        }`}
-                        onClick={() => setActiveTab(tab.id)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Icon className={`h-4 w-4 ${
-                              isActive 
-                                ? 'text-blue-600' 
-                                : hasError 
-                                ? 'text-red-600' 
-                                : 'text-gray-500'
-                            }`} />
-                            <div>
-                              <div className={`font-medium text-sm ${
-                                isActive 
-                                  ? 'text-blue-900 dark:text-blue-100' 
-                                  : hasError 
-                                  ? 'text-red-900 dark:text-red-100' 
-                                  : 'text-gray-900 dark:text-gray-100'
-                              }`}>
-                                {tab.label}
-                              </div>
-                              <div className={`text-xs ${
-                                isActive 
-                                  ? 'text-blue-700 dark:text-blue-300' 
-                                  : hasError 
-                                  ? 'text-red-700 dark:text-red-300' 
-                                  : 'text-gray-500 dark:text-gray-400'
-                              }`}>
-                                {tab.description}
-                              </div>
-                            </div>
-                          </div>
-                          {hasError && (
-                            <Badge variant="destructive" className="text-xs">
-                              {errorCount} ERROR{errorCount > 1 ? 'S' : ''}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Tab Navigation - Mobile (visible on < lg) */}
-              <div className="lg:hidden mb-6">
-                <TabsList className="grid w-full grid-cols-5">
+            {/* Section Select Dropdown */}
+            <div className="mb-6">
+              <Label htmlFor="section-select" className="text-sm font-medium mb-2 block">
+                Product Section
+              </Label>
+              <Select value={activeTab} onValueChange={setActiveTab}>
+                <SelectTrigger
+                  id="section-select"
+                  className="h-auto ps-3 text-left [&>span]:flex [&>span]:items-center [&>span]:gap-3 [&>span_svg]:shrink-0"
+                >
+                  <SelectValue placeholder="Choose a section" />
+                </SelectTrigger>
+                <SelectContent className="[&_*[role=option]]:ps-3 [&_*[role=option]]:pe-8 [&_*[role=option]>span]:start-auto [&_*[role=option]>span]:end-2">
                   {tabs.map((tab) => {
                     const Icon = tab.icon
                     const errorCount = getTabErrorCount(tab.id)
                     const hasError = errorCount > 0
 
                     return (
-                      <TabsTrigger key={tab.id} value={tab.id} className="relative">
-                        <Icon className="h-4 w-4" />
-                        {hasError && (
-                          <div className="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full" />
-                        )}
-                      </TabsTrigger>
+                      <SelectItem key={tab.id} value={tab.id}>
+                        <span className="flex items-center gap-3">
+                          <Icon className={`h-4 w-4 ${
+                            hasError ? 'text-red-600' : 'text-gray-500'
+                          }`} />
+                          <span>
+                            <span className={`block font-medium ${
+                              hasError ? 'text-red-900 dark:text-red-100' : 'text-gray-900 dark:text-gray-100'
+                            }`}>
+                              {tab.label}
+                              {hasError && (
+                                <span className="ml-2 text-xs text-red-600 font-normal">
+                                  ({errorCount} ERROR{errorCount > 1 ? 'S' : ''})
+                                </span>
+                              )}
+                            </span>
+                            <span className={`text-muted-foreground mt-0.5 block text-xs ${
+                              hasError ? 'text-red-700 dark:text-red-300' : ''
+                            }`}>
+                              {tab.description}
+                            </span>
+                          </span>
+                        </span>
+                      </SelectItem>
                     )
                   })}
-                </TabsList>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Section Content */}
+            {activeTab === 'general' && Object.keys(fieldsSplit.generalFields).length > 0 && (
+              <div className="space-y-6">
+                <Fields
+                  list={list}
+                  fields={fieldsSplit.generalFields}
+                  value={value}
+                  onChange={setValue}
+                  forceValidation={forceValidation}
+                  invalidFields={invalidFields}
+                  isRequireds={isRequireds}
+                />
               </div>
+            )}
 
-              {/* Tab Content */}
-              <TabsContent value="general" className="space-y-6">
-                {Object.keys(fieldsSplit.generalFields).length > 0 && (
-                  <Fields
-                    list={list}
-                    fields={fieldsSplit.generalFields}
-                    value={value}
-                    onChange={setValue}
-                    forceValidation={forceValidation}
-                    invalidFields={invalidFields}
-                    isRequireds={isRequireds}
-                  />
-                )}
-              </TabsContent>
+            {activeTab === 'media' && Object.keys(fieldsSplit.mediaFields).length > 0 && (
+              <div className="space-y-6">
+                <Fields
+                  list={list}
+                  fields={fieldsSplit.mediaFields}
+                  value={value}
+                  onChange={setValue}
+                  forceValidation={forceValidation}
+                  invalidFields={invalidFields}
+                  isRequireds={isRequireds}
+                />
+              </div>
+            )}
 
-              <TabsContent value="media" className="space-y-6">
-                {Object.keys(fieldsSplit.mediaFields).length > 0 && (
-                  <Fields
-                    list={list}
-                    fields={fieldsSplit.mediaFields}
-                    value={value}
-                    onChange={setValue}
-                    forceValidation={forceValidation}
-                    invalidFields={invalidFields}
-                    isRequireds={isRequireds}
-                  />
-                )}
-              </TabsContent>
-
-              <TabsContent value="variants" className="space-y-6">
+            {activeTab === 'variants' && (
+              <div className="space-y-6">
                 <VariantsTab product={item} />
-              </TabsContent>
+              </div>
+            )}
 
-              <TabsContent value="discounts" className="space-y-6">
-                {Object.keys(fieldsSplit.discountTaxFields).length > 0 && (
-                  <Fields
-                    list={list}
-                    fields={fieldsSplit.discountTaxFields}
-                    value={value}
-                    onChange={setValue}
-                    forceValidation={forceValidation}
-                    invalidFields={invalidFields}
-                    isRequireds={isRequireds}
-                  />
-                )}
-              </TabsContent>
+            {activeTab === 'discounts' && Object.keys(fieldsSplit.discountTaxFields).length > 0 && (
+              <div className="space-y-6">
+                <Fields
+                  list={list}
+                  fields={fieldsSplit.discountTaxFields}
+                  value={value}
+                  onChange={setValue}
+                  forceValidation={forceValidation}
+                  invalidFields={invalidFields}
+                  isRequireds={isRequireds}
+                />
+              </div>
+            )}
 
-              <TabsContent value="organization" className="space-y-6">
-                {Object.keys(fieldsSplit.organizationFields).length > 0 && (
-                  <Fields
-                    list={list}
-                    fields={fieldsSplit.organizationFields}
-                    value={value}
-                    onChange={setValue}
-                    forceValidation={forceValidation}
-                    invalidFields={invalidFields}
-                    isRequireds={isRequireds}
-                  />
-                )}
-              </TabsContent>
-            </Tabs>
+            {activeTab === 'organization' && Object.keys(fieldsSplit.organizationFields).length > 0 && (
+              <div className="space-y-6">
+                <Fields
+                  list={list}
+                  fields={fieldsSplit.organizationFields}
+                  value={value}
+                  onChange={setValue}
+                  forceValidation={forceValidation}
+                  invalidFields={invalidFields}
+                  isRequireds={isRequireds}
+                />
+              </div>
+            )}
           </div>
         </div>
       </main>
