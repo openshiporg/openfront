@@ -20,7 +20,7 @@ import { PageBreadcrumbs } from '../../../dashboard/components/PageBreadcrumbs'
 import { Fields } from '../../../dashboard/components/Fields'
 import { useCreateItem } from '../../../dashboard/utils/useCreateItem'
 import { enhanceFields } from '../../../dashboard/utils/enhanceFields'
-import { CreateVariantsTab } from '../components/CreateVariantsTab'
+import { VariantsTab } from '../components/VariantsTab'
 
 interface ProductCreatePageClientProps {
   listKey: string
@@ -117,20 +117,6 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
     router.push('/dashboard/platform/products')
   }, [router])
   
-  // Variants and options state for create mode
-  const [variants, setVariants] = useState<any[]>([])
-  const [options, setOptions] = useState<any[]>([])
-  
-  // Handle variants/options changes from CreateVariantsTab
-  const handleVariantsChange = useCallback((newVariants: any[]) => {
-    setVariants(newVariants)
-    // TODO: Integrate with form data if needed
-  }, [])
-  
-  const handleOptionsChange = useCallback((newOptions: any[]) => {
-    setOptions(newOptions)
-    // TODO: Integrate with form data if needed
-  }, [])
 
   if (!list) {
     return (
@@ -418,10 +404,7 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
 
             {activeTab === 'variants' && (
               <div className="space-y-6">
-                <CreateVariantsTab 
-                  onVariantsChange={handleVariantsChange}
-                  onOptionsChange={handleOptionsChange}
-                />
+                <VariantsTab product={{}} />
               </div>
             )}
 
