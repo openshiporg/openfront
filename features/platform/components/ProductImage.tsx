@@ -28,7 +28,7 @@ export function ProductImage({
         width={width}
         height={height}
         className={cn(
-          "object-cover rounded-lg",
+          "object-cover rounded-sm",
           className
         )}
         onError={(e) => {
@@ -52,12 +52,12 @@ export function ProductImage({
 
   return (
     <div className={cn(
-      "flex items-center justify-center bg-muted rounded-lg",
+      "flex items-center justify-center bg-muted rounded-sm",
       className
     )}>
       <Package className={cn(
         "text-muted-foreground",
-        iconClassName || (width <= 48 ? "w-6 h-6" : "w-8 h-8")
+        iconClassName || "size-4"
       )} />
     </div>
   );

@@ -16,8 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MoreVertical, ChevronsUpDown, Package } from "lucide-react";
 import Link from "next/link";
-import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 import { ItemPagination } from "../../orders/components/ItemPagination";
+import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 import { ProductImage } from "../../components/ProductImage";
 
 interface Product {
@@ -64,20 +64,20 @@ export function CollectionDetailsComponent({
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'published':
-        return 'bg-green-50 text-green-800 border-green-200';
+        return 'emerald';
       case 'draft':
-        return 'bg-gray-50 text-gray-800 border-gray-200';
+        return 'zinc';
       case 'proposed':
-        return 'bg-blue-50 text-blue-800 border-blue-200';
+        return 'blue';
       case 'rejected':
-        return 'bg-red-50 text-red-800 border-red-200';
+        return 'red';
       default:
-        return 'bg-gray-50 text-gray-800 border-gray-200';
+        return 'zinc';
     }
   };
   
   const triggerClassName =
-    "flex items-center rounded-sm shadow-sm uppercase tracking-wide border max-w-fit gap-2 text-nowrap pl-2.5 pr-1 py-[3px] text-sm font-medium text-indigo-500 bg-white border-indigo-200 hover:bg-indigo-100 hover:text-indigo-700 focus:z-10 focus:ring-2 focus:ring-indigo-700 focus:text-indigo-700 dark:bg-indigo-950 dark:border-indigo-900 dark:text-indigo-300 dark:hover:text-white dark:hover:bg-indigo-700 dark:focus:ring-indigo-500 dark:focus:text-white";
+    "flex items-center rounded-sm shadow-sm uppercase tracking-wide border max-w-fit gap-2 text-nowrap pl-2.5 pr-1 py-[3px] text-sm font-medium text-slate-500 bg-white border-slate-200 hover:bg-slate-100 hover:text-slate-700 focus:z-10 focus:ring-2 focus:ring-slate-700 focus:text-slate-700 dark:bg-slate-950 dark:border-slate-900 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-700 dark:focus:ring-slate-500 dark:focus:text-white";
 
   return (
     <>
@@ -144,41 +144,13 @@ export function CollectionDetailsComponent({
           </div>
           <AccordionContent className="pb-0">
             <div className="divide-y">
-              {/* Collection Details */}
-              <div className="px-4 md:px-6 py-4">
-                <h4 className="text-sm font-medium mb-3">Details</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Handle:</span>
-                    <span className="ml-2 font-medium">{collection.handle}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Products:</span>
-                    <span className="ml-2 font-medium">{totalProducts}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Created:</span>
-                    <span className="ml-2 font-medium">
-                      {new Date(collection.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Updated:</span>
-                    <span className="ml-2 font-medium">
-                      {new Date(collection.updatedAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
               {/* Products Section */}
-              {totalProducts > 0 && (
-                <Collapsible
+              <Collapsible
                   open={isProductsOpen}
                   onOpenChange={setIsProductsOpen}
-                  className="flex flex-col gap-2 py-3 px-4 md:px-6 bg-indigo-50/30 dark:bg-indigo-900/10 border-b"
+                  className="flex flex-col gap-2 py-3 px-4 md:px-6 bg-slate-50/30 dark:bg-slate-900/10 border-b"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between w-full">
                     <CollapsibleTrigger asChild>
                       <button type="button" className={triggerClassName}>
                         {totalProducts} Product{totalProducts !== 1 ? "s" : ""}
@@ -212,9 +184,7 @@ export function CollectionDetailsComponent({
                               <ProductImage
                                 src={product.thumbnail}
                                 alt={product.title}
-                                width={48}
-                                height={48}
-                                className="size-12"
+                                className="size-12 rounded-sm"
                               />
                             </div>
                             <div className="grid flex-grow min-w-0">
@@ -225,7 +195,10 @@ export function CollectionDetailsComponent({
                                 {product.title}
                               </Link>
                               <div className="flex items-center gap-2 mt-1">
-                                <Badge className={`text-[.6rem] py-0 px-2 tracking-wide font-medium rounded-md border h-5 ${getStatusColor(product.status)}`}>
+                                <Badge 
+                                  color={getStatusColor(product.status)}
+                                  className="text-[.6rem] py-0 px-2 tracking-wide font-medium rounded-md border h-5"
+                                >
                                   {product.status.toUpperCase()}
                                 </Badge>
                                 {product.productVariants && product.productVariants.length > 0 && (
@@ -241,7 +214,33 @@ export function CollectionDetailsComponent({
                     )}
                   </CollapsibleContent>
                 </Collapsible>
-              )}
+              
+              {/* Details Section */}
+              <div className="px-4 md:px-6 py-4">
+                <h4 className="text-sm font-medium mb-3">Details</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Handle:</span>
+                    <span className="ml-2 font-medium">{collection.handle}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Products:</span>
+                    <span className="ml-2 font-medium">{totalProducts}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Created:</span>
+                    <span className="ml-2 font-medium">
+                      {new Date(collection.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Updated:</span>
+                    <span className="ml-2 font-medium">
+                      {new Date(collection.updatedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
               
               {/* Metadata Section */}
               {collection.metadata && (

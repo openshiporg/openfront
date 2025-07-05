@@ -146,7 +146,7 @@ export async function getFilteredCollections(
 export async function getCollection(id: string) {
   const query = `
     query GetCollection($id: ID!) {
-      collection(where: { id: $id }) {
+      productCollection(where: { id: $id }) {
         id
         title
         handle
@@ -169,7 +169,7 @@ export async function getCollection(id: string) {
   const response = await keystoneClient(query, { id });
 
   if (response.success) {
-    if (!response.data.collection) {
+    if (!response.data.productCollection) {
       return {
         success: false,
         error: 'Collection not found',
@@ -179,7 +179,7 @@ export async function getCollection(id: string) {
 
     return {
       success: true,
-      data: response.data.collection,
+      data: response.data.productCollection,
     };
   } else {
     console.error('Error fetching collection:', response.error);
@@ -209,8 +209,8 @@ export async function getCollectionStatusCounts() {
  */
 export async function updateCollectionStatus(id: string, status: string) {
   const mutation = `
-    mutation UpdateCollectionStatus($id: ID!, $data: CollectionUpdateInput!) {
-      updateCollection(where: { id: $id }, data: $data) {
+    mutation UpdateCollectionStatus($id: ID!, $data: ProductCollectionUpdateInput!) {
+      updateProductCollection(where: { id: $id }, data: $data) {
         id
         status
       }
@@ -229,7 +229,7 @@ export async function updateCollectionStatus(id: string, status: string) {
 
     return {
       success: true,
-      data: response.data.updateCollection,
+      data: response.data.updateProductCollection,
     };
   } else {
     console.error('Error updating collection status:', response.error);

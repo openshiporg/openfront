@@ -75,20 +75,20 @@ export function ProductCategoryDetailsComponent({
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'published':
-        return 'bg-green-100 text-green-800';
+        return 'emerald';
       case 'draft':
-        return 'bg-gray-100 text-gray-800';
+        return 'zinc';
       case 'proposed':
-        return 'bg-blue-100 text-blue-800';
+        return 'blue';
       case 'rejected':
-        return 'bg-red-100 text-red-800';
+        return 'red';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'zinc';
     }
   };
   
   const triggerClassName =
-    "flex items-center rounded-sm shadow-sm uppercase tracking-wide border max-w-fit gap-2 text-nowrap pl-2.5 pr-1 py-[3px] text-sm font-medium text-orange-500 bg-white border-orange-200 hover:bg-orange-100 hover:text-orange-700 focus:z-10 focus:ring-2 focus:ring-orange-700 focus:text-orange-700 dark:bg-orange-950 dark:border-orange-900 dark:text-orange-300 dark:hover:text-white dark:hover:bg-orange-700 dark:focus:ring-orange-500 dark:focus:text-white";
+    "flex items-center rounded-sm shadow-sm uppercase tracking-wide border max-w-fit gap-2 text-nowrap pl-2.5 pr-1 py-[3px] text-sm font-medium text-slate-500 bg-white border-slate-200 hover:bg-slate-100 hover:text-slate-700 focus:z-10 focus:ring-2 focus:ring-slate-700 focus:text-slate-700 dark:bg-slate-950 dark:border-slate-900 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-700 dark:focus:ring-slate-500 dark:focus:text-white";
 
   return (
     <>
@@ -220,9 +220,9 @@ export function ProductCategoryDetailsComponent({
                 <Collapsible
                   open={isProductsOpen}
                   onOpenChange={setIsProductsOpen}
-                  className="flex flex-col gap-2 py-3 px-4 md:px-6 bg-orange-50/30 dark:bg-orange-900/10 border-b"
+                  className="flex flex-col gap-2 py-3 px-4 md:px-6 bg-slate-50/30 dark:bg-slate-900/10 border-b"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between w-full">
                     <CollapsibleTrigger asChild>
                       <button type="button" className={triggerClassName}>
                         {totalProducts} Product{totalProducts !== 1 ? "s" : ""}
@@ -256,9 +256,7 @@ export function ProductCategoryDetailsComponent({
                               <ProductImage
                                 src={product.thumbnail}
                                 alt={product.title}
-                                width={48}
-                                height={48}
-                                className="size-12"
+                                className="size-12 rounded-sm"
                               />
                             </div>
                             <div className="grid flex-grow min-w-0">
@@ -269,7 +267,10 @@ export function ProductCategoryDetailsComponent({
                                 {product.title}
                               </Link>
                               <div className="flex items-center gap-2 mt-1">
-                                <Badge className={`text-[.6rem] py-0 px-2 tracking-wide font-medium rounded-md border h-5 ${getStatusColor(product.status)}`}>
+                                <Badge 
+                                  color={getStatusColor(product.status)}
+                                  className="text-[.6rem] py-0 px-2 tracking-wide font-medium rounded-md border h-5"
+                                >
                                   {product.status.toUpperCase()}
                                 </Badge>
                                 {product.productVariants && product.productVariants.length > 0 && (
