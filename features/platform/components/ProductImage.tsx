@@ -38,7 +38,7 @@ export function ProductImage({
           const parent = target.parentElement;
           if (parent) {
             parent.innerHTML = `
-              <div class="w-full h-full flex items-center justify-center bg-muted rounded-lg">
+              <div class="flex items-center justify-center bg-muted rounded-lg size-12">
                 <svg class="w-6 h-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-6a2 2 0 00-2 2v3a2 2 0 002 2h6a2 2 0 002-2v-3z"></path>
                 </svg>
