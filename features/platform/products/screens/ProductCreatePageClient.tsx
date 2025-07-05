@@ -9,15 +9,18 @@
 import React, { useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Save, ArrowLeft, AlertTriangle, Loader2, Check, X } from 'lucide-react'
+import { Save, ArrowLeft, AlertTriangle, Loader2, Check, X, Package, Image, Box, Tag, Building } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
 import { PageBreadcrumbs } from '../../../dashboard/components/PageBreadcrumbs'
 import { Fields } from '../../../dashboard/components/Fields'
 import { useCreateItem } from '../../../dashboard/utils/useCreateItem'
 import { enhanceFields } from '../../../dashboard/utils/enhanceFields'
+import { CreateVariantsTab } from '../components/CreateVariantsTab'
 
 interface ProductCreatePageClientProps {
   listKey: string
@@ -55,6 +58,50 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
   // Use the create item hook with enhanced fields
   const createItem = useCreateItem(list, enhancedFields)
 
+  // Tab configuration following the same pattern as ProductItemPageClient
+  const tabs = [
+    {
+      id: "general",
+      label: "General", 
+      icon: Package,
+      description: "Basic product information like title, description, and handle",
+    },
+    {
+      id: "media",
+      label: "Media",
+      icon: Image, 
+      description: "Product images and gallery",
+    },
+    {
+      id: "variants",
+      label: "Variants",
+      icon: Box,
+      description: "Product variations, options, and inventory", 
+    },
+    {
+      id: "discounts",
+      label: "Discounts & Taxes",
+      icon: Tag,
+      description: "Pricing rules, discounts, and tax settings",
+    },
+    {
+      id: "organization", 
+      label: "Organization",
+      icon: Building,
+      description: "Categories, collections, tags, and status",
+    }
+  ]
+
+  // Field distribution by tab following the same pattern as ProductItemPageClient
+  const GENERAL_FIELDS = new Set(['title', 'handle', 'description', 'subtitle', 'isGiftcard'])
+  const MEDIA_FIELDS = new Set(['productImages'])
+  const VARIANT_FIELDS = new Set(['productVariants'])
+  const DISCOUNT_TAX_FIELDS = new Set(['discountable', 'discountConditions', 'discountRules', 'taxRates'])
+  const ORGANIZATION_FIELDS = new Set(['status', 'productCollections', 'productCategories', 'productTags'])
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState('general')
+
   const handleSave = useCallback(async () => {
     if (!createItem) return
     
@@ -69,6 +116,21 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
   const handleCancel = useCallback(() => {
     router.push('/dashboard/platform/products')
   }, [router])
+  
+  // Variants and options state for create mode
+  const [variants, setVariants] = useState<any[]>([])
+  const [options, setOptions] = useState<any[]>([])
+  
+  // Handle variants/options changes from CreateVariantsTab
+  const handleVariantsChange = useCallback((newVariants: any[]) => {
+    setVariants(newVariants)
+    // TODO: Integrate with form data if needed
+  }, [])
+  
+  const handleOptionsChange = useCallback((newOptions: any[]) => {
+    setOptions(newOptions)
+    // TODO: Integrate with form data if needed
+  }, [])
 
   if (!list) {
     return (
@@ -107,15 +169,77 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
   // Split fields by position for sidebar/main layout (same pattern as dashboard)
   const fieldsSplit = useMemo(() => {
     const sidebarFields: Record<string, any> = {}
-    const mainFields: Record<string, any> = {}
+    const generalFields: Record<string, any> = {}
+    const mediaFields: Record<string, any> = {}
+    const variantFields: Record<string, any> = {}
+    const discountTaxFields: Record<string, any> = {}
+    const organizationFields: Record<string, any> = {}
     
     Object.entries(enhancedFields).forEach(([key, field]) => {
-      // For now, put all fields in main - same as dashboard logic
-      mainFields[key] = field
+      const fieldPath = field.path
+      
+      // Distribute fields by tab
+      if (GENERAL_FIELDS.has(fieldPath)) {
+        generalFields[key] = field
+      } else if (MEDIA_FIELDS.has(fieldPath)) {
+        mediaFields[key] = field
+      } else if (VARIANT_FIELDS.has(fieldPath)) {
+        variantFields[key] = field
+      } else if (DISCOUNT_TAX_FIELDS.has(fieldPath)) {
+        discountTaxFields[key] = field
+      } else if (ORGANIZATION_FIELDS.has(fieldPath)) {
+        organizationFields[key] = field
+      } else {
+        // Default to general tab for unknown fields
+        generalFields[key] = field
+      }
     })
     
-    return { sidebarFields, mainFields }
+    return { 
+      sidebarFields, 
+      generalFields, 
+      mediaFields, 
+      variantFields, 
+      discountTaxFields, 
+      organizationFields 
+    }
   }, [enhancedFields])
+
+  // Get tab error count - check for invalid fields in each tab (same pattern as item page)
+  const getTabErrorCount = useCallback((tabId: string) => {
+    if (!createItem?.props?.invalidFields) return 0
+    
+    let fieldsToCheck: Record<string, any> = {}
+    
+    switch (tabId) {
+      case 'general':
+        fieldsToCheck = fieldsSplit.generalFields
+        break
+      case 'media':
+        fieldsToCheck = fieldsSplit.mediaFields
+        break
+      case 'variants':
+        fieldsToCheck = fieldsSplit.variantFields
+        break
+      case 'discounts':
+        fieldsToCheck = fieldsSplit.discountTaxFields
+        break
+      case 'organization':
+        fieldsToCheck = fieldsSplit.organizationFields
+        break
+      default:
+        return 0
+    }
+
+    let errorCount = 0
+    Object.keys(fieldsToCheck).forEach(fieldKey => {
+      if (createItem.props.invalidFields.has(fieldKey)) {
+        errorCount++
+      }
+    })
+    
+    return errorCount
+  }, [fieldsSplit, createItem?.props?.invalidFields])
 
   return (
     <>
@@ -224,9 +348,93 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
               </Alert>
             )}
 
-            {/* Main Fields */}
-            {Object.keys(fieldsSplit.mainFields).length > 0 && (
-              <Fields {...createItem.props} fields={fieldsSplit.mainFields} view="createView" groups={list.groups} />
+            {/* Section Select Dropdown */}
+            <div className="mb-4">
+              <Label htmlFor="section-select" className="text-sm font-medium mb-2 block">
+                Product Section
+              </Label>
+              <Select value={activeTab} onValueChange={setActiveTab}>
+                <SelectTrigger
+                  id="section-select"
+                  className="h-auto ps-3 text-left [&>span]:flex [&>span]:items-center [&>span]:gap-3 [&>span_svg]:shrink-0"
+                >
+                  <SelectValue placeholder="Choose a section" />
+                </SelectTrigger>
+                <SelectContent className="[&_*[role=option]]:ps-3 [&_*[role=option]]:pe-8 [&_*[role=option]>span]:start-auto [&_*[role=option]>span]:end-2">
+                  {tabs.map((tab) => {
+                    const Icon = tab.icon
+                    const errorCount = getTabErrorCount(tab.id)
+                    const hasError = errorCount > 0
+
+                    return (
+                      <SelectItem key={tab.id} value={tab.id}>
+                        <span className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg border ${
+                            hasError 
+                              ? 'border-red-300 bg-red-50 dark:bg-red-950/30' 
+                              : 'border-blue-300 bg-blue-50 dark:bg-blue-950/30'
+                          }`}>
+                            <Icon className={`h-4 w-4 ${
+                              hasError ? 'text-red-600' : 'text-blue-600'
+                            }`} />
+                          </div>
+                          <span>
+                            <span className={`block font-medium ${
+                              hasError ? 'text-red-900 dark:text-red-100' : 'text-gray-900 dark:text-gray-100'
+                            }`}>
+                              {tab.label}
+                              {hasError && (
+                                <span className="ml-2 text-xs text-red-600 font-normal">
+                                  ({errorCount} ERROR{errorCount > 1 ? 'S' : ''})
+                                </span>
+                              )}
+                            </span>
+                            <span className={`text-muted-foreground mt-0.5 block text-xs ${
+                              hasError ? 'text-red-700 dark:text-red-300' : ''
+                            }`}>
+                              {tab.description}
+                            </span>
+                          </span>
+                        </span>
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Section Content */}
+            {activeTab === 'general' && Object.keys(fieldsSplit.generalFields).length > 0 && (
+              <div className="space-y-6">
+                <Fields {...createItem.props} fields={fieldsSplit.generalFields} view="createView" groups={list.groups} />
+              </div>
+            )}
+
+            {activeTab === 'media' && Object.keys(fieldsSplit.mediaFields).length > 0 && (
+              <div className="space-y-6">
+                <Fields {...createItem.props} fields={fieldsSplit.mediaFields} view="createView" groups={list.groups} />
+              </div>
+            )}
+
+            {activeTab === 'variants' && (
+              <div className="space-y-6">
+                <CreateVariantsTab 
+                  onVariantsChange={handleVariantsChange}
+                  onOptionsChange={handleOptionsChange}
+                />
+              </div>
+            )}
+
+            {activeTab === 'discounts' && Object.keys(fieldsSplit.discountTaxFields).length > 0 && (
+              <div className="space-y-6">
+                <Fields {...createItem.props} fields={fieldsSplit.discountTaxFields} view="createView" groups={list.groups} />
+              </div>
+            )}
+
+            {activeTab === 'organization' && Object.keys(fieldsSplit.organizationFields).length > 0 && (
+              <div className="space-y-6">
+                <Fields {...createItem.props} fields={fieldsSplit.organizationFields} view="createView" groups={list.groups} />
+              </div>
             )}
           </div>
         </div>
