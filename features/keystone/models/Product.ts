@@ -1,4 +1,3 @@
-
 import { graphql, list } from "@keystone-6/core";
 import { denyAll } from "@keystone-6/core/access";
 import {
@@ -212,6 +211,15 @@ export const Product = list({
     productImages: relationship({
       ref: "ProductImage.products",
       many: true,
+      ui: {
+        displayMode: "cards",
+        cardFields: ["image", "altText", "imagePath"],
+        inlineCreate: { fields: ["image", "altText", "imagePath"] },
+        inlineEdit: { fields: ["image", "altText", "imagePath"] },
+        inlineConnect: true,
+        removeMode: "disconnect",
+        linkToItem: false,
+      },
     }),
     productOptions: relationship({
       ref: "ProductOption.product",

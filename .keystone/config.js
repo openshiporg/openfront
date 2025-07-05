@@ -8846,7 +8846,16 @@ var Product = (0, import_core49.list)({
     }),
     productImages: (0, import_fields49.relationship)({
       ref: "ProductImage.products",
-      many: true
+      many: true,
+      ui: {
+        displayMode: "cards",
+        cardFields: ["image", "altText", "imagePath"],
+        inlineCreate: { fields: ["image", "altText", "imagePath"] },
+        inlineEdit: { fields: ["image", "altText", "imagePath"] },
+        inlineConnect: true,
+        removeMode: "disconnect",
+        linkToItem: false
+      }
     }),
     productOptions: (0, import_fields49.relationship)({
       ref: "ProductOption.product",
