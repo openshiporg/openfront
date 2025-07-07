@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation'
 import { 
   SearchX,
   Table as TableIcon,
-  Plus 
+  CirclePlus 
 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -143,12 +143,11 @@ export function ProductCategoryListPageClient({
           customCreateButton={
             <Button 
               onClick={() => setIsCreateDrawerOpen(true)}
-              variant="default"
-              size="sm"
+              size="icon"
+              className="lg:px-4 lg:py-2 lg:w-auto rounded-lg"
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <CirclePlus />
               <span className="hidden lg:inline">Create {list.singular}</span>
-              <span className="lg:hidden">Create</span>
             </Button>
           }
         />
