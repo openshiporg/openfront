@@ -72,7 +72,7 @@ export function RegionList({ data, statusCounts, list }: RegionListProps) {
 
       {/* Create Drawers */}
       <CreateItemDrawerClientWrapper
-        listKey="Region"
+        listKey="regions"
         open={isCreateDrawerOpen}
         onClose={() => setIsCreateDrawerOpen(false)}
         onCreate={() => {

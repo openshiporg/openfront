@@ -1,15 +1,16 @@
 'use client'
 
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { DrawerDescription, DrawerFooter, DrawerHeader, DrawerTitle } from '@/components/ui/drawer'
 import { Badge } from '@/components/ui/badge'
 import { Fields } from '../../dashboard/components/Fields'
+import { useInvalidFields } from '../../dashboard/utils/useInvalidFields'
+import { useHasChanges, serializeValueToOperationItem } from '../../dashboard/utils/useHasChanges'
 import { enhanceFields } from '../../dashboard/utils/enhanceFields'
-import { useCreateItem } from '../../dashboard/utils/useCreateItem'
-import { AlertCircle, Check, Loader2, X } from 'lucide-react'
+import { createItemAction } from '../../dashboard/actions/item-actions'
+import { AlertCircle, Check, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 
 interface CreateItemDrawerClientProps {
   list: any
@@ -17,86 +18,179 @@ interface CreateItemDrawerClientProps {
   onCreate?: (newItem: any) => void
 }
 
+// Hook for event callbacks (copied from ItemPageClient)
+function useEventCallback<Func extends (...args: any[]) => unknown>(callback: Func): Func {
+  const callbackRef = useRef(callback)
+  const cb = useCallback((...args: any[]) => {
+    return callbackRef.current(...args)
+  }, [])
+  useEffect(() => {
+    callbackRef.current = callback
+  })
+  return cb as any
+}
+
+// Helper function to create initial values for creation
+function createInitialValue(enhancedFields: Record<string, any>) {
+  const result: Record<string, unknown | null> = {}
+  
+  Object.entries(enhancedFields).forEach(([fieldPath, field]) => {
+    try {
+      // Enhanced fields already have controllers
+      const controller = field.controller
+      
+      // Use the controller's default value for new items
+      result[fieldPath] = controller.defaultValue || null
+    } catch (error) {
+      console.error(`Error creating initial value for field ${fieldPath}:`, error)
+      result[fieldPath] = null
+    }
+  })
+  
+  return result
+}
+
 export function CreateItemDrawerClient({ 
   list, 
   onClose, 
   onCreate 
 }: CreateItemDrawerClientProps) {
-  // Create enhanced fields exactly like CreatePageClient does
+  // Create enhanced fields exactly like ItemPageClient does
   const enhancedFields = useMemo(() => {
     return enhanceFields(list.fields || {}, list.key)
   }, [list.fields, list.key])
-  
-  // Use the create item hook with enhanced fields (same as CreatePageClient)
-  const createItem = useCreateItem(list, enhancedFields)
 
-  // Create handler exactly like CreatePageClient but adapted for drawer
-  const handleCreate = useCallback(async (e?: React.FormEvent) => {
-    if (e) e.preventDefault()
+  // Create initial value for new item
+  const initialValue = useMemo(() => {
+    return createInitialValue(enhancedFields)
+  }, [enhancedFields])
+
+  // State exactly like ItemPageClient
+  const [value, setValue] = useState(() => initialValue)
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [forceValidation, setForceValidation] = useState(false)
+
+  // Reset value when initialValue changes (like ItemPageClient)
+  useEffect(() => {
+    setValue(initialValue)
+  }, [initialValue])
+
+  // Create isRequireds object exactly like ItemPageClient
+  const isRequireds = useMemo(() => {
+    const result: Record<string, any> = {}
     
-    if (!createItem) return
+    Object.entries(enhancedFields).forEach(([fieldPath, field]) => {
+      result[fieldPath] = field.itemView?.isRequired || false
+    })
     
-    try {
-      const item = await createItem.create()
-      if (item?.id) {
-        toast.success(`Created ${list.singular.toLowerCase()} successfully`)
-        
-        // Call onCreate callback if provided
-        if (onCreate) {
-          onCreate(item)
+    // Override with dynamic adminMeta data if available
+    if (list.adminMetaFields) {
+      list.adminMetaFields.forEach((field: any) => {
+        if (field.itemView && field.itemView.isRequired !== undefined) {
+          result[field.path] = field.itemView.isRequired
         }
-        
-        // Close drawer after successful creation
-        onClose()
-      } else {
-        console.error('No item.id in response:', item)
-        toast.error('Failed to create item - no ID returned')
-      }
-    } catch (error: any) {
-      console.error('Create error:', error)
-      toast.error('Unable to create item', {
-        description: error.message
       })
     }
-  }, [createItem, list, onCreate, onClose])
+    
+    return result
+  }, [enhancedFields, list.adminMetaFields])
 
-  const handleCancel = () => {
-    onClose()
-  }
+  // Validation exactly like ItemPageClient
+  const invalidFields = useInvalidFields(
+    enhancedFields,
+    value,
+    isRequireds,
+    forceValidation
+  )
 
-  if (!list) {
+  // Track changes (for create, we check if anything was entered)
+  const hasChanges = useHasChanges('create', enhancedFields, value, initialValue)
+
+  // Handle field changes exactly like ItemPageClient
+  const onFieldChange = useEventCallback((fieldPath: string, newValue: any) => {
+    setValue(prev => ({
+      ...prev,
+      [fieldPath]: newValue
+    }))
+  })
+
+  // Handle save (create new item)
+  const handleSave = useEventCallback(async () => {
+    if (saveState !== 'idle') return
+
+    // Force validation
+    setForceValidation(true)
+    
+    // Check if we have validation errors
+    if (invalidFields.size > 0) {
+      toast.error('Please fix the validation errors before saving')
+      return
+    }
+
+    try {
+      setSaveState('saving')
+      
+      // Serialize data for creation
+      const data = serializeValueToOperationItem('create', enhancedFields, value, initialValue)
+      
+      // Call create action
+      const result = await createItemAction(list.key, data)
+      
+      if (result.errors && result.errors.length > 0) {
+        // Handle GraphQL errors
+        const error = result.errors.find(x => x.path === undefined || x.path?.length === 1)
+        if (error) {
+          toast.error('Unable to create item', {
+            description: error.message
+          })
+          setSaveState('idle')
+          return
+        }
+      }
+      
+      // Success
+      setSaveState('saved')
+      toast.success(`${list.singular} created successfully`)
+      
+      // Call onCreate callback if provided
+      if (onCreate && result.data) {
+        onCreate(result.data)
+      }
+      
+      // Close drawer after short delay
+      setTimeout(() => {
+        onClose()
+        setSaveState('idle')
+      }, 1000)
+      
+    } catch (error) {
+      console.error('Error creating item:', error)
+      toast.error('Failed to create item')
+      setSaveState('idle')
+    }
+  })
+
+  // Render validation badge
+  const renderValidationBadge = () => {
+    if (invalidFields.size === 0) return null
+    
     return (
-      <>
-        <DrawerHeader className="flex-shrink-0">
-          <DrawerTitle>Error</DrawerTitle>
-        </DrawerHeader>
-        <div className="p-6 text-center">
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              The requested list was not found.
-            </AlertDescription>
-          </Alert>
-        </div>
-      </>
+      <Badge variant="destructive" className="gap-1">
+        <AlertCircle className="h-3 w-3" />
+        {invalidFields.size} error{invalidFields.size === 1 ? '' : 's'}
+      </Badge>
     )
   }
 
-  if (!createItem) {
+  // Render changes badge
+  const renderChangesBadge = () => {
+    if (!hasChanges) return null
+    
     return (
-      <>
-        <DrawerHeader className="flex-shrink-0">
-          <DrawerTitle>Error</DrawerTitle>
-        </DrawerHeader>
-        <div className="p-6 text-center">
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Failed to initialize creation form for {list.label}.
-            </AlertDescription>
-          </Alert>
-        </div>
-      </>
+      <Badge variant="secondary" className="gap-1">
+        <AlertCircle className="h-3 w-3" />
+        Unsaved changes
+      </Badge>
     )
   }
 
@@ -105,78 +199,59 @@ export function CreateItemDrawerClient({
       <DrawerHeader className="flex-shrink-0">
         <DrawerTitle>Create {list.singular}</DrawerTitle>
         <DrawerDescription>
-          Add a new {list.singular.toLowerCase()}
+          Create a new {list.singular.toLowerCase()} item
         </DrawerDescription>
       </DrawerHeader>
-      
-      <form onSubmit={handleCreate} className="flex flex-col flex-1 min-h-0">
-        <div className="flex-1 overflow-y-auto p-4">
-          {/* GraphQL errors (same pattern as CreatePageClient) */}
-          {(createItem.error?.networkError || createItem.error?.graphQLErrors?.length) && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                {createItem.error.networkError?.message || 
-                 createItem.error.graphQLErrors?.[0]?.message ||
-                 'An error occurred while creating the item'
-                }
-              </AlertDescription>
-            </Alert>
-          )}
 
-          {/* Fields using same pattern as CreatePageClient */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-6">
           <Fields
-            {...createItem.props}
             fields={enhancedFields}
-            view="createView"
+            value={value}
+            onChange={onFieldChange}
+            forceValidation={forceValidation}
             groups={list.groups}
           />
         </div>
+      </div>
 
-        <DrawerFooter className="flex-shrink-0 border-t">
-          {/* Status indicators */}
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              {createItem.state === 'loading' && (
-                <div className="flex items-center gap-x-1.5 text-xs text-muted-foreground">
-                  <Loader2 className="animate-spin h-3.5 w-3.5" />
-                  <span>Creating...</span>
-                </div>
-              )}
-              {createItem.invalidFields.size > 0 && (
-                <Badge variant="destructive" className="text-xs">
-                  <AlertCircle className="h-3 w-3 mr-1" />
-                  {createItem.invalidFields.size} invalid field{createItem.invalidFields.size === 1 ? '' : 's'}
-                </Badge>
-              )}
-            </div>
+      <DrawerFooter className="flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex gap-2">
+            {renderValidationBadge()}
+            {renderChangesBadge()}
           </div>
           
-          <div className="flex gap-2 justify-end">
-            <Button type="button" variant="outline" onClick={handleCancel}>
-              <X className="h-4 w-4 mr-2" />
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              disabled={saveState === 'saving'}
+            >
               Cancel
             </Button>
-            <Button 
-              type="submit" 
-              disabled={createItem.state === 'loading'}
+            <Button
+              onClick={handleSave}
+              disabled={saveState === 'saving' || !hasChanges || invalidFields.size > 0}
               className="min-w-[120px]"
             >
-              {createItem.state === 'loading' ? (
+              {saveState === 'saving' ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Creating...
                 </>
-              ) : (
+              ) : saveState === 'saved' ? (
                 <>
-                  Create {list.singular}
-                  <Check className="h-4 w-4 ml-2" />
+                  <Check className="mr-2 h-4 w-4" />
+                  Created!
                 </>
+              ) : (
+                `Create ${list.singular}`
               )}
             </Button>
           </div>
-        </DrawerFooter>
-      </form>
+        </div>
+      </DrawerFooter>
     </>
   )
 }

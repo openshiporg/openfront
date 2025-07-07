@@ -131,7 +131,7 @@ export function GiftCardDetailsComponent({
       </Accordion>
 
       <EditItemDrawerClientWrapper
-        listKey="giftCards"
+        listKey="gift-cards"
         itemId={giftcard.id}
         open={isEditDrawerOpen}
         onClose={() => setIsEditDrawerOpen(false)}

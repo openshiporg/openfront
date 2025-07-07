@@ -257,7 +257,7 @@ export function CollectionDetailsComponent({
       </Accordion>
 
       <EditItemDrawerClientWrapper
-        listKey="productCollections"
+        listKey="product-collections"
         itemId={collection.id}
         open={isEditDrawerOpen}
         onClose={() => setIsEditDrawerOpen(false)}

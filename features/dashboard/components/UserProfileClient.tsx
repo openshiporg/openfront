@@ -30,6 +30,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { ThemeSwitcher } from "@/components/ui/theme-switcher";
+import { signOut } from "../actions/auth";
+import { useRouter } from "next/navigation";
 
 interface User {
   id: string;
@@ -43,6 +45,7 @@ interface UserProfileClientProps {
 
 export function UserProfileClient({ user }: UserProfileClientProps) {
   const { isMobile } = useSidebar();
+  const router = useRouter();
 
   const initials = user.name
     ? user.name
@@ -53,8 +56,18 @@ export function UserProfileClient({ user }: UserProfileClientProps) {
     : user.email.slice(0, 2).toUpperCase();
 
   const handleSignOut = async () => {
-    // Use dashboard signout endpoint
-    window.location.href = "/dashboard/signin";
+    try {
+      const result = await signOut();
+      if (result.error) {
+        console.error('Logout error:', result.error);
+      }
+      // Redirect to signin page after logout (successful or not)
+      router.push("/dashboard/signin");
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Still redirect even if logout fails to clear local state
+      router.push("/dashboard/signin");
+    }
   };
 
   return (

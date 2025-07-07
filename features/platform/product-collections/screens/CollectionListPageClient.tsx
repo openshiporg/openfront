@@ -9,11 +9,14 @@ import React, { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   SearchX,
-  Table as TableIcon 
+  Table as TableIcon,
+  Plus 
 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import { PageContainer } from '../../../dashboard/components/PageContainer'
 import { PlatformFilterBar } from '../../components/PlatformFilterBar'
+import { CreateItemDrawerClientWrapper } from '@/features/platform/components/CreateItemDrawerClientWrapper'
 import { StatusTabs } from '../components/StatusTabs'
 import { CollectionDetailsComponent } from '../components/CollectionDetailsComponent'
 import { Pagination } from '../../../dashboard/components/Pagination'
@@ -69,6 +72,7 @@ export function CollectionListPageClient({
 }: CollectionListPageClientProps) {
   const router = useRouter()
   const { basePath } = useDashboard()
+  const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false)
   // Hooks for sorting and field selection
   const selectedFields = useSelectedFields(list)
   const sort = useSort(list)
@@ -132,7 +136,20 @@ export function CollectionListPageClient({
     <PageContainer title="Collections" header={header} breadcrumbs={breadcrumbs}>
       {/* Filter Bar - includes search, filters, sorting, and create button */}
       <div className="px-4 md:px-6">
-        <PlatformFilterBar list={list} />
+        <PlatformFilterBar 
+          list={list}
+          customCreateButton={
+            <Button 
+              onClick={() => setIsCreateDrawerOpen(true)}
+              variant="default"
+              size="sm"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              <span className="hidden lg:inline">Create {list.singular}</span>
+              <span className="lg:hidden">Create</span>
+            </Button>
+          }
+        />
       </div>
 
 
@@ -180,6 +197,13 @@ export function CollectionListPageClient({
           )}
         </>
       )}
+      
+      <CreateItemDrawerClientWrapper
+        listKey="product-collections"
+        open={isCreateDrawerOpen}
+        onClose={() => setIsCreateDrawerOpen(false)}
+        onCreate={() => window.location.reload()}
+      />
     </PageContainer>
   )
 }

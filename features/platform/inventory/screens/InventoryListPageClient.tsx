@@ -211,7 +211,7 @@ export function InventoryListPageClient({
 
       {/* Create Item Drawer */}
       <CreateItemDrawerClientWrapper
-        listKey={list.key}
+        listKey="inventory"
         open={isCreateDrawerOpen}
         onClose={() => setIsCreateDrawerOpen(false)}
         onCreate={() => {

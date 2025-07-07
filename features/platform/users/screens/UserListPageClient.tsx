@@ -209,7 +209,7 @@ export function UserListPageClient({
 
       {/* Create Item Drawer */}
       <CreateItemDrawerClientWrapper
-        listKey={list.key}
+        listKey="users"
         open={isCreateDrawerOpen}
         onClose={() => setIsCreateDrawerOpen(false)}
         onCreate={() => {

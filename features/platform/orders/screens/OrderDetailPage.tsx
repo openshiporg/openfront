@@ -49,7 +49,7 @@ export async function OrderDetailPage({ params }: OrderPageParams) {
       <OrderPageClient
         order={order}
         id={itemId}
-        listKey="Order"
+        listKey="orders"
         fieldModes={{}}
         fieldPositions={{}}
         uiConfig={uiConfig}

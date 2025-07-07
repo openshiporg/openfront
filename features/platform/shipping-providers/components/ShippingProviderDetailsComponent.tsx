@@ -131,7 +131,7 @@ export function ShippingProviderDetailsComponent({
       </Accordion>
 
       <EditItemDrawerClientWrapper
-        listKey="shippingProviders"
+        listKey="shipping-providers"
         itemId={shippingprovider.id}
         open={isEditDrawerOpen}
         onClose={() => setIsEditDrawerOpen(false)}
