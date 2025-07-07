@@ -59,10 +59,11 @@ export function CreateItemDrawerClient({
     return createInitialValue(enhancedFields)
   }, [enhancedFields])
 
-  // State exactly like ItemPageClient
+  // State exactly like dashboard useCreateItem pattern
   const [value, setValue] = useState(() => initialValue)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [forceValidation, setForceValidation] = useState(false)
+  const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set())
 
   // Reset value when initialValue changes (like ItemPageClient)
   useEffect(() => {
@@ -89,13 +90,34 @@ export function CreateItemDrawerClient({
     return result
   }, [enhancedFields, list.adminMetaFields])
 
-  // Validation exactly like ItemPageClient
-  const invalidFields = useInvalidFields(
-    enhancedFields,
-    value,
-    isRequireds,
-    forceValidation
-  )
+  // Validation function (matches dashboard useCreateItem pattern)
+  const validate = useCallback(() => {
+    const newInvalidFields = new Set<string>()
+    
+    Object.entries(enhancedFields).forEach(([key, field]: [string, any]) => {
+      const fieldValue = value[key]
+      const isRequired = isRequireds[key]
+      
+      // Check if required field is empty
+      if (isRequired && (fieldValue === null || fieldValue === undefined || fieldValue === '')) {
+        newInvalidFields.add(key)
+      }
+      
+      // Additional field-specific validation could go here
+      if (field.controller?.validate) {
+        try {
+          const isValid = field.controller.validate(fieldValue)
+          if (!isValid) {
+            newInvalidFields.add(key)
+          }
+        } catch (error) {
+          newInvalidFields.add(key)
+        }
+      }
+    })
+    
+    return newInvalidFields
+  }, [enhancedFields, value, isRequireds])
 
   // Track changes (for create, we check if anything was entered)
   const hasChanges = useHasChanges('create', enhancedFields, value, initialValue)
@@ -112,11 +134,11 @@ export function CreateItemDrawerClient({
   const handleSave = useEventCallback(async () => {
     if (saveState !== 'idle') return
 
-    // Force validation
-    setForceValidation(true)
-    
-    // Check if we have validation errors
-    if (invalidFields.size > 0) {
+    // Validate before creating (matches dashboard pattern)
+    const validationErrors = validate()
+    if (validationErrors.size > 0) {
+      setInvalidFields(validationErrors)
+      setForceValidation(true)
       toast.error('Please fix the validation errors before saving')
       return
     }
@@ -155,6 +177,8 @@ export function CreateItemDrawerClient({
       setTimeout(() => {
         onClose()
         setSaveState('idle')
+        setForceValidation(false)
+        setInvalidFields(new Set())
       }, 1000)
       
     } catch (error) {
