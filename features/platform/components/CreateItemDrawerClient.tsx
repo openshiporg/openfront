@@ -30,20 +30,14 @@ function useEventCallback<Func extends (...args: any[]) => unknown>(callback: Fu
   return cb as any
 }
 
-// Helper function to create initial values for creation
+// Helper function to create initial values for creation (matches dashboard useCreateItem pattern)
 function createInitialValue(enhancedFields: Record<string, any>) {
-  const result: Record<string, unknown | null> = {}
+  const result: Record<string, any> = {}
   
-  Object.entries(enhancedFields).forEach(([fieldPath, field]) => {
-    try {
-      // Enhanced fields already have controllers
-      const controller = field.controller
-      
-      // Use the controller's default value for new items
-      result[fieldPath] = controller.defaultValue || null
-    } catch (error) {
-      console.error(`Error creating initial value for field ${fieldPath}:`, error)
-      result[fieldPath] = null
+  // Initialize each field with its default value from the controller (exact dashboard pattern)
+  Object.entries(enhancedFields).forEach(([key, field]: [string, any]) => {
+    if (field.controller?.defaultValue !== undefined) {
+      result[key] = field.controller.defaultValue
     }
   })
   
@@ -210,6 +204,9 @@ export function CreateItemDrawerClient({
             value={value}
             onChange={onFieldChange}
             forceValidation={forceValidation}
+            invalidFields={invalidFields}
+            isRequireds={isRequireds}
+            view="createView"
             groups={list.groups}
           />
         </div>
