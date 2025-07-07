@@ -85,10 +85,15 @@ export async function UserListPage({ searchParams }: PageProps) {
   // Get status counts using dedicated action
   const statusCountsResponse = await getUserStatusCounts()
   
-  let statusCounts = {"has_account":0,"all":0,"no_account":0}
+  let statusCounts = {"withAccount":0,"all":0,"withoutAccount":0}
 
   if (statusCountsResponse.success) {
-    statusCounts = statusCountsResponse.data
+    // Map the backend keys to frontend keys
+    statusCounts = {
+      all: statusCountsResponse.data.all || 0,
+      withAccount: statusCountsResponse.data.has_account || 0,
+      withoutAccount: statusCountsResponse.data.no_account || 0
+    }
   }
 
   return (

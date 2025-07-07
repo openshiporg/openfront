@@ -18,10 +18,53 @@ export interface User {
   orders?: Array<{
     id: string;
     displayId: string;
-    email: string;
-    total?: string;
     status: string;
-    lineItems?: Array<{ id: string }>;
+    email: string;
+    taxRate?: number;
+    canceledAt?: string;
+    createdAt: string;
+    updatedAt?: string;
+    user?: {
+      id: string;
+      name: string;
+      email: string;
+    };
+    shippingAddress?: {
+      id: string;
+      company?: string;
+      firstName?: string;
+      lastName?: string;
+      address1?: string;
+      address2?: string;
+      city?: string;
+      province?: string;
+      postalCode?: string;
+      phone?: string;
+    };
+    billingAddress?: {
+      id: string;
+      company?: string;
+      firstName?: string;
+      lastName?: string;
+      address1?: string;
+      address2?: string;
+      city?: string;
+      province?: string;
+      postalCode?: string;
+      phone?: string;
+    };
+    lineItems?: Array<{
+      id: string;
+      title: string;
+      quantity: number;
+      sku?: string;
+      thumbnail?: string;
+      formattedUnitPrice?: string;
+      formattedTotal?: string;
+      variantData?: any;
+      productData?: any;
+    }>;
+    total?: string;
   }>;
   [key: string]: unknown;
 }
@@ -48,12 +91,53 @@ export async function getUsers(
     orders {
       id
       displayId
-      email
-      total
       status
+      email
+      taxRate
+      canceledAt
+      createdAt
+      updatedAt
+      user {
+        id
+        name
+        email
+      }
+      shippingAddress {
+        id
+        company
+        firstName
+        lastName
+        address1
+        address2
+        city
+        province
+        postalCode
+        phone
+      }
+      billingAddress {
+        id
+        company
+        firstName
+        lastName
+        address1
+        address2
+        city
+        province
+        postalCode
+        phone
+      }
       lineItems {
         id
+        title
+        quantity
+        sku
+        thumbnail
+        formattedUnitPrice
+        formattedTotal
+        variantData
+        productData
       }
+      total
     }
     createdAt
     updatedAt
