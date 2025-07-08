@@ -38,20 +38,17 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
     { value: "disabled", label: "Disabled", count: statusCounts.disabled },
   ] as const;
 
-  // Get current status from URL
-  const statusFilter = searchParams.get("!status_matches");
+  // Get current status from URL - isDisabled is a checkbox field
+  const isDisabledFilter = searchParams.get("!isDisabled_is");
   let currentStatus = "all";
 
-  if (statusFilter) {
+  if (isDisabledFilter) {
     try {
-      const parsed = JSON.parse(decodeURIComponent(statusFilter));
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        // For discounts, we need to check boolean values
-        if (parsed[0].value === false) {
-          currentStatus = "active";
-        } else if (parsed[0].value === true) {
-          currentStatus = "disabled";
-        }
+      const parsed = JSON.parse(decodeURIComponent(isDisabledFilter));
+      if (parsed === false) {
+        currentStatus = "active";
+      } else if (parsed === true) {
+        currentStatus = "disabled";
       }
     } catch (e) {
       // Invalid JSON in URL, ignore
@@ -65,15 +62,12 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
     params.set("page", "1");
     
     if (status === "all") {
-      params.delete("!status_matches");
+      params.delete("!isDisabled_is");
     } else {
-      const filterValue = [
-        {
-          label: statusConfig[status as keyof typeof statusConfig].label,
-          value: status === "active" ? false : true, // isDisabled: false for active, true for disabled
-        },
-      ];
-      params.set("!status_matches", JSON.stringify(filterValue));
+      // For checkbox fields, use simple boolean value
+      // isDisabled: false for active, true for disabled
+      const filterValue = status === "active" ? false : true;
+      params.set("!isDisabled_is", JSON.stringify(filterValue));
     }
     router.push(`${pathname}?${params.toString()}`);
   };

@@ -40,11 +40,6 @@ export function DiscountDetailsComponent({ discount, list }: DiscountDetailsComp
         <AccordionItem value={discount.id} className="border-0">
           <div className="px-4 md:px-6 py-3 md:py-4 flex justify-between w-full border-b relative min-h-[80px]">
             <div className="flex items-start gap-4">
-              {/* Discount Icon */}
-              <div className="w-12 h-12 flex-shrink-0 bg-muted rounded-lg overflow-hidden flex items-center justify-center">
-                <Tag className="w-6 h-6 text-muted-foreground" />
-              </div>
-
               {/* Discount Info */}
               <div className="flex flex-col items-start text-left gap-2">
                 <div className="flex flex-wrap items-center gap-2">

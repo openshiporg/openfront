@@ -90,7 +90,7 @@ export async function DiscountListPage({ searchParams }: PageProps) {
   // Get status counts using dedicated action
   const statusCountsResponse = await getDiscountStatusCounts()
   
-  let statusCounts = {"active":0,"all":0,"inactive":0}
+  let statusCounts = {"active":0,"all":0,"disabled":0}
 
   if (statusCountsResponse.success) {
     statusCounts = statusCountsResponse.data
