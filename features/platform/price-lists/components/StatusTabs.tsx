@@ -38,7 +38,7 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
     { value: "draft", label: "Draft", count: statusCounts.draft },
   ] as const;
 
-  // Get current status from URL
+  // Get current status from URL - status is a select field
   const statusFilter = searchParams.get("!status_matches");
   let currentStatus = "all";
 
@@ -46,10 +46,11 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
     try {
       const parsed = JSON.parse(decodeURIComponent(statusFilter));
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // For price lists, we check string values
-        if (parsed[0].value === "active") {
+        // For select fields, expect simple string values
+        const value = typeof parsed[0] === 'string' ? parsed[0] : parsed[0].value;
+        if (value === "active") {
           currentStatus = "active";
-        } else if (parsed[0].value === "draft") {
+        } else if (value === "draft") {
           currentStatus = "draft";
         }
       }
@@ -67,12 +68,8 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
     if (status === "all") {
       params.delete("!status_matches");
     } else {
-      const filterValue = [
-        {
-          label: statusConfig[status as keyof typeof statusConfig].label,
-          value: status, // Pass string value for price lists
-        },
-      ];
+      // For select fields, use simple string array
+      const filterValue = [status];
       params.set("!status_matches", JSON.stringify(filterValue));
     }
     router.push(`${pathname}?${params.toString()}`);

@@ -7,7 +7,42 @@ import { keystoneClient } from "../../../dashboard/lib/keystoneClient";
 export interface GiftCard {
   id: string;
   code: string;
-  [key: string]: unknown;
+  value: number;
+  balance: number;
+  isDisabled: boolean;
+  endsAt?: string;
+  metadata?: any;
+  createdAt: string;
+  updatedAt: string;
+  order?: {
+    id: string;
+    displayId: string;
+    total: string;
+    user?: {
+      id: string;
+      name: string;
+      email: string;
+    };
+  };
+  giftCardTransactions?: Array<{
+    id: string;
+    amount: number;
+    createdAt: string;
+    order?: {
+      id: string;
+      displayId: string;
+      total: string;
+    };
+  }>;
+  region?: {
+    id: string;
+    name: string;
+    currency?: {
+      code: string;
+      symbol: string;
+      name: string;
+    };
+  };
 }
 
 /**
@@ -19,7 +54,44 @@ export async function getGiftCards(
   skip: number = 0,
   orderBy: Array<Record<string, string>> = [{ createdAt: 'desc' }],
   selectedFields: string = `
-    id code value balance isDisabled endsAt createdAt updatedAt
+    id
+    code
+    value
+    balance
+    isDisabled
+    endsAt
+    metadata
+    createdAt
+    updatedAt
+    order {
+      id
+      displayId
+      total
+      user {
+        id
+        name
+        email
+      }
+    }
+    giftCardTransactions {
+      id
+      amount
+      createdAt
+      order {
+        id
+        displayId
+        total
+      }
+    }
+    region {
+      id
+      name
+      currency {
+        code
+        symbol
+        name
+      }
+    }
   `
 ) {
   const query = `
