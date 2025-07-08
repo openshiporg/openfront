@@ -214,43 +214,6 @@ export function CollectionDetailsComponent({
                     )}
                   </CollapsibleContent>
                 </Collapsible>
-              
-              {/* Details Section */}
-              <div className="px-4 md:px-6 py-4">
-                <h4 className="text-sm font-medium mb-3">Details</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Handle:</span>
-                    <span className="ml-2 font-medium">{collection.handle}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Products:</span>
-                    <span className="ml-2 font-medium">{totalProducts}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Created:</span>
-                    <span className="ml-2 font-medium">
-                      {new Date(collection.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Updated:</span>
-                    <span className="ml-2 font-medium">
-                      {new Date(collection.updatedAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Metadata Section */}
-              {collection.metadata && (
-                <div className="px-4 md:px-6 py-4">
-                  <h4 className="text-sm font-medium mb-2">Metadata</h4>
-                  <pre className="text-xs bg-muted p-3 rounded overflow-auto">
-                    {JSON.stringify(collection.metadata, null, 2)}
-                  </pre>
-                </div>
-              )}
             </div>
           </AccordionContent>
         </AccordionItem>

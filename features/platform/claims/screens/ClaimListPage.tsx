@@ -5,9 +5,11 @@
 
 import { getListByPath } from '../../../dashboard/actions/getListByPath'
 import { getAdminMetaAction } from '../../../dashboard/actions'
+import { buildOrderByClause } from '../../../dashboard/lib/buildOrderByClause'
+import { buildWhereClause } from '../../../dashboard/lib/buildWhereClause'
 import { notFound } from 'next/navigation'
 import { ClaimListPageClient } from './ClaimListPageClient'
-import { getFilteredClaims, getClaimStatusCounts } from '../actions'
+import { getClaims, getClaimStatusCounts } from '../actions'
 
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -36,17 +38,34 @@ export async function ClaimListPage({ searchParams }: PageProps) {
   const currentPage = parseInt(searchParamsObj.page?.toString() || '1', 10) || 1
   const pageSize = parseInt(searchParamsObj.pageSize?.toString() || list.pageSize?.toString() || '50', 10)
   const searchString = searchParamsObj.search?.toString() || ''
-  
-  // Extract sort parameter
-  const sortBy = searchParamsObj.sortBy?.toString()
 
-  // Use dedicated Claims actions (no status filtering since ClaimOrder doesn't have status)
-  const response = await getFilteredClaims(
-    undefined, // No status filtering
-    searchString || undefined,
-    currentPage,
+  // Build dynamic orderBy clause using Keystone's defaults
+  const orderBy = buildOrderByClause(list, searchParamsObj)
+
+  // Build filters from URL params using Keystone's approach
+  const filterWhere = buildWhereClause(list, searchParamsObj)
+
+  // Build search where clause
+  const searchParameters = searchString ? { search: searchString } : {}
+  const searchWhere = buildWhereClause(list, searchParameters)
+
+  // Combine search and filters - following Keystone's pattern
+  const whereConditions = []
+  if (Object.keys(searchWhere).length > 0) {
+    whereConditions.push(searchWhere)
+  }
+  if (Object.keys(filterWhere).length > 0) {
+    whereConditions.push(filterWhere)
+  }
+
+  const where = whereConditions.length > 0 ? { AND: whereConditions } : {}
+
+  // Use Claims actions with where clause
+  const response = await getClaims(
+    where,
     pageSize,
-    sortBy
+    (currentPage - 1) * pageSize,
+    orderBy
   )
 
   let fetchedData: { items: any[], count: number } = { items: [], count: 0 }

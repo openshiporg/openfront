@@ -5,9 +5,11 @@
 
 import { getListByPath } from '../../../dashboard/actions/getListByPath'
 import { getAdminMetaAction } from '../../../dashboard/actions'
+import { buildOrderByClause } from '../../../dashboard/lib/buildOrderByClause'
+import { buildWhereClause } from '../../../dashboard/lib/buildWhereClause'
 import { notFound } from 'next/navigation'
 import { CollectionListPageClient } from './CollectionListPageClient'
-import { getFilteredCollections, getCollectionStatusCounts } from '../actions'
+import { getCollections, getCollectionStatusCounts } from '../actions'
 
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -37,30 +39,40 @@ export async function CollectionListPage({ searchParams }: PageProps) {
   const pageSize = parseInt(searchParamsObj.pageSize?.toString() || list.pageSize?.toString() || '50', 10)
   const searchString = searchParamsObj.search?.toString() || ''
 
-  // Extract sort parameter and convert to Dasher7 format
-  const sortBy = searchParamsObj.sortBy?.toString()
-  let sort: { field: string; direction: string } | undefined
-  if (sortBy) {
-    if (sortBy.startsWith('-')) {
-      sort = { field: sortBy.substring(1), direction: 'DESC' }
-    } else {
-      sort = { field: sortBy, direction: 'ASC' }
-    }
+  // Build dynamic orderBy clause using Keystone's defaults
+  const orderBy = buildOrderByClause(list, searchParamsObj)
+
+  // Build filters from URL params using Keystone's approach
+  const filterWhere = buildWhereClause(list, searchParamsObj)
+
+  // Build search where clause
+  const searchParameters = searchString ? { search: searchString } : {}
+  const searchWhere = buildWhereClause(list, searchParameters)
+
+  // Combine search and filters - following Keystone's pattern
+  const whereConditions = []
+  if (Object.keys(searchWhere).length > 0) {
+    whereConditions.push(searchWhere)
+  }
+  if (Object.keys(filterWhere).length > 0) {
+    whereConditions.push(filterWhere)
   }
 
-  // Use dedicated Collections actions (matching Dasher7 signature)
-  const response = await getFilteredCollections(
-    searchString || undefined,
-    currentPage,
+  const where = whereConditions.length > 0 ? { AND: whereConditions } : {}
+
+  // Use Collections actions with where clause
+  const response = await getCollections(
+    where,
     pageSize,
-    sort
+    (currentPage - 1) * pageSize,
+    orderBy
   )
 
   let fetchedData: { items: any[], count: number } = { items: [], count: 0 }
   let error: string | null = null
 
   if (response.success) {
-    fetchedData = { items: response.data.items || [], count: response.data.count || 0 }
+    fetchedData = response.data
   } else {
     console.error('Error fetching collections:', response.error)
     error = response.error

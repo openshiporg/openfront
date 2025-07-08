@@ -1,7 +1,9 @@
-import { getFilteredInventory, getInventoryStatusCounts } from '../actions';
+import { getInventory, getInventoryStatusCounts } from '../actions';
+import { buildOrderByClause } from '../../../dashboard/lib/buildOrderByClause';
+import { buildWhereClause } from '../../../dashboard/lib/buildWhereClause';
 
 interface PageProps {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 const list = {
@@ -23,14 +25,43 @@ export default async function InventoryListPage({ searchParams }: PageProps) {
   // Import and use the client component
   const { InventoryListPageClient } = await import('./InventoryListPageClient');
   
+  const resolvedSearchParams = await searchParams;
+  const searchParamsObj = Object.fromEntries(
+    Object.entries(resolvedSearchParams).map(([key, value]) => [
+      key,
+      Array.isArray(value) ? value : value?.toString(),
+    ])
+  );
+
   // Parse search params
-  const page = parseInt(searchParams.page as string || '1');
-  const pageSize = parseInt(searchParams.pageSize as string || String(list.pageSize));
-  const search = searchParams.search as string || '';
+  const currentPage = parseInt(searchParamsObj.page?.toString() || '1', 10) || 1;
+  const pageSize = parseInt(searchParamsObj.pageSize?.toString() || list.pageSize?.toString() || '50', 10);
+  const searchString = searchParamsObj.search?.toString() || '';
+
+  // Build dynamic orderBy clause using Keystone's defaults
+  const orderBy = buildOrderByClause(list, searchParamsObj);
+
+  // Build filters from URL params using Keystone's approach
+  const filterWhere = buildWhereClause(list, searchParamsObj);
+
+  // Build search where clause
+  const searchParameters = searchString ? { search: searchString } : {};
+  const searchWhere = buildWhereClause(list, searchParameters);
+
+  // Combine search and filters - following Keystone's pattern
+  const whereConditions = [];
+  if (Object.keys(searchWhere).length > 0) {
+    whereConditions.push(searchWhere);
+  }
+  if (Object.keys(filterWhere).length > 0) {
+    whereConditions.push(filterWhere);
+  }
+
+  const where = whereConditions.length > 0 ? { AND: whereConditions } : {};
 
   // Fetch data
   const [dataResult, statusCounts] = await Promise.all([
-    getFilteredInventory(searchParams, pageSize),
+    getInventory(where, pageSize, (currentPage - 1) * pageSize, orderBy),
     getInventoryStatusCounts()
   ]);
 
@@ -42,7 +73,7 @@ export default async function InventoryListPage({ searchParams }: PageProps) {
       list={list}
       initialData={initialData}
       initialError={initialError}
-      initialSearchParams={{ page, pageSize, search }}
+      initialSearchParams={{ page: currentPage, pageSize, search: searchString }}
       statusCounts={statusCounts}
     />
   );

@@ -5,9 +5,11 @@
 
 import { getListByPath } from '../../../dashboard/actions/getListByPath'
 import { getAdminMetaAction } from '../../../dashboard/actions'
+import { buildOrderByClause } from '../../../dashboard/lib/buildOrderByClause'
+import { buildWhereClause } from '../../../dashboard/lib/buildWhereClause'
 import { notFound } from 'next/navigation'
 import { UserListPageClient } from './UserListPageClient'
-import { getFilteredUsers, getUserStatusCounts } from '../actions'
+import { getUsers, getUserStatusCounts } from '../actions'
 
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -36,31 +38,34 @@ export async function UserListPage({ searchParams }: PageProps) {
   const currentPage = parseInt(searchParamsObj.page?.toString() || '1', 10) || 1
   const pageSize = parseInt(searchParamsObj.pageSize?.toString() || list.pageSize?.toString() || '50', 10)
   const searchString = searchParamsObj.search?.toString() || ''
-  
-  // Extract status filter from URL params
-  const statusFilter = searchParamsObj['!status_matches']
-  let status = 'all'
-  if (statusFilter) {
-    try {
-      const parsed = JSON.parse(decodeURIComponent(statusFilter.toString()))
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        status = typeof parsed[0] === 'string' ? parsed[0] : parsed[0].value
-      }
-    } catch (e) {
-      // Invalid JSON, ignore
-    }
+
+  // Build dynamic orderBy clause using Keystone's defaults
+  const orderBy = buildOrderByClause(list, searchParamsObj)
+
+  // Build filters from URL params using Keystone's approach
+  const filterWhere = buildWhereClause(list, searchParamsObj)
+
+  // Build search where clause
+  const searchParameters = searchString ? { search: searchString } : {}
+  const searchWhere = buildWhereClause(list, searchParameters)
+
+  // Combine search and filters - following Keystone's pattern
+  const whereConditions = []
+  if (Object.keys(searchWhere).length > 0) {
+    whereConditions.push(searchWhere)
+  }
+  if (Object.keys(filterWhere).length > 0) {
+    whereConditions.push(filterWhere)
   }
 
-  // Extract sort parameter
-  const sortBy = searchParamsObj.sortBy?.toString()
+  const where = whereConditions.length > 0 ? { AND: whereConditions } : {}
 
-  // Use dedicated Users actions
-  const response = await getFilteredUsers(
-    status === 'all' ? undefined : status,
-    searchString || undefined,
-    currentPage,
+  // Use Users actions with where clause
+  const response = await getUsers(
+    where,
     pageSize,
-    sortBy
+    (currentPage - 1) * pageSize,
+    orderBy
   )
 
   let fetchedData: { items: any[], count: number } = { items: [], count: 0 }

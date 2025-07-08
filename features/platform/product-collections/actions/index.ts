@@ -49,7 +49,7 @@ export async function getCollections(
   `
 ) {
   const query = `
-    query GetCollections($where: CollectionWhereInput, $take: Int!, $skip: Int!, $orderBy: [CollectionOrderByInput!]) {
+    query GetCollections($where: ProductCollectionWhereInput, $take: Int!, $skip: Int!, $orderBy: [ProductCollectionOrderByInput!]) {
       items: productCollections(where: $where, take: $take, skip: $skip, orderBy: $orderBy) {
         ${selectedFields}
       }

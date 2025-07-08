@@ -287,62 +287,6 @@ export function ProductCategoryDetailsComponent({
                   </CollapsibleContent>
                 </Collapsible>
               )}
-              
-              {/* Details Section */}
-              <div className="px-4 md:px-6 py-4">
-                <h4 className="text-sm font-medium mb-3">Details</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">ID:</span>
-                    <span className="ml-2 font-medium">{productcategory.id}</span>
-                  </div>
-                  {productcategory.handle && (
-                    <div>
-                      <span className="text-muted-foreground">Handle:</span>
-                      <span className="ml-2 font-medium font-mono">{productcategory.handle}</span>
-                    </div>
-                  )}
-                  <div>
-                    <span className="text-muted-foreground">Status:</span>
-                    <span className="ml-2 font-medium">
-                      {productcategory.isActive ? "Active" : "Inactive"}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Visibility:</span>
-                    <span className="ml-2 font-medium">
-                      {productcategory.isInternal ? "Internal" : "Public"}
-                    </span>
-                  </div>
-                  {productcategory.parentCategory && (
-                    <div>
-                      <span className="text-muted-foreground">Parent Category:</span>
-                      <Link
-                        href={`/dashboard/platform/product-categories/${productcategory.parentCategory.id}`}
-                        className="ml-2 font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                      >
-                        {productcategory.parentCategory.title}
-                      </Link>
-                    </div>
-                  )}
-                  <div>
-                    <span className="text-muted-foreground">Products:</span>
-                    <span className="ml-2 font-medium">{totalProducts}</span>
-                  </div>
-                  {productcategory.updatedAt && (
-                    <div>
-                      <span className="text-muted-foreground">Updated:</span>
-                      <span className="ml-2 font-medium">
-                        {new Date(productcategory.updatedAt).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
           </AccordionContent>
         </AccordionItem>

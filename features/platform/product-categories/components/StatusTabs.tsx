@@ -39,25 +39,17 @@ export function StatusTabs({
     { value: "inactive", label: "Inactive", count: statusCounts.inactive },
   ] as const;
 
-  // Get current status from URL
-  const statusFilter = searchParams.get("!status_matches");
+  // Get current status from URL - isActive is a checkbox field
+  const isActiveFilter = searchParams.get("!isActive_is");
   let currentStatus = "all";
 
-  if (statusFilter) {
+  if (isActiveFilter) {
     try {
-      const parsed = JSON.parse(decodeURIComponent(statusFilter));
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        // Handle both string format and object format
-        if (typeof parsed[0] === "string") {
-          currentStatus = parsed[0];
-        } else if (typeof parsed[0] === "object" && parsed[0].value !== undefined) {
-          // For product categories, we need to check boolean values
-          if (parsed[0].value === true) {
-            currentStatus = "active";
-          } else if (parsed[0].value === false) {
-            currentStatus = "inactive";
-          }
-        }
+      const parsed = JSON.parse(decodeURIComponent(isActiveFilter));
+      if (parsed === true) {
+        currentStatus = "active";
+      } else if (parsed === false) {
+        currentStatus = "inactive";
       }
     } catch (e) {
       // Invalid JSON in URL, ignore
@@ -71,15 +63,11 @@ export function StatusTabs({
     params.set("page", "1");
     
     if (status === "all") {
-      params.delete("!status_matches");
+      params.delete("!isActive_is");
     } else {
-      const filterValue = [
-        {
-          label: statusConfig[status as keyof typeof statusConfig].label,
-          value: status === "active" ? true : false,
-        },
-      ];
-      params.set("!status_matches", JSON.stringify(filterValue));
+      // For checkbox fields, use simple boolean value
+      const filterValue = status === "active" ? true : false;
+      params.set("!isActive_is", JSON.stringify(filterValue));
     }
     router.push(`${pathname}?${params.toString()}`);
   };
