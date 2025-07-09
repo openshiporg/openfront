@@ -38,32 +38,13 @@ export function RegionStatusTabs({ statusCounts }: RegionStatusTabsProps) {
     { value: "inactive", label: "Inactive", count: statusCounts.inactive },
   ] as const;
 
-  // Get current status from URL - using a simpler approach since Region doesn't have status field
-  const statusFilter = searchParams.get("!countries_some");
+  // Get current status from URL - regions don't have a status field, so let's not use filtering
   let currentStatus = "all";
 
-  if (statusFilter === "true") {
-    currentStatus = "active"; // Has countries
-  } else if (statusFilter === "false") {
-    currentStatus = "inactive"; // No countries
-  }
-
   const handleStatusChange = (status: string) => {
-    const params = new URLSearchParams(searchParams);
-    
-    // Remove page parameter when changing status
-    params.delete("page");
-    
-    if (status === "all") {
-      params.delete("!countries_some");
-    } else if (status === "active") {
-      params.set("!countries_some", "true"); // Has countries
-    } else if (status === "inactive") {
-      params.set("!countries_some", "false"); // No countries
-    }
-    
-    const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-    router.push(newUrl);
+    // For now, don't actually filter since regions don't have a proper status field
+    // Just keep the current page - status tabs are for display only
+    console.log('Status changed to:', status);
   };
 
   const scrollToTab = (index: number) => {

@@ -16,7 +16,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { PageContainer } from '../../../dashboard/components/PageContainer'
 import { PlatformFilterBar } from '../../components/PlatformFilterBar'
-import { RegionStatusTabs } from '../components/RegionStatusTabs'
 import { RegionDetailsComponent } from '../components/RegionDetailsComponent'
 import { RegionCreateDrawer } from '../components/RegionCreateDrawer'
 import { Pagination } from '../../../dashboard/components/Pagination'
@@ -34,11 +33,6 @@ interface RegionListPageClientProps {
     pageSize: number  
     search: string
   }
-  statusCounts: {
-    active: number
-    all: number
-    inactive: number
-  } | null
 }
 
 function EmptyState({ isFiltered }: { isFiltered: boolean }) {
@@ -69,8 +63,7 @@ export function RegionListPageClient({
   list, 
   initialData, 
   initialError, 
-  initialSearchParams,
-  statusCounts
+  initialSearchParams
 }: RegionListPageClientProps) {
   const router = useRouter()
   const { basePath } = useDashboard()
@@ -155,12 +148,7 @@ export function RegionListPageClient({
         />
       </div>
 
-      {/* Status Tabs */}
-      {statusCounts && (
-        <RegionStatusTabs 
-          statusCounts={statusCounts}
-        />
-      )}
+      {/* Status Tabs removed - regions don't have status field */}
 
       {/* Active Filters */}
       <div className="px-4 md:px-6 border-b">

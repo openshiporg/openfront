@@ -17,8 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Separator } from '@/components/ui/separator'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Globe, DollarSign, CreditCard, Truck, X } from 'lucide-react'
+import { Globe, DollarSign, CreditCard, Truck, Check, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import predefinedRegions from '../lib/predefined-regions.json'
 
@@ -144,33 +143,23 @@ export function RegionCreateDrawer({
     }
   }, [loading, onClose])
 
+  const hasChanges = selectedPreset !== '' || formData.selectedCountries.length > 0
+
   return (
     <Drawer open={open} onOpenChange={handleClose}>
-      <DrawerContent className="max-h-[90vh]">
-        <DrawerHeader className="border-b">
-          <div className="flex items-center justify-between">
-            <div>
-              <DrawerTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                Create New Region
-              </DrawerTitle>
-              <DrawerDescription>
-                Select a region preset and customize countries for your market expansion
-              </DrawerDescription>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleClose}
-              disabled={loading}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+      <DrawerContent>
+        <DrawerHeader className="flex-shrink-0">
+          <DrawerTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            Create New Region
+          </DrawerTitle>
+          <DrawerDescription>
+            Select a region preset and customize countries for your market expansion
+          </DrawerDescription>
         </DrawerHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1">
-          <ScrollArea className="flex-1 px-6 py-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="flex-1 overflow-y-auto p-6">
             <div className="space-y-6">
               {/* Region Preset Selection */}
               <div className="space-y-4">
@@ -367,25 +356,31 @@ export function RegionCreateDrawer({
                 </>
               )}
             </div>
-          </ScrollArea>
+          </div>
 
-          <DrawerFooter className="border-t">
-            <div className="flex gap-2">
+          <DrawerFooter className="flex-shrink-0 border-t">
+            <div className="flex gap-2 justify-end">
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={handleClose}
                 disabled={loading}
-                className="flex-1"
               >
                 Cancel
               </Button>
               <Button 
                 type="submit" 
                 disabled={loading || !selectedRegion || formData.selectedCountries.length === 0}
-                className="flex-1"
+                className="min-w-[120px]"
               >
-                {loading ? 'Creating...' : 'Create Region'}
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Region'
+                )}
               </Button>
             </div>
           </DrawerFooter>

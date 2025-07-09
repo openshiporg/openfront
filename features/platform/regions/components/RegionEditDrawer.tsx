@@ -16,8 +16,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Separator } from '@/components/ui/separator'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Globe, DollarSign, CreditCard, Truck, X, AlertCircle } from 'lucide-react'
+import { Globe, DollarSign, CreditCard, Truck, AlertCircle, Check, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import predefinedRegions from '../lib/predefined-regions.json'
@@ -40,6 +39,17 @@ interface RegionEditDrawerProps {
       id: string
       iso2: string
       displayName: string
+    }>
+    paymentProviders?: Array<{
+      id: string
+      name: string
+      code: string
+      isInstalled: boolean
+    }>
+    fulfillmentProviders?: Array<{
+      id: string
+      name: string
+      code: string
     }>
   }
   onSave?: (updatedRegion: any) => void
@@ -76,10 +86,10 @@ export function RegionEditDrawer({
         taxRate: region.taxRate * 100, // Convert to percentage for display
         currencyCode: region.currency.code,
         currencySymbol: region.currency.symbol,
-        currencyName: region.currency.name,
+        currencyName: region.currency.name || region.currency.code,
         selectedCountries: region.countries.map(c => c.iso2),
-        selectedPaymentProviders: region.paymentProviders.map(p => p.code),
-        selectedFulfillmentProviders: region.fulfillmentProviders.map(f => f.code)
+        selectedPaymentProviders: region.paymentProviders?.map(p => p.code) || [],
+        selectedFulfillmentProviders: region.fulfillmentProviders?.map(f => f.code) || []
       })
     }
   }, [region, open])
@@ -143,17 +153,21 @@ export function RegionEditDrawer({
     }
   }, [loading, onClose])
 
+  const hasChanges = formData.name !== region.name || 
+                    formData.taxRate !== region.taxRate * 100 ||
+                    JSON.stringify(formData.selectedCountries.sort()) !== JSON.stringify(region.countries.map(c => c.iso2).sort())
+
   if (!matchingPreset) {
     return (
       <Drawer open={open} onOpenChange={handleClose}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader className="border-b">
+        <DrawerContent>
+          <DrawerHeader className="flex-shrink-0">
             <DrawerTitle className="flex items-center gap-2">
               <Globe className="h-5 w-5" />
               Edit Region
             </DrawerTitle>
           </DrawerHeader>
-          <div className="p-6">
+          <div className="flex-1 overflow-y-auto p-6">
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
@@ -161,10 +175,12 @@ export function RegionEditDrawer({
               </AlertDescription>
             </Alert>
           </div>
-          <DrawerFooter className="border-t">
-            <Button onClick={handleClose} variant="outline">
-              Close
-            </Button>
+          <DrawerFooter className="flex-shrink-0 border-t">
+            <div className="flex gap-2 justify-end">
+              <Button onClick={handleClose} variant="outline">
+                Close
+              </Button>
+            </div>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
@@ -173,31 +189,19 @@ export function RegionEditDrawer({
 
   return (
     <Drawer open={open} onOpenChange={handleClose}>
-      <DrawerContent className="max-h-[90vh]">
-        <DrawerHeader className="border-b">
-          <div className="flex items-center justify-between">
-            <div>
-              <DrawerTitle className="flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                Edit Region
-              </DrawerTitle>
-              <DrawerDescription>
-                Update region configuration and country selection
-              </DrawerDescription>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleClose}
-              disabled={loading}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+      <DrawerContent>
+        <DrawerHeader className="flex-shrink-0">
+          <DrawerTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            Edit Region
+          </DrawerTitle>
+          <DrawerDescription>
+            Update region configuration and country selection
+          </DrawerDescription>
         </DrawerHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1">
-          <ScrollArea className="flex-1 px-6 py-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="flex-1 overflow-y-auto p-6">
             <div className="space-y-6">
               {/* Region Template Info */}
               <div className="space-y-4">
@@ -382,25 +386,31 @@ export function RegionEditDrawer({
                 </div>
               </div>
             </div>
-          </ScrollArea>
+          </div>
 
-          <DrawerFooter className="border-t">
-            <div className="flex gap-2">
+          <DrawerFooter className="flex-shrink-0 border-t">
+            <div className="flex gap-2 justify-end">
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={handleClose}
                 disabled={loading}
-                className="flex-1"
               >
                 Cancel
               </Button>
               <Button 
                 type="submit" 
-                disabled={loading || formData.selectedCountries.length === 0}
-                className="flex-1"
+                disabled={loading || !hasChanges || formData.selectedCountries.length === 0}
+                className="min-w-[120px]"
               >
-                {loading ? 'Saving...' : 'Save Changes'}
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
               </Button>
             </div>
           </DrawerFooter>
