@@ -150,27 +150,11 @@ export const platformNavItems: PlatformNavItem[] = [
     group: 'operations'
   },
   {
-    title: 'Regions',
-    href: '/platform/regions',
+    title: 'Regions & Markets',
+    href: '/platform/regions-management',
     color: 'blue',
-    description: 'Manage regions, countries, currencies, and tax configurations.',
+    description: 'Manage regions, currencies, countries, and shipping in one place.',
     icon: Globe,
-    group: 'operations'
-  },
-  {
-    title: 'Countries',
-    href: '/platform/countries',
-    color: 'teal',
-    description: 'Manage country configurations and settings.',
-    icon: MapPin,
-    group: 'operations'
-  },
-  {
-    title: 'Currencies',
-    href: '/platform/currencies',
-    color: 'green',
-    description: 'Manage currency configurations and exchange rates.',
-    icon: DollarSign,
     group: 'operations'
   },
 

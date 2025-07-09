@@ -75,7 +75,7 @@ export function RegionalTabs({ regions, selectedRegion, className }: RegionalTab
       </Tabs>
 
       {/* Currency conversion toggle - only show when "All Regions" is selected */}
-      {currentTab === 'all' && (
+      {/* {currentTab === 'all' && (
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">Convert to:</span>
           <ToggleGroup 
@@ -95,7 +95,7 @@ export function RegionalTabs({ regions, selectedRegion, className }: RegionalTab
             ))}
           </ToggleGroup>
         </div>
-      )}
+      )} */}
     </div>
   );
 }

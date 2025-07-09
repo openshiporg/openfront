@@ -42,7 +42,9 @@
       "Bash(for:*)",
       "Bash(do echo \"=== $file ===\")",
       "Bash(done)",
-      "Bash(true)"
+      "Bash(true)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:localhost)"
     ],
     "deny": []
   }

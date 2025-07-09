@@ -9,13 +9,16 @@ import React, { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   SearchX,
-  Table as TableIcon 
+  Table as TableIcon,
+  CirclePlus
 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import { PageContainer } from '../../../dashboard/components/PageContainer'
 import { PlatformFilterBar } from '../../components/PlatformFilterBar'
-import { StatusTabs } from '../../components/StatusTabs'
+import { RegionStatusTabs } from '../components/RegionStatusTabs'
 import { RegionDetailsComponent } from '../components/RegionDetailsComponent'
+import { RegionCreateDrawer } from '../components/RegionCreateDrawer'
 import { Pagination } from '../../../dashboard/components/Pagination'
 import { FilterList } from '../../../dashboard/components/FilterList'
 import { useDashboard } from '../../../dashboard/context/DashboardProvider'
@@ -71,6 +74,8 @@ export function RegionListPageClient({
 }: RegionListPageClientProps) {
   const router = useRouter()
   const { basePath } = useDashboard()
+  const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false)
+  
   // Hooks for sorting and field selection
   const selectedFields = useSelectedFields(list)
   const sort = useSort(list)
@@ -117,12 +122,22 @@ export function RegionListPageClient({
   const header = (
     <div>
       <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-50">
-        Regions
+        Regions & Market Configuration
       </h1>
       <p className="text-muted-foreground">
-        Create and manage regions
+        Manage your global markets, currencies, and shipping setup
       </p>
     </div>
+  )
+
+  const customCreateButton = (
+    <Button 
+      onClick={() => setIsCreateDrawerOpen(true)}
+      className="flex items-center gap-2"
+    >
+      <CirclePlus className="h-4 w-4" />
+      New Region
+    </Button>
   )
 
   // Check if we have any active filters (search or actual filters)
@@ -134,27 +149,17 @@ export function RegionListPageClient({
     <PageContainer title="Regions" header={header} breadcrumbs={breadcrumbs}>
       {/* Filter Bar - includes search, filters, sorting, and create button */}
       <div className="px-4 md:px-6">
-        <PlatformFilterBar list={list} />
+        <PlatformFilterBar 
+          list={list} 
+          customCreateButton={customCreateButton}
+        />
       </div>
 
       {/* Status Tabs */}
       {statusCounts && (
-        <div className="border-b">
-          <StatusTabs 
-            statusCounts={statusCounts}
-            statusConfig={{
-                      "active": {
-                                "label": "Active",
-                                "color": "emerald"
-                      },
-                      "inactive": {
-                                "label": "Inactive",
-                                "color": "zinc"
-                      }
-            }}
-            entityName="Regions"
-          />
-        </div>
+        <RegionStatusTabs 
+          statusCounts={statusCounts}
+        />
       )}
 
       {/* Active Filters */}
@@ -201,6 +206,16 @@ export function RegionListPageClient({
           )}
         </>
       )}
+      
+      {/* Custom Create Drawer */}
+      <RegionCreateDrawer
+        open={isCreateDrawerOpen}
+        onClose={() => setIsCreateDrawerOpen(false)}
+        onCreate={() => {
+          // Refresh the page after creating a region
+          router.refresh()
+        }}
+      />
     </PageContainer>
   )
 }

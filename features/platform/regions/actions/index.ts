@@ -7,18 +7,18 @@ import { keystoneClient } from "../../../dashboard/lib/keystoneClient";
 export interface Region {
   id: string;
   name: string;
-  code?: string;
+  code: string;
   createdAt: string;
   updatedAt?: string;
-  taxRate?: number;
-  automaticTaxes?: boolean;
-  currency?: {
+  taxRate: number;
+  automaticTaxes: boolean;
+  currency: {
     id: string;
     code: string;
     symbol: string;
     symbolNative: string;
   };
-  countries?: Array<{
+  countries: Array<{
     id: string;
     iso2: string;
     displayName: string;
@@ -28,6 +28,11 @@ export interface Region {
     name: string;
     code: string;
     isInstalled: boolean;
+  }>;
+  fulfillmentProviders?: Array<{
+    id: string;
+    name: string;
+    code: string;
   }>;
   [key: string]: unknown;
 }
@@ -50,6 +55,9 @@ export async function getRegions(
     }
     paymentProviders {
       id name code isInstalled
+    }
+    fulfillmentProviders {
+      id name code
     }
   `
 ) {
@@ -100,9 +108,13 @@ export async function getFilteredRegions(
   // Build where clause
   const where: Record<string, any> = {};
   
-  // Status filtering
+  // Status filtering based on countries relationship
   if (status && status !== 'all') {
-    where.status = { equals: status };
+    if (status === 'active') {
+      where.countries = { some: {} }; // Has at least one country
+    } else if (status === 'inactive') {
+      where.countries = { none: {} }; // Has no countries
+    }
   }
   
   // Search filtering (adjust fields as needed)
@@ -151,6 +163,7 @@ export async function getRegion(id: string) {
         currency { id code symbol symbolNative }
         countries { id iso2 displayName }
         paymentProviders { id name code isInstalled }
+        fulfillmentProviders { id name code }
       }
     }
   `;
@@ -182,18 +195,14 @@ export async function getRegion(id: string) {
 
 /**
  * Get region status counts for StatusTabs
+ * Since Region model doesn't have a status field, we'll use simpler metrics
  */
 export async function getRegionStatusCounts() {
-  const statusKeys = ["active","inactive"];
-  
-  const statusQueries = statusKeys.map(status => 
-    `${status}: regionsCount(where: { status: { equals: ${status} } })`
-  ).join('\n      ');
-  
   const query = `
     query GetRegionStatusCounts {
-      ${statusQueries}
       all: regionsCount
+      withCountries: regionsCount(where: { countries: { some: {} } })
+      withoutCountries: regionsCount(where: { countries: { none: {} } })
     }
   `;
 
@@ -202,11 +211,9 @@ export async function getRegionStatusCounts() {
   if (response.success) {
     const counts: Record<string, number> = {
       all: response.data.all || 0,
+      active: response.data.withCountries || 0, // Regions with countries are "active"
+      inactive: response.data.withoutCountries || 0, // Regions without countries are "inactive"
     };
-    
-    statusKeys.forEach(status => {
-      counts[status] = response.data[status] || 0;
-    });
     
     return {
       success: true,
@@ -216,11 +223,9 @@ export async function getRegionStatusCounts() {
     console.error('Error fetching region status counts:', response.error);
     const emptyCounts: Record<string, number> = {
       all: 0,
+      active: 0,
+      inactive: 0,
     };
-    
-    statusKeys.forEach(status => {
-      emptyCounts[status] = 0;
-    });
     
     return {
       success: false,
@@ -231,37 +236,40 @@ export async function getRegionStatusCounts() {
 }
 
 /**
- * Update region status
+ * Update region basic info
  */
-export async function updateRegionStatus(id: string, status: string) {
+export async function updateRegion(id: string, data: { name?: string; code?: string; taxRate?: number }) {
   const mutation = `
-    mutation UpdateRegionStatus($id: ID!, $data: RegionUpdateInput!) {
+    mutation UpdateRegion($id: ID!, $data: RegionUpdateInput!) {
       updateRegion(where: { id: $id }, data: $data) {
         id
-        status
+        name
+        code
+        taxRate
       }
     }
   `;
 
   const response = await keystoneClient(mutation, {
     id,
-    data: { status },
+    data,
   });
 
   if (response.success) {
-    // Revalidate the region page to reflect the status change
+    // Revalidate the region page to reflect the changes
     revalidatePath(`/dashboard/platform/regions/${id}`);
     revalidatePath('/dashboard/platform/regions');
+    revalidatePath('/dashboard/platform/regions-management');
 
     return {
       success: true,
       data: response.data.updateRegion,
     };
   } else {
-    console.error('Error updating region status:', response.error);
+    console.error('Error updating region:', response.error);
     return {
       success: false,
-      error: response.error || 'Failed to update region status',
+      error: response.error || 'Failed to update region',
       data: null,
     };
   }
