@@ -20,10 +20,30 @@ import {
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
+const Square = ({
+  className,
+  children,
+}: {
+  className?: string
+  children: React.ReactNode
+}) => (
+  <span
+    data-square
+    className={cn(
+      "bg-indigo-400/20 text-indigo-500 flex size-5 items-center justify-center rounded text-xs font-medium",
+      className
+    )}
+    aria-hidden="true"
+  >
+    {children}
+  </span>
+)
+
 export interface SingleSelectOption {
   value: string
   label: string
   flag?: string
+  square?: string // For currency symbols in squares
   disable?: boolean
   [key: string]: any
 }
@@ -38,6 +58,7 @@ interface SingleSelectProps {
   className?: string
   label?: string
   searchPlaceholder?: string
+  showSquare?: boolean // Whether to show currency symbols in squares
   groupedOptions?: Array<{
     continent: string
     items: SingleSelectOption[]
@@ -53,6 +74,7 @@ export default function SingleSelect({
   className,
   label,
   searchPlaceholder = "Search options...",
+  showSquare = false,
   options = [],
   groupedOptions,
 }: SingleSelectProps) {
@@ -93,9 +115,11 @@ export default function SingleSelect({
           >
             {selectedOption ? (
               <span className="flex min-w-0 items-center gap-2">
-                {selectedOption.flag && (
+                {showSquare && selectedOption.square ? (
+                  <Square>{selectedOption.square}</Square>
+                ) : selectedOption.flag ? (
                   <span className="text-lg leading-none">{selectedOption.flag}</span>
-                )}
+                ) : null}
                 <span className="truncate">{selectedOption.label}</span>
               </span>
             ) : (
@@ -131,11 +155,13 @@ export default function SingleSelect({
                           disabled={option.disable}
                           onSelect={() => handleSelect(option.value)}
                         >
-                          {option.flag && (
+                          {showSquare && option.square ? (
+                            <Square className="mr-2">{option.square}</Square>
+                          ) : option.flag ? (
                             <span className="text-lg leading-none mr-2">
                               {option.flag}
                             </span>
-                          )}
+                          ) : null}
                           {option.label}
                           {value === option.value && (
                             <CheckIcon size={16} className="ml-auto" />
@@ -155,11 +181,13 @@ export default function SingleSelect({
                       disabled={option.disable}
                       onSelect={() => handleSelect(option.value)}
                     >
-                      {option.flag && (
+                      {showSquare && option.square ? (
+                        <Square className="mr-2">{option.square}</Square>
+                      ) : option.flag ? (
                         <span className="text-lg leading-none mr-2">
                           {option.flag}
                         </span>
-                      )}
+                      ) : null}
                       {option.label}
                       {value === option.value && (
                         <CheckIcon size={16} className="ml-auto" />

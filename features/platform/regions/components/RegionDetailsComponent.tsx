@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MoreVertical, ChevronsUpDown, DollarSign, MapPin, CreditCard, Truck } from "lucide-react";
 import Link from "next/link";
-// Removed custom RegionEditDrawer - using standard edit drawers for individual components
+import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 import { ItemPagination } from "../../orders/components/ItemPagination";
 
 interface Region {
@@ -143,6 +143,7 @@ export function RegionDetailsComponent({
   region,
   list,
 }: RegionDetailsComponentProps) {
+  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   
   // Determine if region is "active" based on whether it has countries
   const isActive = region.countries && region.countries.length > 0;
@@ -216,10 +217,7 @@ export function RegionDetailsComponent({
                     variant="secondary"
                     size="icon"
                     className="border [&_svg]:size-3 h-6 w-6"
-                    onClick={() => {
-                      // TODO: Add region overview edit functionality
-                      // For now, users can edit individual components below
-                    }}
+                    onClick={() => setIsEditDrawerOpen(true)}
                   >
                     <MoreVertical className="stroke-muted-foreground" />
                   </Button>
@@ -387,7 +385,16 @@ export function RegionDetailsComponent({
         </AccordionItem>
       </Accordion>
 
-      {/* Individual edit drawers will be added to each collapsible section */}
+      {/* Edit Region Drawer */}
+      <EditItemDrawerClientWrapper
+        listKey="regions"
+        itemId={region.id}
+        open={isEditDrawerOpen}
+        onClose={() => setIsEditDrawerOpen(false)}
+        onSave={() => {
+          // Refresh will be handled by the parent component
+        }}
+      />
     </>
   );
 }

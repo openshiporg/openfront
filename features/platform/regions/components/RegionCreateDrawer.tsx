@@ -95,7 +95,7 @@ export function RegionCreateDrawer({
     return ALL_CURRENCIES.map(currency => ({
       value: currency.code,
       label: currency.name,
-      flag: currency.symbol,
+      square: currency.symbol,
     }))
   }
 
@@ -257,6 +257,7 @@ export function RegionCreateDrawer({
                       placeholder="Choose a currency"
                       searchPlaceholder="Search currencies..."
                       emptyIndicator="No currencies found"
+                      showSquare={true}
                     />
                   </div>
 
