@@ -199,6 +199,7 @@ export function RegionListPageClient({
       <RegionCreateDrawer
         open={isCreateDrawerOpen}
         onClose={() => setIsCreateDrawerOpen(false)}
+        existingRegions={data?.items?.map(item => ({ code: item.code })) || []}
         onCreate={() => {
           // Refresh the page after creating a region
           router.refresh()

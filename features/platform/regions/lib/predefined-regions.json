@@ -212,9 +212,9 @@
       "name": "Asia Pacific",
       "description": "Asia Pacific developed markets",
       "currency": {
-        "code": "USD",
-        "symbol": "$",
-        "name": "US Dollar"
+        "code": "AUD",
+        "symbol": "A$",
+        "name": "Australian Dollar"
       },
       "defaultTaxRate": 0.10,
       "countries": [
@@ -634,6 +634,91 @@
         }
       ],
       "defaultPaymentProviders": [
+        { "code": "pp_system_default", "name": "Manual Payment" }
+      ],
+      "defaultFulfillmentProviders": [
+        { "code": "fp_manual", "name": "Manual Fulfillment" }
+      ]
+    },
+    {
+      "code": "japan",
+      "name": "Japan",
+      "description": "Japanese market",
+      "currency": {
+        "code": "JPY",
+        "symbol": "¥",
+        "name": "Japanese Yen"
+      },
+      "defaultTaxRate": 0.10,
+      "countries": [
+        {
+          "iso2": "jp",
+          "iso3": "jpn",
+          "numCode": 392,
+          "name": "Japan",
+          "displayName": "Japan",
+          "flag": "🇯🇵"
+        }
+      ],
+      "defaultPaymentProviders": [
+        { "code": "pp_stripe_stripe", "name": "Stripe" },
+        { "code": "pp_system_default", "name": "Manual Payment" }
+      ],
+      "defaultFulfillmentProviders": [
+        { "code": "fp_manual", "name": "Manual Fulfillment" }
+      ]
+    },
+    {
+      "code": "south_korea",
+      "name": "South Korea",
+      "description": "South Korean market",
+      "currency": {
+        "code": "KRW",
+        "symbol": "₩",
+        "name": "South Korean Won"
+      },
+      "defaultTaxRate": 0.10,
+      "countries": [
+        {
+          "iso2": "kr",
+          "iso3": "kor",
+          "numCode": 410,
+          "name": "South Korea",
+          "displayName": "South Korea",
+          "flag": "🇰🇷"
+        }
+      ],
+      "defaultPaymentProviders": [
+        { "code": "pp_stripe_stripe", "name": "Stripe" },
+        { "code": "pp_system_default", "name": "Manual Payment" }
+      ],
+      "defaultFulfillmentProviders": [
+        { "code": "fp_manual", "name": "Manual Fulfillment" }
+      ]
+    },
+    {
+      "code": "singapore",
+      "name": "Singapore",
+      "description": "Singapore market",
+      "currency": {
+        "code": "SGD",
+        "symbol": "S$",
+        "name": "Singapore Dollar"
+      },
+      "defaultTaxRate": 0.07,
+      "countries": [
+        {
+          "iso2": "sg",
+          "iso3": "sgp",
+          "numCode": 702,
+          "name": "Singapore",
+          "displayName": "Singapore",
+          "flag": "🇸🇬"
+        }
+      ],
+      "defaultPaymentProviders": [
+        { "code": "pp_stripe_stripe", "name": "Stripe" },
+        { "code": "pp_paypal_paypal", "name": "PayPal" },
         { "code": "pp_system_default", "name": "Manual Payment" }
       ],
       "defaultFulfillmentProviders": [

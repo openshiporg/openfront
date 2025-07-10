@@ -11,13 +11,10 @@ import {
   DrawerFooter 
 } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Separator } from '@/components/ui/separator'
-import { Globe, DollarSign, CreditCard, Truck, Check, Loader2 } from 'lucide-react'
+import SingleSelect, { SingleSelectOption } from '@/components/ui/single-select'
+import MultipleSelector, { Option } from '@/components/ui/multiselect'
+import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import predefinedRegions from '../lib/predefined-regions.json'
 
@@ -25,84 +22,133 @@ interface RegionCreateDrawerProps {
   open: boolean
   onClose: () => void
   onCreate?: (newRegion: any) => void
+  existingRegions?: Array<{ code: string }>
 }
+
+// Extract all unique currencies from predefined regions
+const getAllCurrencies = () => {
+  const uniqueCurrencies = new Map()
+  predefinedRegions.regions.forEach(region => {
+    const currency = region.currency
+    if (!uniqueCurrencies.has(currency.code)) {
+      uniqueCurrencies.set(currency.code, {
+        code: currency.code.toLowerCase(),
+        symbol: currency.symbol,
+        name: currency.name
+      })
+    }
+  })
+  return Array.from(uniqueCurrencies.values())
+}
+
+const ALL_CURRENCIES = getAllCurrencies()
+
+// Available fulfillment providers from onboarding
+const FULFILLMENT_PROVIDERS = [
+  { code: 'fp_manual', name: 'Manual Fulfillment' },
+  { code: 'standard_shipping', name: 'Standard Shipping' },
+  { code: 'express_shipping', name: 'Express Shipping' },
+  { code: 'return_shipping', name: 'Return Shipping' },
+]
+
+// Available payment providers
+const PAYMENT_PROVIDERS = [
+  { code: 'pp_stripe_stripe', name: 'Stripe' },
+  { code: 'pp_paypal_paypal', name: 'PayPal' },
+  { code: 'pp_system_default', name: 'Manual Payment' },
+]
 
 export function RegionCreateDrawer({ 
   open, 
   onClose, 
-  onCreate 
+  onCreate,
+  existingRegions = []
 }: RegionCreateDrawerProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState<string>('')
-  const [formData, setFormData] = useState({
-    name: '',
-    code: '',
-    taxRate: 0,
-    currencyCode: '',
-    currencySymbol: '',
-    currencyName: '',
-    selectedCountries: [] as string[],
-    selectedPaymentProviders: [] as string[],
-    selectedFulfillmentProviders: [] as string[]
-  })
+  const [selectedCurrency, setSelectedCurrency] = useState<string>('')
+  
+  // Multi-select states
+  const [selectedCountries, setSelectedCountries] = useState<Option[]>([])
+  const [selectedPaymentProviders, setSelectedPaymentProviders] = useState<Option[]>([])
+  const [selectedFulfillmentProviders, setSelectedFulfillmentProviders] = useState<Option[]>([])
+
+  // Filter out existing regions from presets
+  const availablePresets = predefinedRegions.regions.filter(
+    region => !existingRegions.some(existing => existing.code === region.code)
+  )
 
   const selectedRegion = predefinedRegions.regions.find(r => r.code === selectedPreset)
+
+  // Get region options for single select
+  const getRegionOptions = (): SingleSelectOption[] => {
+    return availablePresets.map(region => ({
+      value: region.code,
+      label: region.name,
+      flag: getRegionIcon(region.code),
+    }))
+  }
+
+  // Get currency options for single select
+  const getCurrencyOptions = (): SingleSelectOption[] => {
+    return ALL_CURRENCIES.map(currency => ({
+      value: currency.code,
+      label: currency.name,
+      flag: currency.symbol,
+    }))
+  }
+
+  // Convert preset data to Option format for multi-selects
+  const getCountryOptions = (region: any): Option[] => {
+    return region?.countries.map((country: any) => ({
+      value: country.iso2,
+      label: country.displayName,
+      flag: country.flag,
+    })) || []
+  }
+
+  const getPaymentProviderOptions = (): Option[] => {
+    return PAYMENT_PROVIDERS.map((provider) => ({
+      value: provider.code,
+      label: provider.name,
+    }))
+  }
+
+  const getFulfillmentProviderOptions = (): Option[] => {
+    return FULFILLMENT_PROVIDERS.map((provider) => ({
+      value: provider.code,
+      label: provider.name,
+    }))
+  }
 
   const handlePresetSelect = useCallback((presetCode: string) => {
     const preset = predefinedRegions.regions.find(r => r.code === presetCode)
     if (preset) {
       setSelectedPreset(presetCode)
-      setFormData({
-        name: preset.name,
-        code: preset.code,
-        taxRate: preset.defaultTaxRate * 100, // Convert to percentage
-        currencyCode: preset.currency.code,
-        currencySymbol: preset.currency.symbol,
-        currencyName: preset.currency.name,
-        selectedCountries: preset.countries.map(c => c.iso2),
-        selectedPaymentProviders: preset.defaultPaymentProviders.map(p => p.code),
-        selectedFulfillmentProviders: preset.defaultFulfillmentProviders.map(f => f.code)
-      })
+      setSelectedCurrency(preset.currency.code.toLowerCase())
+      
+      // Pre-select all options from the preset
+      setSelectedCountries(getCountryOptions(preset))
+      setSelectedPaymentProviders(getPaymentProviderOptions()) // Default to all
+      setSelectedFulfillmentProviders(getFulfillmentProviderOptions()) // Default to all
     }
-  }, [])
-
-  const handleCountryToggle = useCallback((countryCode: string) => {
-    setFormData(prev => ({
-      ...prev,
-      selectedCountries: prev.selectedCountries.includes(countryCode)
-        ? prev.selectedCountries.filter(c => c !== countryCode)
-        : [...prev.selectedCountries, countryCode]
-    }))
-  }, [])
-
-  const handlePaymentProviderToggle = useCallback((providerCode: string) => {
-    setFormData(prev => ({
-      ...prev,
-      selectedPaymentProviders: prev.selectedPaymentProviders.includes(providerCode)
-        ? prev.selectedPaymentProviders.filter(p => p !== providerCode)
-        : [...prev.selectedPaymentProviders, providerCode]
-    }))
-  }, [])
-
-  const handleFulfillmentProviderToggle = useCallback((providerCode: string) => {
-    setFormData(prev => ({
-      ...prev,
-      selectedFulfillmentProviders: prev.selectedFulfillmentProviders.includes(providerCode)
-        ? prev.selectedFulfillmentProviders.filter(f => f !== providerCode)
-        : [...prev.selectedFulfillmentProviders, providerCode]
-    }))
   }, [])
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!selectedRegion) {
+    if (!selectedPreset) {
       toast.error('Please select a region preset')
       return
     }
     
-    if (formData.selectedCountries.length === 0) {
+    if (!selectedCurrency) {
+      toast.error('Please select a currency')
+      return
+    }
+    
+    if (selectedCountries.length === 0) {
       toast.error('Please select at least one country')
       return
     }
@@ -110,12 +156,20 @@ export function RegionCreateDrawer({
     setLoading(true)
     
     try {
-      // Here you would call your region creation API
-      // For now, we'll simulate the API call
+      const regionData = {
+        preset: selectedPreset,
+        currency: selectedCurrency,
+        selectedCountries: selectedCountries.map(c => c.value),
+        selectedPaymentProviders: selectedPaymentProviders.map(p => p.value),
+        selectedFulfillmentProviders: selectedFulfillmentProviders.map(f => f.value)
+      }
+      
+      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000))
       
-      toast.success(`Region "${formData.name}" created successfully`)
-      onCreate?.(formData)
+      const regionName = selectedRegion?.name || 'New Region'
+      toast.success(`Region "${regionName}" created successfully`)
+      onCreate?.(regionData)
       onClose()
       router.refresh()
     } catch (error) {
@@ -123,38 +177,55 @@ export function RegionCreateDrawer({
     } finally {
       setLoading(false)
     }
-  }, [formData, selectedRegion, onCreate, onClose, router])
+  }, [selectedPreset, selectedCurrency, selectedCountries, selectedPaymentProviders, selectedFulfillmentProviders, selectedRegion, onCreate, onClose, router])
 
   const handleClose = useCallback(() => {
     if (!loading) {
       setSelectedPreset('')
-      setFormData({
-        name: '',
-        code: '',
-        taxRate: 0,
-        currencyCode: '',
-        currencySymbol: '',
-        currencyName: '',
-        selectedCountries: [],
-        selectedPaymentProviders: [],
-        selectedFulfillmentProviders: []
-      })
+      setSelectedCurrency('')
+      setSelectedCountries([])
+      setSelectedPaymentProviders([])
+      setSelectedFulfillmentProviders([])
       onClose()
     }
   }, [loading, onClose])
 
-  const hasChanges = selectedPreset !== '' || formData.selectedCountries.length > 0
+  // Get region icons/emojis
+  const getRegionIcon = (regionCode: string) => {
+    const iconMap: Record<string, string> = {
+      'us': '🇺🇸',
+      'na': '🇺🇸',
+      'eu': '🇪🇺', 
+      'uk': '🇬🇧',
+      'ca': '🇨🇦',
+      'au': '🇦🇺',
+      'apac': '🇦🇺',
+      'jp': '🇯🇵',
+      'japan': '🇯🇵',
+      'kr': '🇰🇷',
+      'south_korea': '🇰🇷',
+      'sg': '🇸🇬',
+      'singapore': '🇸🇬',
+      'in': '🇮🇳',
+      'india': '🇮🇳',
+      'br': '🇧🇷',
+      'latam': '🇧🇷',
+      'mx': '🇲🇽',
+      'nordics': '🇸🇪',
+      'mena': '🇦🇪',
+      'africa': '🇿🇦',
+      'china': '🇨🇳'
+    }
+    return iconMap[regionCode] || '🌍'
+  }
 
   return (
     <Drawer open={open} onOpenChange={handleClose}>
       <DrawerContent>
         <DrawerHeader className="flex-shrink-0">
-          <DrawerTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5" />
-            Create New Region
-          </DrawerTitle>
+          <DrawerTitle>Create New Region</DrawerTitle>
           <DrawerDescription>
-            Select a region preset and customize countries for your market expansion
+            Select a region preset and customize the configuration for your market
           </DrawerDescription>
         </DrawerHeader>
 
@@ -162,196 +233,70 @@ export function RegionCreateDrawer({
           <div className="flex-1 overflow-y-auto p-6">
             <div className="space-y-6">
               {/* Region Preset Selection */}
-              <div className="space-y-4">
-                <Label className="text-sm font-medium">Select Region Preset</Label>
-                <RadioGroup value={selectedPreset} onValueChange={handlePresetSelect}>
-                  <div className="grid grid-cols-1 gap-3">
-                    {predefinedRegions.regions.map(region => (
-                      <div key={region.code} className="flex items-center space-x-3">
-                        <RadioGroupItem value={region.code} id={region.code} />
-                        <Label 
-                          htmlFor={region.code} 
-                          className="flex-1 cursor-pointer p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <div className="font-medium">{region.name}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {region.description}
-                              </div>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-xs">
-                                  {region.countries.map(c => c.flag).join(' ')}
-                                </span>
-                                <span className="text-xs text-muted-foreground">
-                                  {region.currency.symbol} {region.currency.code}
-                                </span>
-                              </div>
-                            </div>
-                            <Badge variant="secondary" className="text-xs">
-                              {region.countries.length} {region.countries.length === 1 ? 'country' : 'countries'}
-                            </Badge>
-                          </div>
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </RadioGroup>
+              <div>
+                <SingleSelect
+                  label="Region Preset"
+                  value={selectedPreset}
+                  onChange={handlePresetSelect}
+                  options={getRegionOptions()}
+                  placeholder="Choose a region preset"
+                  searchPlaceholder="Search regions..."
+                  emptyIndicator="No regions found"
+                />
               </div>
 
               {selectedRegion && (
                 <>
-                  <Separator />
-                  
-                  {/* Basic Information */}
-                  <div className="space-y-4">
-                    <Label className="text-sm font-medium">Basic Information</Label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="name" className="text-sm">Region Name</Label>
-                        <Input
-                          id="name"
-                          value={formData.name}
-                          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                          placeholder="Region name"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="code" className="text-sm">Region Code</Label>
-                        <Input
-                          id="code"
-                          value={formData.code}
-                          onChange={(e) => setFormData(prev => ({ ...prev, code: e.target.value }))}
-                          placeholder="Region code"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="taxRate" className="text-sm">Tax Rate (%)</Label>
-                      <Input
-                        id="taxRate"
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.01"
-                        value={formData.taxRate}
-                        onChange={(e) => setFormData(prev => ({ ...prev, taxRate: parseFloat(e.target.value) || 0 }))}
-                        placeholder="Tax rate"
-                        required
-                      />
-                    </div>
+                  {/* Currency Selection */}
+                  <div>
+                    <SingleSelect
+                      label="Currency"
+                      value={selectedCurrency}
+                      onChange={setSelectedCurrency}
+                      options={getCurrencyOptions()}
+                      placeholder="Choose a currency"
+                      searchPlaceholder="Search currencies..."
+                      emptyIndicator="No currencies found"
+                    />
                   </div>
 
-                  {/* Currency Configuration */}
-                  <div className="space-y-4">
-                    <Label className="text-sm font-medium flex items-center gap-2">
-                      <DollarSign className="h-4 w-4" />
-                      Currency Configuration
-                    </Label>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <Label htmlFor="currencyCode" className="text-sm">Currency Code</Label>
-                        <Input
-                          id="currencyCode"
-                          value={formData.currencyCode}
-                          onChange={(e) => setFormData(prev => ({ ...prev, currencyCode: e.target.value }))}
-                          placeholder="USD"
-                          required
-                          readOnly
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="currencySymbol" className="text-sm">Symbol</Label>
-                        <Input
-                          id="currencySymbol"
-                          value={formData.currencySymbol}
-                          onChange={(e) => setFormData(prev => ({ ...prev, currencySymbol: e.target.value }))}
-                          placeholder="$"
-                          required
-                          readOnly
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="currencyName" className="text-sm">Currency Name</Label>
-                        <Input
-                          id="currencyName"
-                          value={formData.currencyName}
-                          onChange={(e) => setFormData(prev => ({ ...prev, currencyName: e.target.value }))}
-                          placeholder="US Dollar"
-                          required
-                          readOnly
-                        />
-                      </div>
-                    </div>
+                  {/* Countries Multi-Select */}
+                  <div>
+                    <MultipleSelector
+                      label="Countries"
+                      value={selectedCountries}
+                      onChange={setSelectedCountries}
+                      options={getCountryOptions(selectedRegion)}
+                      placeholder="Select countries"
+                      searchPlaceholder="Search countries..."
+                      emptyIndicator={<p className="text-center text-sm">No countries found</p>}
+                    />
                   </div>
 
-                  {/* Country Selection */}
-                  <div className="space-y-4">
-                    <Label className="text-sm font-medium">Select Countries</Label>
-                    <div className="grid grid-cols-1 gap-2">
-                      {selectedRegion.countries.map(country => (
-                        <div key={country.iso2} className="flex items-center space-x-3">
-                          <Checkbox
-                            id={country.iso2}
-                            checked={formData.selectedCountries.includes(country.iso2)}
-                            onCheckedChange={() => handleCountryToggle(country.iso2)}
-                          />
-                          <Label htmlFor={country.iso2} className="flex-1 cursor-pointer">
-                            <div className="flex items-center gap-2">
-                              <span className="text-lg">{country.flag}</span>
-                              <span>{country.displayName}</span>
-                              <span className="text-sm text-muted-foreground">({country.iso2.toUpperCase()})</span>
-                            </div>
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
+                  {/* Payment Providers Multi-Select */}
+                  <div>
+                    <MultipleSelector
+                      label="Payment Providers"
+                      value={selectedPaymentProviders}
+                      onChange={setSelectedPaymentProviders}
+                      options={getPaymentProviderOptions()}
+                      placeholder="Select payment providers"
+                      searchPlaceholder="Search payment providers..."
+                      emptyIndicator={<p className="text-center text-sm">No payment providers found</p>}
+                    />
                   </div>
 
-                  {/* Payment Providers */}
-                  <div className="space-y-4">
-                    <Label className="text-sm font-medium flex items-center gap-2">
-                      <CreditCard className="h-4 w-4" />
-                      Payment Providers
-                    </Label>
-                    <div className="grid grid-cols-1 gap-2">
-                      {selectedRegion.defaultPaymentProviders.map(provider => (
-                        <div key={provider.code} className="flex items-center space-x-3">
-                          <Checkbox
-                            id={provider.code}
-                            checked={formData.selectedPaymentProviders.includes(provider.code)}
-                            onCheckedChange={() => handlePaymentProviderToggle(provider.code)}
-                          />
-                          <Label htmlFor={provider.code} className="flex-1 cursor-pointer">
-                            {provider.name}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Fulfillment Providers */}
-                  <div className="space-y-4">
-                    <Label className="text-sm font-medium flex items-center gap-2">
-                      <Truck className="h-4 w-4" />
-                      Fulfillment Providers
-                    </Label>
-                    <div className="grid grid-cols-1 gap-2">
-                      {selectedRegion.defaultFulfillmentProviders.map(provider => (
-                        <div key={provider.code} className="flex items-center space-x-3">
-                          <Checkbox
-                            id={provider.code}
-                            checked={formData.selectedFulfillmentProviders.includes(provider.code)}
-                            onCheckedChange={() => handleFulfillmentProviderToggle(provider.code)}
-                          />
-                          <Label htmlFor={provider.code} className="flex-1 cursor-pointer">
-                            {provider.name}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
+                  {/* Fulfillment Providers Multi-Select */}
+                  <div>
+                    <MultipleSelector
+                      label="Fulfillment & Shipping"
+                      value={selectedFulfillmentProviders}
+                      onChange={setSelectedFulfillmentProviders}
+                      options={getFulfillmentProviderOptions()}
+                      placeholder="Select fulfillment and shipping options"
+                      searchPlaceholder="Search fulfillment options..."
+                      emptyIndicator={<p className="text-center text-sm">No fulfillment options found</p>}
+                    />
                   </div>
                 </>
               )}
@@ -370,7 +315,7 @@ export function RegionCreateDrawer({
               </Button>
               <Button 
                 type="submit" 
-                disabled={loading || !selectedRegion || formData.selectedCountries.length === 0}
+                disabled={loading || !selectedPreset || !selectedCurrency || selectedCountries.length === 0}
                 className="min-w-[120px]"
               >
                 {loading ? (
