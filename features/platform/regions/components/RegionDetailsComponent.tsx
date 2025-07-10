@@ -11,8 +11,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MoreVertical } from "lucide-react";
 import Link from "next/link";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 import { ItemPagination } from "../../orders/components/ItemPagination";
+import { cn } from "@/lib/utils";
 
 interface Region {
   id: string;
@@ -52,6 +60,26 @@ interface RegionDetailsComponentProps {
 }
 
 type TabType = 'currency' | 'countries' | 'payment' | 'fulfillment';
+
+// Square component for currency symbols
+const Square = ({
+  className,
+  children,
+}: {
+  className?: string
+  children: React.ReactNode
+}) => (
+  <span
+    data-square
+    className={cn(
+      "bg-indigo-400/20 text-indigo-500 flex size-5 items-center justify-center rounded text-xs font-medium border",
+      className
+    )}
+    aria-hidden="true"
+  >
+    {children}
+  </span>
+)
 
 // Get country flag from react-flags or fallback to emoji
 function getCountryFlag(countryCode: string): string {
@@ -286,10 +314,10 @@ export function RegionDetailsComponent({
             </div>
           </div>
           <AccordionContent className="pb-0">
-            {/* Horizontal Tabs Navigation */}
+            {/* Responsive Tabs Navigation */}
             <div className="bg-muted/80 border-b">
-              {/* Horizontal Tab Buttons */}
-              <div className="flex items-center gap-3 px-4 py-2">
+              {/* Desktop: Horizontal Tab Buttons */}
+              <div className="hidden md:flex items-center gap-3 px-4 py-2">
                 {tabs.map((tab) => (
                   <button
                     key={tab.key}
@@ -313,6 +341,30 @@ export function RegionDetailsComponent({
                   </button>
                 ))}
               </div>
+
+              {/* Mobile: Select Dropdown */}
+              <div className="md:hidden px-4 py-2">
+                <div className="w-fit">
+                  <Select value={activeTab} onValueChange={(value: TabType) => setActiveTab(value)}>
+                    <SelectTrigger className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 h-auto w-auto">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                        <SelectValue />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tabs.map((tab) => (
+                        <SelectItem key={tab.key} value={tab.key} className="text-xs">
+                          {tab.key === 'currency' && 'Currency'}
+                          {tab.key === 'countries' && 'Countries'}
+                          {tab.key === 'payment' && 'Payment Providers'}
+                          {tab.key === 'fulfillment' && 'Fulfillment Providers'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
             
             {/* Tab Content Area */}
@@ -332,147 +384,153 @@ export function RegionDetailsComponent({
                     </div>
                   )}
 
-                  <div className="p-4 pt-2 space-y-2">
+                  <div className="p-4 pt-2">
                     {/* Currency Tab */}
-                    {activeTab === 'currency' && 
-                      currencyData.slice(
-                        (currentPages.currency - 1) * itemsPerPage,
-                        currentPages.currency * itemsPerPage
-                      ).map((currency, index) => (
-                        <div key={index} className="rounded-md border bg-background p-2 shadow-sm">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <span className="text-2xl">{currency.symbol}</span>
-                              <div>
-                                <div className="text-sm font-medium">{currency.code.toUpperCase()}</div>
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <span>Tax Rate: {(currency.taxRate * 100).toFixed(1)}%</span>
-                                  <span>‧</span>
-                                  <div className="flex items-center gap-1">
-                                    <div className={`w-2 h-2 rounded-full ${
-                                      currency.automaticTaxes ? 'bg-green-500' : 'bg-red-500'
-                                    }`}></div>
-                                    <span>{currency.automaticTaxes ? 'automatic taxes' : 'no automatic taxes'}</span>
+                    {activeTab === 'currency' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {currencyData.slice(
+                          (currentPages.currency - 1) * itemsPerPage,
+                          currentPages.currency * itemsPerPage
+                        ).map((currency, index) => (
+                          <div key={index} className="rounded-md border bg-background p-2 shadow-sm">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <Square className="shrink-0">{currency.symbol}</Square>
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-sm font-medium truncate">{currency.code.toUpperCase()}</div>
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <span className="truncate">Tax Rate: {(currency.taxRate * 100).toFixed(1)}%</span>
+                                    <span>‧</span>
+                                    <div className="flex items-center gap-1 min-w-0">
+                                      <div className={`w-2 h-2 rounded-full shrink-0 ${
+                                        currency.automaticTaxes ? 'bg-green-500' : 'bg-red-500'
+                                      }`}></div>
+                                      <span className="truncate">{currency.automaticTaxes ? 'automatic taxes' : 'no automatic taxes'}</span>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-2">
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-6 w-6"
+                                className="h-6 w-6 shrink-0"
                                 onClick={() => setEditCurrencyOpen(true)}
                               >
                                 <MoreVertical className="h-3 w-3" />
                               </Button>
                             </div>
                           </div>
-                        </div>
-                      ))
-                    }
+                        ))}
+                      </div>
+                    )}
 
                     {/* Countries Tab */}
-                    {activeTab === 'countries' && 
-                      region.countries.slice(
-                        (currentPages.countries - 1) * itemsPerPage,
-                        currentPages.countries * itemsPerPage
-                      ).map((country, index) => (
-                        <div key={index} className="rounded-md border bg-background p-2 shadow-sm">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <span className="text-2xl">{getCountryFlag(country.iso2)}</span>
-                              <div>
-                                <div className="text-sm font-medium">{country.displayName}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {country.iso2.toUpperCase()}
+                    {activeTab === 'countries' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {region.countries.slice(
+                          (currentPages.countries - 1) * itemsPerPage,
+                          currentPages.countries * itemsPerPage
+                        ).map((country, index) => (
+                          <div key={index} className="rounded-md border bg-background p-2 shadow-sm">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <span className="text-2xl shrink-0">{getCountryFlag(country.iso2)}</span>
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-sm font-medium truncate">{country.displayName}</div>
+                                  <div className="text-xs text-muted-foreground truncate">
+                                    {country.iso2.toUpperCase()}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => {
-                                setEditCountryId(country.id);
-                                setEditCountryOpen(true);
-                              }}
-                            >
-                              <MoreVertical className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))
-                    }
-
-                    {/* Payment Providers Tab */}
-                    {activeTab === 'payment' && 
-                      paymentProviders.slice(
-                        (currentPages.payment - 1) * itemsPerPage,
-                        currentPages.payment * itemsPerPage
-                      ).map((provider, index) => (
-                        <div key={index} className="rounded-md border bg-background p-2 shadow-sm">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div>
-                                <div className="text-sm font-medium">{provider.name}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {provider.code}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant={provider.isInstalled ? "default" : "secondary"} className="text-xs">
-                                {provider.isInstalled ? "Installed" : "Available"}
-                              </Badge>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-6 w-6"
+                                className="h-6 w-6 shrink-0"
                                 onClick={() => {
-                                  setEditPaymentId(provider.id);
-                                  setEditPaymentOpen(true);
+                                  setEditCountryId(country.id);
+                                  setEditCountryOpen(true);
                                 }}
                               >
                                 <MoreVertical className="h-3 w-3" />
                               </Button>
                             </div>
                           </div>
-                        </div>
-                      ))
-                    }
+                        ))}
+                      </div>
+                    )}
 
-                    {/* Fulfillment Providers Tab */}
-                    {activeTab === 'fulfillment' && 
-                      fulfillmentProviders.slice(
-                        (currentPages.fulfillment - 1) * itemsPerPage,
-                        currentPages.fulfillment * itemsPerPage
-                      ).map((provider, index) => (
-                        <div key={index} className="rounded-md border bg-background p-2 shadow-sm">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div>
-                                <div className="text-sm font-medium">{provider.name}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {provider.code}
+                    {/* Payment Providers Tab */}
+                    {activeTab === 'payment' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {paymentProviders.slice(
+                          (currentPages.payment - 1) * itemsPerPage,
+                          currentPages.payment * itemsPerPage
+                        ).map((provider, index) => (
+                          <div key={index} className="rounded-md border bg-background p-2 shadow-sm">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-sm font-medium truncate">{provider.name}</div>
+                                  <div className="text-xs text-muted-foreground truncate">
+                                    {provider.code}
+                                  </div>
                                 </div>
                               </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <Badge variant={provider.isInstalled ? "default" : "secondary"} className="text-xs">
+                                  {provider.isInstalled ? "Installed" : "Available"}
+                                </Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
+                                  onClick={() => {
+                                    setEditPaymentId(provider.id);
+                                    setEditPaymentOpen(true);
+                                  }}
+                                >
+                                  <MoreVertical className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </div>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => {
-                                setEditFulfillmentId(provider.id);
-                                setEditFulfillmentOpen(true);
-                              }}
-                            >
-                              <MoreVertical className="h-3 w-3" />
-                            </Button>
                           </div>
-                        </div>
-                      ))
-                    }
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Fulfillment Providers Tab */}
+                    {activeTab === 'fulfillment' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {fulfillmentProviders.slice(
+                          (currentPages.fulfillment - 1) * itemsPerPage,
+                          currentPages.fulfillment * itemsPerPage
+                        ).map((provider, index) => (
+                          <div key={index} className="rounded-md border bg-background p-2 shadow-sm">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-sm font-medium truncate">{provider.name}</div>
+                                  <div className="text-xs text-muted-foreground truncate">
+                                    {provider.code}
+                                  </div>
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 shrink-0"
+                                onClick={() => {
+                                  setEditFulfillmentId(provider.id);
+                                  setEditFulfillmentOpen(true);
+                                }}
+                              >
+                                <MoreVertical className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </>
               )}
