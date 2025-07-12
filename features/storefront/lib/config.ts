@@ -24,6 +24,7 @@ const getEmptyResponseForQuery = (query: RequestDocument): Record<string, any[] 
 // Factory function using composition instead of inheritance
 const createRetryingClient = async () => {
   const endpoint = await getGraphQLEndpoint();
+  console.log('GraphQL endpoint:', endpoint);
   const client = new GraphQLClient(endpoint);
 
   return {
@@ -37,7 +38,8 @@ const createRetryingClient = async () => {
         return response as T;
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.log(`GraphQL error: ${errorMessage}`);
+        console.error(`GraphQL error: ${errorMessage}`);
+        console.error('Full error:', error);
         return getEmptyResponseForQuery(document) as T;
       }
     }

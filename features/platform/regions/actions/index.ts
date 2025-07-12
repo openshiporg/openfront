@@ -236,6 +236,216 @@ export async function getRegionStatusCounts() {
 }
 
 /**
+ * Create a new region with countries, payment providers, and fulfillment providers
+ */
+export async function createRegion(data: {
+  preset: string;
+  currency: string;
+  selectedCountries: string[];
+  selectedPaymentProviders: string[];
+  selectedFulfillmentProviders: string[];
+}) {
+  try {
+    // Import predefined regions data
+    const predefinedRegions = await import('../lib/predefined-regions.json');
+    const regionPreset = predefinedRegions.regions.find(r => r.code === data.preset);
+    
+    if (!regionPreset) {
+      return {
+        success: false,
+        error: 'Invalid region preset',
+        data: null,
+      };
+    }
+
+    // 1. Create or get currency
+    let currencyId: string;
+    const currencyQuery = `
+      query GetCurrency($code: String!) {
+        currencies(where: { code: { equals: $code } }) {
+          id
+          code
+        }
+      }
+    `;
+    
+    const currencyResponse = await keystoneClient(currencyQuery, {
+      code: data.currency,
+    });
+
+    if (currencyResponse.success && currencyResponse.data.currencies?.length > 0) {
+      currencyId = currencyResponse.data.currencies[0].id;
+    } else {
+      // Create currency
+      const createCurrencyMutation = `
+        mutation CreateCurrency($data: CurrencyCreateInput!) {
+          createCurrency(data: $data) {
+            id
+            code
+          }
+        }
+      `;
+      
+      const currencyCreateResponse = await keystoneClient(createCurrencyMutation, {
+        data: {
+          code: regionPreset.currency.code,
+          symbol: regionPreset.currency.symbol,
+          symbolNative: regionPreset.currency.symbol,
+          name: regionPreset.currency.name,
+        },
+      });
+
+      if (!currencyCreateResponse.success) {
+        return {
+          success: false,
+          error: currencyCreateResponse.error || 'Failed to create currency',
+          data: null,
+        };
+      }
+
+      currencyId = currencyCreateResponse.data.createCurrency.id;
+    }
+
+    // 2. Create or get countries
+    const countryIds: string[] = [];
+    for (const countryIso2 of data.selectedCountries) {
+      const countryData = regionPreset.countries.find(c => c.iso2 === countryIso2);
+      if (!countryData) continue;
+
+      // Check if country exists
+      const countryQuery = `
+        query GetCountry($iso2: String!) {
+          countries(where: { iso2: { equals: $iso2 } }) {
+            id
+            iso2
+          }
+        }
+      `;
+      
+      const countryResponse = await keystoneClient(countryQuery, {
+        iso2: countryIso2,
+      });
+
+      if (countryResponse.success && countryResponse.data.countries?.length > 0) {
+        countryIds.push(countryResponse.data.countries[0].id);
+      } else {
+        // Create country
+        const createCountryMutation = `
+          mutation CreateCountry($data: CountryCreateInput!) {
+            createCountry(data: $data) {
+              id
+              iso2
+            }
+          }
+        `;
+        
+        const countryCreateResponse = await keystoneClient(createCountryMutation, {
+          data: countryData,
+        });
+
+        if (countryCreateResponse.success) {
+          countryIds.push(countryCreateResponse.data.createCountry.id);
+        }
+      }
+    }
+
+    // 3. Get payment provider IDs
+    const paymentProviderIds: string[] = [];
+    for (const providerCode of data.selectedPaymentProviders) {
+      const providerQuery = `
+        query GetPaymentProvider($code: String!) {
+          paymentProviders(where: { code: { equals: $code } }) {
+            id
+            code
+          }
+        }
+      `;
+      
+      const providerResponse = await keystoneClient(providerQuery, {
+        code: providerCode,
+      });
+
+      if (providerResponse.success && providerResponse.data.paymentProviders?.length > 0) {
+        paymentProviderIds.push(providerResponse.data.paymentProviders[0].id);
+      }
+    }
+
+    // 4. Get fulfillment provider IDs
+    const fulfillmentProviderIds: string[] = [];
+    for (const providerCode of data.selectedFulfillmentProviders) {
+      const providerQuery = `
+        query GetFulfillmentProvider($code: String!) {
+          fulfillmentProviders(where: { code: { equals: $code } }) {
+            id
+            code
+          }
+        }
+      `;
+      
+      const providerResponse = await keystoneClient(providerQuery, {
+        code: providerCode,
+      });
+
+      if (providerResponse.success && providerResponse.data.fulfillmentProviders?.length > 0) {
+        fulfillmentProviderIds.push(providerResponse.data.fulfillmentProviders[0].id);
+      }
+    }
+
+    // 5. Create the region
+    const createRegionMutation = `
+      mutation CreateRegion($data: RegionCreateInput!) {
+        createRegion(data: $data) {
+          id
+          name
+          code
+          taxRate
+          currency { id code symbol symbolNative }
+          countries { id iso2 displayName }
+          paymentProviders { id name code }
+          fulfillmentProviders { id name code }
+        }
+      }
+    `;
+
+    const regionCreateResponse = await keystoneClient(createRegionMutation, {
+      data: {
+        code: regionPreset.code,
+        name: regionPreset.name,
+        currency: { connect: { id: currencyId } },
+        taxRate: regionPreset.defaultTaxRate,
+        countries: countryIds.length > 0 ? { connect: countryIds.map(id => ({ id })) } : undefined,
+        paymentProviders: paymentProviderIds.length > 0 ? { connect: paymentProviderIds.map(id => ({ id })) } : undefined,
+        fulfillmentProviders: fulfillmentProviderIds.length > 0 ? { connect: fulfillmentProviderIds.map(id => ({ id })) } : undefined,
+      },
+    });
+
+    if (regionCreateResponse.success) {
+      // Revalidate the region pages to reflect the changes
+      revalidatePath('/dashboard/platform/regions');
+      revalidatePath('/dashboard/platform/regions-management');
+
+      return {
+        success: true,
+        data: regionCreateResponse.data.createRegion,
+      };
+    } else {
+      return {
+        success: false,
+        error: regionCreateResponse.error || 'Failed to create region',
+        data: null,
+      };
+    }
+  } catch (error: any) {
+    console.error('Error creating region:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to create region',
+      data: null,
+    };
+  }
+}
+
+/**
  * Update region basic info
  */
 export async function updateRegion(id: string, data: { name?: string; code?: string; taxRate?: number }) {

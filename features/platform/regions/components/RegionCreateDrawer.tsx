@@ -17,6 +17,7 @@ import MultipleSelector, { Option } from '@/components/ui/multiselect'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import predefinedRegions from '../lib/predefined-regions.json'
+import { createRegion } from '../actions'
 
 interface RegionCreateDrawerProps {
   open: boolean
@@ -164,16 +165,20 @@ export function RegionCreateDrawer({
         selectedFulfillmentProviders: selectedFulfillmentProviders.map(f => f.value)
       }
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Call the actual createRegion server action
+      const result = await createRegion(regionData)
       
-      const regionName = selectedRegion?.name || 'New Region'
-      toast.success(`Region "${regionName}" created successfully`)
-      onCreate?.(regionData)
-      onClose()
-      router.refresh()
-    } catch (error) {
-      toast.error('Failed to create region')
+      if (result.success) {
+        const regionName = selectedRegion?.name || 'New Region'
+        toast.success(`Region "${regionName}" created successfully`)
+        onCreate?.(result.data)
+        onClose()
+        router.refresh()
+      } else {
+        toast.error(result.error || 'Failed to create region')
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to create region')
     } finally {
       setLoading(false)
     }
