@@ -20,11 +20,13 @@ const statusColors = {
 
 interface ShippingProvider {
   id: string;
-  title: string;
-  status?: string;
+  name: string;
+  isActive?: boolean;
+  accessToken?: string;
+  metadata?: any;
   createdAt: string;
   updatedAt?: string;
-  // Add more fields as needed based on your GraphQL schema
+  [key: string]: unknown;
 }
 
 interface ShippingProviderDetailsComponentProps {
@@ -51,7 +53,7 @@ export function ShippingProviderDetailsComponent({
                     href={`/dashboard/platform/shipping-providers/${shippingprovider.id}`}
                     className="font-medium text-base hover:text-blue-600 dark:hover:text-blue-400"
                   >
-                    {shippingprovider.title}
+                    {shippingprovider.name}
                   </Link>
                   <span>‧</span>
                   <span className="text-sm font-medium">
@@ -71,15 +73,12 @@ export function ShippingProviderDetailsComponent({
 
             <div className="flex flex-col justify-between h-full">
               <div className="flex items-center gap-2">
-                {shippingprovider.status && (
+                {shippingprovider.isActive !== undefined && (
                   <Badge
-                    color={
-                      statusColors[shippingprovider.status as keyof typeof statusColors] ||
-                      "zinc"
-                    }
+                    color={shippingprovider.isActive ? "emerald" : "zinc"}
                     className="text-[.6rem] sm:text-[.7rem] py-0 px-2 sm:px-3 tracking-wide font-medium rounded-md border h-6"
                   >
-                    {shippingprovider.status.toUpperCase()}
+                    {shippingprovider.isActive ? "ACTIVE" : "INACTIVE"}
                   </Badge>
                 )}
                 
@@ -110,10 +109,18 @@ export function ShippingProviderDetailsComponent({
               {/* Expanded content - customize based on your entity fields */}
               <div className="px-4 md:px-6 py-4">
                 <h4 className="text-sm font-medium mb-3">Details</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
                   <div>
                     <span className="text-muted-foreground">ID:</span>
                     <span className="ml-2 font-medium">{shippingprovider.id}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Name:</span>
+                    <span className="ml-2 font-medium">{shippingprovider.name}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Status:</span>
+                    <span className="ml-2 font-medium">{shippingprovider.isActive ? "Active" : "Inactive"}</span>
                   </div>
                   {shippingprovider.updatedAt && (
                     <div>
@@ -123,6 +130,13 @@ export function ShippingProviderDetailsComponent({
                       </span>
                     </div>
                   )}
+                </div>
+                
+                <div className="mt-4">
+                  <h5 className="text-xs font-medium text-muted-foreground mb-2">Raw Data (JSON)</h5>
+                  <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-40">
+                    {JSON.stringify(shippingprovider, null, 2)}
+                  </pre>
                 </div>
               </div>
             </div>

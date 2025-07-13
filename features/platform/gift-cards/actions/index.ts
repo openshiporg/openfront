@@ -223,7 +223,7 @@ export async function getGiftCard(id: string) {
 export async function getGiftCardStatusCounts() {
   const query = `
     query GetGiftCardStatusCounts {
-      enabled: giftCardsCount(where: { isDisabled: { equals: false } })
+      active: giftCardsCount(where: { isDisabled: { equals: false } })
       disabled: giftCardsCount(where: { isDisabled: { equals: true } })
       all: giftCardsCount
     }
@@ -235,7 +235,7 @@ export async function getGiftCardStatusCounts() {
     return {
       success: true,
       data: {
-        enabled: response.data.enabled || 0,
+        active: response.data.active || 0,
         disabled: response.data.disabled || 0,
         all: response.data.all || 0
       }
@@ -245,7 +245,7 @@ export async function getGiftCardStatusCounts() {
     return {
       success: false,
       error: response.error || 'Failed to fetch giftcard status counts',
-      data: { enabled: 0, disabled: 0, all: 0 }
+      data: { active: 0, disabled: 0, all: 0 }
     };
   }
 }

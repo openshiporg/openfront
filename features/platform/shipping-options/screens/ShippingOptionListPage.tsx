@@ -1,6 +1,6 @@
 /**
- * GiftCardListPage - Server Component
- * Uses dedicated GiftCards actions for consistent data fetching
+ * ShippingOptionListPage - Server Component
+ * Uses dedicated ShippingOptions actions for consistent data fetching
  */
 
 import { getListByPath } from '../../../dashboard/actions/getListByPath'
@@ -8,14 +8,14 @@ import { getAdminMetaAction } from '../../../dashboard/actions'
 import { buildOrderByClause } from '../../../dashboard/lib/buildOrderByClause'
 import { buildWhereClause } from '../../../dashboard/lib/buildWhereClause'
 import { notFound } from 'next/navigation'
-import { GiftCardListPageClient } from './GiftCardListPageClient'
-import { getGiftCards, getGiftCardStatusCounts } from '../actions'
+import { ShippingOptionListPageClient } from './ShippingOptionListPageClient'
+import { getShippingOptions, getShippingOptionStatusCounts } from '../actions'
 
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export async function GiftCardListPage({ searchParams }: PageProps) {
+export async function ShippingOptionListPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const searchParamsObj = Object.fromEntries(
     Object.entries(resolvedSearchParams).map(([key, value]) => [
@@ -24,8 +24,8 @@ export async function GiftCardListPage({ searchParams }: PageProps) {
     ])
   );
 
-  // Hardcode the list key for giftcards
-  const listKeyPath = 'gift-cards';
+  // Hardcode the list key for shipping-options
+  const listKeyPath = 'shipping-options';
 
   // Get the list by path using our cached function
   const list = await getListByPath(listKeyPath);
@@ -60,8 +60,8 @@ export async function GiftCardListPage({ searchParams }: PageProps) {
 
   const where = whereConditions.length > 0 ? { AND: whereConditions } : {}
 
-  // Use GiftCards actions with where clause
-  const response = await getGiftCards(
+  // Use ShippingOptions actions with where clause
+  const response = await getShippingOptions(
     where,
     pageSize,
     (currentPage - 1) * pageSize,
@@ -74,7 +74,7 @@ export async function GiftCardListPage({ searchParams }: PageProps) {
   if (response.success) {
     fetchedData = response.data
   } else {
-    console.error('Error fetching giftcards:', response.error)
+    console.error('Error fetching shipping options:', response.error)
     error = response.error
   }
 
@@ -88,16 +88,16 @@ export async function GiftCardListPage({ searchParams }: PageProps) {
   const enhancedList = adminMetaList || list
 
   // Get status counts using dedicated action
-  const statusCountsResponse = await getGiftCardStatusCounts()
+  const statusCountsResponse = await getShippingOptionStatusCounts()
   
-  let statusCounts = {"active":0,"all":0,"disabled":0}
+  let statusCounts = {"active":0,"all":0,"inactive":0,"return":0}
 
   if (statusCountsResponse.success) {
     statusCounts = statusCountsResponse.data
   }
 
   return (
-    <GiftCardListPageClient
+    <ShippingOptionListPageClient
       list={enhancedList}
       initialData={fetchedData}
       initialError={error}
@@ -111,4 +111,4 @@ export async function GiftCardListPage({ searchParams }: PageProps) {
   )
 }
 
-export default GiftCardListPage
+export default ShippingOptionListPage

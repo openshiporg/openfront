@@ -33,6 +33,24 @@ const CountrySelect = forwardRef<
   const innerRef = useRef<HTMLSelectElement>(null)
   const [selectedValue, setSelectedValue] = useState<string | undefined>(value as string || defaultValue as string)
 
+  // Auto-select first country if no value is provided
+  useEffect(() => {
+    if (!selectedValue && countryOptions.length > 0) {
+      const firstCountry = countryOptions[0].value
+      setSelectedValue(firstCountry)
+      // Trigger onChange to update parent state
+      if (onChange) {
+        const syntheticEvent = {
+          target: {
+            name: props.name,
+            value: firstCountry
+          }
+        } as React.ChangeEvent<HTMLSelectElement>
+        onChange(syntheticEvent)
+      }
+    }
+  }, [countryOptions, selectedValue, onChange, props.name])
+
   useImperativeHandle<HTMLSelectElement | null, HTMLSelectElement | null>(
     ref,
     () => innerRef.current
@@ -122,9 +140,9 @@ const CountrySelect = forwardRef<
       >
         <SelectTrigger
           id={id}
-          className="w-full py-1 [&>span_svg]:text-muted-foreground/80 [&>span]:flex [&>span]:items-center [&>span]:gap-2 [&>span_svg]:shrink-0"
+          className="w-full py-1 [&>span_svg]:text-muted-foreground/80 [&>span]:flex [&>span]:items-center [&>span]:gap-2 [&>span_svg]:shrink-0 data-[placeholder]:text-muted-foreground"
         >
-          <SelectValue placeholder={placeholder}>
+          <SelectValue placeholder={placeholder} className="text-muted-foreground data-[state=closed]:text-muted-foreground">
             {selectedValue && (
               <span className="flex items-center gap-2">
                 <span className="text-lg leading-none">

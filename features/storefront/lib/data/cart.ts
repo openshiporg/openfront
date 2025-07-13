@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { revalidateTag } from "next/cache";
 import { gql } from "graphql-request";
 import { openfrontClient } from "../config";
-import { getAuthHeaders, getCartId, setCartId, removeCartId } from "./cookies";
+import { getAuthHeaders, getCartId, setCartId, removeCartId, setAuthToken } from "./cookies";
 import { redirect } from "next/navigation";
 import { getUser } from "./user";
 import { Address } from "../../types/storefront";
@@ -949,14 +949,65 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
     if (user) {
       shippingAddress.user = { connect: { id: user.id } };
     } else {
-      // For guest users, create a new user inline with the address
-      shippingAddress.user = {
-        create: {
-          email,
-          hasAccount: false,
-          name: `${formData.get("shippingAddress.firstName")} ${formData.get("shippingAddress.lastName")}`,
+      // For guest users, create user first, sign them in, then connect to address
+      try {
+        const randomPassword = crypto.randomBytes(32).toString('hex');
+        const { createUser: guestUser } = await openfrontClient.request(
+          gql`
+            mutation CreateGuestUser($data: UserCreateInput!) {
+              createUser(data: $data) {
+                id
+                email
+                hasAccount
+              }
+            }
+          `,
+          {
+            data: {
+              email,
+              hasAccount: false,
+              name: `${formData.get("shippingAddress.firstName")} ${formData.get("shippingAddress.lastName")}`,
+              password: randomPassword,
+            }
+          }
+        );
+        
+        // Sign in the guest user to get a session
+        const { authenticateUserWithPassword } = await openfrontClient.request(
+          gql`
+            mutation AuthenticateGuestUser($email: String!, $password: String!) {
+              authenticateUserWithPassword(email: $email, password: $password) {
+                ... on UserAuthenticationWithPasswordSuccess {
+                  sessionToken
+                  item {
+                    id
+                    email
+                  }
+                }
+                ... on UserAuthenticationWithPasswordFailure {
+                  message
+                  __typename
+                }
+              }
+            }
+          `,
+          { email, password: randomPassword }
+        );
+
+        if (authenticateUserWithPassword.__typename === "UserAuthenticationWithPasswordFailure") {
+          throw new Error(authenticateUserWithPassword.message);
         }
-      };
+
+        // Set the auth token for the guest user session
+        if (authenticateUserWithPassword.sessionToken) {
+          await setAuthToken(authenticateUserWithPassword.sessionToken);
+        }
+        
+        shippingAddress.user = { connect: { id: guestUser.id } };
+      } catch (error) {
+        console.error("Error creating guest user:", error);
+        return error instanceof Error ? error.message : String(error);
+      }
     }
 
     // Create shipping address first

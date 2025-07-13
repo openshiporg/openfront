@@ -42,6 +42,35 @@ const Addresses = ({
 
   // Custom form action handler that will handle client-side redirection
   const handleFormAction = async (prevState: any, formData: FormData) => {
+    // Check for required fields before calling setAddresses
+    if (!formData.get("shippingAddress.countryCode")) {
+      return "Please select a country.";
+    }
+
+    if (!formData.get("shippingAddress.firstName")) {
+      return "Please enter your first name.";
+    }
+
+    if (!formData.get("shippingAddress.lastName")) {
+      return "Please enter your last name.";
+    }
+
+    if (!formData.get("shippingAddress.address1")) {
+      return "Please enter your address.";
+    }
+
+    if (!formData.get("shippingAddress.city")) {
+      return "Please enter your city.";
+    }
+
+    if (!formData.get("shippingAddress.postalCode")) {
+      return "Please enter your postal code.";
+    }
+
+    if (!formData.get("email")) {
+      return "Please enter your email address.";
+    }
+
     const result = await setAddresses(null, formData);
 
     // If successful, redirect client-side
@@ -49,10 +78,6 @@ const Addresses = ({
       const countryCode = params?.countryCode as string;
       router.push(`/${countryCode}/checkout?step=delivery`);
       return;
-    }
-
-    if (!formData.get("shippingAddress.countryCode")) {
-      return "Please select a country.";
     }
 
     // Otherwise return the error message
@@ -89,7 +114,7 @@ const Addresses = ({
               checked={sameAsBilling}
               onChange={toggleSameAsBilling}
               cart={cart}
-              countryCode={null}
+              countryCode={params?.countryCode as string}
             />
 
             {!sameAsBilling && (

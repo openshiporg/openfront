@@ -248,7 +248,7 @@ export function RegionDetailsComponent({
     <>
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value={region.id} className="border-0">
-          <div className="px-4 md:px-6 py-3 md:py-4 flex justify-between w-full border-b relative min-h-[80px]">
+          <div className="px-4 md:px-6 py-3 md:py-4 flex justify-between w-full relative min-h-[80px]">
             <div className="flex items-start gap-4">
               {/* Region Info */}
               <div className="flex flex-col items-start text-left gap-2 sm:gap-1.5">
@@ -323,21 +323,23 @@ export function RegionDetailsComponent({
                     key={tab.key}
                     type="button"
                     onClick={() => setActiveTab(tab.key)}
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all duration-200 ${
+                    className={`relative z-10 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-300 border ${
                       activeTab === tab.key 
-                        ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700' 
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-gray-900/50'
+                        ? 'bg-background border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100' 
+                        : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-background/50'
                     }`}
                   >
-                    {activeTab === tab.key && (
-                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-in fade-in zoom-in duration-200"></div>
-                    )}
-                    <span>
-                      {tab.key === 'currency' && 'Currency'}
-                      {tab.key === 'countries' && 'Countries'}
-                      {tab.key === 'payment' && 'Payment Providers'}
-                      {tab.key === 'fulfillment' && 'Fulfillment Providers'}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span>
+                        {tab.key === 'currency' && 'Currency'}
+                        {tab.key === 'countries' && 'Countries'}
+                        {tab.key === 'payment' && 'Payment Providers'}
+                        {tab.key === 'fulfillment' && 'Fulfillment Providers'}
+                      </span>
+                      <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px]">
+                        {tab.count}
+                      </span>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -346,10 +348,12 @@ export function RegionDetailsComponent({
               <div className="md:hidden px-4 py-2">
                 <div className="w-fit">
                   <Select value={activeTab} onValueChange={(value: TabType) => setActiveTab(value)}>
-                    <SelectTrigger className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 h-auto w-auto">
+                    <SelectTrigger className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-background border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 h-auto w-auto">
                       <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
                         <SelectValue />
+                        <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px]">
+                          ({activeTabData?.count || 0})
+                        </span>
                       </div>
                     </SelectTrigger>
                     <SelectContent>
@@ -384,7 +388,7 @@ export function RegionDetailsComponent({
                     </div>
                   )}
 
-                  <div className="p-4 pt-2">
+                  <div className="p-2">
                     {/* Currency Tab */}
                     {activeTab === 'currency' && (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -392,7 +396,7 @@ export function RegionDetailsComponent({
                           (currentPages.currency - 1) * itemsPerPage,
                           currentPages.currency * itemsPerPage
                         ).map((currency, index) => (
-                          <div key={index} className="rounded-md border bg-background p-2 shadow-sm">
+                          <div key={index} className="rounded-md border bg-background p-3 shadow-sm">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3 min-w-0 flex-1">
                                 <Square className="shrink-0">{currency.symbol}</Square>
@@ -401,12 +405,7 @@ export function RegionDetailsComponent({
                                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                     <span className="truncate">Tax Rate: {(currency.taxRate * 100).toFixed(1)}%</span>
                                     <span>‧</span>
-                                    <div className="flex items-center gap-1 min-w-0">
-                                      <div className={`w-2 h-2 rounded-full shrink-0 ${
-                                        currency.automaticTaxes ? 'bg-green-500' : 'bg-red-500'
-                                      }`}></div>
-                                      <span className="truncate">{currency.automaticTaxes ? 'automatic taxes' : 'no automatic taxes'}</span>
-                                    </div>
+                                    <span className="truncate">{currency.automaticTaxes ? 'automatic taxes' : 'no automatic taxes'}</span>
                                   </div>
                                 </div>
                               </div>
@@ -431,7 +430,7 @@ export function RegionDetailsComponent({
                           (currentPages.countries - 1) * itemsPerPage,
                           currentPages.countries * itemsPerPage
                         ).map((country, index) => (
-                          <div key={index} className="rounded-md border bg-background p-2 shadow-sm">
+                          <div key={index} className="rounded-md border bg-background p-3 shadow-sm">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3 min-w-0 flex-1">
                                 <span className="text-2xl shrink-0">{getCountryFlag(country.iso2)}</span>
@@ -466,20 +465,22 @@ export function RegionDetailsComponent({
                           (currentPages.payment - 1) * itemsPerPage,
                           currentPages.payment * itemsPerPage
                         ).map((provider, index) => (
-                          <div key={index} className="rounded-md border bg-background p-2 shadow-sm">
+                          <div key={index} className="rounded-md border bg-background p-3 shadow-sm">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3 min-w-0 flex-1">
                                 <div className="min-w-0 flex-1">
                                   <div className="text-sm font-medium truncate">{provider.name}</div>
-                                  <div className="text-xs text-muted-foreground truncate">
-                                    {provider.code}
+                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    <div className={`w-2 h-2 rounded-full shrink-0 ${
+                                      provider.isInstalled ? 'bg-green-500' : 'bg-red-500'
+                                    }`}></div>
+                                    <span className="truncate">
+                                      {provider.isInstalled ? 'installed' : 'not installed'}
+                                    </span>
                                   </div>
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
-                                <Badge variant={provider.isInstalled ? "default" : "secondary"} className="text-xs">
-                                  {provider.isInstalled ? "Installed" : "Available"}
-                                </Badge>
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -505,7 +506,7 @@ export function RegionDetailsComponent({
                           (currentPages.fulfillment - 1) * itemsPerPage,
                           currentPages.fulfillment * itemsPerPage
                         ).map((provider, index) => (
-                          <div key={index} className="rounded-md border bg-background p-2 shadow-sm">
+                          <div key={index} className="rounded-md border bg-background p-3 shadow-sm">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-3 min-w-0 flex-1">
                                 <div className="min-w-0 flex-1">

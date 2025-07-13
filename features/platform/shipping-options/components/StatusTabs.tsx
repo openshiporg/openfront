@@ -3,27 +3,18 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Clock, Settings } from "lucide-react";
 
 const statusConfig = {
   active: {
     label: "Active",
-    icon: Check,
     color: "emerald"
   },
   inactive: {
-    label: "Inactive",
-    icon: X,
+    label: "Admin Only",
     color: "zinc"
   },
-  pending: {
-    label: "Pending",
-    icon: Clock,
-    color: "orange"
-  },
-  configured: {
-    label: "Configured",
-    icon: Settings,
+  return: {
+    label: "Return Options",
     color: "blue"
   },
 } as const;
@@ -33,6 +24,7 @@ interface StatusTabsProps {
     all: number;
     active: number;
     inactive: number;
+    return: number;
   };
 }
 
@@ -48,20 +40,31 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
 
   const statuses = [
     { value: "active", label: "Active", count: statusCounts.active },
-    { value: "inactive", label: "Inactive", count: statusCounts.inactive },
+    { value: "inactive", label: "Admin Only", count: statusCounts.inactive },
+    { value: "return", label: "Return Options", count: statusCounts.return },
   ] as const;
 
-  // Get current status from URL - isActive is a checkbox field
-  const isActiveFilter = searchParams.get("!isActive_is");
+  // Get current status from URL - handle multiple possible filters
+  const adminOnlyFilter = searchParams.get("!adminOnly_is");
+  const isReturnFilter = searchParams.get("!isReturn_is");
   let currentStatus = "all";
 
-  if (isActiveFilter) {
+  if (isReturnFilter) {
     try {
-      const parsed = JSON.parse(decodeURIComponent(isActiveFilter));
+      const parsed = JSON.parse(decodeURIComponent(isReturnFilter));
       if (parsed === true) {
-        currentStatus = "active";
-      } else if (parsed === false) {
+        currentStatus = "return";
+      }
+    } catch (e) {
+      // Invalid JSON in URL, ignore
+    }
+  } else if (adminOnlyFilter) {
+    try {
+      const parsed = JSON.parse(decodeURIComponent(adminOnlyFilter));
+      if (parsed === true) {
         currentStatus = "inactive";
+      } else if (parsed === false) {
+        currentStatus = "active";
       }
     } catch (e) {
       // Invalid JSON in URL, ignore
@@ -74,14 +77,20 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
     // Reset to page 1 when changing status
     params.set("page", "1");
     
+    // Clear all status filters first
+    params.delete("!adminOnly_is");
+    params.delete("!isReturn_is");
+    
     if (status === "all") {
-      params.delete("!isActive_is");
-    } else {
-      // For checkbox fields, use simple boolean value
-      // isActive: true for active, false for inactive
-      const filterValue = status === "active" ? true : false;
-      params.set("!isActive_is", JSON.stringify(filterValue));
+      // No filters needed for "all"
+    } else if (status === "active") {
+      params.set("!adminOnly_is", JSON.stringify(false));
+    } else if (status === "inactive") {
+      params.set("!adminOnly_is", JSON.stringify(true));
+    } else if (status === "return") {
+      params.set("!isReturn_is", JSON.stringify(true));
     }
+    
     router.push(`${pathname}?${params.toString()}`);
   };
 
@@ -127,14 +136,13 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
             onClick={() => handleStatusChange("all")}
           >
             <div className="text-sm font-medium leading-5 whitespace-nowrap flex items-center justify-center h-full gap-2">
-              All Shipping Providers
+              All Shipping Options
               <span className="rounded-sm bg-background border shadow-xs px-1.5 py-0 text-[10px] leading-[14px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 inline-flex items-center h-[18px]">
                 {statusCounts.all}
               </span>
             </div>
           </div>
           {statuses.map((status, index) => {
-            const StatusIcon = statusConfig[status.value as keyof typeof statusConfig].icon;
             return (
               <div
                 key={status.value}

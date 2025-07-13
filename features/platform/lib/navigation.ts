@@ -44,22 +44,30 @@ export interface PlatformNavGroup {
 
 // Core platform navigation items organized by logical groups
 export const platformNavItems: PlatformNavItem[] = [
-  // Orders & Fulfillment
+  // Standalone Items
   {
     title: 'Orders',
     href: '/platform/orders',
     color: 'blue',
     description: 'Manage customer orders, returns, claims, and fulfillment.',
     icon: Ticket,
-    group: 'orders'
+    group: 'standalone'
   },
   {
-    title: 'Claims',
-    href: '/platform/claims',
-    color: 'orange',
-    description: 'Handle order claims, disputes, and issue resolution.',
-    icon: ShieldCheck,
-    group: 'orders'
+    title: 'Analytics',
+    href: '/platform/analytics',
+    color: 'indigo',
+    description: 'View sales reports, customer insights, and business performance metrics.',
+    icon: BarChart3,
+    group: 'standalone'
+  },
+  {
+    title: 'Markets',
+    href: '/platform/regions-management',
+    color: 'blue',
+    description: 'Manage regions, currencies, countries, and shipping in one place.',
+    icon: Globe,
+    group: 'standalone'
   },
 
   // Products & Catalog
@@ -124,48 +132,22 @@ export const platformNavItems: PlatformNavItem[] = [
     group: 'marketing'
   },
   {
-    title: 'Analytics',
-    href: '/platform/analytics',
-    color: 'indigo',
-    description: 'View sales reports, customer insights, and business performance metrics.',
-    icon: BarChart3,
+    title: 'Shipping Options',
+    href: '/platform/shipping-options',
+    color: 'sky',
+    description: 'Configure customer-facing shipping methods and pricing.',
+    icon: Truck,
     group: 'marketing'
   },
 
-  // Operations & Config
-  {
-    title: 'Shipping',
-    href: '/platform/shipping',
-    color: 'sky',
-    description: 'Configure shipping options, fulfillment providers, and delivery methods.',
-    icon: Truck,
-    group: 'operations'
-  },
+  // Integrations
   {
     title: 'Shipping Providers',
     href: '/platform/shipping-providers',
     color: 'cyan',
     description: 'Manage shipping provider configurations and settings.',
     icon: Package2,
-    group: 'operations'
-  },
-  {
-    title: 'Regions & Markets',
-    href: '/platform/regions-management',
-    color: 'blue',
-    description: 'Manage regions, currencies, countries, and shipping in one place.',
-    icon: Globe,
-    group: 'operations'
-  },
-
-  // System & Settings
-  {
-    title: 'Stores',
-    href: '/platform/stores',
-    color: 'violet',
-    description: 'Manage store configurations and multi-store settings.',
-    icon: Store,
-    group: 'system'
+    group: 'integrations'
   },
   {
     title: 'Payment Providers',
@@ -173,26 +155,15 @@ export const platformNavItems: PlatformNavItem[] = [
     color: 'slate',
     description: 'Configure payment gateways and provider settings.',
     icon: CreditCard,
-    group: 'system'
-  },
-  {
-    title: 'System Configuration',
-    href: '/platform/system',
-    color: 'zinc',
-    description: 'Configure system settings and general configurations.',
-    icon: Settings,
-    group: 'system'
+    group: 'integrations'
   },
 ];
 
+// Standalone navigation items (no grouping)
+export const platformStandaloneItems = platformNavItems.filter(item => item.group === 'standalone')
+
 // Organized navigation groups following e-commerce best practices
 export const platformNavGroups: PlatformNavGroup[] = [
-  {
-    id: 'orders',
-    title: 'Orders',
-    icon: Ticket,
-    items: platformNavItems.filter(item => item.group === 'orders')
-  },
   {
     id: 'catalog',
     title: 'Products',
@@ -212,16 +183,10 @@ export const platformNavGroups: PlatformNavGroup[] = [
     items: platformNavItems.filter(item => item.group === 'marketing')
   },
   {
-    id: 'operations',
-    title: 'Operations',
-    icon: Settings,
-    items: platformNavItems.filter(item => item.group === 'operations')
-  },
-  {
-    id: 'system',
-    title: 'Settings',
-    icon: Layers,
-    items: platformNavItems.filter(item => item.group === 'system')
+    id: 'integrations',
+    title: 'Integrations',
+    icon: RefreshCw,
+    items: platformNavItems.filter(item => item.group === 'integrations')
   }
 ];
 

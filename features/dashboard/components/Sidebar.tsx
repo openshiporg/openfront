@@ -42,7 +42,7 @@ import { UserProfileClient } from './UserProfileClient'
 import { OnboardingCards } from '@/features/platform/onboarding/components/OnboardingCards'
 import OnboardingDialog from '@/features/platform/onboarding/components/OnboardingDialog'
 import { dismissOnboarding } from '@/features/platform/onboarding/actions/onboarding'
-import { platformNavGroups, getPlatformNavItemsWithBasePath } from '@/features/platform/lib/navigation'
+import { platformNavGroups, platformStandaloneItems, getPlatformNavItemsWithBasePath } from '@/features/platform/lib/navigation'
 import { useDashboard } from '../context/DashboardProvider'
 
 interface User {
@@ -106,6 +106,12 @@ export function Sidebar({ adminMeta, user }: SidebarProps) {
     icon: group.icon,
   }))
 
+  // Standalone platform items with proper basePath
+  const standaloneItemsWithBasePath = platformStandaloneItems.map(item => ({
+    ...item,
+    href: `${basePath}${item.href}`,
+  }))
+
   return (
     <SidebarComponent collapsible="icon">
       <SidebarHeader>
@@ -136,9 +142,23 @@ export function Sidebar({ adminMeta, user }: SidebarProps) {
           </SidebarMenu>
         </SidebarGroup>
 
-        {/* Platform Routes */}
+        {/* Platform Routes - Standalone Items */}
         <SidebarGroup>
           <SidebarGroupLabel>Platform</SidebarGroupLabel>
+          <SidebarMenu>
+            {standaloneItemsWithBasePath.map((item) => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton asChild isActive={isLinkActive(item.href)}>
+                  <Link href={item.href} onClick={() => setOpenMobile(false)}>
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+          
+          {/* Platform Groups */}
           {platformItems.map((platformItem) => (
             <div key={platformItem.title} className="max-h-full overflow-y-auto group-has-[[data-collapsible=icon]]/sidebar-wrapper:hidden">
               <Collapsible
@@ -183,6 +203,18 @@ export function Sidebar({ adminMeta, user }: SidebarProps) {
 
           {/* Platform Dropdown - Icon Mode */}
           <div className="hidden group-has-[[data-collapsible=icon]]/sidebar-wrapper:block">
+            {/* Standalone Items in Icon Mode */}
+            {standaloneItemsWithBasePath.map((item) => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton asChild isActive={isLinkActive(item.href)}>
+                  <Link href={item.href} onClick={() => setOpenMobile(false)}>
+                    <item.icon className="h-4 w-4" />
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+            
+            {/* Grouped Items in Icon Mode */}
             {platformItems.map((platformItem) => (
               <DropdownMenu key={platformItem.title}>
                 <SidebarMenuItem>
