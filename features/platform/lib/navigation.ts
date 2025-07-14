@@ -63,7 +63,7 @@ export const platformNavItems: PlatformNavItem[] = [
   },
   {
     title: 'Markets',
-    href: '/platform/regions-management',
+    href: '/platform/markets',
     color: 'blue',
     description: 'Manage regions, currencies, countries, and shipping in one place.',
     icon: Globe,

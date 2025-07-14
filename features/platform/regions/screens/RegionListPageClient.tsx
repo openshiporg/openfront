@@ -109,13 +109,13 @@ export function RegionListPageClient({
   const breadcrumbs = [
     { type: 'link' as const, label: 'Dashboard', href: basePath },
     { type: 'page' as const, label: 'Platform' },
-    { type: 'page' as const, label: 'Regions' }
+    { type: 'page' as const, label: 'Markets' }
   ]
 
   const header = (
     <div>
       <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-50">
-        Regions & Market Configuration
+        Markets
       </h1>
       <p className="text-muted-foreground">
         Manage your global markets, currencies, and shipping setup
@@ -139,7 +139,7 @@ export function RegionListPageClient({
   const isEmpty = data?.count === 0 && !isFiltered
 
   return (
-    <PageContainer title="Regions" header={header} breadcrumbs={breadcrumbs}>
+    <PageContainer title="Markets" header={header} breadcrumbs={breadcrumbs}>
       {/* Filter Bar - includes search, filters, sorting, and create button */}
       <div className="px-4 md:px-6">
         <PlatformFilterBar 
