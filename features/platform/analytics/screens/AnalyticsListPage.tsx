@@ -30,6 +30,7 @@ import { PageBreadcrumbs } from "@/features/dashboard/components/PageBreadcrumbs
 import { StatsCards } from "../components/StatsCards";
 import { DateRangePickerWrapper } from "../components/DateRangePickerWrapper";
 import { RegionalTabs } from "../components/RegionalTabs";
+import { ConvertToTabs } from "../components/ConvertToTabs";
 import { AnalyticsClientWrapper } from "../components/AnalyticsClientWrapper";
 
 interface PageProps {
@@ -441,6 +442,11 @@ export async function AnalyticsListPage({ searchParams }: PageProps) {
             )}
           </div>
 
+          {/* Convert To Tabs */}
+          <div className="px-6 pb-4">
+            <ConvertToTabs />
+          </div>
+
           {/* Stats Cards */}
           <div className="px-6">
             <StatsCards
@@ -449,20 +455,22 @@ export async function AnalyticsListPage({ searchParams }: PageProps) {
             />
           </div>
 
-          <AnalyticsClientWrapper
-            salesMetrics={salesMetrics}
-            customerMetrics={customerMetrics}
-            productMetrics={productMetrics}
-            cartMetrics={cartMetrics}
-            categoryMetrics={categoryMetrics}
-            fulfillmentMetrics={fulfillmentMetrics}
-            timeSeriesData={timeSeriesData}
-            topProductsData={topProductsData}
-            categoryChartData={categoryChartData}
-            selectedPeriod={selectedPeriod}
-            currencySymbol={currencySymbol}
-            initialConvertTo={conversionCurrency}
-          />
+          <div className="p-6 space-y-6">
+            <AnalyticsClientWrapper
+              salesMetrics={salesMetrics}
+              customerMetrics={customerMetrics}
+              productMetrics={productMetrics}
+              cartMetrics={cartMetrics}
+              categoryMetrics={categoryMetrics}
+              fulfillmentMetrics={fulfillmentMetrics}
+              timeSeriesData={timeSeriesData}
+              topProductsData={topProductsData}
+              categoryChartData={categoryChartData}
+              selectedPeriod={selectedPeriod}
+              currencySymbol={currencySymbol}
+              initialConvertTo={conversionCurrency}
+            />
+          </div>
         </div>
       </section>
     );

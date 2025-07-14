@@ -1,7 +1,7 @@
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardTitle } from "@/components/ui/card";
+"use client";
+
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { TrendingDown, TrendingUp } from "lucide-react";
 
 interface StatData {
   name: string;
@@ -19,67 +19,55 @@ interface StatsCardsProps {
 export function StatsCards({ data, loading = false }: StatsCardsProps) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 divide-y bg-border divide-border overflow-hidden rounded-lg md:grid-cols-4 md:divide-x md:divide-y-0">
-        {[...Array(4)].map((_, index) => (
-          <Card
-            key={index}
-            className="rounded-none border-0 shadow-sm py-0"
-          >
-            <CardContent className="p-4 sm:p-6">
-              <div className="h-4 w-20 bg-muted animate-pulse rounded mb-2" />
-              <div className="h-8 w-full bg-muted animate-pulse rounded mb-2" />
-              <div className="h-6 w-16 bg-muted animate-pulse rounded" />
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 w-full">
+          {[...Array(4)].map((_, index) => (
+            <div
+              key={index}
+              className="group/card rounded-xl transition-all duration-200 bg-card hover:bg-card/80 text-foreground shadow-inner hover:scale-110 hover:shadow-slate-6"
+            >
+              <div className="p-4 md:p-6">
+                <div className="flex flex-col items-center gap-1 md:gap-2">
+                  <div className="h-8 w-20 bg-muted animate-pulse rounded mb-2" />
+                  <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+                </div>
+              </div>
+            </div>
+          ))}
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 divide-y bg-border divide-border overflow-hidden rounded-lg md:grid-cols-4 md:divide-x md:divide-y-0">
-      {data.map((stat) => (
-        <Card
-          key={stat.name}
-          className="rounded-none border-0 shadow-sm py-0"
-        >
-          <CardContent className="p-4 sm:p-6">
-            <CardTitle className="text-base font-normal">
-              {stat.name}
-            </CardTitle>
-            <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:gap-2">
-              <div className="flex flex-wrap items-baseline text-2xl font-semibold text-primary">
-                <span className="mr-2">{stat.value}</span>
-                <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-                  from {stat.previous}
-                </span>
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 w-full">
+        {data.map((item) => (
+          <div
+            key={item.name}
+            className="group/card rounded-xl transition-all duration-200 bg-card hover:bg-card/80 text-foreground shadow-inner hover:scale-110 hover:shadow-slate-6"
+          >
+            <div className="p-4 md:p-6">
+              <div className="flex flex-col items-center gap-1 md:gap-2">
+                <div className="flex items-baseline gap-2">
+                  <p className="text-3xl md:text-4xl font-bold text-foreground">
+                    {item.value}
+                  </p>
+                  <span
+                    className={cn(
+                      item.changeType === "positive"
+                        ? "text-green-800 dark:text-green-400"
+                        : "text-red-800 dark:text-red-400",
+                      "text-sm font-medium"
+                    )}
+                  >
+                    {item.change}
+                  </span>
+                </div>
+                <p className="text-xs md:text-sm text-muted-foreground text-center">
+                  {item.name}
+                </p>
               </div>
-
-              <Badge
-                variant="outline"
-                className={cn(
-                  "inline-flex items-center px-1.5 ps-2.5 py-0.5 text-xs font-medium w-fit shrink-0",
-                  stat.changeType === "positive"
-                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                    : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                )}
-              >
-                {stat.changeType === "positive" ? (
-                  <TrendingUp className="mr-0.5 -ml-1 h-5 w-5 shrink-0 self-center text-green-500" />
-                ) : (
-                  <TrendingDown className="mr-0.5 -ml-1 h-5 w-5 shrink-0 self-center text-red-500" />
-                )}
-
-                <span className="sr-only">
-                  {" "}
-                  {stat.changeType === "positive" ? "Increased" : "Decreased"} by{" "}
-                </span>
-                {stat.change}
-              </Badge>
             </div>
-          </CardContent>
-        </Card>
-      ))}
+          </div>
+        ))}
     </div>
   );
 }

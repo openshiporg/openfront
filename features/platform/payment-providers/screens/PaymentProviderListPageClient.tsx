@@ -20,7 +20,7 @@ import { StatusTabs } from '../components/StatusTabs'
 import { PaymentProviderDetailsComponent } from '../components/PaymentProviderDetailsComponent'
 import { Pagination } from '../../../dashboard/components/Pagination'
 import { FilterList } from '../../../dashboard/components/FilterList'
-import { CreateItemDrawerClientWrapper } from '@/features/platform/components/CreateItemDrawerClientWrapper'
+import { CreatePaymentProviderDrawer } from '../components/drawers/CreatePaymentProviderDrawer'
 import { useDashboard } from '../../../dashboard/context/DashboardProvider'
 import { useSelectedFields } from '../../../dashboard/hooks/useSelectedFields'
 import { useSort } from '../../../dashboard/hooks/useSort'
@@ -211,13 +211,12 @@ export function PaymentProviderListPageClient({
       )}
     </PageContainer>
     
-    {/* Create Item Drawer */}
-    <CreateItemDrawerClientWrapper
-      listKey="payment-providers"
+    {/* Create Payment Provider Drawer */}
+    <CreatePaymentProviderDrawer
       open={isCreateDrawerOpen}
       onClose={() => setIsCreateDrawerOpen(false)}
       onCreate={() => {
-        window.location.reload();
+        router.refresh();
       }}
     />
   </>

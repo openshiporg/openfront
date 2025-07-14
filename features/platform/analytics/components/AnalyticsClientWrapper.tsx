@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { ImprovedAnalyticsDashboard } from "./ImprovedAnalyticsDashboard";
-import { ConvertToTabs } from "./ConvertToTabs";
 
 interface AnalyticsClientWrapperProps {
   salesMetrics: any;
@@ -20,21 +19,7 @@ interface AnalyticsClientWrapperProps {
 }
 
 export function AnalyticsClientWrapper(props: AnalyticsClientWrapperProps) {
-  const [convertTo, setConvertTo] = useState(props.initialConvertTo || "usd");
-
   return (
-    <>
-      {/* Convert To Tabs */}
-      <div className="px-6 pb-4">
-        <ConvertToTabs 
-          convertTo={convertTo}
-          onConvertToChange={setConvertTo}
-        />
-      </div>
-
-      <div className="p-6 space-y-6">
-        <ImprovedAnalyticsDashboard {...props} />
-      </div>
-    </>
+    <ImprovedAnalyticsDashboard {...props} />
   );
 }

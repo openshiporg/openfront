@@ -11,6 +11,7 @@
     "migrate": "prisma migrate deploy"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^1.3.23",
     "@graphql-tools/schema": "^10.0.23",
     "@keystone-6/auth": "^8.1.0",
     "@keystone-6/core": "^6.5.1",
@@ -63,6 +64,7 @@
     "@tiptap/pm": "^2.22.3",
     "@tiptap/react": "^2.22.3",
     "@tiptap/starter-kit": "^2.22.3",
+    "ai": "^4.3.17",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

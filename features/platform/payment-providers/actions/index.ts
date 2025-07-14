@@ -242,6 +242,105 @@ export async function getPaymentProviderRegionCounts() {
 }
 
 /**
+ * Create a new payment provider
+ */
+export interface CreatePaymentProviderInput {
+  name: string;
+  code: string;
+  isInstalled?: boolean;
+  createPaymentFunction?: string;
+  capturePaymentFunction?: string;
+  refundPaymentFunction?: string;
+  getPaymentStatusFunction?: string;
+  generatePaymentLinkFunction?: string;
+  handleWebhookFunction?: string;
+  metadata?: Record<string, any>;
+  credentials?: Record<string, any>;
+  regionIds?: string[];
+}
+
+export async function createPaymentProvider(input: CreatePaymentProviderInput) {
+  const {
+    name,
+    code,
+    isInstalled = true,
+    createPaymentFunction,
+    capturePaymentFunction,
+    refundPaymentFunction,
+    getPaymentStatusFunction,
+    generatePaymentLinkFunction,
+    handleWebhookFunction,
+    metadata,
+    credentials,
+    regionIds
+  } = input;
+
+  const mutation = `
+    mutation CreatePaymentProvider(
+      $name: String!
+      $code: String!
+      $isInstalled: Boolean
+      $createPaymentFunction: String
+      $capturePaymentFunction: String
+      $refundPaymentFunction: String
+      $getPaymentStatusFunction: String
+      $generatePaymentLinkFunction: String
+      $handleWebhookFunction: String
+      $metadata: JSON
+      $credentials: JSON
+      $regionIds: [ID!]
+    ) {
+      createPaymentProvider(data: {
+        name: $name
+        code: $code
+        isInstalled: $isInstalled
+        createPaymentFunction: $createPaymentFunction
+        capturePaymentFunction: $capturePaymentFunction
+        refundPaymentFunction: $refundPaymentFunction
+        getPaymentStatusFunction: $getPaymentStatusFunction
+        generatePaymentLinkFunction: $generatePaymentLinkFunction
+        handleWebhookFunction: $handleWebhookFunction
+        metadata: $metadata
+        credentials: $credentials
+        regions: $regionIds ? { connect: $regionIds } : null
+      }) {
+        id
+        name
+        code
+        isInstalled
+        metadata
+        regions {
+          id
+          name
+          code
+        }
+      }
+    }
+  `;
+
+  const response = await keystoneClient(mutation, {
+    name,
+    code,
+    isInstalled,
+    createPaymentFunction,
+    capturePaymentFunction,
+    refundPaymentFunction,
+    getPaymentStatusFunction,
+    generatePaymentLinkFunction,
+    handleWebhookFunction,
+    metadata,
+    credentials,
+    regionIds: regionIds?.map(id => ({ id }))
+  });
+
+  if (response.success) {
+    revalidatePath('/dashboard/platform/payment-providers');
+  }
+
+  return response;
+}
+
+/**
  * Update paymentprovider installed status
  */
 export async function updatePaymentProviderStatus(id: string, isInstalled: boolean) {

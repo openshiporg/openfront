@@ -495,6 +495,45 @@ async function createMCPServer(graphqlEndpoint: string, cookie: string) {
       }
     });
 
+    // Add field selection tools - essential for performance with large schemas
+    tools.push({
+      name: 'getFieldsForType',
+      description: 'Get available fields for a GraphQL type. Use this to see what fields you can select instead of auto-selecting ALL fields.\n\nRequired arguments:\n• typeName (String) - The GraphQL type name (e.g., "User", "Order")',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          typeName: {
+            type: 'string',
+            description: 'The GraphQL type name to get fields for'
+          }
+        },
+        required: ['typeName']
+      }
+    });
+
+    tools.push({
+      name: 'customQuery',
+      description: 'Execute a GraphQL query with custom field selection. Use this when you want to select specific fields instead of getting ALL fields automatically.\n\nRequired arguments:\n• operation (String) - The operation name (e.g., "users", "orders")\n• fieldSelection (String) - GraphQL field selection string (e.g., "id name email" or "id user { email } updatedAt")\n• args (Object) - Query arguments (optional)',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          operation: {
+            type: 'string',
+            description: 'The GraphQL operation name'
+          },
+          fieldSelection: {
+            type: 'string',
+            description: 'GraphQL field selection string. For nested fields use "user { email }" syntax'
+          },
+          args: {
+            type: 'object',
+            description: 'Query arguments (optional)'
+          }
+        },
+        required: ['operation', 'fieldSelection']
+      }
+    });
+
     // Add type discovery tools
     tools.push({
       name: 'lookupInputType',
@@ -673,6 +712,96 @@ async function createMCPServer(graphqlEndpoint: string, cookie: string) {
           content: [{
             type: 'text' as const,
             text: JSON.stringify(searchResults, null, 2),
+          }],
+        };
+      }
+      
+      // Handle field selection tools
+      if (name === 'getFieldsForType') {
+        const typeName = args.typeName;
+        const type = schema.getType(typeName);
+        
+        if (!type || !isObjectType(type)) {
+          throw new Error(`Object type "${typeName}" not found`);
+        }
+        
+        const fields = type.getFields();
+        const fieldInfo = Object.entries(fields).map(([fieldName, fieldValue]) => ({
+          name: fieldName,
+          type: getSimpleTypeName(fieldValue.type),
+          isScalar: isScalarType(fieldValue.type) || 
+                   (isNonNullType(fieldValue.type) && isScalarType(fieldValue.type.ofType)),
+          description: fieldValue.description || `Field: ${fieldName}`
+        }));
+        
+        const result = {
+          typeName,
+          description: type.description || `Object type: ${typeName}`,
+          fields: fieldInfo,
+          tip: "Use customQuery to select only the fields you need for better performance"
+        };
+        
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify(result, null, 2),
+          }],
+        };
+      }
+      
+      if (name === 'customQuery') {
+        const { operation, fieldSelection, args: queryArgs } = args;
+        
+        // Find the operation in schema
+        let field: any = null;
+        let operationType = '';
+        
+        if (schema.getQueryType()) {
+          const queryFields = schema.getQueryType()!.getFields();
+          if (queryFields[operation]) {
+            field = queryFields[operation];
+            operationType = 'query';
+          }
+        }
+        
+        if (!field && schema.getMutationType()) {
+          const mutationFields = schema.getMutationType()!.getFields();
+          if (mutationFields[operation]) {
+            field = mutationFields[operation];
+            operationType = 'mutation';
+          }
+        }
+        
+        if (!field) {
+          throw new Error(`Operation "${operation}" not found`);
+        }
+        
+        // Build the query/mutation with custom fields
+        const argDefs = (field.args || []).map((arg: any) => {
+          return `$${arg.name}: ${arg.type.toString()}`;
+        }).join(', ');
+        
+        const argUses = (field.args || []).map((arg: any) => 
+          `${arg.name}: $${arg.name}`
+        ).join(', ');
+        
+        const queryString = `
+          ${operationType} ${operation.charAt(0).toUpperCase() + operation.slice(1)}${argDefs ? `(${argDefs})` : ''} {
+            ${operation}${argUses ? `(${argUses})` : ''} {
+              ${fieldSelection}
+            }
+          }
+        `.trim();
+        
+        console.log(`Executing custom ${operationType}:`, queryString);
+        
+        // Execute the query
+        const result = await executeGraphQL(queryString, graphqlEndpoint, cookie, queryArgs || {});
+        
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify(result, null, 2),
           }],
         };
       }
@@ -1097,6 +1226,45 @@ export async function POST(request: Request, { params }: { params: { transport: 
         }
       });
 
+      // Add field selection tools - essential for performance with large schemas
+      tools.push({
+        name: 'getFieldsForType',
+        description: 'Get available fields for a GraphQL type. Use this to see what fields you can select instead of auto-selecting ALL fields.\n\nRequired arguments:\n• typeName (String) - The GraphQL type name (e.g., "User", "Order")',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            typeName: {
+              type: 'string',
+              description: 'The GraphQL type name to get fields for'
+            }
+          },
+          required: ['typeName']
+        }
+      });
+
+      tools.push({
+        name: 'customQuery',
+        description: 'Execute a GraphQL query with custom field selection. Use this when you want to select specific fields instead of getting ALL fields automatically.\n\nRequired arguments:\n• operation (String) - The operation name (e.g., "users", "orders")\n• fieldSelection (String) - GraphQL field selection string (e.g., "id name email" or "id user { email } updatedAt")\n• args (Object) - Query arguments (optional)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            operation: {
+              type: 'string',
+              description: 'The GraphQL operation name'
+            },
+            fieldSelection: {
+              type: 'string',
+              description: 'GraphQL field selection string. For nested fields use "user { email }" syntax'
+            },
+            args: {
+              type: 'object',
+              description: 'Query arguments (optional)'
+            }
+          },
+          required: ['operation', 'fieldSelection']
+        }
+      });
+
       // Add type discovery tools
       tools.push({
         name: 'lookupInputType',
@@ -1289,6 +1457,110 @@ export async function POST(request: Request, { params }: { params: { transport: 
               content: [{
                 type: 'text',
                 text: JSON.stringify(searchResults, null, 2),
+              }],
+            }
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        
+        // Handle field selection tools
+        if (name === 'getFieldsForType') {
+          const typeName = args.typeName;
+          const type = schema.getType(typeName);
+          
+          if (!type || !isObjectType(type)) {
+            throw new Error(`Object type "${typeName}" not found`);
+          }
+          
+          const fields = type.getFields();
+          const fieldInfo = Object.entries(fields).map(([fieldName, fieldValue]) => ({
+            name: fieldName,
+            type: getSimpleTypeName(fieldValue.type),
+            isScalar: isScalarType(fieldValue.type) || 
+                     (isNonNullType(fieldValue.type) && isScalarType(fieldValue.type.ofType)),
+            description: fieldValue.description || `Field: ${fieldName}`
+          }));
+          
+          const result = {
+            typeName,
+            description: type.description || `Object type: ${typeName}`,
+            fields: fieldInfo,
+            tip: "Use customQuery to select only the fields you need for better performance"
+          };
+          
+          return new Response(JSON.stringify({
+            jsonrpc: '2.0',
+            id: body.id,
+            result: {
+              content: [{
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
+              }],
+            }
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        
+        if (name === 'customQuery') {
+          const { operation, fieldSelection, args: queryArgs } = args;
+          
+          // Find the operation in schema
+          let field: any = null;
+          let operationType = '';
+          
+          if (schema.getQueryType()) {
+            const queryFields = schema.getQueryType()!.getFields();
+            if (queryFields[operation]) {
+              field = queryFields[operation];
+              operationType = 'query';
+            }
+          }
+          
+          if (!field && schema.getMutationType()) {
+            const mutationFields = schema.getMutationType()!.getFields();
+            if (mutationFields[operation]) {
+              field = mutationFields[operation];
+              operationType = 'mutation';
+            }
+          }
+          
+          if (!field) {
+            throw new Error(`Operation "${operation}" not found`);
+          }
+          
+          // Build the query/mutation with custom fields
+          const argDefs = (field.args || []).map((arg: any) => {
+            return `$${arg.name}: ${arg.type.toString()}`;
+          }).join(', ');
+          
+          const argUses = (field.args || []).map((arg: any) => 
+            `${arg.name}: $${arg.name}`
+          ).join(', ');
+          
+          const queryString = `
+            ${operationType} ${operation.charAt(0).toUpperCase() + operation.slice(1)}${argDefs ? `(${argDefs})` : ''} {
+              ${operation}${argUses ? `(${argUses})` : ''} {
+                ${fieldSelection}
+              }
+            }
+          `.trim();
+          
+          console.log(`Executing custom ${operationType}:`, queryString);
+          
+          // Execute the query
+          const result = await executeGraphQL(queryString, graphqlEndpoint, cookie, queryArgs || {});
+          
+          return new Response(JSON.stringify({
+            jsonrpc: '2.0',
+            id: body.id,
+            result: {
+              content: [{
+                type: 'text',
+                text: JSON.stringify(result, null, 2),
               }],
             }
           }), {

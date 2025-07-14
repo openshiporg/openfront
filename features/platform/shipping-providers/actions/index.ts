@@ -277,6 +277,114 @@ export async function getShippingProviderRegionCounts() {
 }
 
 /**
+ * Create a new shipping provider
+ */
+export interface CreateShippingProviderInput {
+  name: string;
+  accessToken?: string;
+  fromAddressId?: string | null;
+  createLabelFunction?: string;
+  getRatesFunction?: string;
+  validateAddressFunction?: string;
+  trackShipmentFunction?: string;
+  cancelLabelFunction?: string;
+  metadata?: Record<string, any>;
+  regionIds?: string[];
+}
+
+export async function createShippingProvider(input: CreateShippingProviderInput) {
+  const {
+    name,
+    accessToken,
+    fromAddressId,
+    createLabelFunction,
+    getRatesFunction,
+    validateAddressFunction,
+    trackShipmentFunction,
+    cancelLabelFunction,
+    metadata,
+    regionIds
+  } = input;
+
+  const mutation = `
+    mutation CreateShippingProvider(
+      $name: String!
+      $accessToken: String
+      $fromAddressId: ID
+      $createLabelFunction: String
+      $getRatesFunction: String
+      $validateAddressFunction: String
+      $trackShipmentFunction: String
+      $cancelLabelFunction: String
+      $metadata: JSON
+      $regionIds: [RegionWhereUniqueInput!]
+    ) {
+      createShippingProvider(data: {
+        name: $name
+        accessToken: $accessToken
+        fromAddress: $fromAddressId ? { connect: { id: $fromAddressId } } : null
+        isActive: true
+        createLabelFunction: $createLabelFunction
+        getRatesFunction: $getRatesFunction
+        validateAddressFunction: $validateAddressFunction
+        trackShipmentFunction: $trackShipmentFunction
+        cancelLabelFunction: $cancelLabelFunction
+        metadata: $metadata
+        regions: { connect: $regionIds }
+      }) {
+        id
+        name
+        isActive
+        accessToken
+        metadata
+        fromAddress {
+          id
+          firstName
+          lastName
+          company
+          address1
+          city
+          province
+          postalCode
+          country {
+            iso2
+          }
+        }
+        regions {
+          id
+          name
+          code
+        }
+      }
+    }
+  `;
+
+  // Transform regionIds to the format expected by GraphQL
+  const regionConnections = regionIds && regionIds.length > 0 
+    ? regionIds.map(id => ({ id }))
+    : []
+
+  const response = await keystoneClient(mutation, {
+    name,
+    accessToken,
+    fromAddressId,
+    createLabelFunction,
+    getRatesFunction,
+    validateAddressFunction,
+    trackShipmentFunction,
+    cancelLabelFunction,
+    metadata,
+    regionIds: regionConnections
+  });
+
+  if (response.success) {
+    revalidatePath('/dashboard/platform/shipping-providers');
+  }
+
+  return response;
+}
+
+/**
  * Update shippingprovider status
  */
 export async function updateShippingProviderStatus(id: string, status: string) {

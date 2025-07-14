@@ -20,7 +20,7 @@ import { StatusTabs } from '../components/StatusTabs'
 import { ShippingProviderDetailsComponent } from '../components/ShippingProviderDetailsComponent'
 import { Pagination } from '../../../dashboard/components/Pagination'
 import { FilterList } from '../../../dashboard/components/FilterList'
-import { CreateItemDrawerClientWrapper } from '@/features/platform/components/CreateItemDrawerClientWrapper'
+import { CreateShippingProviderDrawer } from '../components/drawers/CreateShippingProviderDrawer'
 import { useDashboard } from '../../../dashboard/context/DashboardProvider'
 import { useSelectedFields } from '../../../dashboard/hooks/useSelectedFields'
 import { useSort } from '../../../dashboard/hooks/useSort'
@@ -211,13 +211,12 @@ export function ShippingProviderListPageClient({
       )}
     </PageContainer>
     
-    {/* Create Item Drawer */}
-    <CreateItemDrawerClientWrapper
-      listKey="shipping-providers"
+    {/* Create Shipping Provider Drawer */}
+    <CreateShippingProviderDrawer
       open={isCreateDrawerOpen}
       onClose={() => setIsCreateDrawerOpen(false)}
       onCreate={() => {
-        window.location.reload();
+        router.refresh();
       }}
     />
   </>
