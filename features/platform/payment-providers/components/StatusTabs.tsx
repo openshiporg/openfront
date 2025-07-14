@@ -3,42 +3,20 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Clock, Settings } from "lucide-react";
 
-const statusConfig = {
-  active: {
-    label: "Active",
-    icon: Check,
-    color: "emerald"
-  },
-  inactive: {
-    label: "Inactive",
-    icon: X,
-    color: "zinc"
-  },
-  pending: {
-    label: "Pending",
-    icon: Clock,
-    color: "orange"
-  },
-  configured: {
-    label: "Configured",
-    icon: Settings,
-    color: "blue"
-  },
-} as const;
 
 interface StatusTabsProps {
-  statusCounts: {
+  regionCounts: {
     all: number;
-    active: number;
-    inactive: number;
-    pending: number;
-    configured: number;
+    regions: Array<{
+      id: string;
+      name: string;
+      count: number;
+    }>;
   };
 }
 
-export function StatusTabs({ statusCounts }: StatusTabsProps) {
+export function StatusTabs({ regionCounts }: StatusTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams()!;
   const pathname = usePathname();
@@ -48,37 +26,39 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
   const tabRefs = useRef<Array<HTMLDivElement | null>>([]);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const statuses = [
-    { value: "active", label: "Active", count: statusCounts.active },
-    { value: "inactive", label: "Inactive", count: statusCounts.inactive },
-    { value: "pending", label: "Pending", count: statusCounts.pending },
-    { value: "configured", label: "Configured", count: statusCounts.configured },
-  ] as const;
+  const regions = regionCounts.regions.map(region => ({
+    value: region.id,
+    label: region.name,
+    count: region.count,
+  }));
 
-  // Get current status from URL
-  const statusFilter = searchParams.get("!status_matches");
-  let currentStatus = "all";
+  // Get current region from URL - region filter
+  const regionFilter = searchParams.get("!regions_some");
+  let currentRegion = "all";
 
-  if (statusFilter) {
+  if (regionFilter) {
     try {
-      const parsed = JSON.parse(decodeURIComponent(statusFilter));
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        // Handle both old object format and new string format
-        currentStatus = typeof parsed[0] === "object" ? parsed[0].value : parsed[0];
+      const parsed = JSON.parse(decodeURIComponent(regionFilter));
+      if (typeof parsed === "object" && parsed.id) {
+        currentRegion = parsed.id;
       }
     } catch (e) {
       // Invalid JSON in URL, ignore
     }
   }
 
-  const handleStatusChange = (status: string) => {
+  const handleRegionChange = (regionId: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (status === "all") {
-      params.delete("!status_matches");
+    
+    // Reset to page 1 when changing region
+    params.set("page", "1");
+    
+    if (regionId === "all") {
+      params.delete("!regions_some");
     } else {
-      // Just use the status value directly, not an object
-      params.set("!status_matches", JSON.stringify([status]));
+      params.set("!regions_some", JSON.stringify({ id: regionId }));
     }
+    
     router.push(`${pathname}?${params.toString()}`);
   };
 
@@ -86,7 +66,7 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
     updateScroll(n => n + 1);
   };
 
-  const activeIndex = currentStatus === "all" ? 0 : statuses.findIndex((s) => s.value === currentStatus) + 1;
+  const activeIndex = currentRegion === "all" ? 0 : regions.findIndex((r) => r.value === currentRegion) + 1;
   const activeTabOffsetLeft = tabRefs.current[activeIndex]?.offsetLeft || 0;
   const activeTabWidth = tabRefs.current[activeIndex]?.offsetWidth || 0;
   const scrollOffset = scrollContainerRef.current ? scrollContainerRef.current.scrollLeft : 0;
@@ -115,40 +95,39 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
           <div
             ref={el => { tabRefs.current[0] = el }}
             className={`px-3 py-2 cursor-pointer transition-colors duration-300 ${
-              currentStatus === "all"
+              currentRegion === "all"
                 ? "text-foreground"
                 : "text-muted-foreground"
             }`}
             onMouseEnter={() => setHoveredIndex(0)}
             onMouseLeave={() => setHoveredIndex(null)}
-            onClick={() => handleStatusChange("all")}
+            onClick={() => handleRegionChange("all")}
           >
             <div className="text-sm font-medium leading-5 whitespace-nowrap flex items-center justify-center h-full gap-2">
-              All Payment Providers
+              All Regions
               <span className="rounded-sm bg-background border shadow-xs px-1.5 py-0 text-[10px] leading-[14px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 inline-flex items-center h-[18px]">
-                {statusCounts.all}
+                {regionCounts.all}
               </span>
             </div>
           </div>
-          {statuses.map((status, index) => {
-            const StatusIcon = statusConfig[status.value as keyof typeof statusConfig].icon;
+          {regions.map((region, index) => {
             return (
               <div
-                key={status.value}
+                key={region.value}
                 ref={el => { tabRefs.current[index + 1] = el }}
                 className={`px-3 py-2 cursor-pointer transition-colors duration-300 ${
-                  currentStatus === status.value
+                  currentRegion === region.value
                     ? "text-foreground"
                     : "text-muted-foreground"
                 }`}
                 onMouseEnter={() => setHoveredIndex(index + 1)}
                 onMouseLeave={() => setHoveredIndex(null)}
-                onClick={() => handleStatusChange(status.value)}
+                onClick={() => handleRegionChange(region.value)}
               >
                 <div className="text-sm font-medium leading-5 whitespace-nowrap flex items-center justify-center h-full gap-2">
-                  {status.label}
-                  <Badge color={statusConfig[status.value as keyof typeof statusConfig].color} className="px-1.5 py-0 text-[10px] leading-[14px] rounded-sm shadow-xs inline-flex items-center h-[18px]">
-                    {status.count}
+                  {region.label}
+                  <Badge color="blue" className="px-1.5 py-0 text-[10px] leading-[14px] rounded-sm shadow-xs inline-flex items-center h-[18px]">
+                    {region.count}
                   </Badge>
                 </div>
               </div>

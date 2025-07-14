@@ -19,7 +19,27 @@ export async function getPaymentProviders(
   skip: number = 0,
   orderBy: Array<Record<string, string>> = [{ createdAt: 'desc' }],
   selectedFields: string = `
-    id name code isInstalled metadata
+    id
+    name
+    code
+    isInstalled
+    metadata
+    regions {
+      id
+      name
+      code
+      currency {
+        code
+        symbol
+      }
+      countries {
+        id
+        name
+        iso2
+      }
+    }
+    createdAt
+    updatedAt
   `
 ) {
   const query = `
@@ -175,6 +195,48 @@ export async function getPaymentProviderStatusCounts() {
       success: false,
       error: response.error || 'Failed to fetch paymentprovider status counts',
       data: { installed: 0, notInstalled: 0, all: 0 }
+    };
+  }
+}
+
+/**
+ * Get payment provider region counts for tabs
+ */
+export async function getPaymentProviderRegionCounts() {
+  const query = `
+    query GetPaymentProviderRegionCounts {
+      all: paymentProvidersCount
+      regions {
+        id
+        name
+        paymentProvidersCount
+      }
+    }
+  `;
+
+  const response = await keystoneClient(query);
+
+  if (response.success) {
+    const allCount = response.data.all || 0;
+    const regions = (response.data.regions || []).map((region: any) => ({
+      id: region.id,
+      name: region.name,
+      count: region.paymentProvidersCount || 0,
+    }));
+
+    return {
+      success: true,
+      data: {
+        all: allCount,
+        regions,
+      },
+    };
+  } else {
+    console.error('Error fetching payment provider region counts:', response.error);
+    return {
+      success: false,
+      error: response.error || 'Failed to fetch payment provider region counts',
+      data: { all: 0, regions: [] },
     };
   }
 }

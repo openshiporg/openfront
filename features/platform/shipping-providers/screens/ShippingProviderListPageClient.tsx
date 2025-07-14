@@ -34,11 +34,14 @@ interface ShippingProviderListPageClientProps {
     pageSize: number  
     search: string
   }
-  statusCounts: {
-    active: number
-    all: number
-    inactive: number
-  } | null
+  regionCounts: {
+    all: number;
+    regions: Array<{
+      id: string;
+      name: string;
+      count: number;
+    }>;
+  }
 }
 
 function EmptyState({ isFiltered }: { isFiltered: boolean }) {
@@ -70,7 +73,7 @@ export function ShippingProviderListPageClient({
   initialData, 
   initialError, 
   initialSearchParams,
-  statusCounts
+  regionCounts
 }: ShippingProviderListPageClientProps) {
   const router = useRouter()
   const { basePath } = useDashboard()
@@ -158,24 +161,9 @@ export function ShippingProviderListPageClient({
       </div>
 
       {/* Status Tabs */}
-      {statusCounts && (
-        <div className="border-b">
-          <StatusTabs 
-            statusCounts={statusCounts}
-            statusConfig={{
-                      "active": {
-                                "label": "Active",
-                                "color": "emerald"
-                      },
-                      "inactive": {
-                                "label": "Inactive",
-                                "color": "zinc"
-                      }
-            }}
-            entityName="ShippingProviders"
-          />
-        </div>
-      )}
+      <div className="border-b">
+        <StatusTabs regionCounts={regionCounts} />
+      </div>
 
       {/* Active Filters */}
       <div className="px-4 md:px-6 border-b">

@@ -103,7 +103,7 @@ export function ShippingOptionListPageClient({
           </>
         }
       >
-        <div className="space-y-6">
+        <div>
           {/* Filter Bar */}
           <div className="px-4 md:px-6">
             <PlatformFilterBar 

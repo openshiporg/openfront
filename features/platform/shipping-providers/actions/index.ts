@@ -27,6 +27,20 @@ export async function getShippingProviders(
     isActive
     accessToken
     metadata
+    regions {
+      id
+      name
+      code
+      currency {
+        code
+        symbol
+      }
+      countries {
+        id
+        name
+        iso2
+      }
+    }
     createdAt
     updatedAt
   `
@@ -216,6 +230,48 @@ export async function getShippingProviderStatusCounts() {
       success: false,
       error: response.error || 'Failed to fetch shippingprovider status counts',
       data: emptyCounts,
+    };
+  }
+}
+
+/**
+ * Get shipping provider region counts for tabs
+ */
+export async function getShippingProviderRegionCounts() {
+  const query = `
+    query GetShippingProviderRegionCounts {
+      all: shippingProvidersCount
+      regions {
+        id
+        name
+        shippingProvidersCount
+      }
+    }
+  `;
+
+  const response = await keystoneClient(query);
+
+  if (response.success) {
+    const allCount = response.data.all || 0;
+    const regions = (response.data.regions || []).map((region: any) => ({
+      id: region.id,
+      name: region.name,
+      count: region.shippingProvidersCount || 0,
+    }));
+
+    return {
+      success: true,
+      data: {
+        all: allCount,
+        regions,
+      },
+    };
+  } else {
+    console.error('Error fetching shipping provider region counts:', response.error);
+    return {
+      success: false,
+      error: response.error || 'Failed to fetch shipping provider region counts',
+      data: { all: 0, regions: [] },
     };
   }
 }
