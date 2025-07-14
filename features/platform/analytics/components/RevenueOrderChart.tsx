@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -133,18 +133,21 @@ export function RevenueOrderChart({
       <CardContent>
         <ChartContainer
           config={chartConfig}
-          className="aspect-auto h-60 w-full [&_.recharts-rectangle.recharts-tooltip-cursor]:fill-[var(--chart-1)]/15"
+          className="aspect-auto h-60 w-full"
         >
-          <BarChart
+          <AreaChart
             accessibilityLayer
             data={timeSeriesData}
-            maxBarSize={20}
             margin={{ left: -12, right: 12, top: 12 }}
           >
             <defs>
-              <linearGradient id={`${id}-gradient`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--chart-1)" />
-                <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0.6} />
+              <linearGradient id={`${id}-fillRevenue`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.8} />
+                <stop offset="55%" stopColor="var(--chart-1)" stopOpacity={0.1} />
+              </linearGradient>
+              <linearGradient id={`${id}-fillOrders`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--chart-3)" stopOpacity={0.8} />
+                <stop offset="55%" stopColor="var(--chart-3)" stopOpacity={0.1} />
               </linearGradient>
             </defs>
             <CartesianGrid
@@ -182,12 +185,15 @@ export function RevenueOrderChart({
                 <CustomTooltipContent metricView={metricView} currencySymbol={currencySymbol} />
               }
             />
-            <Bar 
-              dataKey={metricView === 'revenue' ? "displayRevenue" : "orders"} 
-              fill={metricView === 'revenue' ? `url(#${id}-gradient)` : "var(--chart-3)"} 
-              radius={[4, 4, 0, 0]}
+            <Area
+              strokeWidth={2}
+              dataKey={metricView === 'revenue' ? "displayRevenue" : "orders"}
+              type="stepBefore"
+              fill={metricView === 'revenue' ? `url(#${id}-fillRevenue)` : `url(#${id}-fillOrders)`}
+              fillOpacity={0.1}
+              stroke={metricView === 'revenue' ? "var(--chart-1)" : "var(--chart-3)"}
             />
-          </BarChart>
+          </AreaChart>
         </ChartContainer>
       </CardContent>
     </Card>

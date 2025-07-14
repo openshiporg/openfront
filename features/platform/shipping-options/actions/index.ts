@@ -48,16 +48,18 @@ export interface ShippingOptionResponse {
   error?: string;
 }
 
-export interface ShippingOptionStatusCounts {
+export interface ShippingOptionRegionCounts {
   all: number;
-  active: number;
-  inactive: number;
-  return: number;
+  regions: Array<{
+    id: string;
+    name: string;
+    count: number;
+  }>;
 }
 
-export interface ShippingOptionStatusCountsResponse {
+export interface ShippingOptionRegionCountsResponse {
   success: boolean;
-  data?: ShippingOptionStatusCounts;
+  data?: ShippingOptionRegionCounts;
   error?: string;
 }
 
@@ -135,14 +137,17 @@ export async function getShippingOptions(
 }
 
 /**
- * Get shipping option status counts for tabs
+ * Get shipping option region counts for tabs
  */
-export async function getShippingOptionStatusCounts(): Promise<ShippingOptionStatusCountsResponse> {
+export async function getShippingOptionRegionCounts(): Promise<ShippingOptionRegionCountsResponse> {
   const query = `
-    query GetShippingOptionStatusCounts {
-      active: shippingOptionsCount(where: { AND: [{ adminOnly: { equals: false } }, { isReturn: { equals: false } }] })
-      return: shippingOptionsCount(where: { isReturn: { equals: true } })
+    query GetShippingOptionRegionCounts {
       all: shippingOptionsCount
+      regions {
+        id
+        name
+        shippingOptionsCount
+      }
     }
   `;
 
@@ -150,25 +155,25 @@ export async function getShippingOptionStatusCounts(): Promise<ShippingOptionSta
 
   if (response.success) {
     const allCount = response.data.all || 0;
-    const activeCount = response.data.active || 0;
-    const returnCount = response.data.return || 0;
-    const inactiveCount = allCount - activeCount - returnCount;
+    const regions = (response.data.regions || []).map((region: any) => ({
+      id: region.id,
+      name: region.name,
+      count: region.shippingOptionsCount || 0,
+    }));
 
     return {
       success: true,
       data: {
         all: allCount,
-        active: activeCount,
-        inactive: inactiveCount,
-        return: returnCount,
+        regions,
       },
     };
   } else {
-    console.error('Error fetching shipping option status counts:', response.error);
+    console.error('Error fetching shipping option region counts:', response.error);
     return {
       success: false,
-      error: response.error || 'Failed to fetch shipping option status counts',
-      data: { all: 0, active: 0, inactive: 0, return: 0 },
+      error: response.error || 'Failed to fetch shipping option region counts',
+      data: { all: 0, regions: [] },
     };
   }
 }

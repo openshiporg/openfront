@@ -8,7 +8,8 @@ import {
   DrawerHeader, 
   DrawerTitle,
   DrawerDescription,
-  DrawerFooter 
+  DrawerFooter,
+  DrawerClose 
 } from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -225,7 +226,7 @@ export function RegionCreateDrawer({
   }
 
   return (
-    <Drawer open={open} onOpenChange={handleClose}>
+    <Drawer open={open} onOpenChange={(open) => { if (!open) handleClose() }}>
       <DrawerContent>
         <DrawerHeader className="flex-shrink-0">
           <DrawerTitle>Create New Region</DrawerTitle>

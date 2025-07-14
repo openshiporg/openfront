@@ -47,10 +47,10 @@ export function StatsCards({ data, loading = false }: StatsCardsProps) {
             <CardTitle className="text-base font-normal">
               {stat.name}
             </CardTitle>
-            <div className="mt-1 flex items-baseline gap-2 md:block lg:flex">
-              <div className="flex items-baseline text-2xl font-semibold text-primary">
-                {stat.value}
-                <span className="ml-2 text-sm font-medium text-muted-foreground">
+            <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-baseline sm:gap-2">
+              <div className="flex flex-wrap items-baseline text-2xl font-semibold text-primary">
+                <span className="mr-2">{stat.value}</span>
+                <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
                   from {stat.previous}
                 </span>
               </div>
@@ -58,7 +58,7 @@ export function StatsCards({ data, loading = false }: StatsCardsProps) {
               <Badge
                 variant="outline"
                 className={cn(
-                  "inline-flex items-center px-1.5 ps-2.5 py-0.5 text-xs font-medium md:mt-2 lg:mt-0",
+                  "inline-flex items-center px-1.5 ps-2.5 py-0.5 text-xs font-medium w-fit shrink-0",
                   stat.changeType === "positive"
                     ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                     : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"

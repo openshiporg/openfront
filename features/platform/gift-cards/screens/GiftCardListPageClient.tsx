@@ -9,15 +9,18 @@ import React, { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   SearchX,
-  Table as TableIcon 
+  Table as TableIcon,
+  Plus 
 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
 import { PageContainer } from '../../../dashboard/components/PageContainer'
 import { PlatformFilterBar } from '../../components/PlatformFilterBar'
 import { StatusTabs } from '../components/StatusTabs'
 import { GiftCardDetailsComponent } from '../components/GiftCardDetailsComponent'
 import { Pagination } from '../../../dashboard/components/Pagination'
 import { FilterList } from '../../../dashboard/components/FilterList'
+import { CreateItemDrawerClientWrapper } from '@/features/platform/components/CreateItemDrawerClientWrapper'
 import { useDashboard } from '../../../dashboard/context/DashboardProvider'
 import { useSelectedFields } from '../../../dashboard/hooks/useSelectedFields'
 import { useSort } from '../../../dashboard/hooks/useSort'
@@ -71,6 +74,8 @@ export function GiftCardListPageClient({
 }: GiftCardListPageClientProps) {
   const router = useRouter()
   const { basePath } = useDashboard()
+  const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false)
+  
   // Hooks for sorting and field selection
   const selectedFields = useSelectedFields(list)
   const sort = useSort(list)
@@ -131,10 +136,25 @@ export function GiftCardListPageClient({
   const isEmpty = data?.count === 0 && !isFiltered
 
   return (
+    <>
     <PageContainer title="GiftCards" header={header} breadcrumbs={breadcrumbs}>
       {/* Filter Bar - includes search, filters, sorting, and create button */}
       <div className="px-4 md:px-6">
-        <PlatformFilterBar list={list} />
+        <PlatformFilterBar 
+          list={list}
+          customCreateButton={
+            <Button 
+              onClick={() => setIsCreateDrawerOpen(true)}
+              size="icon"
+              className="lg:px-4 lg:py-2 lg:w-auto rounded-lg"
+            >
+              <Plus className="size-4 lg:mr-2" />
+              <span className="sr-only lg:not-sr-only lg:whitespace-nowrap">
+                Create Gift Card
+              </span>
+            </Button>
+          }
+        />
       </div>
 
       {/* Status Tabs */}
@@ -202,5 +222,16 @@ export function GiftCardListPageClient({
         </>
       )}
     </PageContainer>
+    
+    {/* Create Item Drawer */}
+    <CreateItemDrawerClientWrapper
+      listKey="gift-cards"
+      open={isCreateDrawerOpen}
+      onClose={() => setIsCreateDrawerOpen(false)}
+      onCreate={() => {
+        window.location.reload();
+      }}
+    />
+  </>
   )
 }

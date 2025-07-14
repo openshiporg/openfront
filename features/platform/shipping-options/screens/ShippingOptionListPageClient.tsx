@@ -53,11 +53,13 @@ interface ShippingOptionListPageClientProps {
     pageSize: number;
     search: string;
   };
-  statusCounts: {
+  regionCounts: {
     all: number;
-    active: number;
-    inactive: number;
-    return: number;
+    regions: Array<{
+      id: string;
+      name: string;
+      count: number;
+    }>;
   };
 }
 
@@ -66,7 +68,7 @@ export function ShippingOptionListPageClient({
   initialData,
   initialError,
   initialSearchParams,
-  statusCounts,
+  regionCounts,
 }: ShippingOptionListPageClientProps) {
   const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
 
@@ -104,12 +106,26 @@ export function ShippingOptionListPageClient({
         <div className="space-y-6">
           {/* Filter Bar */}
           <div className="px-4 md:px-6">
-            <PlatformFilterBar list={list} />
+            <PlatformFilterBar 
+              list={list}
+              customCreateButton={
+                <Button 
+                  onClick={() => setIsCreateDrawerOpen(true)}
+                  size="icon"
+                  className="lg:px-4 lg:py-2 lg:w-auto rounded-lg"
+                >
+                  <Plus className="size-4 lg:mr-2" />
+                  <span className="sr-only lg:not-sr-only lg:whitespace-nowrap">
+                    Create Shipping Option
+                  </span>
+                </Button>
+              }
+            />
           </div>
 
           {/* Status Tabs */}
           <div className="border-b">
-            <StatusTabs statusCounts={statusCounts} />
+            <StatusTabs regionCounts={regionCounts} />
           </div>
 
           {/* Shipping Options List */}

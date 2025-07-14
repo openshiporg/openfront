@@ -68,9 +68,9 @@ export function DonutChart({
         </p>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           {/* Donut Chart */}
-          <div className="relative">
+          <div className="relative mx-auto lg:mx-0">
             <ResponsiveContainer width={200} height={200}>
               <PieChart>
                 <Pie
@@ -106,10 +106,10 @@ export function DonutChart({
           </div>
 
           {/* Legend */}
-          <div className="flex-1 space-y-3 ml-6">
+          <div className="flex-1 space-y-3 lg:ml-6">
             {dataWithPercentages.slice(0, 5).map((item, index) => (
-              <div key={item.name} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              <div key={item.name} className="flex items-center justify-between gap-3 min-w-0">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div 
                     className="w-4 h-4 rounded-sm flex-shrink-0" 
                     style={{ backgroundColor: item.color }}
@@ -118,11 +118,11 @@ export function DonutChart({
                     {item.name}
                   </span>
                 </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-50">
+                <div className="flex flex-col items-end flex-shrink-0">
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-50 whitespace-nowrap">
                     {formatCurrency(item.value * 100)}
                   </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                     ({item.percentage.toFixed(1)}%)
                   </span>
                 </div>

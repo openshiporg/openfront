@@ -9,7 +9,7 @@ import { buildOrderByClause } from '../../../dashboard/lib/buildOrderByClause'
 import { buildWhereClause } from '../../../dashboard/lib/buildWhereClause'
 import { notFound } from 'next/navigation'
 import { ShippingOptionListPageClient } from './ShippingOptionListPageClient'
-import { getShippingOptions, getShippingOptionStatusCounts } from '../actions'
+import { getShippingOptions, getShippingOptionRegionCounts } from '../actions'
 
 interface PageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -87,13 +87,13 @@ export async function ShippingOptionListPage({ searchParams }: PageProps) {
   // Create enhanced list with validation data
   const enhancedList = adminMetaList || list
 
-  // Get status counts using dedicated action
-  const statusCountsResponse = await getShippingOptionStatusCounts()
+  // Get region counts using dedicated action
+  const regionCountsResponse = await getShippingOptionRegionCounts()
   
-  let statusCounts = {"active":0,"all":0,"inactive":0,"return":0}
+  let regionCounts = {"all":0,"regions":[]}
 
-  if (statusCountsResponse.success) {
-    statusCounts = statusCountsResponse.data
+  if (regionCountsResponse.success) {
+    regionCounts = regionCountsResponse.data
   }
 
   return (
@@ -106,7 +106,7 @@ export async function ShippingOptionListPage({ searchParams }: PageProps) {
         pageSize,
         search: searchString
       }}
-      statusCounts={statusCounts}
+      regionCounts={regionCounts}
     />
   )
 }
