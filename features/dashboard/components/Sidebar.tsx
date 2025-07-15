@@ -50,7 +50,9 @@ interface User {
   email: string;
   name?: string;
   onboardingStatus?: string;
-  role?: any;
+  role?: {
+    canManageOnboarding?: boolean;
+  };
 }
 
 interface SidebarProps {

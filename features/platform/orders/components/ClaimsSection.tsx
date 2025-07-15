@@ -139,11 +139,11 @@ export const ClaimsSection = ({ order, claims, totalItems }: ClaimsSectionProps)
           const TypeIcon = typeConfig?.icon || AlertTriangle;
           
           return (
-            <div key={claim.id} className="rounded-md border bg-background p-3 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
+            <div key={claim.id} className="rounded-md border bg-background p-3 shadow-sm space-y-2">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">
                         Claim #{index + 1}
                       </span>
@@ -167,16 +167,17 @@ export const ClaimsSection = ({ order, claims, totalItems }: ClaimsSectionProps)
                     </div>
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 shrink-0"
-                  disabled={isUpdating === claim.id}
-                >
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 shrink-0"
+                      disabled={isUpdating === claim.id}
+                    >
                       <MoreVertical className="h-3 w-3" />
-                    </DropdownMenuTrigger>
+                    </Button>
+                  </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       {/* Payment Status Updates */}
                       {claim.type === 'refund' && claim.paymentStatus === 'not_refunded' && (
@@ -237,16 +238,21 @@ export const ClaimsSection = ({ order, claims, totalItems }: ClaimsSectionProps)
                         Cancel Claim
                       </DropdownMenuItem>
                     </DropdownMenuContent>
-                  </DropdownMenu>
-                </Button>
+                </DropdownMenu>
               </div>
               
-              {/* Simplified Status Display */}
-              <div className="space-y-2 mb-3">
+              {/* Status Display */}
+              <div className="space-y-2">
                 <div className="text-xs text-muted-foreground">
-                  Status: {paymentStatusConfig?.label || claim.paymentStatus}
-                  {claim.type === 'replace' && fulfillmentStatusConfig && (
-                    <> • {fulfillmentStatusConfig.label}</>
+                  {claim.type === 'refund' ? (
+                    <>Payment: {paymentStatusConfig?.label || claim.paymentStatus}</>
+                  ) : (
+                    <>
+                      Fulfillment: {fulfillmentStatusConfig?.label || claim.fulfillmentStatus}
+                      {paymentStatusConfig && paymentStatusConfig.label !== 'N/A' && (
+                        <> • Payment: {paymentStatusConfig.label}</>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -254,7 +260,7 @@ export const ClaimsSection = ({ order, claims, totalItems }: ClaimsSectionProps)
               {/* Claim Items Summary */}
               {claim.claimItems && claim.claimItems.length > 0 && (
                 <>
-                  <Separator className="mb-2" />
+                  <Separator className="my-2" />
                   <div className="space-y-1">
                     <span className="text-xs font-medium text-muted-foreground">
                       {claim.claimItems.length} Item{claim.claimItems.length !== 1 ? 's' : ''}

@@ -17,6 +17,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MoreVertical, Package } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 import { ItemPagination } from "../../orders/components/ItemPagination";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
@@ -54,6 +60,8 @@ export function CollectionDetailsComponent({
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('products');
   const [currentPage, setCurrentPage] = useState(1);
+  const [editProductId, setEditProductId] = useState<string>('');
+  const [editProductOpen, setEditProductOpen] = useState(false);
   const itemsPerPage = 12;
   
   const products = collection.products || [];
@@ -75,6 +83,11 @@ export function CollectionDetailsComponent({
   ];
 
   const activeTabData = tabs.find(tab => tab.key === activeTab);
+  
+  const handleEditProduct = (productId: string) => {
+    setEditProductId(productId);
+    setEditProductOpen(true);
+  };
   
   // Status badge colors
   const getStatusColor = (status: string) => {
@@ -228,7 +241,7 @@ export function CollectionDetailsComponent({
                   {/* Products Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {paginatedProducts.map((product) => (
-                      <div key={product.id} className="rounded-md border bg-background p-4 shadow-sm">
+                      <div key={product.id} className="rounded-md border bg-background p-4 shadow-sm relative">
                         <div className="flex items-center gap-3 mb-3">
                           <div className="flex-shrink-0">
                             <ProductImage
@@ -259,6 +272,20 @@ export function CollectionDetailsComponent({
                             )}
                           </div>
                         </div>
+                        <div className="absolute top-2 right-2">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-6 w-6">
+                                <MoreVertical className="h-3 w-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditProduct(product.id)}>
+                                Edit Product
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -275,6 +302,19 @@ export function CollectionDetailsComponent({
         open={isEditDrawerOpen}
         onClose={() => setIsEditDrawerOpen(false)}
       />
+
+      {/* Edit Product Drawer */}
+      {editProductId && (
+        <EditItemDrawerClientWrapper
+          listKey="products"
+          itemId={editProductId}
+          open={editProductOpen}
+          onClose={() => {
+            setEditProductOpen(false);
+            setEditProductId('');
+          }}
+        />
+      )}
     </>
   );
 }

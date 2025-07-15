@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -9,7 +10,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MoreVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ItemPagination } from "../../orders/components/ItemPagination";
+import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 
 interface ProductVariant {
   id: string;
@@ -34,6 +43,8 @@ export const VariantsContent = ({
 }: VariantsContentProps) => {
   const [activeTab, setActiveTab] = useState<TabType>('variants');
   const [currentPage, setCurrentPage] = useState(1);
+  const [editItemId, setEditItemId] = useState<string>('');
+  const [editItemOpen, setEditItemOpen] = useState(false);
   const itemsPerPage = 5;
 
   // Calculate pagination
@@ -52,6 +63,11 @@ export const VariantsContent = ({
   ];
 
   const activeTabData = tabs.find(tab => tab.key === activeTab);
+
+  const handleEditItem = (itemId: string) => {
+    setEditItemId(itemId);
+    setEditItemOpen(true);
+  };
 
   return (
     <>
@@ -138,7 +154,7 @@ export const VariantsContent = ({
               {paginatedItems.map((variant) => (
                 <div
                   key={variant.id}
-                  className="rounded-md border bg-background p-3 shadow-sm"
+                  className="rounded-md border bg-background p-3 shadow-sm relative"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
@@ -164,12 +180,39 @@ export const VariantsContent = ({
                       </Badge>
                     )}
                   </div>
+                  <div className="absolute top-2 right-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                          <MoreVertical className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEditItem(variant.id)}>
+                          Edit Variant
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         )}
       </div>
+
+      {/* Edit Variant Drawer */}
+      {editItemId && (
+        <EditItemDrawerClientWrapper
+          listKey="product-variants"
+          itemId={editItemId}
+          open={editItemOpen}
+          onClose={() => {
+            setEditItemOpen(false);
+            setEditItemId('');
+          }}
+        />
+      )}
     </>
   );
 };

@@ -3,6 +3,14 @@
 import React, { useState } from "react";
 import { ReturnsSection } from "./ReturnsSection";
 import { ClaimsSection } from "./ClaimsSection";
+import { Button } from "@/components/ui/button";
+import { MoreVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -10,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 
 interface OrderSectionTabsProps {
   order: any;
@@ -18,6 +27,9 @@ interface OrderSectionTabsProps {
 type TabType = 'lineItems' | 'returns' | 'claims';
 
 export const OrderSectionTabs = ({ order }: OrderSectionTabsProps) => {
+  const [editLineItemId, setEditLineItemId] = useState<string>('');
+  const [editLineItemOpen, setEditLineItemOpen] = useState(false);
+  
   // Calculate counts for sections
   const lineItemsCount = order.lineItems?.length || 0;
   const returnsCount = order.returns?.length || 0;
@@ -47,6 +59,11 @@ export const OrderSectionTabs = ({ order }: OrderSectionTabsProps) => {
 
   const [activeTab, setActiveTab] = useState<TabType>('lineItems');
   const activeTabData = tabs.find(tab => tab.key === activeTab);
+
+  const handleEditLineItem = (lineItemId: string) => {
+    setEditLineItemId(lineItemId);
+    setEditLineItemOpen(true);
+  };
 
   return (
     <>
@@ -159,6 +176,24 @@ export const OrderSectionTabs = ({ order }: OrderSectionTabsProps) => {
                       </div>
                     </div>
                   </div>
+                  <div className="absolute top-2 right-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                        >
+                          <MoreVertical className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEditLineItem(item.id)}>
+                          Edit Line Item
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               ))}
             </div>
@@ -185,6 +220,19 @@ export const OrderSectionTabs = ({ order }: OrderSectionTabsProps) => {
           </div>
         )}
       </div>
+
+      {/* Edit Line Item Drawer */}
+      {editLineItemId && (
+        <EditItemDrawerClientWrapper
+          listKey="line-items"
+          itemId={editLineItemId}
+          open={editLineItemOpen}
+          onClose={() => {
+            setEditLineItemOpen(false);
+            setEditLineItemId('');
+          }}
+        />
+      )}
     </>
   );
 };
