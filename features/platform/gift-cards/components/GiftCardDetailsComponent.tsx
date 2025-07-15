@@ -16,6 +16,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { MoreVertical, ArrowRight, ShoppingBag, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
@@ -38,6 +44,8 @@ export function GiftCardDetailsComponent({
   const [currentPages, setCurrentPages] = useState<Record<TabType, number>>({
     transactions: 1
   });
+  const [editItemId, setEditItemId] = useState<string>('');
+  const [editItemOpen, setEditItemOpen] = useState(false);
   const itemsPerPage = 5;
 
   const isActive = !giftcard.isDisabled && (!giftcard.endsAt || new Date(giftcard.endsAt) > new Date());
@@ -71,6 +79,11 @@ export function GiftCardDetailsComponent({
       style: 'currency',
       currency,
     }).format(amount / 100);
+  };
+
+  const handleEditItem = (itemId: string) => {
+    setEditItemId(itemId);
+    setEditItemOpen(true);
   };
 
   return (
@@ -160,14 +173,22 @@ export function GiftCardDetailsComponent({
                 
                 {/* Action buttons */}
                 <div className="absolute bottom-3 right-5 sm:static flex items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="border [&_svg]:size-3 h-6 w-6"
-                    onClick={() => setIsEditDrawerOpen(true)}
-                  >
-                    <MoreVertical className="stroke-muted-foreground" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="border [&_svg]:size-3 h-6 w-6"
+                      >
+                        <MoreVertical className="stroke-muted-foreground" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setIsEditDrawerOpen(true)}>
+                        Edit Gift Card
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Button
                     variant="secondary"
                     size="icon"
@@ -279,13 +300,22 @@ export function GiftCardDetailsComponent({
                                       </div>
                                     </div>
                                   </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 shrink-0"
-                                  >
-                                    <MoreVertical className="h-3 w-3" />
-                                  </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 shrink-0"
+                                      >
+                                        <MoreVertical className="h-3 w-3" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => handleEditItem(transaction.id)}>
+                                        Edit Transaction
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 </div>
                                 <div className="flex items-center justify-between text-xs">
                                   <span className="text-muted-foreground">Order Total:</span>
@@ -322,6 +352,19 @@ export function GiftCardDetailsComponent({
         open={isEditDrawerOpen}
         onClose={() => setIsEditDrawerOpen(false)}
       />
+
+      {/* Edit Item Drawer */}
+      {editItemId && (
+        <EditItemDrawerClientWrapper
+          listKey="gift-card-transactions"
+          itemId={editItemId}
+          open={editItemOpen}
+          onClose={() => {
+            setEditItemOpen(false);
+            setEditItemId('');
+          }}
+        />
+      )}
     </>
   );
 }

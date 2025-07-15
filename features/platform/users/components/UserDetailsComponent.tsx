@@ -16,6 +16,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { MoreVertical, User, Mail, Phone, MapPin, ShoppingCart, CreditCard, Users } from "lucide-react";
 import Link from "next/link";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
@@ -143,6 +149,9 @@ export function UserDetailsComponent({
     carts: 1,
     customerGroups: 1
   });
+  const [editItemId, setEditItemId] = useState<string>('');
+  const [editItemOpen, setEditItemOpen] = useState(false);
+  const [editItemType, setEditItemType] = useState<string>('');
   const itemsPerPage = 5;
 
   // Prepare data for tabs
@@ -185,6 +194,12 @@ export function UserDetailsComponent({
       ...prev,
       [tabKey]: newPage
     }));
+  };
+
+  const handleEditItem = (itemId: string, itemType: string) => {
+    setEditItemId(itemId);
+    setEditItemType(itemType);
+    setEditItemOpen(true);
   };
 
   return (
@@ -270,14 +285,22 @@ export function UserDetailsComponent({
                 
                 {/* Action buttons */}
                 <div className="absolute bottom-3 right-5 sm:static flex items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="border [&_svg]:size-3 h-6 w-6"
-                    onClick={() => setIsEditDrawerOpen(true)}
-                  >
-                    <MoreVertical className="stroke-muted-foreground" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="border [&_svg]:size-3 h-6 w-6"
+                      >
+                        <MoreVertical className="stroke-muted-foreground" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setIsEditDrawerOpen(true)}>
+                        Edit User
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Button
                     variant="secondary"
                     size="icon"
@@ -411,13 +434,22 @@ export function UserDetailsComponent({
                                   )}
                                 </div>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 shrink-0"
-                              >
-                                <MoreVertical className="h-3 w-3" />
-                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 shrink-0"
+                                  >
+                                    <MoreVertical className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleEditItem(address.id, 'addresses')}>
+                                    Edit Address
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </div>
                         ))}
@@ -461,13 +493,22 @@ export function UserDetailsComponent({
                                   </div>
                                 </div>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 shrink-0"
-                              >
-                                <MoreVertical className="h-3 w-3" />
-                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 shrink-0"
+                                  >
+                                    <MoreVertical className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleEditItem(cart.id, 'carts')}>
+                                    Edit Cart
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </div>
                         ))}
@@ -492,13 +533,22 @@ export function UserDetailsComponent({
                                   </div>
                                 </div>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 shrink-0"
-                              >
-                                <MoreVertical className="h-3 w-3" />
-                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 shrink-0"
+                                  >
+                                    <MoreVertical className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleEditItem(group.id, 'customer-groups')}>
+                                    Edit Customer Group
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </div>
                         ))}
@@ -518,6 +568,20 @@ export function UserDetailsComponent({
         open={isEditDrawerOpen}
         onClose={() => setIsEditDrawerOpen(false)}
       />
+
+      {/* Edit Item Drawer */}
+      {editItemId && (
+        <EditItemDrawerClientWrapper
+          listKey={editItemType}
+          itemId={editItemId}
+          open={editItemOpen}
+          onClose={() => {
+            setEditItemOpen(false);
+            setEditItemId('');
+            setEditItemType('');
+          }}
+        />
+      )}
     </>
   );
 }

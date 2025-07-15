@@ -14,7 +14,7 @@ export default function MCPDemoPage() {
     setResponse('');
     
     try {
-      const res = await fetch('/api/completion', {
+      const res = await fetch('/api/completion-simple', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

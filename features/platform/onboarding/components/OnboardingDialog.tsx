@@ -698,16 +698,19 @@ const OnboardingDialog: React.FC<OnboardingDialogProps> = ({
     'minimal'
   );
   const [currentJsonData, setCurrentJsonData] = useState<any>(null);
+  const [customJsonApplied, setCustomJsonApplied] = useState(false);
   
   // Load JSON data when template changes
   React.useEffect(() => {
     if (selectedTemplate !== 'custom') {
       const templateData = getSeedForTemplate(selectedTemplate, seedData);
       setCurrentJsonData(templateData);
+      setCustomJsonApplied(false);
     } else {
       // For custom, start with basic template
       const basicData = getSeedForTemplate('minimal', seedData);
       setCurrentJsonData(basicData);
+      setCustomJsonApplied(false);
     }
   }, [selectedTemplate]);
   const [progressMessage, setProgressMessage] = useState<string>('');
@@ -1772,11 +1775,14 @@ const OnboardingDialog: React.FC<OnboardingDialogProps> = ({
           </div>
 
           <div className="flex-1 max-h-[70vh] overflow-y-auto p-6 md:px-6 md:pb-8 md:pt-6">
-            {selectedTemplate === 'custom' && step === 'template' ? (
+            {selectedTemplate === 'custom' && step === 'template' && !customJsonApplied ? (
               /* Custom JSON Editor */
               <FullJsonEditor
                 currentJson={currentJsonData}
-                onJsonUpdate={setCurrentJsonData}
+                onJsonUpdate={(newJsonData) => {
+                  setCurrentJsonData(newJsonData);
+                  setCustomJsonApplied(true);
+                }}
                 templateName="Custom"
               />
             ) : (
