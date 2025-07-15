@@ -1,18 +1,23 @@
-export { default as ItemPagination } from './ItemPagination';
+export { ItemPagination } from './ItemPagination';
 export { OrderDetailsComponent } from './OrderDetailsComponent';
 export { OrderListItem } from './OrderListItem';
-export { default as Pagination } from './Pagination';
-export { ProductDetailsCollapsible } from './ProductDetailsCollapsible';
+export { Pagination } from './Pagination';
 export { StatusTabs } from './StatusTabs';
 export { FulfillmentHistory } from './FulfillmentHistory';
 export { UnfulfilledItems } from './UnfulfilledItems';
 export { CartDialog } from './CartDialog';
-export * from './ShippingTabs';
 export { OrderCreateButton } from './OrderCreateButton';
 export { CustomerSearchCombobox } from './CustomerSearchCombobox';
 export { AddressSelectCombobox } from './AddressSelectCombobox';
 export { VariantSearchCombobox } from './VariantSearchCombobox';
-export { default as MiniStorefront } from './MiniStorefront';
+export { MiniStorefront } from './MiniStorefront';
 export { AdminPaymentSelection } from './AdminPaymentSelection';
 export { PaymentSelection } from './PaymentSelection';
 export { LineItemsManager } from './LineItemsManager';
+
+// ShippingTabs exports
+export { AddressFormCard } from './ShippingTabs/AddressFormCard';
+export { AddressSelect } from './ShippingTabs/AddressSelect';
+export { ShippingAddressTab } from './ShippingTabs/ShippingAddressTab';
+export { ShippingMethodsTab } from './ShippingTabs/ShippingMethodsTab';
+export { ShippingTabs } from './ShippingTabs/ShippingTabs';

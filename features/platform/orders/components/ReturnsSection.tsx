@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { 
   DropdownMenu, 
@@ -18,7 +17,8 @@ import { toast } from 'sonner';
 
 interface ReturnsSectionProps {
   order: any;
-  returns?: any[];
+  returns: any[];
+  totalItems: number;
 }
 
 const returnStatusConfig = {
@@ -55,7 +55,7 @@ const formatCurrency = (amount: number, currencyCode: string = 'USD') => {
   }).format(amount / 100);
 };
 
-export const ReturnsSection = ({ order, returns = [] }: ReturnsSectionProps) => {
+export const ReturnsSection = ({ order, returns, totalItems }: ReturnsSectionProps) => {
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
@@ -78,171 +78,132 @@ export const ReturnsSection = ({ order, returns = [] }: ReturnsSectionProps) => 
     }
   };
 
-  const canCreateReturn = order?.status !== 'canceled' && order?.lineItems?.length > 0;
-  const hasReturns = returns && returns.length > 0;
-
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-          <CardTitle className="text-base font-medium">Returns</CardTitle>
-          {canCreateReturn && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsReturnModalOpen(true)}
-              className="h-8"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Create Return
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent>
-          {!hasReturns ? (
-            <div className="text-center py-6">
-              <Package className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">
-                No returns have been created for this order
-              </p>
-              {canCreateReturn && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsReturnModalOpen(true)}
-                  className="mt-3"
-                >
-                  Create First Return
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {returns.map((returnItem: any, index: number) => {
-                const statusConfig = returnStatusConfig[returnItem.status as keyof typeof returnStatusConfig];
-                const StatusIcon = statusConfig?.icon || Clock;
-                
-                return (
-                  <div key={returnItem.id} className="border rounded-lg p-4 space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm">
-                            Return #{index + 1}
-                          </span>
-                          <Badge 
-                            color={statusConfig?.color || "zinc"} 
-                            className="text-xs"
-                          >
-                            <StatusIcon className="h-3 w-3 mr-1" />
-                            {statusConfig?.label || returnItem.status}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {statusConfig?.description}
-                        </p>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>
-                            Created: {new Date(returnItem.createdAt).toLocaleDateString()}
-                          </span>
-                          <span>
-                            Refund: {formatCurrency(returnItem.refundAmount || 0, order.currency?.code)}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">
-                          Return #{index + 1}
-                        </span>
-                        
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              disabled={isUpdating === returnItem.id}
-                            >
-                              <MoreVertical className="h-3 w-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {returnItem.status === 'requested' && (
-                              <>
-                                <DropdownMenuItem 
-                                  onClick={() => handleStatusUpdate(returnItem.id, 'received')}
-                                >
-                                  Mark as Received
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  onClick={() => handleStatusUpdate(returnItem.id, 'requires_action')}
-                                >
-                                  Requires Action
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  onClick={() => handleStatusUpdate(returnItem.id, 'canceled')}
-                                  className="text-red-600"
-                                >
-                                  Cancel Return
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                            {returnItem.status === 'received' && (
-                              <DropdownMenuItem 
-                                onClick={() => handleStatusUpdate(returnItem.id, 'requires_action')}
-                              >
-                                Requires Action
-                              </DropdownMenuItem>
-                            )}
-                            {returnItem.status === 'requires_action' && (
-                              <DropdownMenuItem 
-                                onClick={() => handleStatusUpdate(returnItem.id, 'received')}
-                              >
-                                Mark as Received
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+        {returns.map((returnItem: any, index: number) => {
+          const statusConfig = returnStatusConfig[returnItem.status as keyof typeof returnStatusConfig];
+          const StatusIcon = statusConfig?.icon || Clock;
+          
+          return (
+            <div key={returnItem.id} className="rounded-md border bg-background p-3 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-medium">
+                        Return #{index + 1}
+                      </span>
+                      <Badge 
+                        color={statusConfig?.color || "zinc"} 
+                        className="text-xs"
+                      >
+                        <StatusIcon className="h-3 w-3 mr-1" />
+                        {statusConfig?.label || returnItem.status}
+                      </Badge>
                     </div>
-                    
-                    {/* Return Items Summary */}
-                    {returnItem.returnItems && returnItem.returnItems.length > 0 && (
-                      <>
-                        <Separator />
-                        <div className="space-y-2">
-                          <span className="text-xs font-medium text-muted-foreground">
-                            Item{returnItem.returnItems.length !== 1 ? 's' : ''} ({returnItem.returnItems.length})
-                          </span>
-                          <div className="grid grid-cols-1 gap-2">
-                            {returnItem.returnItems.slice(0, 3).map((item: any) => (
-                              <div key={item.id} className="flex items-center justify-between text-xs">
-                                <span className="truncate flex-1">
-                                  {item.lineItem?.title || 'Unknown Item'} 
-                                  {item.lineItem?.variantTitle && ` - ${item.lineItem.variantTitle}`}
-                                </span>
-                                <span className="text-muted-foreground ml-2">
-                                  Qty: {item.quantity}
-                                </span>
-                              </div>
-                            ))}
-                            {returnItem.returnItems.length > 3 && (
-                              <span className="text-xs text-muted-foreground">
-                                +{returnItem.returnItems.length - 3} more item{returnItem.returnItems.length - 3 !== 1 ? 's' : ''}
-                              </span>
-                            )}
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <span>
+                        {new Date(returnItem.createdAt).toLocaleDateString()}
+                      </span>
+                      {returnItem.refundAmount > 0 && (
+                        <span>
+                          {formatCurrency(returnItem.refundAmount, order.currency?.code)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 shrink-0"
+                  disabled={isUpdating === returnItem.id}
+                >
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <MoreVertical className="h-3 w-3" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {returnItem.status === 'requested' && (
+                        <>
+                          <DropdownMenuItem 
+                            onClick={() => handleStatusUpdate(returnItem.id, 'received')}
+                          >
+                            Mark as Received
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleStatusUpdate(returnItem.id, 'requires_action')}
+                          >
+                            Requires Action
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleStatusUpdate(returnItem.id, 'canceled')}
+                            className="text-red-600"
+                          >
+                            Cancel Return
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      {returnItem.status === 'received' && (
+                        <DropdownMenuItem 
+                          onClick={() => handleStatusUpdate(returnItem.id, 'requires_action')}
+                        >
+                          Requires Action
+                        </DropdownMenuItem>
+                      )}
+                      {returnItem.status === 'requires_action' && (
+                        <DropdownMenuItem 
+                          onClick={() => handleStatusUpdate(returnItem.id, 'received')}
+                        >
+                          Mark as Received
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </Button>
+              </div>
+              
+              {/* Simplified Status Display */}
+              <div className="space-y-2 mb-3">
+                <div className="text-xs text-muted-foreground">
+                  Status: {statusConfig?.label || returnItem.status}
+                </div>
+              </div>
+              
+              {/* Return Items Summary */}
+              {returnItem.returnItems && returnItem.returnItems.length > 0 && (
+                <>
+                  <Separator className="mb-2" />
+                  <div className="space-y-1">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {returnItem.returnItems.length} Item{returnItem.returnItems.length !== 1 ? 's' : ''}
+                    </span>
+                    <div className="space-y-1">
+                      {returnItem.returnItems.slice(0, 2).map((item: any) => (
+                        <div key={item.id} className="text-xs">
+                          <div className="truncate font-medium">
+                            {item.lineItem?.title || 'Unknown Item'} 
+                            {item.lineItem?.variantTitle && ` - ${item.lineItem.variantTitle}`}
+                          </div>
+                          <div className="text-muted-foreground">
+                            {item.reason?.replace('_', ' ')} • Qty: {item.quantity}
                           </div>
                         </div>
-                      </>
-                    )}
+                      ))}
+                      {returnItem.returnItems.length > 2 && (
+                        <span className="text-xs text-muted-foreground">
+                          +{returnItem.returnItems.length - 2} more
+                        </span>
+                      )}
+                    </div>
                   </div>
-                );
-              })}
+                </>
+              )}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          );
+        })}
+      </div>
       
       <CreateReturnModal
         isOpen={isReturnModalOpen}

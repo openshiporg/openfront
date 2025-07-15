@@ -9,9 +9,17 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreVertical } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { MoreVertical, Users, DollarSign, Calendar, Clock, User, Group } from "lucide-react";
 import Link from "next/link";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
+import { ItemPagination } from "../../orders/components/ItemPagination";
 
 const statusColors = {
   "active": "emerald",
@@ -26,6 +34,34 @@ interface PriceList {
   status: string;
   startsAt?: string;
   endsAt?: string;
+  customerGroups?: Array<{
+    id: string;
+    name: string;
+    metadata?: any;
+  }>;
+  prices?: Array<{
+    id: string;
+    amount: number;
+    currency?: {
+      id: string;
+      code: string;
+      symbol: string;
+    };
+    variant?: {
+      id: string;
+      title: string;
+      product?: {
+        id: string;
+        title: string;
+      };
+    };
+  }>;
+  rules?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    value: number;
+  }>;
   createdAt: string;
   updatedAt?: string;
 }
@@ -35,17 +71,69 @@ interface PriceListDetailsComponentProps {
   list: any;
 }
 
+type TabType = 'customerGroups' | 'prices' | 'rules';
+
 export function PriceListDetailsComponent({
   pricelist,
   list,
 }: PriceListDetailsComponentProps) {
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>('customerGroups');
+  const [currentPages, setCurrentPages] = useState<Record<TabType, number>>({
+    customerGroups: 1,
+    prices: 1,
+    rules: 1
+  });
+  const itemsPerPage = 5;
+
+  // Prepare data for tabs
+  const customerGroupsData = pricelist.customerGroups || [];
+  const pricesData = pricelist.prices || [];
+  const rulesData = pricelist.rules || [];
+
+  const tabs = [
+    { 
+      key: 'customerGroups' as TabType, 
+      label: `Customer Groups`,
+      count: customerGroupsData.length,
+      data: customerGroupsData
+    },
+    { 
+      key: 'prices' as TabType, 
+      label: `Prices`,
+      count: pricesData.length,
+      data: pricesData
+    },
+    { 
+      key: 'rules' as TabType, 
+      label: `Rules`,
+      count: rulesData.length,
+      data: rulesData
+    }
+  ].filter(tab => tab.count > 0);
+
+  const activeTabData = tabs.find(tab => tab.key === activeTab);
+
+  const handlePageChange = (tabKey: TabType, newPage: number) => {
+    setCurrentPages(prev => ({
+      ...prev,
+      [tabKey]: newPage
+    }));
+  };
+
+  const formatCurrency = (amount: number, currency?: { code: string; symbol: string }) => {
+    if (!currency) return `$${(amount / 100).toFixed(2)}`;
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency.code,
+    }).format(amount / 100);
+  };
 
   return (
     <>
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value={pricelist.id} className="border-0">
-          <div className="px-4 md:px-6 py-3 md:py-4 flex justify-between w-full border-b relative min-h-[80px]">
+          <div className="px-4 md:px-6 py-3 md:py-4 flex justify-between w-full border-b relative min-h-[120px]">
             <div className="flex items-start gap-4">
               {/* PriceList Info */}
               <div className="flex flex-col items-start text-left gap-2 sm:gap-1.5">
@@ -68,7 +156,45 @@ export function PriceListDetailsComponent({
                   </span>
                 </div>
                 
-                {/* Add more fields display here as needed */}
+                {/* Enhanced Price List Details */}
+                <div className="flex flex-wrap items-center gap-1.5 text-sm">
+                  <span className="text-muted-foreground">Type: {pricelist.type}</span>
+                  {customerGroupsData.length > 0 && (
+                    <>
+                      <span className="text-muted-foreground">‧</span>
+                      <span className="text-muted-foreground">
+                        {customerGroupsData.length} {customerGroupsData.length === 1 ? 'group' : 'groups'}
+                      </span>
+                    </>
+                  )}
+                  {pricesData.length > 0 && (
+                    <>
+                      <span className="text-muted-foreground">‧</span>
+                      <span className="text-muted-foreground">
+                        {pricesData.length} {pricesData.length === 1 ? 'price' : 'prices'}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                {/* Description */}
+                {pricelist.description && (
+                  <div className="text-sm text-muted-foreground">
+                    {pricelist.description}
+                  </div>
+                )}
+
+                {/* Date Range */}
+                {(pricelist.startsAt || pricelist.endsAt) && (
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <Calendar className="w-3 h-3 text-muted-foreground" />
+                    <span className="text-muted-foreground">
+                      {pricelist.startsAt && `Starts: ${new Date(pricelist.startsAt).toLocaleDateString()}`}
+                      {pricelist.startsAt && pricelist.endsAt && ' • '}
+                      {pricelist.endsAt && `Ends: ${new Date(pricelist.endsAt).toLocaleDateString()}`}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -109,26 +235,190 @@ export function PriceListDetailsComponent({
             </div>
           </div>
           <AccordionContent className="pb-0">
-            <div className="divide-y">
-              {/* Expanded content - customize based on your entity fields */}
-              <div className="px-4 md:px-6 py-4">
-                <h4 className="text-sm font-medium mb-3">Details</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">ID:</span>
-                    <span className="ml-2 font-medium">{pricelist.id}</span>
+            {tabs.length > 0 ? (
+              <>
+                {/* Responsive Tabs Navigation */}
+                <div className="bg-muted/80 border-b">
+                  {/* Desktop: Horizontal Tab Buttons */}
+                  <div className="hidden md:flex items-center gap-3 px-4 py-2">
+                    {tabs.map((tab) => (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => setActiveTab(tab.key)}
+                        className={`relative z-10 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-300 border ${
+                          activeTab === tab.key 
+                            ? 'bg-background border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100' 
+                            : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-background/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span>
+                            {tab.key === 'customerGroups' && 'Customer Groups'}
+                            {tab.key === 'prices' && 'Prices'}
+                            {tab.key === 'rules' && 'Rules'}
+                          </span>
+                          <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px]">
+                            {tab.count}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
                   </div>
-                  {pricelist.updatedAt && (
-                    <div>
-                      <span className="text-muted-foreground">Updated:</span>
-                      <span className="ml-2 font-medium">
-                        {new Date(pricelist.updatedAt).toLocaleDateString()}
-                      </span>
+
+                  {/* Mobile: Select Dropdown */}
+                  <div className="md:hidden px-4 py-2">
+                    <div className="w-fit">
+                      <Select value={activeTab} onValueChange={(value: TabType) => setActiveTab(value)}>
+                        <SelectTrigger className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-background border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 h-auto w-auto">
+                          <div className="flex items-center gap-1.5">
+                            <SelectValue />
+                            <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px]">
+                              ({activeTabData?.count || 0})
+                            </span>
+                          </div>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tabs.map((tab) => (
+                            <SelectItem key={tab.key} value={tab.key} className="text-xs">
+                              {tab.key === 'customerGroups' && 'Customer Groups'}
+                              {tab.key === 'prices' && 'Prices'}
+                              {tab.key === 'rules' && 'Rules'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
+                  </div>
+                </div>
+                
+                {/* Tab Content Area */}
+                <div className="bg-muted/40">
+                  {activeTabData && (
+                    <>
+                      {/* Pagination for active tab */}
+                      {activeTabData.count > itemsPerPage && (
+                        <div className="flex justify-between items-center p-4 pb-2">
+                          <div />
+                          <ItemPagination
+                            currentPage={currentPages[activeTab]}
+                            totalItems={activeTabData.count}
+                            itemsPerPage={itemsPerPage}
+                            onPageChange={(newPage) => handlePageChange(activeTab, newPage)}
+                          />
+                        </div>
+                      )}
+
+                      <div className="px-4 py-2">
+                        {/* Customer Groups Tab */}
+                        {activeTab === 'customerGroups' && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {customerGroupsData.slice(
+                              (currentPages.customerGroups - 1) * itemsPerPage,
+                              currentPages.customerGroups * itemsPerPage
+                            ).map((group, index) => (
+                              <div key={group.id} className="rounded-md border bg-background p-3 shadow-sm">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <Group className="w-4 h-4 text-muted-foreground shrink-0" />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="text-sm font-medium truncate">{group.name}</div>
+                                      <div className="text-xs text-muted-foreground">
+                                        Customer group
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 shrink-0"
+                                  >
+                                    <MoreVertical className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Prices Tab */}
+                        {activeTab === 'prices' && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {pricesData.slice(
+                              (currentPages.prices - 1) * itemsPerPage,
+                              currentPages.prices * itemsPerPage
+                            ).map((price, index) => (
+                              <div key={price.id} className="rounded-md border bg-background p-3 shadow-sm">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <DollarSign className="w-4 h-4 text-muted-foreground shrink-0" />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="text-sm font-medium truncate">
+                                        {formatCurrency(price.amount, price.currency)}
+                                      </div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {price.variant?.product?.title} - {price.variant?.title}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 shrink-0"
+                                  >
+                                    <MoreVertical className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Rules Tab */}
+                        {activeTab === 'rules' && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                            {rulesData.slice(
+                              (currentPages.rules - 1) * itemsPerPage,
+                              currentPages.rules * itemsPerPage
+                            ).map((rule, index) => (
+                              <div key={rule.id} className="rounded-md border bg-background p-3 shadow-sm">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="text-sm font-medium truncate">{rule.name}</div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {rule.type} • Value: {rule.value}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 shrink-0"
+                                  >
+                                    <MoreVertical className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
+              </>
+            ) : (
+              <div className="px-4 md:px-6 py-6">
+                <div className="text-center">
+                  <DollarSign className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    No customer groups, prices, or rules configured for this price list
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </AccordionContent>
         </AccordionItem>
       </Accordion>

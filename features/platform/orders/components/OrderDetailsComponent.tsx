@@ -17,7 +17,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { MoreVertical } from "lucide-react";
 import Link from "next/link";
-import { ProductDetailsCollapsible } from "./ProductDetailsCollapsible";
 import { ArrowRight } from "lucide-react";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 import { ReturnsSection } from "./ReturnsSection";
@@ -138,14 +137,6 @@ export const OrderDetailsComponent = ({
                     className="text-[.6rem] sm:text-[.7rem] py-0 px-2 sm:px-3 tracking-wide font-medium rounded-md border h-6"
                   >
                     {order.returns.length} RETURN{order.returns.length > 1 ? 'S' : ''}
-                  </Badge>
-                )}
-                {order.claimOrders?.length > 0 && (
-                  <Badge
-                    color="purple"
-                    className="text-[.6rem] sm:text-[.7rem] py-0 px-2 sm:px-3 tracking-wide font-medium rounded-md border h-6"
-                  >
-                    {order.claimOrders.length} CLAIM{order.claimOrders.length > 1 ? 'S' : ''}
                   </Badge>
                 )}
                 {currentAction && (

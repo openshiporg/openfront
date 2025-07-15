@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
-import { ChevronsUpDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ItemPagination } from "../../orders/components/ItemPagination";
 
 interface ProductVariant {
@@ -24,12 +25,14 @@ interface VariantsContentProps {
   variants: ProductVariant[];
 }
 
+type TabType = 'variants';
+
 export const VariantsContent = ({
   productId,
   totalItems,
   variants,
 }: VariantsContentProps) => {
-  const [isOpen, setIsOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState<TabType>('variants');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
@@ -38,74 +41,135 @@ export const VariantsContent = ({
   const endIndex = startIndex + itemsPerPage;
   const paginatedItems = variants.slice(startIndex, endIndex);
 
-  const triggerClassName =
-    "flex items-center rounded-sm shadow-sm uppercase tracking-wide border max-w-fit gap-2 text-nowrap pl-2.5 pr-1 py-[3px] text-sm font-medium text-emerald-500 bg-white border-emerald-200 hover:bg-emerald-100 hover:text-emerald-700 focus:z-10 focus:ring-2 focus:ring-emerald-700 focus:text-emerald-700 dark:bg-emerald-950 dark:border-emerald-900 dark:text-emerald-300 dark:hover:text-white dark:hover:bg-emerald-700 dark:focus:ring-emerald-500 dark:focus:text-white";
+  // Build tabs array
+  const tabs = [
+    { 
+      key: 'variants' as TabType, 
+      label: 'Variants',
+      count: totalItems,
+      data: variants
+    }
+  ];
+
+  const activeTabData = tabs.find(tab => tab.key === activeTab);
 
   return (
-    <Collapsible
-      open={isOpen}
-      onOpenChange={setIsOpen}
-      className="flex flex-col gap-2 py-3 px-4 md:px-6 bg-emerald-50/30 dark:bg-emerald-900/10 border-b"
-    >
-      <div className="flex items-center gap-2">
-        <CollapsibleTrigger asChild>
-          <button type="button" className={triggerClassName}>
-            {totalItems} Variant{totalItems !== 1 ? "s" : ""}
-            <ChevronsUpDown className="h-4 w-4" />
-          </button>
-        </CollapsibleTrigger>
-        {isOpen && totalItems > 5 && (
-          <ItemPagination
-            currentPage={currentPage}
-            totalItems={totalItems}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
-          />
-        )}
+    <>
+      {/* Responsive Tabs Navigation */}
+      <div className="bg-muted/80 border-b">
+        {/* Desktop: Horizontal Tab Buttons */}
+        <div className="hidden md:flex items-center justify-between px-4 py-2">
+          <div className="flex items-center gap-3">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                className={`relative z-10 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-300 border ${
+                  activeTab === tab.key 
+                    ? 'bg-background border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100' 
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-background/50'
+                }`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span>Variants</span>
+                  <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px]">
+                    {tab.count}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+          {totalItems > itemsPerPage && (
+            <ItemPagination
+              currentPage={currentPage}
+              totalItems={totalItems}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+            />
+          )}
+        </div>
+
+        {/* Mobile: Select Dropdown */}
+        <div className="md:hidden px-4 py-2">
+          <div className="flex items-center justify-between">
+            <div className="w-fit">
+              <Select value={activeTab} onValueChange={(value: TabType) => setActiveTab(value)}>
+                <SelectTrigger className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-background border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 h-auto w-auto">
+                  <div className="flex items-center gap-1.5">
+                    <SelectValue />
+                    <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px]">
+                      ({activeTabData?.count || 0})
+                    </span>
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {tabs.map((tab) => (
+                    <SelectItem key={tab.key} value={tab.key} className="text-xs">
+                      Variants
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {totalItems > itemsPerPage && (
+              <ItemPagination
+                currentPage={currentPage}
+                totalItems={totalItems}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
+            )}
+          </div>
+        </div>
       </div>
-      <CollapsibleContent className="space-y-2">
-        {isOpen && (
-          <>
-            {totalItems > 5 && (
-              <div className="text-xs text-muted-foreground">
+      
+      {/* Tab Content Area */}
+      <div className="bg-muted/40">
+        {activeTab === 'variants' && totalItems > 0 && (
+          <div className="px-4 py-2">
+            {totalItems > itemsPerPage && (
+              <div className="text-xs text-muted-foreground mb-3 pl-0.5">
                 Showing {startIndex + 1}-{Math.min(endIndex, totalItems)} of{" "}
                 {totalItems} variants
               </div>
             )}
-            {paginatedItems.map((variant) => (
-              <div
-                key={variant.id}
-                className="border p-3 bg-background rounded-sm"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">
-                      {variant.title}
-                    </p>
-                    {variant.sku && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        SKU: {variant.sku}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+              {paginatedItems.map((variant) => (
+                <div
+                  key={variant.id}
+                  className="rounded-md border bg-background p-3 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">
+                        {variant.title}
                       </p>
+                      {variant.sku && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          SKU: {variant.sku}
+                        </p>
+                      )}
+                    </div>
+                    {variant.manageInventory && (
+                      <Badge
+                        variant={
+                          variant.inventoryQuantity === 0
+                            ? "destructive"
+                            : "secondary"
+                        }
+                        className="text-xs shrink-0"
+                      >
+                        {variant.inventoryQuantity || 0} in stock
+                      </Badge>
                     )}
                   </div>
-                  {variant.manageInventory && (
-                    <Badge
-                      variant={
-                        variant.inventoryQuantity === 0
-                          ? "destructive"
-                          : "secondary"
-                      }
-                      className="text-xs"
-                    >
-                      {variant.inventoryQuantity || 0} in stock
-                    </Badge>
-                  )}
                 </div>
-              </div>
-            ))}
-          </>
+              ))}
+            </div>
+          </div>
         )}
-      </CollapsibleContent>
-    </Collapsible>
+      </div>
+    </>
   );
 };

@@ -7,14 +7,16 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreVertical, ChevronsUpDown } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { MoreVertical, User, Mail, Phone, MapPin, ShoppingCart, CreditCard, Users } from "lucide-react";
 import Link from "next/link";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 import { ItemPagination } from "../../orders/components/ItemPagination";
@@ -29,6 +31,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   firstName: string;
   lastName: string;
   hasAccount: boolean;
@@ -87,6 +90,36 @@ interface User {
     }>;
     total?: string;
   }>;
+  addresses?: Array<{
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    company?: string;
+    address1?: string;
+    address2?: string;
+    city?: string;
+    province?: string;
+    postalCode?: string;
+    phone?: string;
+    metadata?: any;
+  }>;
+  carts?: Array<{
+    id: string;
+    status: string;
+    completedAt?: string;
+    createdAt: string;
+    totalPrice?: string;
+    lineItems?: Array<{
+      id: string;
+      title: string;
+      quantity: number;
+    }>;
+  }>;
+  customerGroups?: Array<{
+    id: string;
+    name: string;
+    metadata?: any;
+  }>;
   createdAt: string;
   updatedAt?: string;
 }
@@ -96,20 +129,69 @@ interface UserDetailsComponentProps {
   list: any;
 }
 
+type TabType = 'orders' | 'addresses' | 'carts' | 'customerGroups';
+
 export function UserDetailsComponent({
   user,
   list,
 }: UserDetailsComponentProps) {
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-  const [isOrdersOpen, setIsOrdersOpen] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [activeTab, setActiveTab] = useState<TabType>('orders');
+  const [currentPages, setCurrentPages] = useState<Record<TabType, number>>({
+    orders: 1,
+    addresses: 1,
+    carts: 1,
+    customerGroups: 1
+  });
   const itemsPerPage = 5;
+
+  // Prepare data for tabs
+  const ordersData = user.orders || [];
+  const addressesData = user.addresses || [];
+  const cartsData = user.carts || [];
+  const customerGroupsData = user.customerGroups || [];
+
+  const tabs = [
+    { 
+      key: 'orders' as TabType, 
+      label: `Orders`,
+      count: ordersData.length,
+      data: ordersData
+    },
+    { 
+      key: 'addresses' as TabType, 
+      label: `Addresses`,
+      count: addressesData.length,
+      data: addressesData
+    },
+    { 
+      key: 'carts' as TabType, 
+      label: `Carts`,
+      count: cartsData.length,
+      data: cartsData
+    },
+    { 
+      key: 'customerGroups' as TabType, 
+      label: `Customer Groups`,
+      count: customerGroupsData.length,
+      data: customerGroupsData
+    }
+  ].filter(tab => tab.count > 0);
+
+  const activeTabData = tabs.find(tab => tab.key === activeTab);
+
+  const handlePageChange = (tabKey: TabType, newPage: number) => {
+    setCurrentPages(prev => ({
+      ...prev,
+      [tabKey]: newPage
+    }));
+  };
 
   return (
     <>
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value={user.id} className="border-0">
-          <div className="px-4 md:px-6 py-3 md:py-4 flex justify-between w-full border-b relative min-h-[80px]">
+          <div className="px-4 md:px-6 py-3 md:py-4 flex justify-between w-full border-b relative min-h-[120px]">
             <div className="flex items-start gap-4">
               {/* User Info */}
               <div className="flex flex-col items-start text-left gap-2 sm:gap-1.5">
@@ -132,7 +214,46 @@ export function UserDetailsComponent({
                   </span>
                 </div>
                 
-                {/* Add more fields display here as needed */}
+                {/* Enhanced User Details */}
+                <div className="flex flex-wrap items-center gap-1.5 text-sm">
+                  {user.email && (
+                    <>
+                      <div className="flex items-center gap-1">
+                        <Mail className="w-3 h-3 text-muted-foreground" />
+                        <span className="text-muted-foreground">{user.email}</span>
+                      </div>
+                      <span className="text-muted-foreground">‧</span>
+                    </>
+                  )}
+                  {user.phone && (
+                    <>
+                      <div className="flex items-center gap-1">
+                        <Phone className="w-3 h-3 text-muted-foreground" />
+                        <span className="text-muted-foreground">{user.phone}</span>
+                      </div>
+                      <span className="text-muted-foreground">‧</span>
+                    </>
+                  )}
+                  <span className="text-muted-foreground">
+                    {ordersData.length} {ordersData.length === 1 ? 'order' : 'orders'}
+                  </span>
+                  {addressesData.length > 0 && (
+                    <>
+                      <span className="text-muted-foreground">‧</span>
+                      <span className="text-muted-foreground">
+                        {addressesData.length} {addressesData.length === 1 ? 'address' : 'addresses'}
+                      </span>
+                    </>
+                  )}
+                </div>
+                
+                {/* Role Display */}
+                {user.role && (
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <Users className="w-3 h-3 text-muted-foreground" />
+                    <span className="text-muted-foreground">Role: {user.role.name}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -170,17 +291,222 @@ export function UserDetailsComponent({
             </div>
           </div>
           <AccordionContent className="pb-0">
-            <div className="divide-y">
-              {/* Orders Collapsible Section - Always show even with 0 orders */}
-              <OrdersCollapsibleSection
-                userId={user.id}
-                orders={user.orders || []}
-                isOpen={isOrdersOpen}
-                setIsOpen={setIsOrdersOpen}
-                currentPage={currentPage}
-                setCurrentPage={setCurrentPage}
-                itemsPerPage={itemsPerPage}
-              />
+            {/* Responsive Tabs Navigation */}
+            <div className="bg-muted/80 border-b">
+              {/* Desktop: Horizontal Tab Buttons */}
+              <div className="hidden md:flex items-center gap-3 px-4 py-2">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`relative z-10 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-300 border ${
+                      activeTab === tab.key 
+                        ? 'bg-background border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100' 
+                        : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-background/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>
+                        {tab.key === 'orders' && 'Orders'}
+                        {tab.key === 'addresses' && 'Addresses'}
+                        {tab.key === 'carts' && 'Carts'}
+                        {tab.key === 'customerGroups' && 'Customer Groups'}
+                      </span>
+                      <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px]">
+                        {tab.count}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Mobile: Select Dropdown */}
+              <div className="md:hidden px-4 py-2">
+                <div className="w-fit">
+                  <Select value={activeTab} onValueChange={(value: TabType) => setActiveTab(value)}>
+                    <SelectTrigger className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-background border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 h-auto w-auto">
+                      <div className="flex items-center gap-1.5">
+                        <SelectValue />
+                        <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px]">
+                          ({activeTabData?.count || 0})
+                        </span>
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tabs.map((tab) => (
+                        <SelectItem key={tab.key} value={tab.key} className="text-xs">
+                          {tab.key === 'orders' && 'Orders'}
+                          {tab.key === 'addresses' && 'Addresses'}
+                          {tab.key === 'carts' && 'Carts'}
+                          {tab.key === 'customerGroups' && 'Customer Groups'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+            
+            {/* Tab Content Area */}
+            <div className="bg-muted/40">
+              {activeTabData && (
+                <>
+                  {/* Pagination for active tab */}
+                  {activeTabData.count > itemsPerPage && (
+                    <div className="flex justify-between items-center p-4 pb-2">
+                      <div />
+                      <ItemPagination
+                        currentPage={currentPages[activeTab]}
+                        totalItems={activeTabData.count}
+                        itemsPerPage={itemsPerPage}
+                        onPageChange={(newPage) => handlePageChange(activeTab, newPage)}
+                      />
+                    </div>
+                  )}
+
+                  <div className="px-4 py-2">
+                    {/* Orders Tab */}
+                    {activeTab === 'orders' && (
+                      <div className="space-y-2">
+                        {ordersData.slice(
+                          (currentPages.orders - 1) * itemsPerPage,
+                          currentPages.orders * itemsPerPage
+                        ).map((order) => (
+                          <div key={order.id} className="border-0">
+                            <OrderDetailsComponent
+                              order={order}
+                              list={{ key: "Order" }}
+                              removeEditItemButton={true}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Addresses Tab */}
+                    {activeTab === 'addresses' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {addressesData.slice(
+                          (currentPages.addresses - 1) * itemsPerPage,
+                          currentPages.addresses * itemsPerPage
+                        ).map((address, index) => (
+                          <div key={address.id} className="rounded-md border bg-background p-3 shadow-sm">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-sm font-medium truncate">
+                                    {address.firstName} {address.lastName}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {address.address1}
+                                    {address.city && `, ${address.city}`}
+                                    {address.province && `, ${address.province}`}
+                                  </div>
+                                  {address.phone && (
+                                    <div className="text-xs text-muted-foreground">
+                                      {address.phone}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 shrink-0"
+                              >
+                                <MoreVertical className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Carts Tab */}
+                    {activeTab === 'carts' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {cartsData.slice(
+                          (currentPages.carts - 1) * itemsPerPage,
+                          currentPages.carts * itemsPerPage
+                        ).map((cart, index) => (
+                          <div key={cart.id} className="rounded-md border bg-background p-3 shadow-sm">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <ShoppingCart className="w-4 h-4 text-muted-foreground shrink-0" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-sm font-medium truncate">
+                                    Cart #{cart.id.slice(-8)}
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    <div className={`w-2 h-2 rounded-full shrink-0 ${
+                                      cart.status === 'COMPLETED' ? 'bg-green-500' : 'bg-blue-500'
+                                    }`}></div>
+                                    <span className="truncate">
+                                      {cart.status.toLowerCase()}
+                                    </span>
+                                    {cart.totalPrice && (
+                                      <>
+                                        <span>‧</span>
+                                        <span>{cart.totalPrice}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {new Date(cart.createdAt).toLocaleDateString()}
+                                    {cart.lineItems && (
+                                      <> • {cart.lineItems.length} items</>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 shrink-0"
+                              >
+                                <MoreVertical className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Customer Groups Tab */}
+                    {activeTab === 'customerGroups' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {customerGroupsData.slice(
+                          (currentPages.customerGroups - 1) * itemsPerPage,
+                          currentPages.customerGroups * itemsPerPage
+                        ).map((group, index) => (
+                          <div key={group.id} className="rounded-md border bg-background p-3 shadow-sm">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <Users className="w-4 h-4 text-muted-foreground shrink-0" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-sm font-medium truncate">{group.name}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    Customer group membership
+                                  </div>
+                                </div>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 shrink-0"
+                              >
+                                <MoreVertical className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </AccordionContent>
         </AccordionItem>
@@ -195,130 +521,3 @@ export function UserDetailsComponent({
     </>
   );
 }
-
-// Orders Collapsible Section Component
-interface OrdersCollapsibleSectionProps {
-  userId: string;
-  orders: Array<{
-    id: string;
-    displayId: string;
-    status: string;
-    email: string;
-    taxRate?: number;
-    canceledAt?: string;
-    createdAt: string;
-    updatedAt?: string;
-    user?: {
-      id: string;
-      name: string;
-      email: string;
-    };
-    shippingAddress?: {
-      id: string;
-      company?: string;
-      firstName?: string;
-      lastName?: string;
-      address1?: string;
-      address2?: string;
-      city?: string;
-      province?: string;
-      postalCode?: string;
-      phone?: string;
-    };
-    billingAddress?: {
-      id: string;
-      company?: string;
-      firstName?: string;
-      lastName?: string;
-      address1?: string;
-      address2?: string;
-      city?: string;
-      province?: string;
-      postalCode?: string;
-      phone?: string;
-    };
-    lineItems?: Array<{
-      id: string;
-      title: string;
-      quantity: number;
-      sku?: string;
-      thumbnail?: string;
-      formattedUnitPrice?: string;
-      formattedTotal?: string;
-      variantData?: any;
-      productData?: any;
-    }>;
-    total?: string;
-  }>;
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
-  currentPage: number;
-  setCurrentPage: (page: number) => void;
-  itemsPerPage: number;
-}
-
-const OrdersCollapsibleSection = ({
-  userId,
-  orders,
-  isOpen,
-  setIsOpen,
-  currentPage,
-  setCurrentPage,
-  itemsPerPage,
-}: OrdersCollapsibleSectionProps) => {
-  const totalItems = orders.length;
-
-  // Calculate pagination
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedOrders = orders.slice(startIndex, endIndex);
-
-  const triggerClassName =
-    "flex items-center rounded-sm shadow-sm uppercase tracking-wide border max-w-fit gap-2 text-nowrap pl-2.5 pr-1 py-[3px] text-sm font-medium text-blue-500 bg-white border-blue-200 hover:bg-blue-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-blue-950 dark:border-blue-900 dark:text-blue-300 dark:hover:text-white dark:hover:bg-blue-700 dark:focus:ring-blue-500 dark:focus:text-white";
-
-  return (
-    <Collapsible
-      open={isOpen}
-      onOpenChange={setIsOpen}
-      className="flex flex-col gap-2 py-3 px-4 md:px-6 bg-blue-50/30 dark:bg-blue-900/10 border-b"
-    >
-      <div className="flex items-center gap-2">
-        <CollapsibleTrigger asChild>
-          <button type="button" className={triggerClassName}>
-            {totalItems} Order{totalItems !== 1 ? "s" : ""}
-            <ChevronsUpDown className="h-4 w-4" />
-          </button>
-        </CollapsibleTrigger>
-        {isOpen && totalItems > 5 && (
-          <ItemPagination
-            currentPage={currentPage}
-            totalItems={totalItems}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
-          />
-        )}
-      </div>
-      <CollapsibleContent className="space-y-2">
-        {isOpen && (
-          <>
-            {totalItems > 5 && (
-              <div className="text-xs text-muted-foreground">
-                Showing {startIndex + 1}-{Math.min(endIndex, totalItems)} of{" "}
-                {totalItems} orders
-              </div>
-            )}
-            {paginatedOrders.map((order) => (
-              <div key={order.id} className="border-0">
-                <OrderDetailsComponent
-                  order={order}
-                  list={{ key: "Order" }}
-                  removeEditItemButton={true}
-                />
-              </div>
-            ))}
-          </>
-        )}
-      </CollapsibleContent>
-    </Collapsible>
-  );
-};

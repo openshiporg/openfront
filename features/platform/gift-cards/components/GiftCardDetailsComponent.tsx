@@ -7,16 +7,19 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreVertical, ChevronsUpDown, ArrowRight, ShoppingBag } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { MoreVertical, ArrowRight, ShoppingBag, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
+import { ItemPagination } from "../../orders/components/ItemPagination";
 import { GiftCard } from "../actions";
 
 interface GiftCardDetailsComponentProps {
@@ -24,19 +27,43 @@ interface GiftCardDetailsComponentProps {
   list: any;
 }
 
+type TabType = 'transactions';
+
 export function GiftCardDetailsComponent({
   giftcard,
   list,
 }: GiftCardDetailsComponentProps) {
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-  const [isTransactionsOpen, setIsTransactionsOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState<TabType>('transactions');
+  const [currentPages, setCurrentPages] = useState<Record<TabType, number>>({
+    transactions: 1
+  });
+  const itemsPerPage = 5;
 
   const isActive = !giftcard.isDisabled && (!giftcard.endsAt || new Date(giftcard.endsAt) > new Date());
   const usagePercentage = giftcard.value > 0 ? ((giftcard.value - giftcard.balance) / giftcard.value) * 100 : 0;
   const hasBeenUsed = giftcard.value !== giftcard.balance;
-  
-  const triggerClassName =
-    "flex items-center rounded-sm shadow-sm uppercase tracking-wide border max-w-fit gap-2 text-nowrap pl-2.5 pr-1 py-[3px] text-sm font-medium text-slate-500 bg-white border-slate-200 hover:bg-slate-100 hover:text-slate-700 focus:z-10 focus:ring-2 focus:ring-slate-700 focus:text-slate-700 dark:bg-slate-950 dark:border-slate-900 dark:text-slate-300 dark:hover:text-white dark:hover:bg-slate-700 dark:focus:ring-slate-500 dark:focus:text-white";
+
+  // Prepare data for tabs
+  const transactionsData = giftcard.giftCardTransactions || [];
+
+  const tabs = [
+    { 
+      key: 'transactions' as TabType, 
+      label: `Transactions`,
+      count: transactionsData.length,
+      data: transactionsData
+    }
+  ];
+
+  const activeTabData = tabs.find(tab => tab.key === activeTab);
+
+  const handlePageChange = (tabKey: TabType, newPage: number) => {
+    setCurrentPages(prev => ({
+      ...prev,
+      [tabKey]: newPage
+    }));
+  };
 
   const formatCurrency = (amount: number) => {
     const currency = giftcard.region?.currency?.code || 'USD';
@@ -154,67 +181,136 @@ export function GiftCardDetailsComponent({
             </div>
           </div>
           <AccordionContent className="pb-0">
-            <div className="divide-y">
-              {/* Orders Section - showing orders that used this gift card - ALWAYS SHOW */}
-              <Collapsible
-                open={isTransactionsOpen}
-                onOpenChange={setIsTransactionsOpen}
-                className="flex flex-col gap-2 py-3 px-4 md:px-6 bg-slate-50/30 dark:bg-slate-900/10 border-b"
-              >
-                <div className="flex items-center justify-between w-full">
-                  <CollapsibleTrigger asChild>
-                    <button type="button" className={triggerClassName}>
-                      <ShoppingBag className="w-4 h-4" />
-                      {(giftcard.giftCardTransactions || []).length} Order{(giftcard.giftCardTransactions || []).length !== 1 ? "s" : ""}
-                      <ChevronsUpDown className="h-4 w-4" />
-                    </button>
-                  </CollapsibleTrigger>
+            {/* Responsive Tabs Navigation */}
+            <div className="bg-muted/80 border-b">
+              {/* Desktop: Horizontal Tab Buttons */}
+              <div className="hidden md:flex items-center gap-3 px-4 py-2">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`relative z-10 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-300 border ${
+                      activeTab === tab.key 
+                        ? 'bg-background border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100' 
+                        : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-background/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>
+                        {tab.key === 'transactions' && 'Transactions'}
+                      </span>
+                      <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px]">
+                        {tab.count}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {/* Mobile: Select Dropdown */}
+              <div className="md:hidden px-4 py-2">
+                <div className="w-fit">
+                  <Select value={activeTab} onValueChange={(value: TabType) => setActiveTab(value)}>
+                    <SelectTrigger className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-background border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 h-auto w-auto">
+                      <div className="flex items-center gap-1.5">
+                        <SelectValue />
+                        <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px]">
+                          ({activeTabData?.count || 0})
+                        </span>
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tabs.map((tab) => (
+                        <SelectItem key={tab.key} value={tab.key} className="text-xs">
+                          {tab.key === 'transactions' && 'Transactions'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <CollapsibleContent className="space-y-2">
-                  {isTransactionsOpen && (
-                    <div className="space-y-2">
-                      {giftcard.giftCardTransactions && giftcard.giftCardTransactions.length > 0 ? (
-                        giftcard.giftCardTransactions.map((transaction) => (
-                          transaction.order && (
-                            <div key={transaction.id} className="bg-white dark:bg-slate-900/50 rounded-lg border p-4">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <Link
-                                    href={`/dashboard/platform/orders/${transaction.order.id}`}
-                                    className="font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                  >
-                                    #{transaction.order.displayId}
-                                  </Link>
-                                  <div className="text-sm text-muted-foreground">
-                                    {new Date(transaction.createdAt).toLocaleDateString("en-US", {
-                                      year: "numeric",
-                                      month: "short",
-                                      day: "numeric",
-                                      hour: "numeric",
-                                      minute: "2-digit",
-                                    })}
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="font-medium">{transaction.order.total}</div>
-                                  <div className="text-sm text-red-600">
-                                    -{formatCurrency(transaction.amount)} used
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )
-                        ))
-                      ) : (
-                        <div className="text-center py-8 text-muted-foreground">
-                          <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                          <p>No orders have used this gift card yet</p>
-                        </div>
-                      )}
+              </div>
+            </div>
+            
+            {/* Tab Content Area */}
+            <div className="bg-muted/40">
+              {activeTabData && (
+                <>
+                  {/* Pagination for active tab */}
+                  {activeTabData.count > itemsPerPage && (
+                    <div className="flex justify-between items-center p-4 pb-2">
+                      <div />
+                      <ItemPagination
+                        currentPage={currentPages[activeTab]}
+                        totalItems={activeTabData.count}
+                        itemsPerPage={itemsPerPage}
+                        onPageChange={(newPage) => handlePageChange(activeTab, newPage)}
+                      />
                     </div>
                   )}
-                </CollapsibleContent>
-              </Collapsible>
+
+                  <div className="px-4 py-2">
+                    {/* Transactions Tab */}
+                    {activeTab === 'transactions' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {transactionsData.length > 0 ? (
+                          transactionsData.slice(
+                            (currentPages.transactions - 1) * itemsPerPage,
+                            currentPages.transactions * itemsPerPage
+                          ).map((transaction) => (
+                            transaction.order && (
+                              <div key={transaction.id} className="rounded-md border bg-background p-3 shadow-sm">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <CreditCard className="w-4 h-4 text-muted-foreground shrink-0" />
+                                    <div className="min-w-0 flex-1">
+                                      <Link
+                                        href={`/dashboard/platform/orders/${transaction.order.id}`}
+                                        className="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                      >
+                                        #{transaction.order.displayId}
+                                      </Link>
+                                      <div className="text-xs text-muted-foreground">
+                                        {new Date(transaction.createdAt).toLocaleDateString("en-US", {
+                                          year: "numeric",
+                                          month: "short",
+                                          day: "numeric",
+                                        })}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 shrink-0"
+                                  >
+                                    <MoreVertical className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-muted-foreground">Order Total:</span>
+                                  <span className="font-medium">{transaction.order.total}</span>
+                                </div>
+                                <div className="flex items-center justify-between text-xs">
+                                  <span className="text-muted-foreground">Gift Card Used:</span>
+                                  <span className="font-medium text-red-600">
+                                    -{formatCurrency(transaction.amount)}
+                                  </span>
+                                </div>
+                              </div>
+                            )
+                          ))
+                        ) : (
+                          <div className="col-span-full text-center py-8 text-muted-foreground">
+                            <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <p>No transactions have used this gift card yet</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </AccordionContent>
         </AccordionItem>

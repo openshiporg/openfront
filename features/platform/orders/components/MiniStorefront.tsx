@@ -73,7 +73,7 @@ const steps: CheckoutStep[] = [
   { id: "review", name: "Review & Complete", icon: Check, completed: false },
 ];
 
-export default function MiniStorefront({ 
+export function MiniStorefront({ 
   regionCode = "us", 
   customerId,
   onSuccess 
