@@ -309,9 +309,9 @@ export function OrdersCreatePage() {
     <>
       <PageBreadcrumbs
         items={[
-          { type: 'link', label: 'Dashboard', href: '/' },
+          { type: 'link', label: 'Dashboard', href: '' },
           { type: 'page', label: 'Platform' },
-          { type: 'link', label: 'Orders', href: '/dashboard/platform/orders' },
+          { type: 'link', label: 'Orders', href: '/platform/orders' },
           { type: 'page', label: 'Create Order' },
         ]}
       />

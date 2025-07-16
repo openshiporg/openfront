@@ -40,9 +40,9 @@ export async function OrderDetailPage({ params }: OrderPageParams) {
     <>
       <PageBreadcrumbs
         items={[
-          { type: 'link', label: 'Dashboard', href: '/dashboard' },
+          { type: 'link', label: 'Dashboard', href: '' },
           { type: 'page', label: 'Platform' },
-          { type: 'link', label: 'Orders', href: '/dashboard/platform/orders' },
+          { type: 'link', label: 'Orders', href: '/platform/orders' },
           { type: 'page', label: `#${order.displayId || order.id}` },
         ]}
       />

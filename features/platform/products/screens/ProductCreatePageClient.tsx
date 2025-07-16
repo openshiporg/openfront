@@ -36,7 +36,7 @@ function CancelButton({
   isDesktop?: boolean;
 }) {
   return (
-    <Button variant="outline" size="sm" className="text-xs" onClick={onCancel}>
+    <Button variant="outline" size="sm" className="sm:text-sm text-xs" onClick={onCancel}>
       <X className="size-3 shrink-0" />
       {isDesktop ? (
         'Cancel'
@@ -146,9 +146,9 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
 
   // Platform-specific breadcrumb items
   const breadcrumbItems = [
-    { type: 'link' as const, label: 'Dashboard', href: '/dashboard' },
+    { type: 'link' as const, label: 'Dashboard', href: '' },
     { type: 'page' as const, label: 'Platform' },
-    { type: 'link' as const, label: 'Products', href: '/dashboard/platform/products' },
+    { type: 'link' as const, label: 'Products', href: '/platform/products' },
     { type: 'page' as const, label: 'Create' }
   ]
 
@@ -230,9 +230,22 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
   return (
     <>
       {/* Platform Breadcrumbs */}
-      <PageBreadcrumbs items={breadcrumbItems} />
+      <PageBreadcrumbs 
+        items={breadcrumbItems} 
+        actions={
+          <Button
+            size="sm"
+            className="sm:text-sm text-xs"
+            onClick={handleSave}
+            disabled={createItem.state === 'loading'}
+          >
+            Create {list.singular}
+            <Check className="ml-1 stroke-[1.5px]" width="8" height="8" />
+          </Button>
+        }
+      />
       
-      <main className="w-full max-w-5xl p-4 md:p-6 pb-16 lg:pb-6">
+      <main className="w-full max-w-5xl p-4 md:p-6">
         <div className="grid lg:grid-cols-[minmax(240px,2fr)_3fr] gap-6 gap-y-8 min-h-[calc(100vh-8rem)]">
           {/* Sidebar */}
           <aside className="lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7.5rem)] flex flex-col h-full">
@@ -255,69 +268,8 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
               )}
             </div>
 
-            {/* Action buttons - visible only on larger screens */}
-            <div className="hidden lg:flex flex-col mr-auto">
-              {/* Status indicators above buttons */}
-              <div className="flex justify-center mb-2">
-                {createItem.state === 'loading' && (
-                  <div className="flex items-center gap-x-1.5 text-xs text-muted-foreground">
-                    <Loader2 className="animate-spin h-3.5 w-3.5" />
-                    <span>Creating...</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Buttons */}
-              <div className="flex flex-wrap items-center gap-2">
-                <CancelButton 
-                  onCancel={handleCancel}
-                  isDesktop={true}
-                />
-                <Button
-                  size="sm"
-                  className="text-xs"
-                  onClick={handleSave}
-                  disabled={createItem.state === 'loading'}
-                >
-                  Create {list.singular}
-                  <Check className="ml-1 stroke-[1.5px]" width="8" height="8" />
-                </Button>
-              </div>
-            </div>
           </aside>
 
-          {/* Floating action bar - visible only on smaller screens */}
-          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-10 lg:hidden flex flex-col items-center gap-1.5">
-            {/* Status indicators above the button container */}
-            <div className="flex justify-center">
-              {createItem.state === 'loading' && (
-                <div className="flex items-center gap-x-1.5 text-xs text-muted-foreground">
-                  <Loader2 className="animate-spin h-3.5 w-3.5" />
-                  <span>Creating...</span>
-                </div>
-              )}
-            </div>
-
-            {/* Button container */}
-            <div className="bg-background border rounded-md px-3 py-2 shadow-md w-full">
-              <div className="flex flex-wrap items-center gap-2">
-                <CancelButton 
-                  onCancel={handleCancel}
-                  isDesktop={false}
-                />
-                <Button
-                  size="sm"
-                  className="text-xs"
-                  onClick={handleSave}
-                  disabled={createItem.state === 'loading'}
-                >
-                  <span className="hidden sm:inline">Create {list.singular}</span>
-                  <span className="sm:hidden">Create</span>
-                  <Check className="ml-1 stroke-[1.5px]" width="8" height="8" />
-                </Button>
-              </div>
-            </div>
-          </div>
 
           {/* Main content */}
           <div className="space-y-6">

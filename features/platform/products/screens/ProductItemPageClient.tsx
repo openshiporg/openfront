@@ -118,7 +118,7 @@ function DeleteButton({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="destructive" size="sm" className="text-xs">
+        <Button variant="destructive" size="sm" className="sm:text-sm text-xs">
           <X className="size-3 shrink-0" />
           {isDesktop ? (
             'Delete'
@@ -155,7 +155,7 @@ function ResetButton(props: { onReset: () => void; hasChanges?: boolean; isDeskt
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="outline" size="sm" className="text-xs" disabled={!props.hasChanges}>
+        <Button variant="outline" size="sm" className="sm:text-sm text-xs" disabled={!props.hasChanges}>
           <Undo2 className="size-3 shrink-0" />
           {props.isDesktop ? (
             'Reset'
@@ -491,9 +491,9 @@ export function ProductItemPageClient({ list, item, itemId }: ProductItemPageCli
 
   // Platform-specific breadcrumb items
   const breadcrumbItems = [
-    { type: 'link' as const, label: 'Dashboard', href: '/dashboard' },
+    { type: 'link' as const, label: 'Dashboard', href: '' },
     { type: 'page' as const, label: 'Platform' },
-    { type: 'link' as const, label: 'Products', href: '/dashboard/platform/products' },
+    { type: 'link' as const, label: 'Products', href: '/platform/products' },
     { type: 'page' as const, label: pageLabel }
   ]
 
@@ -513,9 +513,39 @@ export function ProductItemPageClient({ list, item, itemId }: ProductItemPageCli
   return (
     <>
       {/* Platform Breadcrumbs */}
-      <PageBreadcrumbs items={breadcrumbItems} />
+      <PageBreadcrumbs 
+        items={breadcrumbItems} 
+        actions={
+          <div className="flex items-center gap-2">
+            {!list.hideDelete && (
+              <DeleteButton 
+                list={list} 
+                value={value} 
+                onError={setErrorDialogValue}
+                isDesktop={true}
+              />
+            )}
+            {hasChanges && (
+              <ResetButton 
+                hasChanges={hasChanges} 
+                onReset={handleReset}
+                isDesktop={true}
+              />
+            )}
+            <Button
+              size="sm"
+              className="sm:text-sm text-xs"
+              onClick={handleSave}
+              disabled={!hasChanges || loading || saveState === 'saving'}
+            >
+              Save Changes
+              <Check className="ml-1 stroke-[1.5px]" width="8" height="8" />
+            </Button>
+          </div>
+        }
+      />
       
-      <main className="w-full max-w-5xl p-4 md:p-6 pb-16 lg:pb-6">
+      <main className="w-full max-w-5xl p-4 md:p-6">
         <div className="grid lg:grid-cols-[minmax(240px,2fr)_3fr] gap-6 lg:min-h-[calc(100vh-8rem)]">
           {/* Sidebar */}
           <aside className="lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-8rem)] flex flex-col">
@@ -570,103 +600,8 @@ export function ProductItemPageClient({ list, item, itemId }: ProductItemPageCli
               )}
             </div>
 
-            {/* Action buttons - visible only on larger screens */}
-            <div className="hidden lg:flex flex-col mr-auto">
-              {/* Status indicators above buttons */}
-              <div className="flex justify-center mb-2">
-                {saveState === 'saving' && (
-                  <div className="flex items-center gap-x-1.5 text-xs text-muted-foreground">
-                    <Loader2 className="animate-spin h-3.5 w-3.5" />
-                    <span>Saving...</span>
-                  </div>
-                )}
-                {saveState === 'saved' && (
-                  <div className="flex items-center gap-x-1.5 text-xs text-emerald-500">
-                    <Check className="h-3.5 w-3.5" />
-                    <span>Saved</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Buttons */}
-              <div className="flex flex-wrap items-center gap-2">
-                {!list.hideDelete && (
-                  <DeleteButton 
-                    list={list} 
-                    value={value} 
-                    onError={setErrorDialogValue}
-                    isDesktop={true}
-                  />
-                )}
-                {hasChanges && (
-                  <ResetButton 
-                    hasChanges={hasChanges} 
-                    onReset={handleReset}
-                    isDesktop={true}
-                  />
-                )}
-                <Button
-                  size="sm"
-                  className="text-xs"
-                  onClick={handleSave}
-                  disabled={!hasChanges || loading || saveState === 'saving'}
-                >
-                  Save Changes
-                  <Check className="ml-1 stroke-[1.5px]" width="8" height="8" />
-                </Button>
-              </div>
-            </div>
           </aside>
 
-          {/* Floating action bar - visible only on smaller screens */}
-          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-10 lg:hidden flex flex-col items-center gap-1.5">
-            {/* Status indicators above the button container */}
-            <div className="flex justify-center">
-              {saveState === 'saving' && (
-                <div className="flex items-center gap-x-1.5 text-xs text-muted-foreground">
-                  <Loader2 className="animate-spin h-3.5 w-3.5" />
-                  <span>Saving...</span>
-                </div>
-              )}
-              {saveState === 'saved' && (
-                <div className="flex items-center gap-x-1.5 text-xs text-emerald-500">
-                  <Check className="h-3.5 w-3.5" />
-                  <span>Saved</span>
-                </div>
-              )}
-            </div>
-
-            {/* Button container */}
-            <div className="bg-background border rounded-md px-3 py-2 shadow-md w-full">
-              <div className="flex flex-wrap items-center gap-2">
-                {!list.hideDelete && (
-                  <DeleteButton 
-                    list={list} 
-                    value={value} 
-                    onError={setErrorDialogValue}
-                    isDesktop={false}
-                  />
-                )}
-                {hasChanges && (
-                  <ResetButton 
-                    hasChanges={hasChanges} 
-                    onReset={handleReset}
-                    isDesktop={false}
-                  />
-                )}
-                <Button
-                  size="sm"
-                  className="text-xs"
-                  onClick={handleSave}
-                  disabled={!hasChanges || loading || saveState === 'saving'}
-                >
-                  <span className="hidden sm:inline">Save Changes</span>
-                  <span className="sm:hidden">Save</span>
-                  <Check className="ml-1 stroke-[1.5px]" width="8" height="8" />
-                </Button>
-              </div>
-            </div>
-          </div>
 
           {/* Main content with tabs */}
           <div className="space-y-6">
