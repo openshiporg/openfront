@@ -5,7 +5,7 @@ import { permissionsList } from "./models/fields";
 import "dotenv/config";
 import { extendGraphqlSchema } from "./mutations";
 import { models } from "./models";
-import { sendPasswordResetEmail } from "./utils/mail";
+import { sendPasswordResetEmail } from "./lib/mail";
 import Iron from "@hapi/iron";
 import * as cookie from "cookie";
 import { permissions } from "./access";

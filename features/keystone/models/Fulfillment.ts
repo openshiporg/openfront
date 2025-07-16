@@ -9,6 +9,7 @@ import {
 } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
+import { sendOrderFulfillmentEmail } from "../lib/mail";
 
 export const Fulfillment = list({
   access: {
@@ -31,6 +32,81 @@ export const Fulfillment = list({
       await context.db.ShippingLabel.deleteMany({
         where: { fulfillment: { id: item.id } },
       });
+    },
+    afterOperation: async ({ operation, item, context }) => {
+      // Send order fulfillment email when fulfillment is created
+      if (operation === 'create' && item && !item.noNotification) {
+        try {
+          // Get the complete fulfillment with order and shipping labels
+          const fulfillment = await context.sudo().query.Fulfillment.findOne({
+            where: { id: item.id },
+            query: `
+              id
+              noNotification
+              shippingLabels {
+                id
+                trackingNumber
+                trackingUrl
+                carrier
+                labelUrl
+              }
+              fulfillmentItems {
+                id
+                quantity
+                lineItem {
+                  id
+                  title
+                  sku
+                  variantTitle
+                  formattedUnitPrice
+                  formattedTotal
+                }
+              }
+              order {
+                id
+                displayId
+                email
+                secretKey
+                shippingAddress {
+                  id
+                  firstName
+                  lastName
+                  company
+                  address1
+                  address2
+                  city
+                  province
+                  postalCode
+                  phone
+                  country {
+                    id
+                    iso2
+                    displayName
+                  }
+                }
+              }
+            `,
+          });
+
+          if (fulfillment?.order) {
+            // Format fulfillment data for email
+            const fulfillmentData = {
+              items: fulfillment.fulfillmentItems,
+              shippingLabels: fulfillment.shippingLabels?.map(label => ({
+                id: label.id,
+                trackingNumber: label.trackingNumber,
+                url: label.trackingUrl,
+                carrier: label.carrier,
+                labelUrl: label.labelUrl
+              })) || []
+            };
+
+            await sendOrderFulfillmentEmail(fulfillment.order, fulfillmentData);
+          }
+        } catch (error) {
+          console.error('Error sending order fulfillment email:', error);
+        }
+      }
     },
   },
 

@@ -15,6 +15,7 @@ import {
 } from "@keystone-6/core/fields";
 import { trackingFields } from "./trackingFields";
 import { permissions } from "../access";
+import { sendOrderConfirmationEmail } from "../lib/mail";
 
 // Add these helper functions at the top
 const formatCurrency = (amount, currencyCode) => {
@@ -31,6 +32,62 @@ export const Order = list({
       create: permissions.canManageOrders,
       update: permissions.canManageOrders,
       delete: permissions.canManageOrders,
+    },
+  },
+  hooks: {
+    afterOperation: async ({ operation, item, context }) => {
+      // Send order confirmation email when order is created
+      if (operation === 'create' && item && !item.noNotification) {
+        try {
+          // Get the complete order with all necessary fields
+          const order = await context.sudo().query.Order.findOne({
+            where: { id: item.id },
+            query: `
+              id
+              displayId
+              email
+              secretKey
+              subtotal
+              total
+              shipping
+              discount
+              tax
+              lineItems {
+                id
+                title
+                quantity
+                sku
+                variantTitle
+                formattedUnitPrice
+                formattedTotal
+              }
+              shippingAddress {
+                id
+                firstName
+                lastName
+                company
+                address1
+                address2
+                city
+                province
+                postalCode
+                phone
+                country {
+                  id
+                  iso2
+                  displayName
+                }
+              }
+            `,
+          });
+
+          if (order) {
+            await sendOrderConfirmationEmail(order);
+          }
+        } catch (error) {
+          console.error('Error sending order confirmation email:', error);
+        }
+      }
     },
   },
   fields: {
