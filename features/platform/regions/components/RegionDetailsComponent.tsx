@@ -253,7 +253,7 @@ export function RegionDetailsComponent({
   return (
     <>
       <Accordion type="single" collapsible className="w-full">
-        <AccordionItem value={region.id} className="border-0">
+        <AccordionItem value={region.id} className="border-0 border-b">
           <div className="px-4 md:px-6 py-3 md:py-4 flex justify-between w-full relative min-h-[80px]">
             <div className="flex items-start gap-4">
               {/* Region Info */}

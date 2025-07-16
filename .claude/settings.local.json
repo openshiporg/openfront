@@ -44,7 +44,8 @@
       "Bash(done)",
       "Bash(true)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:localhost)"
+      "WebFetch(domain:localhost)",
+      "WebFetch(domain:remixicon.com)"
     ],
     "deny": []
   }
