@@ -66,7 +66,7 @@ async function getGraphQLSchema(graphqlEndpoint: string, cookie: string): Promis
   return buildClientSchema(result.data);
 }
 
-export async function POST(request: Request, { params }: { params: { transport: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ transport: string }> }) {
   try {
     const { transport } = await params;
     
@@ -718,7 +718,7 @@ export async function POST(request: Request, { params }: { params: { transport: 
   }
 }
 
-export async function GET(request: Request, { params }: { params: { transport: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ transport: string }> }) {
   const { transport } = await params;
   
   const baseUrl = await getBaseUrl();

@@ -1,7 +1,7 @@
 import { streamText, experimental_createMCPClient } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { getBaseUrl } from '@/features/dashboard/lib/getBaseUrl';
-import { StreamableHTTPClientTransport, StreamableHTTPClientTransportOptions } from '@modelcontextprotocol/sdk/client/streamableHttp';
+import { StreamableHTTPClientTransport, StreamableHTTPClientTransportOptions } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 
 // Cookie-aware transport that properly handles cookie forwarding
 class CookieAwareTransport extends StreamableHTTPClientTransport {
