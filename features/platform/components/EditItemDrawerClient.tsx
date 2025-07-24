@@ -9,7 +9,7 @@ import { useInvalidFields } from '../../dashboard/utils/useInvalidFields'
 import { useHasChanges, serializeValueToOperationItem } from '../../dashboard/utils/useHasChanges'
 import { enhanceFields } from '../../dashboard/utils/enhanceFields'
 import { updateItemAction, deleteItemAction } from '../../dashboard/actions/item-actions'
-import { AlertCircle, Check, Loader2, Undo2 } from 'lucide-react'
+import { AlertCircle, Check, Loader2, Undo2, Copy } from 'lucide-react'
 import { RiDeleteBinLine } from '@remixicon/react'
 import { toast } from 'sonner'
 import { 
@@ -94,6 +94,7 @@ export function EditItemDrawerClient({
   const [value, setValue] = useState(() => initialValue)
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [forceValidation, setForceValidation] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   // Reset value when initialValue changes (like ItemPageClient)
   useEffect(() => {
@@ -191,6 +192,18 @@ export function EditItemDrawerClient({
     onClose()
   }
 
+  // Copy handler for item ID
+  const handleCopy = useEventCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(itemId)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+      toast.success('ID copied to clipboard')
+    } catch (err) {
+      toast.error('Failed to copy to clipboard')
+    }
+  })
+
   // Reset handler exactly like ItemPageClient
   const handleReset = useEventCallback(() => {
     setValue(initialValue)
@@ -218,8 +231,8 @@ export function EditItemDrawerClient({
       // Close the drawer first
       onClose()
       
-      // Navigate to list page
-      router.push(list.isSingleton ? '/' : `/${list.path}`)
+      // Don't redirect automatically - let the parent handle navigation
+      // The drawer is used in platform context, not Keystone admin context
     } catch (err: any) {
       toast.error("Unable to delete item.", {
         action: {
@@ -234,9 +247,47 @@ export function EditItemDrawerClient({
     <>
       <DrawerHeader className="flex-shrink-0">
         <DrawerTitle>Edit {list.singular}</DrawerTitle>
-        <DrawerDescription>
-          Make changes to this {list.singular.toLowerCase()}
-        </DrawerDescription>
+        <div className="mt-2">
+          <div className="relative border rounded-md bg-muted/40 transition-all">
+            <div className="p-1 flex items-center gap-3">
+              <div className="flex gap-3 flex-1 min-w-0">
+                <div className="flex-shrink-0">
+                  <div className="bg-background shadow-xs border rounded-sm py-0.5 px-1 text-[.65rem] text-muted-foreground">
+                    ID
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-mono truncate">
+                    {itemId}
+                  </div>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-sm h-6 w-6 flex-shrink-0 relative"
+                onClick={handleCopy}
+                disabled={copied}
+              >
+                <div
+                  className={`transition-all duration-200 ${
+                    copied ? "scale-100 opacity-100" : "scale-0 opacity-0"
+                  }`}
+                >
+                  <Check className="size-3 text-emerald-500" />
+                </div>
+                <div
+                  className={`absolute transition-all duration-200 ${
+                    copied ? "scale-0 opacity-0" : "scale-100 opacity-100"
+                  }`}
+                >
+                  <Copy className="size-3" />
+                </div>
+                <span className="sr-only">{copied ? "Copied" : "Copy ID"}</span>
+              </Button>
+            </div>
+          </div>
+        </div>
       </DrawerHeader>
       
       <form onSubmit={handleSave} className="flex flex-col flex-1 min-h-0">
