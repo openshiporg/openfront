@@ -35,9 +35,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// features/integrations/payment/manual.ts
-var manual_exports = {};
-__export(manual_exports, {
+// features/integrations/payment/stripe.ts
+var stripe_exports = {};
+__export(stripe_exports, {
   capturePaymentFunction: () => capturePaymentFunction,
   createPaymentFunction: () => createPaymentFunction,
   generatePaymentLinkFunction: () => generatePaymentLinkFunction,
@@ -45,60 +45,91 @@ __export(manual_exports, {
   handleWebhookFunction: () => handleWebhookFunction,
   refundPaymentFunction: () => refundPaymentFunction
 });
-async function handleWebhookFunction({ event, headers }) {
-  return {
-    isValid: true,
-    event,
-    type: event.type,
-    resource: event.data
-  };
-}
 async function createPaymentFunction({ cart, amount, currency }) {
-  return {
-    status: "pending",
-    data: {
-      status: "pending",
-      amount,
-      currency: currency.toLowerCase()
+  const stripe = getStripeClient();
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount,
+    currency: currency.toLowerCase(),
+    automatic_payment_methods: {
+      enabled: true
     }
+  });
+  return {
+    clientSecret: paymentIntent.client_secret,
+    paymentIntentId: paymentIntent.id
   };
 }
 async function capturePaymentFunction({ paymentId, amount }) {
+  const stripe = getStripeClient();
+  const paymentIntent = await stripe.paymentIntents.capture(paymentId, {
+    amount_to_capture: amount
+  });
   return {
-    status: "captured",
-    amount,
-    data: {
-      status: "captured",
-      amount,
-      captured_at: (/* @__PURE__ */ new Date()).toISOString()
-    }
+    status: paymentIntent.status,
+    amount: paymentIntent.amount_captured,
+    data: paymentIntent
   };
 }
 async function refundPaymentFunction({ paymentId, amount }) {
+  const stripe = getStripeClient();
+  const refund = await stripe.refunds.create({
+    payment_intent: paymentId,
+    amount
+  });
   return {
-    status: "refunded",
-    amount,
-    data: {
-      status: "refunded",
-      amount,
-      refunded_at: (/* @__PURE__ */ new Date()).toISOString()
-    }
+    status: refund.status,
+    amount: refund.amount,
+    data: refund
   };
 }
 async function getPaymentStatusFunction({ paymentId }) {
+  const stripe = getStripeClient();
+  const paymentIntent = await stripe.paymentIntents.retrieve(paymentId);
   return {
-    status: "succeeded",
-    data: {
-      status: "succeeded"
-    }
+    status: paymentIntent.status,
+    amount: paymentIntent.amount,
+    data: paymentIntent
   };
 }
 async function generatePaymentLinkFunction({ paymentId }) {
-  return null;
+  return `https://dashboard.stripe.com/payments/${paymentId}`;
 }
-var init_manual = __esm({
-  "features/integrations/payment/manual.ts"() {
+async function handleWebhookFunction({ event, headers }) {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    throw new Error("Stripe webhook secret is not configured");
+  }
+  const stripe = getStripeClient();
+  try {
+    const stripeEvent = stripe.webhooks.constructEvent(
+      JSON.stringify(event),
+      headers["stripe-signature"],
+      webhookSecret
+    );
+    return {
+      isValid: true,
+      event: stripeEvent,
+      type: stripeEvent.type,
+      resource: stripeEvent.data.object
+    };
+  } catch (err) {
+    throw new Error(`Webhook signature verification failed: ${err.message}`);
+  }
+}
+var import_stripe, getStripeClient;
+var init_stripe = __esm({
+  "features/integrations/payment/stripe.ts"() {
     "use strict";
+    import_stripe = __toESM(require("stripe"));
+    getStripeClient = () => {
+      const stripeKey = process.env.STRIPE_SECRET_KEY;
+      if (!stripeKey) {
+        throw new Error("Stripe secret key not configured");
+      }
+      return new import_stripe.default(stripeKey, {
+        apiVersion: "2023-10-16"
+      });
+    };
   }
 });
 
@@ -286,9 +317,9 @@ var init_paypal = __esm({
   }
 });
 
-// features/integrations/payment/stripe.ts
-var stripe_exports = {};
-__export(stripe_exports, {
+// features/integrations/payment/manual.ts
+var manual_exports = {};
+__export(manual_exports, {
   capturePaymentFunction: () => capturePaymentFunction3,
   createPaymentFunction: () => createPaymentFunction3,
   generatePaymentLinkFunction: () => generatePaymentLinkFunction3,
@@ -296,90 +327,76 @@ __export(stripe_exports, {
   handleWebhookFunction: () => handleWebhookFunction3,
   refundPaymentFunction: () => refundPaymentFunction3
 });
-async function createPaymentFunction3({ cart, amount, currency }) {
-  const stripe = getStripeClient();
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount,
-    currency: currency.toLowerCase(),
-    automatic_payment_methods: {
-      enabled: true
-    }
-  });
+async function handleWebhookFunction3({ event, headers }) {
   return {
-    clientSecret: paymentIntent.client_secret,
-    paymentIntentId: paymentIntent.id
+    isValid: true,
+    event,
+    type: event.type,
+    resource: event.data
+  };
+}
+async function createPaymentFunction3({ cart, amount, currency }) {
+  return {
+    status: "pending",
+    data: {
+      status: "pending",
+      amount,
+      currency: currency.toLowerCase()
+    }
   };
 }
 async function capturePaymentFunction3({ paymentId, amount }) {
-  const stripe = getStripeClient();
-  const paymentIntent = await stripe.paymentIntents.capture(paymentId, {
-    amount_to_capture: amount
-  });
   return {
-    status: paymentIntent.status,
-    amount: paymentIntent.amount_captured,
-    data: paymentIntent
+    status: "captured",
+    amount,
+    data: {
+      status: "captured",
+      amount,
+      captured_at: (/* @__PURE__ */ new Date()).toISOString()
+    }
   };
 }
 async function refundPaymentFunction3({ paymentId, amount }) {
-  const stripe = getStripeClient();
-  const refund = await stripe.refunds.create({
-    payment_intent: paymentId,
-    amount
-  });
   return {
-    status: refund.status,
-    amount: refund.amount,
-    data: refund
+    status: "refunded",
+    amount,
+    data: {
+      status: "refunded",
+      amount,
+      refunded_at: (/* @__PURE__ */ new Date()).toISOString()
+    }
   };
 }
 async function getPaymentStatusFunction3({ paymentId }) {
-  const stripe = getStripeClient();
-  const paymentIntent = await stripe.paymentIntents.retrieve(paymentId);
   return {
-    status: paymentIntent.status,
-    amount: paymentIntent.amount,
-    data: paymentIntent
+    status: "succeeded",
+    data: {
+      status: "succeeded"
+    }
   };
 }
 async function generatePaymentLinkFunction3({ paymentId }) {
-  return `https://dashboard.stripe.com/payments/${paymentId}`;
+  return null;
 }
-async function handleWebhookFunction3({ event, headers }) {
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!webhookSecret) {
-    throw new Error("Stripe webhook secret is not configured");
-  }
-  const stripe = getStripeClient();
-  try {
-    const stripeEvent = stripe.webhooks.constructEvent(
-      JSON.stringify(event),
-      headers["stripe-signature"],
-      webhookSecret
-    );
-    return {
-      isValid: true,
-      event: stripeEvent,
-      type: stripeEvent.type,
-      resource: stripeEvent.data.object
-    };
-  } catch (err) {
-    throw new Error(`Webhook signature verification failed: ${err.message}`);
-  }
-}
-var import_stripe, getStripeClient;
-var init_stripe = __esm({
-  "features/integrations/payment/stripe.ts"() {
+var init_manual = __esm({
+  "features/integrations/payment/manual.ts"() {
     "use strict";
-    import_stripe = __toESM(require("stripe"));
-    getStripeClient = () => {
-      const stripeKey = process.env.STRIPE_SECRET_KEY;
-      if (!stripeKey) {
-        throw new Error("Stripe secret key not configured");
-      }
-      return new import_stripe.default(stripeKey, {
-        apiVersion: "2023-10-16"
-      });
+  }
+});
+
+// features/integrations/payment/index.ts
+var payment_exports = {};
+__export(payment_exports, {
+  paymentProviderAdapters: () => paymentProviderAdapters
+});
+var paymentProviderAdapters;
+var init_payment = __esm({
+  "features/integrations/payment/index.ts"() {
+    "use strict";
+    paymentProviderAdapters = {
+      stripe: () => Promise.resolve().then(() => (init_stripe(), stripe_exports)),
+      paypal: () => Promise.resolve().then(() => (init_paypal(), paypal_exports)),
+      manual: () => Promise.resolve().then(() => (init_manual(), manual_exports))
     };
   }
 });
@@ -2462,6 +2479,7 @@ var activeCartRegion_default = activeCartRegion;
 
 // import("../../integrations/payment/**/*.ts") in features/keystone/utils/paymentProviderAdapter.ts
 var globImport_integrations_payment_ts = __glob({
+  "../../integrations/payment/index.ts": () => Promise.resolve().then(() => (init_payment(), payment_exports)),
   "../../integrations/payment/manual.ts": () => Promise.resolve().then(() => (init_manual(), manual_exports)),
   "../../integrations/payment/paypal.ts": () => Promise.resolve().then(() => (init_paypal(), paypal_exports)),
   "../../integrations/payment/stripe.ts": () => Promise.resolve().then(() => (init_stripe(), stripe_exports))
@@ -5822,16 +5840,10 @@ var import_fields21 = require("@keystone-6/core/fields");
 // features/keystone/lib/mail.ts
 var import_nodemailer = require("nodemailer");
 function getBaseUrlForEmails() {
-  if (process.env.FRONTEND_URL) {
-    return process.env.FRONTEND_URL;
+  if (process.env.SMTP_STORE_LINK) {
+    return process.env.SMTP_STORE_LINK;
   }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL;
-  }
-  console.warn("No base URL found for emails. Please set FRONTEND_URL, VERCEL_URL, or NEXT_PUBLIC_SITE_URL");
+  console.warn("SMTP_STORE_LINK not set. Please add SMTP_STORE_LINK to your environment variables for email links to work properly.");
   return "";
 }
 var transport = (0, import_nodemailer.createTransport)({
@@ -5843,6 +5855,53 @@ var transport = (0, import_nodemailer.createTransport)({
     pass: process.env.SMTP_PASSWORD
   }
 });
+function passwordResetEmail({ url }) {
+  const backgroundColor = "#f9f9f9";
+  const textColor = "#444444";
+  const mainBackgroundColor = "#ffffff";
+  const buttonBackgroundColor = "#346df1";
+  const buttonBorderColor = "#346df1";
+  const buttonTextColor = "#ffffff";
+  return `
+    <body style="background: ${backgroundColor};">
+      <table width="100%" border="0" cellspacing="20" cellpadding="0" style="background: ${mainBackgroundColor}; max-width: 600px; margin: auto; border-radius: 10px;">
+        <tr>
+          <td align="center" style="padding: 10px 0px 0px 0px; font-size: 18px; font-family: Helvetica, Arial, sans-serif; color: ${textColor};">
+            Please click below to reset your password
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding: 20px 0;">
+            <table border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td align="center" style="border-radius: 5px;" bgcolor="${buttonBackgroundColor}"><a href="${url}" target="_blank" style="font-size: 18px; font-family: Helvetica, Arial, sans-serif; color: ${buttonTextColor}; text-decoration: none; border-radius: 5px; padding: 10px 20px; border: 1px solid ${buttonBorderColor}; display: inline-block; font-weight: bold;">Reset Password</a></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding: 0px 0px 10px 0px; font-size: 16px; line-height: 22px; font-family: Helvetica, Arial, sans-serif; color: ${textColor};">
+            If you did not request this email you can safely ignore it.
+          </td>
+        </tr>
+      </table>
+    </body>
+  `;
+}
+async function sendPasswordResetEmail(resetToken, to, baseUrl) {
+  const frontendUrl = baseUrl || getBaseUrlForEmails();
+  const info = await transport.sendMail({
+    to,
+    from: process.env.SMTP_FROM,
+    subject: "Your password reset token!",
+    html: passwordResetEmail({
+      url: `${frontendUrl}${basePath && basePath}/reset?token=${resetToken}`
+    })
+  });
+  if (process.env.MAIL_USER?.includes("ethereal.email")) {
+    console.log(`\uFFFD Message Sent!  Preview it at ${(0, import_nodemailer.getTestMessageUrl)(info)}`);
+  }
+}
 function orderConfirmationEmail({ order, orderUrl }) {
   const backgroundColor = "#f9f9f9";
   const textColor = "#444444";
@@ -11251,78 +11310,6 @@ var models = {
   User,
   UserField
 };
-
-// features/keystone/utils/mail.ts
-var import_nodemailer2 = require("nodemailer");
-var transport2 = (0, import_nodemailer2.createTransport)({
-  // @ts-ignore
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASSWORD
-  }
-});
-function passwordResetEmail({ url }) {
-  const backgroundColor = "#f9f9f9";
-  const textColor = "#444444";
-  const mainBackgroundColor = "#ffffff";
-  const buttonBackgroundColor = "#346df1";
-  const buttonBorderColor = "#346df1";
-  const buttonTextColor = "#ffffff";
-  return `
-    <body style="background: ${backgroundColor};">
-      <table width="100%" border="0" cellspacing="20" cellpadding="0" style="background: ${mainBackgroundColor}; max-width: 600px; margin: auto; border-radius: 10px;">
-        <tr>
-          <td align="center" style="padding: 10px 0px 0px 0px; font-size: 18px; font-family: Helvetica, Arial, sans-serif; color: ${textColor};">
-            Please click below to reset your password
-          </td>
-        </tr>
-        <tr>
-          <td align="center" style="padding: 20px 0;">
-            <table border="0" cellspacing="0" cellpadding="0">
-              <tr>
-                <td align="center" style="border-radius: 5px;" bgcolor="${buttonBackgroundColor}"><a href="${url}" target="_blank" style="font-size: 18px; font-family: Helvetica, Arial, sans-serif; color: ${buttonTextColor}; text-decoration: none; border-radius: 5px; padding: 10px 20px; border: 1px solid ${buttonBorderColor}; display: inline-block; font-weight: bold;">Reset Password</a></td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td align="center" style="padding: 0px 0px 10px 0px; font-size: 16px; line-height: 22px; font-family: Helvetica, Arial, sans-serif; color: ${textColor};">
-            If you did not request this email you can safely ignore it.
-          </td>
-        </tr>
-      </table>
-    </body>
-  `;
-}
-function getBaseUrlForEmails2() {
-  if (process.env.FRONTEND_URL) {
-    return process.env.FRONTEND_URL;
-  }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL;
-  }
-  console.warn("No base URL found for emails. Please set FRONTEND_URL, VERCEL_URL, or NEXT_PUBLIC_SITE_URL");
-  return "";
-}
-async function sendPasswordResetEmail(resetToken, to, baseUrl) {
-  const frontendUrl = baseUrl || getBaseUrlForEmails2();
-  const info = await transport2.sendMail({
-    to,
-    from: process.env.SMTP_FROM,
-    subject: "Your password reset token!",
-    html: passwordResetEmail({
-      url: `${frontendUrl}${basePath && basePath}/reset?token=${resetToken}`
-    })
-  });
-  if (process.env.MAIL_USER?.includes("ethereal.email")) {
-    console.log(`Message Sent! Preview it at ${(0, import_nodemailer2.getTestMessageUrl)(info)}`);
-  }
-}
 
 // features/keystone/index.ts
 var import_iron = __toESM(require("@hapi/iron"));

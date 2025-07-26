@@ -33,6 +33,19 @@ const CountrySelect = forwardRef<
   const innerRef = useRef<HTMLSelectElement>(null)
   const [selectedValue, setSelectedValue] = useState<string | undefined>(value as string || defaultValue as string)
 
+  // Group countries by continent if available
+  const countryOptions = useMemo(() => {
+    if (!region) {
+      return []
+    }
+
+    return region.countries?.map((country: any) => ({
+      value: country.iso2,
+      label: country.name,
+      continent: country.continent || "Other"
+    })) || []
+  }, [region])
+
   // Auto-select first country if no value is provided
   useEffect(() => {
     if (!selectedValue && countryOptions.length > 0) {
@@ -55,19 +68,6 @@ const CountrySelect = forwardRef<
     ref,
     () => innerRef.current
   )
-
-  // Group countries by continent if available
-  const countryOptions = useMemo(() => {
-    if (!region) {
-      return []
-    }
-
-    return region.countries?.map((country: any) => ({
-      value: country.iso2,
-      label: country.name,
-      continent: country.continent || "Other"
-    })) || []
-  }, [region])
 
   // Group by continent
   const groupedOptions = useMemo(() => {

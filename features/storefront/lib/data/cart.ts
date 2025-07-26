@@ -951,7 +951,9 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
     } else {
       // For guest users, create user first, sign them in, then connect to address
       try {
-        const randomPassword = crypto.randomBytes(32).toString('hex');
+        const randomPassword = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
         const { createUser: guestUser } = await openfrontClient.request(
           gql`
             mutation CreateGuestUser($data: UserCreateInput!) {
