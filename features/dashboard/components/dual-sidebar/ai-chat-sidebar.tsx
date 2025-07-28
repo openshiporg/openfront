@@ -365,12 +365,12 @@ function SidebarOnboarding({ onComplete }: { onComplete: () => void }) {
       </div>
 
       {/* Warning Card */}
-      <div className="border border-destructive/50 bg-destructive/5 rounded-lg p-2">
+      <div className="border border-destructive/50 bg-destructive/5 rounded-lg p-2 shadow">
         <div className="space-y-1">
-          <h4 className="font-medium text-sm text-destructive">
+          <h4 className="font-medium text-sm text-destructive-foreground">
             Be very careful when using this AI assistant
           </h4>
-          <p className="text-xs text-destructive/90">
+          <p className="text-xs text-destructive-foreground/90">
             It can do everything you can do since it uses the same session. We
             highly recommend you back up your database daily if you're using the
             AI assistant.

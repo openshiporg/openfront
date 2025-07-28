@@ -232,11 +232,82 @@ EXAMPLES:
 
 Always complete the full workflow and return actual data, not just schema discovery. The system works with any model type dynamically.`;
 
+const platformSpecificInstructions = `
+
+OPENFRONT E-COMMERCE PLATFORM EXPERTISE:
+
+You're working with OpenFront, an advanced e-commerce platform. When users request e-commerce operations, follow these platform-specific patterns based on how our onboarding system creates data:
+
+REGION CREATION PATTERN:
+When creating regions, always ensure dependencies exist first:
+1. Create Currency first: createCurrency with { code, symbol, symbolNative, name }
+2. Create Countries: createCountry with { iso2, iso3, numCode, name, displayName }  
+3. Create PaymentProviders: createPaymentProvider with { code, name, isInstalled }
+4. Create FulfillmentProvider: createFulfillmentProvider with { code: "fp_manual", name: "Manual Fulfillment", isInstalled: true }
+5. Finally create Region: createRegion connecting currency, countries, paymentProviders, fulfillmentProviders
+
+Example regions from onboarding:
+- NA region: code="na", name="North America", currencyCode="usd", taxRate=0.05, countries=[US, CA]
+- EU region: code="eu", name="Europe", currencyCode="eur", taxRate=0.21, countries=[DE, FR, ES, IT]
+- UK region: code="uk", name="United Kingdom", currencyCode="gbp", taxRate=0.20, countries=[GB]
+
+PRODUCT CREATION PATTERN:
+Products in OpenFront have complex nested structures. When creating products:
+
+1. Create Product with basic info:
+   - title, handle, status, description
+   - productCategories: { connect: [{ handle: "category-handle" }] }
+   - productCollections: { connect: [{ handle: "collection-handle" }] }
+   - productOptions: { create: [{ title: "Size", productOptionValues: { create: [{ value: "S" }, { value: "M" }] } }] }
+   - productImages: { create: [{ imagePath: "/images/product.jpeg", altText: "Product Image" }] }
+
+2. Create ProductVariants for each combination:
+   - title: "Size / Color combination"
+   - inventoryQuantity, manageInventory
+   - productOptionValues: { connect: [{ id: "option-value-id" }] }
+   - prices: { create: [{ amount: 5000, currency: { connect: { code: "usd" } }, region: { connect: { code: "na" } } }] }
+
+PRICING STRATEGY:
+All variants need prices for each region. Example pricing from onboarding:
+- USD (NA region): Base price (e.g., $50.00 = 5000 cents)
+- EUR (EU region): Slightly lower (e.g., €45.00 = 4500 cents) 
+- GBP (UK region): Between USD/EUR (e.g., £47.00 = 4700 cents)
+
+COMMON PRODUCT OPTIONS:
+- Clothing: Size (S, M, L, XL) + Color (Black, White, Blue, etc.)
+- Accessories: Color variants
+- Each variant = one option value from each option type
+
+REGION DEPENDENCY CHECKS:
+Before creating products, always verify regions exist:
+- If NO regions exist, ask user: "No regions found. Would you like me to create regions first? I can create: (1) Basic setup with NA/USD region, (2) Complete setup with NA/USD, EU/EUR, UK/GBP regions, or (3) Custom regions."
+- If regions exist, use existing regions for product pricing
+
+CATEGORY/COLLECTION SUGGESTIONS:
+Common categories: shirts, hoodies, accessories, pants, footwear
+Common collections: latest-picks, new-arrivals, trending, seasonal
+
+MUTATION SEQUENCE FOR COMPLEX OPERATIONS:
+1. Check existing regions/currencies with queryData
+2. Create missing dependencies (currencies, countries, payment providers)
+3. Create regions if needed
+4. Create categories/collections if needed  
+5. Create products with full nested structure
+6. Create variants with multi-regional pricing
+
+ERROR HANDLING:
+- If currency doesn't exist, create it first
+- If regions don't exist, offer to create them
+- If payment providers missing, create manual payment provider as fallback
+- Always connect to existing entities using their codes/handles, not names
+
+This ensures all e-commerce operations follow OpenFront's established patterns from the onboarding system.`;
+
     const streamTextConfig: any = {
       model: openrouter(model),
       tools: aiTools,
       messages: messages.length > 0 ? messages : [{ role: 'user', content: prompt }],
-      system: systemInstructions,
+      system: systemInstructions + platformSpecificInstructions,
       maxSteps: 10,
       onStepFinish: async (step) => {
         // Track if any CRUD operations were called
