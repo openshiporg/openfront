@@ -3,7 +3,7 @@
 import pluralize from "pluralize";
 import config from "../index";
 import { graphql } from "@keystone-6/core";
-import { resolveRelationships } from "../../dashboard/views/index-to-view/resolve-relationships";
+import { resolveRelationships } from "./resolve-relationships";
 import { writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
