@@ -21,11 +21,20 @@ const Addresses = ({
   cart: any | null;
   customer: any | null;
 }) => {
+  console.log("🏠 [DEBUG] Addresses component rendered", {
+    cartId: cart?.id,
+    hasShippingAddress: !!cart?.shippingAddress,
+    shippingAddress: cart?.shippingAddress,
+    hasBillingAddress: !!cart?.billingAddress,
+    customerEmail: customer?.email
+  });
+
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
 
   const isOpen = searchParams?.get("step") === "address";
+  console.log("🔍 [DEBUG] Current step:", searchParams?.get("step"), "isOpen:", isOpen);
 
   const [sameAsBilling, setSameAsBilling] = useState(
     cart?.shippingAddress && cart?.billingAddress
@@ -42,45 +51,58 @@ const Addresses = ({
 
   // Custom form action handler that will handle client-side redirection
   const handleFormAction = async (prevState: any, formData: FormData) => {
+    console.log("📝 [DEBUG] handleFormAction called");
+    
     // Check for required fields before calling setAddresses
     if (!formData.get("shippingAddress.countryCode")) {
+      console.log("❌ [DEBUG] Missing country code");
       return "Please select a country.";
     }
 
     if (!formData.get("shippingAddress.firstName")) {
+      console.log("❌ [DEBUG] Missing first name");
       return "Please enter your first name.";
     }
 
     if (!formData.get("shippingAddress.lastName")) {
+      console.log("❌ [DEBUG] Missing last name");
       return "Please enter your last name.";
     }
 
     if (!formData.get("shippingAddress.address1")) {
+      console.log("❌ [DEBUG] Missing address");
       return "Please enter your address.";
     }
 
     if (!formData.get("shippingAddress.city")) {
+      console.log("❌ [DEBUG] Missing city");
       return "Please enter your city.";
     }
 
     if (!formData.get("shippingAddress.postalCode")) {
+      console.log("❌ [DEBUG] Missing postal code");
       return "Please enter your postal code.";
     }
 
     if (!formData.get("email")) {
+      console.log("❌ [DEBUG] Missing email");
       return "Please enter your email address.";
     }
 
+    console.log("✅ [DEBUG] All required fields present, calling setAddresses");
     const result = await setAddresses(null, formData);
+    console.log("📋 [DEBUG] setAddresses result:", result);
 
     // If successful, redirect client-side
     if (result && typeof result === 'object' && 'success' in result && result.success === true) {
       const countryCode = params?.countryCode as string;
+      console.log("🚀 [DEBUG] Success! Redirecting to delivery step:", `/${countryCode}/checkout?step=delivery`);
       router.push(`/${countryCode}/checkout?step=delivery`);
       return;
     }
 
     // Otherwise return the error message
+    console.log("❌ [DEBUG] setAddresses failed with:", result);
     return result;
   };
 
