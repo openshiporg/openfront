@@ -67,6 +67,9 @@ async function getGraphQLSchema(graphqlEndpoint: string, cookie: string): Promis
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ transport: string }> }) {
+  // Track if any CRUD operations occurred during this request
+  let dataHasChanged = false;
+  
   try {
     const { transport } = await params;
     
@@ -596,6 +599,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
           // Execute the mutation
           const result = await executeGraphQL(mutationString, graphqlEndpoint, cookie || '');
           
+          // Mark that data has changed
+          dataHasChanged = true;
+          
           return new Response(JSON.stringify({
             jsonrpc: '2.0',
             id: body.id,
@@ -607,7 +613,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             }
           }), {
             status: 200,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Data-Changed': 'true'
+            },
           });
         }
         
@@ -629,6 +638,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
           // Execute the mutation
           const result = await executeGraphQL(mutationString, graphqlEndpoint, cookie || '');
           
+          // Mark that data has changed
+          dataHasChanged = true;
+          
           return new Response(JSON.stringify({
             jsonrpc: '2.0',
             id: body.id,
@@ -640,7 +652,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             }
           }), {
             status: 200,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Data-Changed': 'true'
+            },
           });
         }
         
@@ -661,6 +676,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
           // Execute the mutation
           const result = await executeGraphQL(mutationString, graphqlEndpoint, cookie || '');
           
+          // Mark that data has changed
+          dataHasChanged = true;
+          
           return new Response(JSON.stringify({
             jsonrpc: '2.0',
             id: body.id,
@@ -672,7 +690,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             }
           }), {
             status: 200,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Data-Changed': 'true'
+            },
           });
         }
         
