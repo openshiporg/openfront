@@ -179,6 +179,13 @@ Generally, users will say the model name directly ("todo", "product", "user"). H
 YOUR TOOLS:
 You have schema discovery tools (searchModels, lookupInputType, createData, updateData, deleteData) when you need to verify specifics or get exact field requirements.
 
+ENHANCED SEARCH CAPABILITY:
+You now have access to a modelSpecificSearch tool that provides intelligent search functionality similar to the dashboard. This tool:
+- Automatically finds the correct model and GraphQL operation
+- Performs case-insensitive searching across common text fields (name, title, description, etc.)
+- Supports ID-based exact matching
+- Uses the same search logic as the dashboard for consistent results
+
 YOUR KNOWLEDGE - How Keystone generates the API from models:
 - Models become {Model}CreateInput, {Model}UpdateInput, etc.
 - Operations become create{Model}, update{Model}, etc.
@@ -198,6 +205,11 @@ WORKFLOW for any data request:
 2. Use getFieldsForType to discover available fields
 3. For relationship fields, ALSO use getFieldsForType on the related type to see what fields are available
 4. Use queryData with the discovered operation and relevant fields (including sub-selections for relationships)
+
+WORKFLOW for searching specific data:
+1. If the user wants to search for specific items (e.g., "find product with name X", "search for users containing Y"), use modelSpecificSearch directly
+2. This tool handles model discovery, operation mapping, and intelligent searching automatically
+3. It returns actual search results, not just schema information
 
 WORKFLOW for creating any type of data:
 1. Identify the model from user's natural language (use searchModels if unclear)
@@ -225,12 +237,17 @@ RELATIONSHIP HANDLING:
 EXAMPLES:
 - "List all widgets" → searchModels("widget") → getFieldsForType("Widget") → queryData(operation="widgets", fields="id name")
 - "Show all gadgets" → searchModels("gadget") → getFieldsForType("Gadget") → queryData(operation="gadgets", fields="id title")
+- "Find products with name Penrose" → modelSpecificSearch(modelName="Product", searchQuery="Penrose", fields="id name description")
+- "Search for users with email john" → modelSpecificSearch(modelName="User", searchQuery="john", fields="id name email")
+- "Find todos containing meeting" → modelSpecificSearch(modelName="Todo", searchQuery="meeting", fields="id title description status")
 - "Create a widget" → searchModels("widget") → lookupInputType("WidgetCreateInput") → createData(operation="createWidget", data='{"name": "New Widget"}', fields="id name")
 - "Create a gadget" → searchModels("gadget") → lookupInputType("GadgetCreateInput") → createData(operation="createGadget", data='{"title": "New Gadget"}', fields="id title")
 - "Update widget with id 123" → searchModels("widget") → lookupInputType("WidgetUpdateInput") → updateData(operation="updateWidget", where='{"id": "123"}', data='{"name": "Updated Widget"}', fields="id name")
 - "Delete the gadget with id 456" → searchModels("gadget") → deleteData(operation="deleteGadget", where='{"id": "456"}', fields="id title")
 
 Always complete the full workflow and return actual data, not just schema discovery. The system works with any model type dynamically.`;
+
+
 
 const platformSpecificInstructions = `
 
@@ -309,7 +326,7 @@ This ensures all e-commerce operations follow OpenFront's established patterns f
       messages: messages.length > 0 ? messages : [{ role: 'user', content: prompt }],
       system: systemInstructions + platformSpecificInstructions,
       maxSteps: 10,
-      onStepFinish: async (step) => {
+      onStepFinish: async (step: { toolCalls?: any[]; toolResults?: any[]; finishReason?: string; usage?: any; text?: string; }) => {
         // Track if any CRUD operations were called
         if (step.toolCalls && step.toolCalls.length > 0) {
           for (const toolCall of step.toolCalls) {
