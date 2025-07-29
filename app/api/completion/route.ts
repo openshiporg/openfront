@@ -321,7 +321,7 @@ This ensures all e-commerce operations follow OpenFront's established patterns f
           }
         }
       },
-      onFinish: async (result) => {
+      onFinish: async (result: { text: string; finishReason: string; usage: any; response: any }) => {
         console.log('Completion finished successfully');
         // Send data change notification through the stream
         if (dataHasChanged) {
@@ -330,7 +330,7 @@ This ensures all e-commerce operations follow OpenFront's established patterns f
         }
         await mcpClient.close();
       },
-      onError: async (error) => {
+      onError: async (error: unknown) => {
         console.error('Stream error occurred:', error);
         await mcpClient.close();
       },
