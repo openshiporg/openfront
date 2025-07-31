@@ -497,16 +497,16 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({
                         step === 'done'
                           ? 'completed'
                           : error &&
-                            itemErrors[section.type]?.['Manual Payment']
+                            itemErrors[section.type]?.['Manual']
                           ? 'error'
                           : completedItems[section.type]?.includes(
-                              'Manual Payment'
+                              'Manual'
                             )
                           ? 'completed'
                           : 'normal'
                       }
                       errorMessage={
-                        itemErrors[section.type]?.['Manual Payment']
+                        itemErrors[section.type]?.['Manual']
                       }
                       step={step}
                     />
