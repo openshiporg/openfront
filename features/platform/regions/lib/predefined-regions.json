@@ -1,0 +1,729 @@
+{
+  "regions": [
+    {
+      "code": "na",
+      "name": "North America", 
+      "description": "United States and Canada market",
+      "currency": {
+        "code": "USD",
+        "symbol": "$",
+        "name": "US Dollar"
+      },
+      "defaultTaxRate": 0.08,
+      "countries": [
+        {
+          "iso2": "us",
+          "iso3": "usa", 
+          "numCode": 840,
+          "name": "United States",
+          "displayName": "United States",
+          "flag": "🇺🇸"
+        },
+        {
+          "iso2": "ca",
+          "iso3": "can",
+          "numCode": 124,
+          "name": "Canada", 
+          "displayName": "Canada",
+          "flag": "🇨🇦"
+        }
+      ],
+      "defaultPaymentProviders": [
+        { "code": "pp_stripe_stripe", "name": "Stripe" },
+        { "code": "pp_paypal_paypal", "name": "PayPal" },
+        { "code": "pp_system_default", "name": "Manual Payment" }
+      ],
+      "defaultFulfillmentProviders": [
+        { "code": "fp_manual", "name": "Manual Fulfillment" }
+      ]
+    },
+    {
+      "code": "eu",
+      "name": "Europe",
+      "description": "European Union and associated countries",
+      "currency": {
+        "code": "EUR",
+        "symbol": "€", 
+        "name": "Euro"
+      },
+      "defaultTaxRate": 0.20,
+      "countries": [
+        {
+          "iso2": "de",
+          "iso3": "deu",
+          "numCode": 276,
+          "name": "Germany",
+          "displayName": "Germany", 
+          "flag": "🇩🇪"
+        },
+        {
+          "iso2": "fr", 
+          "iso3": "fra",
+          "numCode": 250,
+          "name": "France",
+          "displayName": "France",
+          "flag": "🇫🇷"
+        },
+        {
+          "iso2": "es",
+          "iso3": "esp", 
+          "numCode": 724,
+          "name": "Spain",
+          "displayName": "Spain",
+          "flag": "🇪🇸"
+        },
+        {
+          "iso2": "it",
+          "iso3": "ita",
+          "numCode": 380,
+          "name": "Italy",
+          "displayName": "Italy",
+          "flag": "🇮🇹"
+        },
+        {
+          "iso2": "nl",
+          "iso3": "nld",
+          "numCode": 528, 
+          "name": "Netherlands",
+          "displayName": "Netherlands",
+          "flag": "🇳🇱"
+        },
+        {
+          "iso2": "be",
+          "iso3": "bel",
+          "numCode": 56,
+          "name": "Belgium",
+          "displayName": "Belgium",
+          "flag": "🇧🇪"
+        },
+        {
+          "iso2": "at",
+          "iso3": "aut",
+          "numCode": 40,
+          "name": "Austria", 
+          "displayName": "Austria",
+          "flag": "🇦🇹"
+        },
+        {
+          "iso2": "pt",
+          "iso3": "prt",
+          "numCode": 620,
+          "name": "Portugal",
+          "displayName": "Portugal",
+          "flag": "🇵🇹"
+        },
+        {
+          "iso2": "dk",
+          "iso3": "dnk",
+          "numCode": 208,
+          "name": "Denmark",
+          "displayName": "Denmark",
+          "flag": "🇩🇰"
+        },
+        {
+          "iso2": "se",
+          "iso3": "swe", 
+          "numCode": 752,
+          "name": "Sweden",
+          "displayName": "Sweden",
+          "flag": "🇸🇪"
+        },
+        {
+          "iso2": "fi",
+          "iso3": "fin",
+          "numCode": 246,
+          "name": "Finland",
+          "displayName": "Finland", 
+          "flag": "🇫🇮"
+        },
+        {
+          "iso2": "no",
+          "iso3": "nor",
+          "numCode": 578,
+          "name": "Norway",
+          "displayName": "Norway",
+          "flag": "🇳🇴"
+        },
+        {
+          "iso2": "ie",
+          "iso3": "irl",
+          "numCode": 372,
+          "name": "Ireland",
+          "displayName": "Ireland",
+          "flag": "🇮🇪"
+        },
+        {
+          "iso2": "lu",
+          "iso3": "lux",
+          "numCode": 442,
+          "name": "Luxembourg",
+          "displayName": "Luxembourg",
+          "flag": "🇱🇺"
+        },
+        {
+          "iso2": "ch",
+          "iso3": "che",
+          "numCode": 756,
+          "name": "Switzerland", 
+          "displayName": "Switzerland",
+          "flag": "🇨🇭"
+        }
+      ],
+      "defaultPaymentProviders": [
+        { "code": "pp_stripe_stripe", "name": "Stripe" },
+        { "code": "pp_paypal_paypal", "name": "PayPal" },
+        { "code": "pp_system_default", "name": "Manual Payment" }
+      ],
+      "defaultFulfillmentProviders": [
+        { "code": "fp_manual", "name": "Manual Fulfillment" }
+      ]
+    },
+    {
+      "code": "uk",
+      "name": "United Kingdom",
+      "description": "United Kingdom market",
+      "currency": {
+        "code": "GBP",
+        "symbol": "£",
+        "name": "British Pound"
+      },
+      "defaultTaxRate": 0.20,
+      "countries": [
+        {
+          "iso2": "gb",
+          "iso3": "gbr", 
+          "numCode": 826,
+          "name": "United Kingdom",
+          "displayName": "United Kingdom",
+          "flag": "🇬🇧"
+        }
+      ],
+      "defaultPaymentProviders": [
+        { "code": "pp_stripe_stripe", "name": "Stripe" },
+        { "code": "pp_paypal_paypal", "name": "PayPal" },
+        { "code": "pp_system_default", "name": "Manual Payment" }
+      ],
+      "defaultFulfillmentProviders": [
+        { "code": "fp_manual", "name": "Manual Fulfillment" }
+      ]
+    },
+    {
+      "code": "apac",
+      "name": "Asia Pacific",
+      "description": "Asia Pacific developed markets",
+      "currency": {
+        "code": "AUD",
+        "symbol": "A$",
+        "name": "Australian Dollar"
+      },
+      "defaultTaxRate": 0.10,
+      "countries": [
+        {
+          "iso2": "au",
+          "iso3": "aus",
+          "numCode": 36,
+          "name": "Australia",
+          "displayName": "Australia",
+          "flag": "🇦🇺"
+        },
+        {
+          "iso2": "nz",
+          "iso3": "nzl",
+          "numCode": 554,
+          "name": "New Zealand",
+          "displayName": "New Zealand",
+          "flag": "🇳🇿"
+        },
+        {
+          "iso2": "sg",
+          "iso3": "sgp",
+          "numCode": 702,
+          "name": "Singapore",
+          "displayName": "Singapore",
+          "flag": "🇸🇬"
+        },
+        {
+          "iso2": "hk",
+          "iso3": "hkg",
+          "numCode": 344,
+          "name": "Hong Kong",
+          "displayName": "Hong Kong",
+          "flag": "🇭🇰"
+        },
+        {
+          "iso2": "jp",
+          "iso3": "jpn",
+          "numCode": 392,
+          "name": "Japan",
+          "displayName": "Japan", 
+          "flag": "🇯🇵"
+        },
+        {
+          "iso2": "kr",
+          "iso3": "kor",
+          "numCode": 410,
+          "name": "South Korea",
+          "displayName": "South Korea",
+          "flag": "🇰🇷"
+        },
+        {
+          "iso2": "tw",
+          "iso3": "twn",
+          "numCode": 158,
+          "name": "Taiwan",
+          "displayName": "Taiwan",
+          "flag": "🇹🇼"
+        }
+      ],
+      "defaultPaymentProviders": [
+        { "code": "pp_stripe_stripe", "name": "Stripe" },
+        { "code": "pp_paypal_paypal", "name": "PayPal" },
+        { "code": "pp_system_default", "name": "Manual Payment" }
+      ],
+      "defaultFulfillmentProviders": [
+        { "code": "fp_manual", "name": "Manual Fulfillment" }
+      ]
+    },
+    {
+      "code": "latam",
+      "name": "Latin America",
+      "description": "Latin America market",
+      "currency": {
+        "code": "USD",
+        "symbol": "$",
+        "name": "US Dollar"
+      },
+      "defaultTaxRate": 0.16,
+      "countries": [
+        {
+          "iso2": "mx",
+          "iso3": "mex",
+          "numCode": 484,
+          "name": "Mexico",
+          "displayName": "Mexico",
+          "flag": "🇲🇽"
+        },
+        {
+          "iso2": "br",
+          "iso3": "bra",
+          "numCode": 76,
+          "name": "Brazil",
+          "displayName": "Brazil",
+          "flag": "🇧🇷"
+        },
+        {
+          "iso2": "ar",
+          "iso3": "arg",
+          "numCode": 32,
+          "name": "Argentina",
+          "displayName": "Argentina",
+          "flag": "🇦🇷"
+        },
+        {
+          "iso2": "cl",
+          "iso3": "chl",
+          "numCode": 152,
+          "name": "Chile",
+          "displayName": "Chile",
+          "flag": "🇨🇱"
+        },
+        {
+          "iso2": "co",
+          "iso3": "col",
+          "numCode": 170,
+          "name": "Colombia",
+          "displayName": "Colombia",
+          "flag": "🇨🇴"
+        },
+        {
+          "iso2": "pe",
+          "iso3": "per",
+          "numCode": 604,
+          "name": "Peru",
+          "displayName": "Peru",
+          "flag": "🇵🇪"
+        },
+        {
+          "iso2": "uy",
+          "iso3": "ury",
+          "numCode": 858,
+          "name": "Uruguay",
+          "displayName": "Uruguay",
+          "flag": "🇺🇾"
+        },
+        {
+          "iso2": "ec",
+          "iso3": "ecu",
+          "numCode": 218,
+          "name": "Ecuador",
+          "displayName": "Ecuador",
+          "flag": "🇪🇨"
+        }
+      ],
+      "defaultPaymentProviders": [
+        { "code": "pp_stripe_stripe", "name": "Stripe" },
+        { "code": "pp_paypal_paypal", "name": "PayPal" },
+        { "code": "pp_system_default", "name": "Manual Payment" }
+      ],
+      "defaultFulfillmentProviders": [
+        { "code": "fp_manual", "name": "Manual Fulfillment" }
+      ]
+    },
+    {
+      "code": "nordics",
+      "name": "Nordic Countries",
+      "description": "Nordic region with local currencies",
+      "currency": {
+        "code": "SEK",
+        "symbol": "kr",
+        "name": "Swedish Krona"
+      },
+      "defaultTaxRate": 0.25,
+      "countries": [
+        {
+          "iso2": "se",
+          "iso3": "swe",
+          "numCode": 752,
+          "name": "Sweden",
+          "displayName": "Sweden",
+          "flag": "🇸🇪"
+        },
+        {
+          "iso2": "dk",
+          "iso3": "dnk",
+          "numCode": 208,
+          "name": "Denmark",
+          "displayName": "Denmark",
+          "flag": "🇩🇰"
+        },
+        {
+          "iso2": "no",
+          "iso3": "nor",
+          "numCode": 578,
+          "name": "Norway",
+          "displayName": "Norway",
+          "flag": "🇳🇴"
+        },
+        {
+          "iso2": "fi",
+          "iso3": "fin",
+          "numCode": 246,
+          "name": "Finland",
+          "displayName": "Finland",
+          "flag": "🇫🇮"
+        },
+        {
+          "iso2": "is",
+          "iso3": "isl",
+          "numCode": 352,
+          "name": "Iceland",
+          "displayName": "Iceland",
+          "flag": "🇮🇸"
+        }
+      ],
+      "defaultPaymentProviders": [
+        { "code": "pp_stripe_stripe", "name": "Stripe" },
+        { "code": "pp_paypal_paypal", "name": "PayPal" },
+        { "code": "pp_system_default", "name": "Manual Payment" }
+      ],
+      "defaultFulfillmentProviders": [
+        { "code": "fp_manual", "name": "Manual Fulfillment" }
+      ]
+    },
+    {
+      "code": "mena",
+      "name": "Middle East & North Africa",
+      "description": "MENA region markets",
+      "currency": {
+        "code": "USD",
+        "symbol": "$",
+        "name": "US Dollar"
+      },
+      "defaultTaxRate": 0.05,
+      "countries": [
+        {
+          "iso2": "ae",
+          "iso3": "are",
+          "numCode": 784,
+          "name": "United Arab Emirates",
+          "displayName": "United Arab Emirates",
+          "flag": "🇦🇪"
+        },
+        {
+          "iso2": "sa",
+          "iso3": "sau",
+          "numCode": 682,
+          "name": "Saudi Arabia",
+          "displayName": "Saudi Arabia",
+          "flag": "🇸🇦"
+        },
+        {
+          "iso2": "qa",
+          "iso3": "qat",
+          "numCode": 634,
+          "name": "Qatar",
+          "displayName": "Qatar",
+          "flag": "🇶🇦"
+        },
+        {
+          "iso2": "kw",
+          "iso3": "kwt",
+          "numCode": 414,
+          "name": "Kuwait",
+          "displayName": "Kuwait",
+          "flag": "🇰🇼"
+        },
+        {
+          "iso2": "bh",
+          "iso3": "bhr",
+          "numCode": 48,
+          "name": "Bahrain",
+          "displayName": "Bahrain",
+          "flag": "🇧🇭"
+        },
+        {
+          "iso2": "om",
+          "iso3": "omn",
+          "numCode": 512,
+          "name": "Oman",
+          "displayName": "Oman",
+          "flag": "🇴🇲"
+        },
+        {
+          "iso2": "il",
+          "iso3": "isr",
+          "numCode": 376,
+          "name": "Israel",
+          "displayName": "Israel",
+          "flag": "🇮🇱"
+        },
+        {
+          "iso2": "tr",
+          "iso3": "tur",
+          "numCode": 792,
+          "name": "Turkey",
+          "displayName": "Turkey",
+          "flag": "🇹🇷"
+        }
+      ],
+      "defaultPaymentProviders": [
+        { "code": "pp_stripe_stripe", "name": "Stripe" },
+        { "code": "pp_paypal_paypal", "name": "PayPal" },
+        { "code": "pp_system_default", "name": "Manual Payment" }
+      ],
+      "defaultFulfillmentProviders": [
+        { "code": "fp_manual", "name": "Manual Fulfillment" }
+      ]
+    },
+    {
+      "code": "africa",
+      "name": "Africa",
+      "description": "African continent markets",
+      "currency": {
+        "code": "USD",
+        "symbol": "$",
+        "name": "US Dollar"
+      },
+      "defaultTaxRate": 0.14,
+      "countries": [
+        {
+          "iso2": "za",
+          "iso3": "zaf",
+          "numCode": 710,
+          "name": "South Africa",
+          "displayName": "South Africa",
+          "flag": "🇿🇦"
+        },
+        {
+          "iso2": "ng",
+          "iso3": "nga",
+          "numCode": 566,
+          "name": "Nigeria",
+          "displayName": "Nigeria",
+          "flag": "🇳🇬"
+        },
+        {
+          "iso2": "ke",
+          "iso3": "ken",
+          "numCode": 404,
+          "name": "Kenya",
+          "displayName": "Kenya",
+          "flag": "🇰🇪"
+        },
+        {
+          "iso2": "eg",
+          "iso3": "egy",
+          "numCode": 818,
+          "name": "Egypt",
+          "displayName": "Egypt",
+          "flag": "🇪🇬"
+        },
+        {
+          "iso2": "ma",
+          "iso3": "mar",
+          "numCode": 504,
+          "name": "Morocco",
+          "displayName": "Morocco",
+          "flag": "🇲🇦"
+        },
+        {
+          "iso2": "gh",
+          "iso3": "gha",
+          "numCode": 288,
+          "name": "Ghana",
+          "displayName": "Ghana",
+          "flag": "🇬🇭"
+        }
+      ],
+      "defaultPaymentProviders": [
+        { "code": "pp_stripe_stripe", "name": "Stripe" },
+        { "code": "pp_paypal_paypal", "name": "PayPal" },
+        { "code": "pp_system_default", "name": "Manual Payment" }
+      ],
+      "defaultFulfillmentProviders": [
+        { "code": "fp_manual", "name": "Manual Fulfillment" }
+      ]
+    },
+    {
+      "code": "india",
+      "name": "India",
+      "description": "Indian subcontinent market",
+      "currency": {
+        "code": "INR",
+        "symbol": "₹",
+        "name": "Indian Rupee"
+      },
+      "defaultTaxRate": 0.18,
+      "countries": [
+        {
+          "iso2": "in",
+          "iso3": "ind",
+          "numCode": 356,
+          "name": "India",
+          "displayName": "India",
+          "flag": "🇮🇳"
+        }
+      ],
+      "defaultPaymentProviders": [
+        { "code": "pp_stripe_stripe", "name": "Stripe" },
+        { "code": "pp_paypal_paypal", "name": "PayPal" },
+        { "code": "pp_system_default", "name": "Manual Payment" }
+      ],
+      "defaultFulfillmentProviders": [
+        { "code": "fp_manual", "name": "Manual Fulfillment" }
+      ]
+    },
+    {
+      "code": "china",
+      "name": "China",
+      "description": "Chinese market",
+      "currency": {
+        "code": "CNY",
+        "symbol": "¥",
+        "name": "Chinese Yuan"
+      },
+      "defaultTaxRate": 0.13,
+      "countries": [
+        {
+          "iso2": "cn",
+          "iso3": "chn",
+          "numCode": 156,
+          "name": "China",
+          "displayName": "China",
+          "flag": "🇨🇳"
+        }
+      ],
+      "defaultPaymentProviders": [
+        { "code": "pp_system_default", "name": "Manual Payment" }
+      ],
+      "defaultFulfillmentProviders": [
+        { "code": "fp_manual", "name": "Manual Fulfillment" }
+      ]
+    },
+    {
+      "code": "japan",
+      "name": "Japan",
+      "description": "Japanese market",
+      "currency": {
+        "code": "JPY",
+        "symbol": "¥",
+        "name": "Japanese Yen"
+      },
+      "defaultTaxRate": 0.10,
+      "countries": [
+        {
+          "iso2": "jp",
+          "iso3": "jpn",
+          "numCode": 392,
+          "name": "Japan",
+          "displayName": "Japan",
+          "flag": "🇯🇵"
+        }
+      ],
+      "defaultPaymentProviders": [
+        { "code": "pp_stripe_stripe", "name": "Stripe" },
+        { "code": "pp_system_default", "name": "Manual Payment" }
+      ],
+      "defaultFulfillmentProviders": [
+        { "code": "fp_manual", "name": "Manual Fulfillment" }
+      ]
+    },
+    {
+      "code": "south_korea",
+      "name": "South Korea",
+      "description": "South Korean market",
+      "currency": {
+        "code": "KRW",
+        "symbol": "₩",
+        "name": "South Korean Won"
+      },
+      "defaultTaxRate": 0.10,
+      "countries": [
+        {
+          "iso2": "kr",
+          "iso3": "kor",
+          "numCode": 410,
+          "name": "South Korea",
+          "displayName": "South Korea",
+          "flag": "🇰🇷"
+        }
+      ],
+      "defaultPaymentProviders": [
+        { "code": "pp_stripe_stripe", "name": "Stripe" },
+        { "code": "pp_system_default", "name": "Manual Payment" }
+      ],
+      "defaultFulfillmentProviders": [
+        { "code": "fp_manual", "name": "Manual Fulfillment" }
+      ]
+    },
+    {
+      "code": "singapore",
+      "name": "Singapore",
+      "description": "Singapore market",
+      "currency": {
+        "code": "SGD",
+        "symbol": "S$",
+        "name": "Singapore Dollar"
+      },
+      "defaultTaxRate": 0.07,
+      "countries": [
+        {
+          "iso2": "sg",
+          "iso3": "sgp",
+          "numCode": 702,
+          "name": "Singapore",
+          "displayName": "Singapore",
+          "flag": "🇸🇬"
+        }
+      ],
+      "defaultPaymentProviders": [
+        { "code": "pp_stripe_stripe", "name": "Stripe" },
+        { "code": "pp_paypal_paypal", "name": "PayPal" },
+        { "code": "pp_system_default", "name": "Manual Payment" }
+      ],
+      "defaultFulfillmentProviders": [
+        { "code": "fp_manual", "name": "Manual Fulfillment" }
+      ]
+    }
+  ]
+}
