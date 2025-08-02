@@ -81,7 +81,7 @@ Openfront includes 78+ sophisticated data models covering:
 
 2. **Configure environment variables:**
    ```bash
-   cp env.example .env
+   cp .env.example .env
    ```
    
    Update `.env` with your configuration:
@@ -174,7 +174,7 @@ const rates = await shippingProviderAdapter.getRatesFunction({
 
 ## Documentation
 
-For comprehensive technical documentation, see [`features/platform/PLATFORM.md`](./features/platform/PLATFORM.md) which covers:
+For comprehensive technical documentation, see [docs.openship.org/openfront/ecommerce](https://docs.openship.org/openfront/ecommerce) which covers:
 - Complete data model specifications (78+ models)
 - GraphQL API reference and operations
 - Payment and shipping adapter systems
@@ -254,7 +254,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-- **Documentation**: Check our comprehensive docs in `/features/platform/PLATFORM.md`
+- **Documentation**: Check our comprehensive documentation at [docs.openship.org/openfront/ecommerce](https://docs.openship.org/openfront/ecommerce)
 - **Issues**: Report bugs and feature requests on GitHub Issues
 - **Community**: Join our community discussions
 - **Enterprise**: Contact us for enterprise support and custom development
