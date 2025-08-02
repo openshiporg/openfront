@@ -1,8 +1,8 @@
-# OpenFront Final 2 Platform Architecture
+# Openfront Final 2 Platform Architecture
 
 ## Overview
 
-OpenFront Final 2 is a comprehensive, enterprise-grade e-commerce platform built with Next.js 15 and KeystoneJS 6. It provides a complete commerce solution with advanced features including multi-regional support, sophisticated payment and shipping integrations, analytics, gift cards, claims processing, and comprehensive order management.
+Openfront Final 2 is a comprehensive, enterprise-grade e-commerce platform built with Next.js 15 and KeystoneJS 6. It provides a complete commerce solution with advanced features including multi-regional support, sophisticated payment and shipping integrations, analytics, gift cards, claims processing, and comprehensive order management.
 
 ## Core Architecture
 

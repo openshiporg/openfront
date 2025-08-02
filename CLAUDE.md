@@ -1,12 +1,12 @@
-# OpenFront Final 2 - AI Assistant Guide
+# Openfront Final 2 - AI Assistant Guide
 
 ## Overview
 
-OpenFront Final 2 is a comprehensive, enterprise-grade e-commerce platform built with Next.js 15 and KeystoneJS 6. This is the main codebase for the OpenFront Final 2 application, providing a complete commerce solution with advanced features.
+Openfront Final 2 is a comprehensive, enterprise-grade e-commerce platform built with Next.js 15 and KeystoneJS 6. This is the main codebase for the Openfront Final 2 application, providing a complete commerce solution with advanced features.
 
 ## Platform Understanding
 
-For comprehensive technical details about the OpenFront platform architecture, schema, and features, refer to:
+For comprehensive technical details about the Openfront platform architecture, schema, and features, refer to:
 **`features/platform/PLATFORM.md`**
 
 This platform documentation explains:
@@ -19,12 +19,12 @@ This platform documentation explains:
 
 ## Application Architecture
 
-OpenFront Final 2 provides a complete e-commerce solution with sophisticated business logic and enterprise-level capabilities.
+Openfront Final 2 provides a complete e-commerce solution with sophisticated business logic and enterprise-level capabilities.
 
 ## Core Features
 
 ### Comprehensive E-commerce Platform
-OpenFront Final 2 includes enterprise-level features:
+Openfront Final 2 includes enterprise-level features:
 
 #### Product Management
 - Complete product catalog with variants, options, and collections
@@ -138,7 +138,7 @@ const rates = await shippingProviderAdapter.getRatesFunction({
 
 ### AI Assistant Instructions
 
-When working on OpenFront Final 2:
+When working on Openfront Final 2:
 
 1. **Read Platform Documentation**: Always reference the `features/platform/PLATFORM.md` file for technical details
 2. **Verify Implementation**: Check actual code rather than making assumptions about features
@@ -178,7 +178,7 @@ When working on OpenFront Final 2:
 
 ## Important Notes
 
-- OpenFront Final 2 is a production-ready enterprise e-commerce platform
+- Openfront Final 2 is a production-ready enterprise e-commerce platform
 - Contains 78+ sophisticated data models with comprehensive business logic
 - Includes advanced features often missing from basic e-commerce solutions
 - Uses modern architecture with Next.js 15 and KeystoneJS 6

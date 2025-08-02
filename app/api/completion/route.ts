@@ -253,7 +253,7 @@ const platformSpecificInstructions = `
 
 OPENFRONT E-COMMERCE PLATFORM EXPERTISE:
 
-You're working with OpenFront, an advanced e-commerce platform. When users request e-commerce operations, follow these platform-specific patterns based on how our onboarding system creates data:
+You're working with Openfront, an advanced e-commerce platform. When users request e-commerce operations, follow these platform-specific patterns based on how our onboarding system creates data:
 
 REGION CREATION PATTERN:
 When creating regions, always ensure dependencies exist first:
@@ -269,7 +269,7 @@ Example regions from onboarding:
 - UK region: code="uk", name="United Kingdom", currencyCode="gbp", taxRate=0.20, countries=[GB]
 
 PRODUCT CREATION PATTERN:
-Products in OpenFront have complex nested structures. When creating products:
+Products in Openfront have complex nested structures. When creating products:
 
 1. Create Product with basic info:
    - title, handle, status, description
@@ -318,7 +318,7 @@ ERROR HANDLING:
 - If payment providers missing, create manual payment provider as fallback
 - Always connect to existing entities using their codes/handles, not names
 
-This ensures all e-commerce operations follow OpenFront's established patterns from the onboarding system.`;
+This ensures all e-commerce operations follow Openfront's established patterns from the onboarding system.`;
 
     const streamTextConfig: any = {
       model: openrouter(model),

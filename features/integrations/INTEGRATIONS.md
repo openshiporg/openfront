@@ -1,8 +1,8 @@
-# OpenFront Final 2 Integration System
+# Openfront Final 2 Integration System
 
 ## Overview
 
-OpenFront Final 2 uses a sophisticated adapter-based integration system for payment and shipping providers. This system enables flexible, standardized integrations with external services while maintaining consistent APIs and workflows throughout the e-commerce platform.
+Openfront Final 2 uses a sophisticated adapter-based integration system for payment and shipping providers. This system enables flexible, standardized integrations with external services while maintaining consistent APIs and workflows throughout the e-commerce platform.
 
 ## Architecture
 
@@ -82,7 +82,7 @@ PaymentProvider {
 
 ### Stripe Integration
 
-OpenFront includes a complete Stripe payment integration:
+Openfront includes a complete Stripe payment integration:
 
 #### Function Implementations
 ```typescript
@@ -157,7 +157,7 @@ export async function handleWebhookFunction({ event, headers }) {
 
 ### PayPal Integration
 
-OpenFront includes PayPal payment processing:
+Openfront includes PayPal payment processing:
 
 #### Key Features
 - PayPal Order creation and capture
@@ -215,7 +215,7 @@ ShippingProvider {
 
 ### Shippo Integration
 
-OpenFront includes a comprehensive Shippo shipping integration:
+Openfront includes a comprehensive Shippo shipping integration:
 
 #### Function Implementations
 ```typescript
@@ -347,7 +347,7 @@ export async function trackShipmentFunction({ provider, trackingNumber }) {
 
 ### ShipEngine Integration
 
-OpenFront supports ShipEngine integration (documented but implementation in progress):
+Openfront supports ShipEngine integration (documented but implementation in progress):
 
 #### Planned Features
 - Multi-carrier rate shopping
@@ -666,4 +666,4 @@ describe('Payment Processing', () => {
 - Implement bulk label generation
 - Use background jobs for heavy operations
 
-This integration system provides a robust, secure, and scalable foundation for connecting OpenFront to payment and shipping providers while maintaining consistency, reliability, and compliance across all integrations.
+This integration system provides a robust, secure, and scalable foundation for connecting Openfront to payment and shipping providers while maintaining consistency, reliability, and compliance across all integrations.

@@ -115,7 +115,7 @@ const response = await getListItemsAction(
 If you have existing detail components from Dasher 7 or other sources:
 
 1. **Copy the detail components** to your `components/` folder
-2. **Update import paths** to use OpenFrontFinal2 structure
+2. **Update import paths** to use OpenfrontFinal2 structure
 3. **Adapt components** that use external utilities not available in this project
 4. **Test component rendering** with your GraphQL data structure
 

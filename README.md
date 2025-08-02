@@ -1,10 +1,10 @@
-# OpenFront
+# Openfront
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fopenship-org%2Fopenfront%2F&stores=[{"type"%3A"postgres"}])
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/template/openfront)
 
-OpenFront is a comprehensive e-commerce platform that provides everything you need to build and manage online stores. It includes a powerful admin dashboard, customer storefront, payment processing, inventory management, and advanced e-commerce features.
+Openfront is a comprehensive e-commerce platform that provides everything you need to build and manage online stores. It includes a powerful admin dashboard, customer storefront, payment processing, inventory management, and advanced e-commerce features.
 
 Built on top of [next-keystone-starter](https://github.com/junaid33/next-keystone-starter), which provides the foundational architecture for modern full-stack applications with KeystoneJS and Next.js.
 
@@ -53,7 +53,7 @@ openfront/
 ```
 
 ### Data Models
-OpenFront includes 78+ sophisticated data models covering:
+Openfront includes 78+ sophisticated data models covering:
 - Product catalog and variants
 - Order management and fulfillment
 - Customer and user management
@@ -218,7 +218,7 @@ For comprehensive technical documentation, see [`features/platform/PLATFORM.md`]
 ## Deployment
 
 ### Production Deployment
-OpenFront is production-ready and can be deployed to:
+Openfront is production-ready and can be deployed to:
 
 - **Vercel**: One-click deployment with the button above
 - **Docker**: Containerized deployment with included Dockerfile
@@ -261,5 +261,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**OpenFront** - Enterprise E-commerce Platform  
+**Openfront** - Enterprise E-commerce Platform  
 Built with Next.js 15 and KeystoneJS 6 on [next-keystone-starter](https://github.com/junaid33/next-keystone-starter)
