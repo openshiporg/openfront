@@ -99,7 +99,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
     <>
       {/* Bottom action bar */}
       <div
-        className={cn("lg:hidden inset-x-0 bottom-0 fixed transition-opacity duration-300", { 
+        className={cn("z-10 lg:hidden inset-x-0 bottom-0 fixed transition-opacity duration-300", { 
           "opacity-0 pointer-events-none": !show,
           "opacity-100": show,
         })}
