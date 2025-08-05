@@ -1032,6 +1032,8 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
         if (authenticateUserWithPassword.sessionToken) {
           console.log("🍪 [DEBUG] Setting auth token for guest user");
           await setAuthToken(authenticateUserWithPassword.sessionToken);
+          revalidateTag("customer");
+          revalidateTag("auth");
         }
         
         console.log("🔗 [DEBUG] Connecting address to guest user:", guestUser.id);
@@ -1043,7 +1045,6 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
     }
 
     // Create shipping address first
-    console.log("🏠 [DEBUG] Creating shipping address...");
     try {
       const { createAddress: newShippingAddress } =
         await openfrontClient.request(
@@ -1065,10 +1066,8 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
           {
             data: shippingAddress,
           },
-          user ? await getAuthHeaders() : undefined // Added await
+          await getAuthHeaders() // Always get fresh auth headers
         );
-      
-      console.log("✅ [DEBUG] Shipping address created:", newShippingAddress?.id);
 
       data.shippingAddress = {
         connect: { id: newShippingAddress.id },
@@ -1138,32 +1137,30 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
       }
     } catch (error) {
       console.error("Error creating address:", error);
-      console.error("Error creating address in setAddresses:", error instanceof Error ? error.message : String(error)); // Handle unknown error
       return error instanceof Error ? error.message : String(error);
     }
   }
 
-  console.log("🛒 [DEBUG] Updating cart with addresses...", data);
   try {
+    // Always get fresh auth headers since we may have just set a guest user token
+    const authHeaders = await getAuthHeaders();
+    
     const cartUpdateResult = await openfrontClient.request(
       UPDATE_CART_MUTATION,
       {
         cartId,
         data,
       },
-      user ? await getAuthHeaders() : undefined // Added await
+      authHeaders
     );
 
-    console.log("✅ [DEBUG] Cart updated successfully:", cartUpdateResult);
     revalidateTag("cart");
-    console.log("🔄 [DEBUG] Cart tag revalidated");
+    revalidateTag("customer");
+    revalidateTag("auth");
   } catch (error) {
-    console.error("❌ [DEBUG] Error updating cart:", error);
-    console.error("Error updating cart in setAddresses:", error instanceof Error ? error.message : String(error)); // Handle unknown error
+    console.error("Error updating cart:", error);
     return error instanceof Error ? error.message : String(error);
   }
-
-  console.log("🎉 [DEBUG] setAddresses completed successfully");
   // Return success with countryCode for client-side redirection
   return { success: true, countryCode: formData.get("shippingAddress.countryCode") };
 }
@@ -1242,7 +1239,7 @@ export async function placeOrder() {
       removeCartId();
       revalidateTag("cart");
 
-      // Redirect to order confirmation page with lowercase countryCode
+      // Return redirect info for client-side redirect
       const countryCode = completeActiveCart.shippingAddress?.country?.iso2?.toLowerCase();
       if (!countryCode) {
         throw new Error("No country code found in completed order");
@@ -1252,7 +1249,10 @@ export async function placeOrder() {
       const secretKeyParam = completeActiveCart.secretKey ?
         `?secretKey=${completeActiveCart.secretKey}` : '';
 
-      redirect(`/${countryCode}/order/confirmed/${completeActiveCart.id}${secretKeyParam}`);
+      return {
+        success: true,
+        redirectTo: `/${countryCode}/order/confirmed/${completeActiveCart.id}${secretKeyParam}`
+      };
     }
 
     return completeActiveCart;

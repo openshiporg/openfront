@@ -7,6 +7,7 @@ import Items from "@/features/storefront/modules/order/components/items"
 import OrderDetails from "@/features/storefront/modules/order/components/order-details"
 import OrderSummary from "@/features/storefront/modules/order/components/order-summary"
 import ShippingDetails from "@/features/storefront/modules/order/components/shipping-details"
+import FulfillmentCard from "@/features/storefront/modules/order/components/fulfillment-card"
 import React from "react"
 import { StoreOrder } from "@/features/storefront/types/storefront"
 
@@ -34,7 +35,8 @@ const OrderDetailsTemplate: React.FC<OrderDetailsTemplateProps> = ({
         data-testid="order-details-container"
       >
         <OrderDetails order={order} showStatus />
-        <Items items={order.lineItems} region={order.region} /> 
+        <Items items={order.lineItems} region={order.region} />
+        <FulfillmentCard order={order} />
         <ShippingDetails order={order} />
         <OrderSummary order={order} />
         <Help />

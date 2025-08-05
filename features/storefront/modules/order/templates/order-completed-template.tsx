@@ -8,6 +8,7 @@ import OnboardingCta from "@/features/storefront/modules/order/components/onboar
 import OrderDetails from "@/features/storefront/modules/order/components/order-details"
 import ShippingDetails from "@/features/storefront/modules/order/components/shipping-details"
 import PaymentDetails from "@/features/storefront/modules/order/components/payment-details"
+import FulfillmentCard from "@/features/storefront/modules/order/components/fulfillment-card"
 import { StoreOrder } from "@/features/storefront/types/storefront"
 
 type OrderCompletedTemplateProps = {
@@ -40,6 +41,7 @@ export default async function OrderCompletedTemplate({
           {/* Pass region prop */}
           <Items items={order.lineItems} region={order.region} />
           <CartTotals data={order} />
+          <FulfillmentCard order={order} />
           <ShippingDetails order={order} />
           <PaymentDetails order={order} />
           <Help />

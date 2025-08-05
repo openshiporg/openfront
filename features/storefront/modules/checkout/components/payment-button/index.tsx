@@ -8,6 +8,7 @@ import { PayPalButtons, usePayPalScriptReducer } from "@paypal/react-paypal-js"
 import React, { useState } from "react"
 import ErrorMessage from "../error-message"
 import { RiLoader2Fill } from "@remixicon/react"
+import { useRouter } from "next/navigation"
 
 interface PaymentButtonProps {
   cart: {
@@ -85,15 +86,19 @@ const StripePaymentButton: React.FC<StripePaymentButtonProps> = ({
 }) => {
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const router = useRouter()
 
   const onPaymentCompleted = async () => {
-    await placeOrder()
-      .catch((err) => {
-        setErrorMessage(err.message)
-      })
-      .finally(() => {
-        setSubmitting(false)
-      })
+    try {
+      const result = await placeOrder()
+      if (result && typeof result === 'object' && 'success' in result && result.success && 'redirectTo' in result) {
+        router.push(result.redirectTo as string)
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const stripe = useStripe()
@@ -186,15 +191,19 @@ const StripePaymentButton: React.FC<StripePaymentButtonProps> = ({
 const ManualTestPaymentButton = ({ notReady, "data-testid": dataTestId }: { notReady: boolean, "data-testid"?: string }) => {
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const router = useRouter()
 
   const onPaymentCompleted = async () => {
-    await placeOrder()
-      .catch((err) => {
-        setErrorMessage(err.message)
-      })
-      .finally(() => {
-        setSubmitting(false)
-      })
+    try {
+      const result = await placeOrder()
+      if (result && typeof result === 'object' && 'success' in result && result.success && 'redirectTo' in result) {
+        router.push(result.redirectTo as string)
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handlePayment = () => {
@@ -234,15 +243,19 @@ const PayPalPaymentButton: React.FC<PayPalPaymentButtonProps> = ({
 }) => {
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const router = useRouter()
 
   const onPaymentCompleted = async () => {
-    await placeOrder()
-      .catch((err) => {
-        setErrorMessage(err.message)
-      })
-      .finally(() => {
-        setSubmitting(false)
-      })
+    try {
+      const result = await placeOrder()
+      if (result && typeof result === 'object' && 'success' in result && result.success && 'redirectTo' in result) {
+        router.push(result.redirectTo as string)
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const session = cart.paymentCollection?.paymentSessions?.find(

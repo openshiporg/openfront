@@ -9,6 +9,7 @@ async function getCustomerOrder(root, { orderId, secretKey }, context) {
       displayId
       status
       fulfillmentStatus
+      fulfillmentDetails
       paymentDetails
       total
       subtotal
@@ -17,6 +18,36 @@ async function getCustomerOrder(root, { orderId, secretKey }, context) {
       tax
       createdAt
       email
+      unfulfilled
+      fulfillments {
+        id
+        createdAt
+        canceledAt
+        fulfillmentItems {
+          id
+          quantity
+          lineItem {
+            id
+            quantity
+            title
+            sku
+            thumbnail
+            metadata
+            variantTitle
+            formattedUnitPrice
+            formattedTotal
+            productData
+            variantData
+          }
+        }
+        shippingLabels {
+          id
+          labelUrl
+          trackingNumber
+          trackingUrl
+          carrier
+        }
+      }
       user {
         id
         name
