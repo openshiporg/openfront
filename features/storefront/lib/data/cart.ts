@@ -879,29 +879,15 @@ const UPDATE_CART_MUTATION = gql`
 `;
 
 export async function setAddresses(currentState: any, formData: FormData) { // Added types
-  console.log("🚀 [DEBUG] setAddresses function started");
   if (!formData) return "No form data received";
 
   const cartId = (await cookies()).get("_openfront_cart_id")?.value;
-  console.log("🛒 [DEBUG] cartId:", cartId);
   if (!cartId) return { message: "No cartId cookie found" };
 
   const selectedAddressId = formData.get("selectedAddressId");
   const hasModifiedFields = formData.get("hasModifiedFields") === "true";
   const sameAsBilling = formData.get("same_as_billing") === "on";
   const email = formData.get("email");
-  
-  console.log("📋 [DEBUG] Form data extracted:", {
-    selectedAddressId,
-    hasModifiedFields,
-    sameAsBilling,
-    email,
-    firstName: formData.get("shippingAddress.firstName"),
-    lastName: formData.get("shippingAddress.lastName"),
-    address1: formData.get("shippingAddress.address1"),
-    city: formData.get("shippingAddress.city"),
-    countryCode: formData.get("shippingAddress.countryCode")
-  });
 
   const data: {
     email: FormDataEntryValue | null
@@ -911,13 +897,10 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
   } = { email }
 
   // Check if user is authenticated
-  console.log("👤 [DEBUG] Checking user authentication...");
   const user = await getUser();
-  console.log("👤 [DEBUG] User found:", user ? `${user.email} (ID: ${user.id})` : "No user (guest)");
 
   // If we selected an address and haven't modified it, just connect it
   if (selectedAddressId && !hasModifiedFields) {
-    console.log("🔗 [DEBUG] Using existing address:", selectedAddressId);
     data.shippingAddress = {
       connect: { id: selectedAddressId },
     };
@@ -929,7 +912,6 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
     }
   } else {
     // Either no address was selected or fields were modified - create new address
-    console.log("🏠 [DEBUG] Creating new address - selectedAddressId:", selectedAddressId, "hasModifiedFields:", hasModifiedFields);
     const shippingAddress: {
       firstName: FormDataEntryValue | null;
       lastName: FormDataEntryValue | null;
@@ -965,16 +947,13 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
 
     // If user is authenticated, create address with user connection
     if (user) {
-      console.log("✅ [DEBUG] User authenticated, connecting address to user:", user.id);
       shippingAddress.user = { connect: { id: user.id } };
     } else {
       // For guest users, create user first, sign them in, then connect to address
-      console.log("👤 [DEBUG] Creating guest user for checkout...");
       try {
         const randomPassword = Array.from(crypto.getRandomValues(new Uint8Array(32)))
           .map(b => b.toString(16).padStart(2, '0'))
           .join('');
-        console.log("🔑 [DEBUG] Generated password for guest user, creating user...");
         
         const { createUser: guestUser } = await openfrontClient.request(
           gql`
@@ -996,10 +975,7 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
           }
         );
         
-        console.log("👤 [DEBUG] Guest user created:", guestUser?.id, guestUser?.email);
-        
         // Sign in the guest user to get a session
-        console.log("🔐 [DEBUG] Authenticating guest user...");
         const { authenticateUserWithPassword } = await openfrontClient.request(
           gql`
             mutation AuthenticateGuestUser($email: String!, $password: String!) {
@@ -1021,22 +997,16 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
           { email, password: randomPassword }
         );
 
-        console.log("🔐 [DEBUG] Authentication result:", authenticateUserWithPassword.__typename);
-
         if (authenticateUserWithPassword.__typename === "UserAuthenticationWithPasswordFailure") {
-          console.error("❌ [DEBUG] Authentication failed:", authenticateUserWithPassword.message);
           throw new Error(authenticateUserWithPassword.message);
         }
 
         // Set the auth token for the guest user session
         if (authenticateUserWithPassword.sessionToken) {
-          console.log("🍪 [DEBUG] Setting auth token for guest user");
           await setAuthToken(authenticateUserWithPassword.sessionToken);
           revalidateTag("customer");
           revalidateTag("auth");
         }
-        
-        console.log("🔗 [DEBUG] Connecting address to guest user:", guestUser.id);
         shippingAddress.user = { connect: { id: guestUser.id } };
       } catch (error) {
         console.error("Error creating guest user:", error);
