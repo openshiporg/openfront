@@ -3899,66 +3899,232 @@ input NotificationProviderCreateInput {
   updatedAt: DateTime
 }
 
-type OAuth {
+type OAuthApp {
   id: ID!
-  displayName: String
-  applicationName: String
+  name: String
+  clientId: String
+  clientSecret: String
+  redirectUris: JSON
+  scopes: JSON
+  webhookUrl: String
+  status: String
   installUrl: String
   uninstallUrl: String
-  data: JSON
+  description: String
+  developerEmail: String
+  privacyPolicyUrl: String
+  termsOfServiceUrl: String
+  supportUrl: String
   createdAt: DateTime
   updatedAt: DateTime
 }
 
-input OAuthWhereUniqueInput {
+input OAuthAppWhereUniqueInput {
   id: ID
-  applicationName: String
+  clientId: String
 }
 
-input OAuthWhereInput {
-  AND: [OAuthWhereInput!]
-  OR: [OAuthWhereInput!]
-  NOT: [OAuthWhereInput!]
+input OAuthAppWhereInput {
+  AND: [OAuthAppWhereInput!]
+  OR: [OAuthAppWhereInput!]
+  NOT: [OAuthAppWhereInput!]
   id: IDFilter
-  displayName: StringFilter
-  applicationName: StringFilter
+  name: StringFilter
+  clientId: StringFilter
+  clientSecret: StringFilter
+  webhookUrl: StringFilter
+  status: StringNullableFilter
   installUrl: StringFilter
   uninstallUrl: StringFilter
+  description: StringFilter
+  developerEmail: StringFilter
+  privacyPolicyUrl: StringFilter
+  termsOfServiceUrl: StringFilter
+  supportUrl: StringFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
 
-input OAuthOrderByInput {
+input StringNullableFilter {
+  equals: String
+  in: [String!]
+  notIn: [String!]
+  lt: String
+  lte: String
+  gt: String
+  gte: String
+  contains: String
+  startsWith: String
+  endsWith: String
+  mode: QueryMode
+  not: StringNullableFilter
+}
+
+input OAuthAppOrderByInput {
   id: OrderDirection
-  displayName: OrderDirection
-  applicationName: OrderDirection
+  name: OrderDirection
+  clientId: OrderDirection
+  clientSecret: OrderDirection
+  webhookUrl: OrderDirection
+  status: OrderDirection
   installUrl: OrderDirection
   uninstallUrl: OrderDirection
+  description: OrderDirection
+  developerEmail: OrderDirection
+  privacyPolicyUrl: OrderDirection
+  termsOfServiceUrl: OrderDirection
+  supportUrl: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
 }
 
-input OAuthUpdateInput {
-  displayName: String
-  applicationName: String
+input OAuthAppUpdateInput {
+  name: String
+  clientId: String
+  clientSecret: String
+  redirectUris: JSON
+  scopes: JSON
+  webhookUrl: String
+  status: String
   installUrl: String
   uninstallUrl: String
-  data: JSON
+  description: String
+  developerEmail: String
+  privacyPolicyUrl: String
+  termsOfServiceUrl: String
+  supportUrl: String
   createdAt: DateTime
   updatedAt: DateTime
 }
 
-input OAuthUpdateArgs {
-  where: OAuthWhereUniqueInput!
-  data: OAuthUpdateInput!
+input OAuthAppUpdateArgs {
+  where: OAuthAppWhereUniqueInput!
+  data: OAuthAppUpdateInput!
 }
 
-input OAuthCreateInput {
-  displayName: String
-  applicationName: String
+input OAuthAppCreateInput {
+  name: String
+  clientId: String
+  clientSecret: String
+  redirectUris: JSON
+  scopes: JSON
+  webhookUrl: String
+  status: String
   installUrl: String
   uninstallUrl: String
-  data: JSON
+  description: String
+  developerEmail: String
+  privacyPolicyUrl: String
+  termsOfServiceUrl: String
+  supportUrl: String
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+type OAuthToken {
+  id: ID!
+  tokenType: String
+  token: String
+  clientId: String
+  user: User
+  scopes: JSON
+  redirectUri: String
+  expiresAt: DateTime
+  isRevoked: String
+  authorizationCode: String
+  refreshToken: String
+  accessToken: String
+  state: String
+  codeChallenge: String
+  codeChallengeMethod: String
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input OAuthTokenWhereUniqueInput {
+  id: ID
+  token: String
+}
+
+input OAuthTokenWhereInput {
+  AND: [OAuthTokenWhereInput!]
+  OR: [OAuthTokenWhereInput!]
+  NOT: [OAuthTokenWhereInput!]
+  id: IDFilter
+  tokenType: StringFilter
+  token: StringFilter
+  clientId: StringFilter
+  user: UserWhereInput
+  redirectUri: StringFilter
+  expiresAt: DateTimeNullableFilter
+  isRevoked: StringNullableFilter
+  authorizationCode: StringFilter
+  refreshToken: StringFilter
+  accessToken: StringFilter
+  state: StringFilter
+  codeChallenge: StringFilter
+  codeChallengeMethod: StringNullableFilter
+  createdAt: DateTimeFilter
+  updatedAt: DateTimeFilter
+}
+
+input OAuthTokenOrderByInput {
+  id: OrderDirection
+  tokenType: OrderDirection
+  token: OrderDirection
+  clientId: OrderDirection
+  redirectUri: OrderDirection
+  expiresAt: OrderDirection
+  isRevoked: OrderDirection
+  authorizationCode: OrderDirection
+  refreshToken: OrderDirection
+  accessToken: OrderDirection
+  state: OrderDirection
+  codeChallenge: OrderDirection
+  codeChallengeMethod: OrderDirection
+  createdAt: OrderDirection
+  updatedAt: OrderDirection
+}
+
+input OAuthTokenUpdateInput {
+  tokenType: String
+  token: String
+  clientId: String
+  user: UserRelateToOneForUpdateInput
+  scopes: JSON
+  redirectUri: String
+  expiresAt: DateTime
+  isRevoked: String
+  authorizationCode: String
+  refreshToken: String
+  accessToken: String
+  state: String
+  codeChallenge: String
+  codeChallengeMethod: String
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input OAuthTokenUpdateArgs {
+  where: OAuthTokenWhereUniqueInput!
+  data: OAuthTokenUpdateInput!
+}
+
+input OAuthTokenCreateInput {
+  tokenType: String
+  token: String
+  clientId: String
+  user: UserRelateToOneForCreateInput
+  scopes: JSON
+  redirectUri: String
+  expiresAt: DateTime
+  isRevoked: String
+  authorizationCode: String
+  refreshToken: String
+  accessToken: String
+  state: String
+  codeChallenge: String
+  codeChallengeMethod: String
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -6757,6 +6923,8 @@ type Role {
   canManageApps: Boolean
   canManageKeys: Boolean
   canManageOnboarding: Boolean
+  canReadWebhooks: Boolean
+  canManageWebhooks: Boolean
   assignedTo(where: UserWhereInput! = {}, orderBy: [UserOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: UserWhereUniqueInput): [User!]
   assignedToCount(where: UserWhereInput! = {}): Int
   createdAt: DateTime
@@ -6802,6 +6970,8 @@ input RoleWhereInput {
   canManageApps: BooleanFilter
   canManageKeys: BooleanFilter
   canManageOnboarding: BooleanFilter
+  canReadWebhooks: BooleanFilter
+  canManageWebhooks: BooleanFilter
   assignedTo: UserManyRelationFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
@@ -6839,6 +7009,8 @@ input RoleOrderByInput {
   canManageApps: OrderDirection
   canManageKeys: OrderDirection
   canManageOnboarding: OrderDirection
+  canReadWebhooks: OrderDirection
+  canManageWebhooks: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
 }
@@ -6874,6 +7046,8 @@ input RoleUpdateInput {
   canManageApps: Boolean
   canManageKeys: Boolean
   canManageOnboarding: Boolean
+  canReadWebhooks: Boolean
+  canManageWebhooks: Boolean
   assignedTo: UserRelateToManyForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
@@ -6915,6 +7089,8 @@ input RoleCreateInput {
   canManageApps: Boolean
   canManageKeys: Boolean
   canManageOnboarding: Boolean
+  canReadWebhooks: Boolean
+  canManageWebhooks: Boolean
   assignedTo: UserRelateToManyForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
@@ -8306,21 +8482,6 @@ input TeamManyRelationFilter {
   none: TeamWhereInput
 }
 
-input StringNullableFilter {
-  equals: String
-  in: [String!]
-  notIn: [String!]
-  lt: String
-  lte: String
-  gt: String
-  gte: String
-  contains: String
-  startsWith: String
-  endsWith: String
-  mode: QueryMode
-  not: StringNullableFilter
-}
-
 input PasswordFilter {
   isSet: Boolean!
 }
@@ -8540,6 +8701,195 @@ input UserFieldCreateInput {
   updatedAt: DateTime
 }
 
+type WebhookEndpoint {
+  id: ID!
+  url: String
+  events: JSON
+  isActive: Boolean
+  secret: String
+  lastTriggered: DateTime
+  failureCount: Int
+  webhookEvents(where: WebhookEventWhereInput! = {}, orderBy: [WebhookEventOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: WebhookEventWhereUniqueInput): [WebhookEvent!]
+  webhookEventsCount(where: WebhookEventWhereInput! = {}): Int
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input WebhookEndpointWhereUniqueInput {
+  id: ID
+}
+
+input WebhookEndpointWhereInput {
+  AND: [WebhookEndpointWhereInput!]
+  OR: [WebhookEndpointWhereInput!]
+  NOT: [WebhookEndpointWhereInput!]
+  id: IDFilter
+  url: StringFilter
+  isActive: BooleanFilter
+  secret: StringFilter
+  lastTriggered: DateTimeNullableFilter
+  failureCount: IntNullableFilter
+  webhookEvents: WebhookEventManyRelationFilter
+  createdAt: DateTimeNullableFilter
+  updatedAt: DateTimeNullableFilter
+}
+
+input WebhookEventManyRelationFilter {
+  every: WebhookEventWhereInput
+  some: WebhookEventWhereInput
+  none: WebhookEventWhereInput
+}
+
+input WebhookEndpointOrderByInput {
+  id: OrderDirection
+  url: OrderDirection
+  isActive: OrderDirection
+  secret: OrderDirection
+  lastTriggered: OrderDirection
+  failureCount: OrderDirection
+  createdAt: OrderDirection
+  updatedAt: OrderDirection
+}
+
+input WebhookEndpointUpdateInput {
+  url: String
+  events: JSON
+  isActive: Boolean
+  secret: String
+  lastTriggered: DateTime
+  failureCount: Int
+  webhookEvents: WebhookEventRelateToManyForUpdateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input WebhookEventRelateToManyForUpdateInput {
+  disconnect: [WebhookEventWhereUniqueInput!]
+  set: [WebhookEventWhereUniqueInput!]
+  create: [WebhookEventCreateInput!]
+  connect: [WebhookEventWhereUniqueInput!]
+}
+
+input WebhookEndpointUpdateArgs {
+  where: WebhookEndpointWhereUniqueInput!
+  data: WebhookEndpointUpdateInput!
+}
+
+input WebhookEndpointCreateInput {
+  url: String
+  events: JSON
+  isActive: Boolean
+  secret: String
+  lastTriggered: DateTime
+  failureCount: Int
+  webhookEvents: WebhookEventRelateToManyForCreateInput
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input WebhookEventRelateToManyForCreateInput {
+  create: [WebhookEventCreateInput!]
+  connect: [WebhookEventWhereUniqueInput!]
+}
+
+type WebhookEvent {
+  id: ID!
+  eventType: String
+  resourceId: String
+  resourceType: String
+  payload: JSON
+  deliveryAttempts: Int
+  delivered: Boolean
+  lastAttempt: DateTime
+  nextAttempt: DateTime
+  responseStatus: Int
+  responseBody: String
+  endpoint: WebhookEndpoint
+  createdAt: DateTime
+}
+
+input WebhookEventWhereUniqueInput {
+  id: ID
+}
+
+input WebhookEventWhereInput {
+  AND: [WebhookEventWhereInput!]
+  OR: [WebhookEventWhereInput!]
+  NOT: [WebhookEventWhereInput!]
+  id: IDFilter
+  eventType: StringFilter
+  resourceId: StringFilter
+  resourceType: StringFilter
+  deliveryAttempts: IntNullableFilter
+  delivered: BooleanFilter
+  lastAttempt: DateTimeNullableFilter
+  nextAttempt: DateTimeNullableFilter
+  responseStatus: IntNullableFilter
+  responseBody: StringFilter
+  endpoint: WebhookEndpointWhereInput
+  createdAt: DateTimeNullableFilter
+}
+
+input WebhookEventOrderByInput {
+  id: OrderDirection
+  eventType: OrderDirection
+  resourceId: OrderDirection
+  resourceType: OrderDirection
+  deliveryAttempts: OrderDirection
+  delivered: OrderDirection
+  lastAttempt: OrderDirection
+  nextAttempt: OrderDirection
+  responseStatus: OrderDirection
+  responseBody: OrderDirection
+  createdAt: OrderDirection
+}
+
+input WebhookEventUpdateInput {
+  eventType: String
+  resourceId: String
+  resourceType: String
+  payload: JSON
+  deliveryAttempts: Int
+  delivered: Boolean
+  lastAttempt: DateTime
+  nextAttempt: DateTime
+  responseStatus: Int
+  responseBody: String
+  endpoint: WebhookEndpointRelateToOneForUpdateInput
+  createdAt: DateTime
+}
+
+input WebhookEndpointRelateToOneForUpdateInput {
+  create: WebhookEndpointCreateInput
+  connect: WebhookEndpointWhereUniqueInput
+  disconnect: Boolean
+}
+
+input WebhookEventUpdateArgs {
+  where: WebhookEventWhereUniqueInput!
+  data: WebhookEventUpdateInput!
+}
+
+input WebhookEventCreateInput {
+  eventType: String
+  resourceId: String
+  resourceType: String
+  payload: JSON
+  deliveryAttempts: Int
+  delivered: Boolean
+  lastAttempt: DateTime
+  nextAttempt: DateTime
+  responseStatus: Int
+  responseBody: String
+  endpoint: WebhookEndpointRelateToOneForCreateInput
+  createdAt: DateTime
+}
+
+input WebhookEndpointRelateToOneForCreateInput {
+  create: WebhookEndpointCreateInput
+  connect: WebhookEndpointWhereUniqueInput
+}
+
 """
 The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
 """
@@ -8744,12 +9094,18 @@ type Mutation {
   updateNotificationProviders(data: [NotificationProviderUpdateArgs!]!): [NotificationProvider]
   deleteNotificationProvider(where: NotificationProviderWhereUniqueInput!): NotificationProvider
   deleteNotificationProviders(where: [NotificationProviderWhereUniqueInput!]!): [NotificationProvider]
-  createOAuth(data: OAuthCreateInput!): OAuth
-  createOAuths(data: [OAuthCreateInput!]!): [OAuth]
-  updateOAuth(where: OAuthWhereUniqueInput!, data: OAuthUpdateInput!): OAuth
-  updateOAuths(data: [OAuthUpdateArgs!]!): [OAuth]
-  deleteOAuth(where: OAuthWhereUniqueInput!): OAuth
-  deleteOAuths(where: [OAuthWhereUniqueInput!]!): [OAuth]
+  createOAuthApp(data: OAuthAppCreateInput!): OAuthApp
+  createOAuthApps(data: [OAuthAppCreateInput!]!): [OAuthApp]
+  updateOAuthApp(where: OAuthAppWhereUniqueInput!, data: OAuthAppUpdateInput!): OAuthApp
+  updateOAuthApps(data: [OAuthAppUpdateArgs!]!): [OAuthApp]
+  deleteOAuthApp(where: OAuthAppWhereUniqueInput!): OAuthApp
+  deleteOAuthApps(where: [OAuthAppWhereUniqueInput!]!): [OAuthApp]
+  createOAuthToken(data: OAuthTokenCreateInput!): OAuthToken
+  createOAuthTokens(data: [OAuthTokenCreateInput!]!): [OAuthToken]
+  updateOAuthToken(where: OAuthTokenWhereUniqueInput!, data: OAuthTokenUpdateInput!): OAuthToken
+  updateOAuthTokens(data: [OAuthTokenUpdateArgs!]!): [OAuthToken]
+  deleteOAuthToken(where: OAuthTokenWhereUniqueInput!): OAuthToken
+  deleteOAuthTokens(where: [OAuthTokenWhereUniqueInput!]!): [OAuthToken]
   createOrder(data: OrderCreateInput!): Order
   createOrders(data: [OrderCreateInput!]!): [Order]
   updateOrder(where: OrderWhereUniqueInput!, data: OrderUpdateInput!): Order
@@ -9008,6 +9364,18 @@ type Mutation {
   updateUserFields(data: [UserFieldUpdateArgs!]!): [UserField]
   deleteUserField(where: UserFieldWhereUniqueInput!): UserField
   deleteUserFields(where: [UserFieldWhereUniqueInput!]!): [UserField]
+  createWebhookEndpoint(data: WebhookEndpointCreateInput!): WebhookEndpoint
+  createWebhookEndpoints(data: [WebhookEndpointCreateInput!]!): [WebhookEndpoint]
+  updateWebhookEndpoint(where: WebhookEndpointWhereUniqueInput!, data: WebhookEndpointUpdateInput!): WebhookEndpoint
+  updateWebhookEndpoints(data: [WebhookEndpointUpdateArgs!]!): [WebhookEndpoint]
+  deleteWebhookEndpoint(where: WebhookEndpointWhereUniqueInput!): WebhookEndpoint
+  deleteWebhookEndpoints(where: [WebhookEndpointWhereUniqueInput!]!): [WebhookEndpoint]
+  createWebhookEvent(data: WebhookEventCreateInput!): WebhookEvent
+  createWebhookEvents(data: [WebhookEventCreateInput!]!): [WebhookEvent]
+  updateWebhookEvent(where: WebhookEventWhereUniqueInput!, data: WebhookEventUpdateInput!): WebhookEvent
+  updateWebhookEvents(data: [WebhookEventUpdateArgs!]!): [WebhookEvent]
+  deleteWebhookEvent(where: WebhookEventWhereUniqueInput!): WebhookEvent
+  deleteWebhookEvents(where: [WebhookEventWhereUniqueInput!]!): [WebhookEvent]
   endSession: Boolean!
   authenticateUserWithPassword(email: String!, password: String!): UserAuthenticationWithPasswordResult
   createInitialUser(data: CreateInitialUserInput!): UserAuthenticationWithPasswordSuccess!
@@ -9165,9 +9533,12 @@ type Query {
   notificationProvider(where: NotificationProviderWhereUniqueInput!): NotificationProvider
   notificationProviders(where: NotificationProviderWhereInput! = {}, orderBy: [NotificationProviderOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: NotificationProviderWhereUniqueInput): [NotificationProvider!]
   notificationProvidersCount(where: NotificationProviderWhereInput! = {}): Int
-  oAuth(where: OAuthWhereUniqueInput!): OAuth
-  oAuths(where: OAuthWhereInput! = {}, orderBy: [OAuthOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: OAuthWhereUniqueInput): [OAuth!]
-  oAuthsCount(where: OAuthWhereInput! = {}): Int
+  oAuthApp(where: OAuthAppWhereUniqueInput!): OAuthApp
+  oAuthApps(where: OAuthAppWhereInput! = {}, orderBy: [OAuthAppOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: OAuthAppWhereUniqueInput): [OAuthApp!]
+  oAuthAppsCount(where: OAuthAppWhereInput! = {}): Int
+  oAuthToken(where: OAuthTokenWhereUniqueInput!): OAuthToken
+  oAuthTokens(where: OAuthTokenWhereInput! = {}, orderBy: [OAuthTokenOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: OAuthTokenWhereUniqueInput): [OAuthToken!]
+  oAuthTokensCount(where: OAuthTokenWhereInput! = {}): Int
   order(where: OrderWhereUniqueInput!): Order
   orders(where: OrderWhereInput! = {}, orderBy: [OrderOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: OrderWhereUniqueInput): [Order!]
   ordersCount(where: OrderWhereInput! = {}): Int
@@ -9297,6 +9668,12 @@ type Query {
   userField(where: UserFieldWhereUniqueInput!): UserField
   userFields(where: UserFieldWhereInput! = {}, orderBy: [UserFieldOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: UserFieldWhereUniqueInput): [UserField!]
   userFieldsCount(where: UserFieldWhereInput! = {}): Int
+  webhookEndpoint(where: WebhookEndpointWhereUniqueInput!): WebhookEndpoint
+  webhookEndpoints(where: WebhookEndpointWhereInput! = {}, orderBy: [WebhookEndpointOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: WebhookEndpointWhereUniqueInput): [WebhookEndpoint!]
+  webhookEndpointsCount(where: WebhookEndpointWhereInput! = {}): Int
+  webhookEvent(where: WebhookEventWhereUniqueInput!): WebhookEvent
+  webhookEvents(where: WebhookEventWhereInput! = {}, orderBy: [WebhookEventOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: WebhookEventWhereUniqueInput): [WebhookEvent!]
+  webhookEventsCount(where: WebhookEventWhereInput! = {}): Int
   keystone: KeystoneMeta!
   authenticatedItem: AuthenticatedItem
   validateUserPasswordResetToken(email: String!, token: String!): ValidateUserPasswordResetTokenResult

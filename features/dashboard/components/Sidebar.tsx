@@ -147,7 +147,7 @@ export function Sidebar({ adminMeta, user }: SidebarProps) {
         {/* Platform Routes - Standalone Items */}
         <SidebarGroup>
           <SidebarGroupLabel>Platform</SidebarGroupLabel>
-          <SidebarMenu>
+            <SidebarMenu className="gap-0">
             {standaloneItemsWithBasePath.map((item) => (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton asChild isActive={isLinkActive(item.href)}>

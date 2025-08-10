@@ -157,6 +157,14 @@ export const platformNavItems: PlatformNavItem[] = [
     icon: CreditCard,
     group: 'integrations'
   },
+  {
+    title: 'OMS',
+    href: '/platform/order-management-system',
+    color: 'orange',
+    description: 'OAuth authorization and app installation for order management systems.',
+    icon: Settings,
+    group: 'integrations'
+  },
 ];
 
 // Standalone navigation items (no grouping)

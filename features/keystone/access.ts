@@ -1,15 +1,45 @@
 import { permissionsList } from "./models/fields";
+import { SCOPE_TO_PERMISSIONS, OAuthScope } from "./oauth/scopes";
+
 // At it's simplest, the access control returns a yes or no value depending on the users session
 
 export function isSignedIn({ session }) {
   return !!session;
 }
 
+// Helper function to check if OAuth scopes grant a permission
+function hasOAuthPermission(session: any, permission: string): boolean {
+  if (!session?.oauthScopes) return false;
+  
+  const scopes = session.oauthScopes as OAuthScope[];
+  const grantedPermissions = new Set<string>();
+  
+  scopes.forEach(scope => {
+    const scopePermissions = SCOPE_TO_PERMISSIONS[scope];
+    if (scopePermissions) {
+      scopePermissions.forEach(p => grantedPermissions.add(p));
+    }
+  });
+  
+  return grantedPermissions.has(permission);
+}
+
 const generatedPermissions = Object.fromEntries(
   permissionsList.map((permission) => [
     permission,
     function ({ session }) {
-      return !!session?.data.role?.[permission];
+      console.log(`🟡 CHECKING PERMISSION: ${permission}`);
+      console.log(`🟡 Session:`, JSON.stringify(session, null, 2));
+      
+      // Check OAuth scopes first
+      if (hasOAuthPermission(session, permission)) {
+        console.log(`🟡 ✅ OAuth permission granted for ${permission}`);
+        return true;
+      }
+      // Then check role-based permissions
+      const rolePermission = !!session?.data?.role?.[permission];
+      console.log(`🟡 Role permission for ${permission}:`, rolePermission);
+      return rolePermission;
     },
   ])
 );

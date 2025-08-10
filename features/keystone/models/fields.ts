@@ -117,6 +117,14 @@ export const permissionFields = {
     defaultValue: false,
     label: "User can access onboarding and store configuration"
   }),
+  canReadWebhooks: checkbox({
+    defaultValue: false,
+    label: "User can view webhook endpoints and events"
+  }),
+  canManageWebhooks: checkbox({
+    defaultValue: false,
+    label: "User can create, update, and delete webhook endpoints (Warning: Grants access to ALL resource events)"
+  }),
 }
 
 export const permissionsList = Object.keys(permissionFields)

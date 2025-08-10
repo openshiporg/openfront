@@ -32,7 +32,8 @@ import { MoneyAmount } from "./MoneyAmount";
 import { Note } from "./Note";
 import { Notification } from "./Notification";
 import { NotificationProvider } from "./NotificationProvider";
-import { OAuth } from "./OAuth";
+import { OAuthApp } from "./OAuthApp";
+import { OAuthToken } from "./OAuthToken";
 import { Order } from "./Order";
 import { OrderEvent } from './OrderEvent';
 import { OrderLineItem } from "./OrderLineItem";
@@ -76,6 +77,8 @@ import { TaxRate } from "./TaxRate";
 import { Team } from './Team';
 import { User } from "./User";
 import { UserField } from "./UserField";
+import { WebhookEndpoint } from "./WebhookEndpoint";
+import { WebhookEvent } from "./WebhookEvent";
 
 export const models = {
   Address,
@@ -111,7 +114,8 @@ export const models = {
   Note,
   Notification,
   NotificationProvider,
-  OAuth,
+  OAuthApp,
+  OAuthToken,
   Order,
   OrderEvent,
   OrderLineItem,
@@ -155,4 +159,6 @@ export const models = {
   Team,
   User,
   UserField,
+  WebhookEndpoint,
+  WebhookEvent,
 };

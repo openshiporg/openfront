@@ -605,15 +605,48 @@ model NotificationProvider {
   updatedAt     DateTime       @default(now()) @updatedAt
 }
 
-model OAuth {
-  id              String   @id @default(cuid())
-  displayName     String   @default("")
-  applicationName String   @unique @default("")
-  installUrl      String   @default("")
-  uninstallUrl    String   @default("")
-  data            Json?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @default(now()) @updatedAt
+model OAuthApp {
+  id                String   @id @default(cuid())
+  name              String   @default("")
+  clientId          String   @unique @default("")
+  clientSecret      String   @default("")
+  redirectUris      Json?    @default("[]")
+  scopes            Json?    @default("[\"read_products\",\"read_orders\"]")
+  webhookUrl        String   @default("")
+  status            String?  @default("active")
+  installUrl        String   @default("")
+  uninstallUrl      String   @default("")
+  description       String   @default("")
+  developerEmail    String   @default("")
+  privacyPolicyUrl  String   @default("")
+  termsOfServiceUrl String   @default("")
+  supportUrl        String   @default("")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now()) @updatedAt
+}
+
+model OAuthToken {
+  id                  String    @id @default(cuid())
+  tokenType           String
+  token               String    @unique @default("")
+  clientId            String    @default("")
+  user                User?     @relation("OAuthToken_user", fields: [userId], references: [id])
+  userId              String?   @map("user")
+  scopes              Json?     @default("[]")
+  redirectUri         String    @default("")
+  expiresAt           DateTime?
+  isRevoked           String?   @default("false")
+  authorizationCode   String    @default("")
+  refreshToken        String    @default("")
+  accessToken         String    @default("")
+  state               String    @default("")
+  codeChallenge       String    @default("")
+  codeChallengeMethod String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @default(now()) @updatedAt
+
+  @@index([clientId])
+  @@index([userId])
 }
 
 model Order {
@@ -1149,6 +1182,8 @@ model Role {
   canManageApps            Boolean  @default(false)
   canManageKeys            Boolean  @default(false)
   canManageOnboarding      Boolean  @default(false)
+  canReadWebhooks          Boolean  @default(false)
+  canManageWebhooks        Boolean  @default(false)
   assignedTo               User[]   @relation("User_role")
   createdAt                DateTime @default(now())
   updatedAt                DateTime @default(now()) @updatedAt
@@ -1432,6 +1467,7 @@ model User {
   passwordResetToken        String?
   passwordResetIssuedAt     DateTime?
   passwordResetRedeemedAt   DateTime?
+  from_OAuthToken_user      OAuthToken[]    @relation("OAuthToken_user")
   from_OrderEvent_createdBy OrderEvent[]    @relation("OrderEvent_createdBy")
 
   @@index([roleId])
@@ -1450,6 +1486,38 @@ model UserField {
   failedLoginAttempts Json?     @default("{\"count\":0,\"lastAttempt\":null,\"lockedUntil\":null}")
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @default(now()) @updatedAt
+}
+
+model WebhookEndpoint {
+  id            String         @id @default(cuid())
+  url           String         @default("")
+  events        Json?          @default("[]")
+  isActive      Boolean        @default(true)
+  secret        String         @default("")
+  lastTriggered DateTime?
+  failureCount  Int?           @default(0)
+  webhookEvents WebhookEvent[] @relation("WebhookEvent_endpoint")
+  createdAt     DateTime?      @default(now())
+  updatedAt     DateTime?      @updatedAt
+}
+
+model WebhookEvent {
+  id               String           @id @default(cuid())
+  eventType        String           @default("")
+  resourceId       String           @default("")
+  resourceType     String           @default("")
+  payload          Json?
+  deliveryAttempts Int?             @default(0)
+  delivered        Boolean          @default(false)
+  lastAttempt      DateTime?
+  nextAttempt      DateTime?
+  responseStatus   Int?
+  responseBody     String           @default("")
+  endpoint         WebhookEndpoint? @relation("WebhookEvent_endpoint", fields: [endpointId], references: [id])
+  endpointId       String?          @map("endpoint")
+  createdAt        DateTime?        @default(now())
+
+  @@index([endpointId])
 }
 
 enum BatchJobTypeType {

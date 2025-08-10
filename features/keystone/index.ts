@@ -9,6 +9,7 @@ import { sendPasswordResetEmail } from "./lib/mail";
 import Iron from "@hapi/iron";
 import * as cookie from "cookie";
 import { permissions } from "./access";
+import { withWebhooks } from "../webhooks/webhook-plugin";
 // Add rate limiting on storefront queries and mutations
 // import { ApolloArmor } from "@escape.tech/graphql-armor";
 // import { applyMiddleware } from "graphql-middleware";
@@ -64,6 +65,8 @@ export function statelessSessions({
   return {
     async get({ context }: { context: any }) {
       if (!context?.req) return;
+      
+      // Check for API Key authentication
       const apiKey = context.req.headers["x-api-key"];
       // console.log({ apiKey });
       if (apiKey) {
@@ -82,9 +85,86 @@ export function statelessSessions({
           return;
         }
       }
+      
+      // Check for OAuth Bearer token authentication
+      const authHeader = context.req.headers.authorization;
+      console.log('🔵 AUTH HEADER:', authHeader);
+      
+      if (authHeader?.startsWith("Bearer ")) {
+        const accessToken = authHeader.replace("Bearer ", "");
+        console.log('🔵 ACCESS TOKEN (first 20):', accessToken.substring(0, 20));
+        
+        // Try to validate as OAuth token first
+        try {
+          console.log('🔵 LOOKING UP OAUTH TOKEN...');
+          const oauthToken = await context.sudo().query.OAuthToken.findOne({
+            where: { token: accessToken },
+            query: `id clientId scopes expiresAt tokenType isRevoked user { id }`
+          });
+          
+          console.log('🔵 OAUTH TOKEN FOUND:', !!oauthToken);
+          
+          if (oauthToken) {
+            console.log('🔵 OAUTH TOKEN DETAILS:', JSON.stringify(oauthToken, null, 2));
+            
+            // Check token type and revoked status
+            if (oauthToken.tokenType !== "access_token") {
+              console.log('🔵 NOT AN ACCESS TOKEN');
+              return; // Not an access token
+            }
+            
+            if (oauthToken.isRevoked === "true") {
+              console.log('🔵 TOKEN REVOKED');
+              return; // Token revoked
+            }
+            
+            // Check if token is expired
+            if (new Date() > new Date(oauthToken.expiresAt)) {
+              console.log('🔵 TOKEN EXPIRED');
+              return; // Token expired
+            }
+            
+            // Check if app is active
+            const oauthApp = await context.sudo().query.OAuthApp.findOne({
+              where: { clientId: oauthToken.clientId },
+              query: `id status`
+            });
+            
+            console.log('🔵 OAUTH APP:', oauthApp);
+            
+            if (!oauthApp || oauthApp.status !== 'active') {
+              console.log('🔵 OAUTH APP NOT ACTIVE');
+              return; // App not active
+            }
+            
+            // Return user session with OAuth scopes attached
+            if (oauthToken.user?.id) {
+              console.log('🔵 CREATING OAUTH SESSION:');
+              console.log('🔵 User ID:', oauthToken.user.id);
+              console.log('🔵 OAuth Scopes:', oauthToken.scopes);
+              console.log('🔵 List Key:', listKey);
+              
+              return { 
+                itemId: oauthToken.user.id, 
+                listKey,
+                oauthScopes: oauthToken.scopes // Attach scopes for permission checking
+              };
+            }
+          }
+        } catch (err) {
+          console.log('🔵 OAUTH TOKEN LOOKUP ERROR:', err.message);
+          // Not an OAuth token, try as session token below
+        }
+        
+        // If not OAuth, try as regular session token
+        try {
+          return await Iron.unseal(accessToken, secret, ironOptions);
+        } catch (err) {}
+      }
+      
+      // Check for session cookie
       const cookies = cookie.parse(context.req.headers.cookie || "");
-      const bearer = context.req.headers.authorization?.replace("Bearer ", "");
-      const token = bearer || cookies[cookieName];
+      const token = cookies[cookieName];
       if (!token) return;
       try {
         return await Iron.unseal(token, secret, ironOptions);
@@ -191,44 +271,47 @@ const { withAuth } = createAuth({
 // const armor = new ApolloArmor();
 
 // Modify the export statement
+// Apply webhook plugin to the config
 export default withAuth(
-  config({
-    db: {
-      provider: "postgresql",
-      url: databaseURL,
-    },
-    lists: models,
-    storage: {
-      my_images: {
-        kind: "s3",
-        type: "image",
-        bucketName,
-        region,
-        accessKeyId,
-        secretAccessKey,
-        endpoint,
-        signed: { expiry: 5000 },
-        forcePathStyle: true,
+  withWebhooks(
+    config({
+      db: {
+        provider: "postgresql",
+        url: databaseURL,
       },
-    },
-    graphql: {
-      // apolloConfig: {
-      //   ...armor.protect()
-      // },
-      // extendGraphqlSchema: (schema) => {
-      //   const extendedSchema = extendGraphqlSchema(schema);
-      //   return applyMiddleware(extendedSchema,
-      //     applyRateLimiting
-      //   );
-      // }
-      extendGraphqlSchema,
-    },
-    ui: {
-      // Show the UI only for users who have canAccessDashboard permission
-      // (min access scope needed to access Admin UI)
-      isAccessAllowed: ({ session }) => permissions.canAccessDashboard({ session }),
-      basePath
-    },
-    session: statelessSessions(sessionConfig),
-  })
+      lists: models,
+      storage: {
+        my_images: {
+          kind: "s3",
+          type: "image",
+          bucketName,
+          region,
+          accessKeyId,
+          secretAccessKey,
+          endpoint,
+          signed: { expiry: 5000 },
+          forcePathStyle: true,
+        },
+      },
+      graphql: {
+        // apolloConfig: {
+        //   ...armor.protect()
+        // },
+        // extendGraphqlSchema: (schema) => {
+        //   const extendedSchema = extendGraphqlSchema(schema);
+        //   return applyMiddleware(extendedSchema,
+        //     applyRateLimiting
+        //   );
+        // }
+        extendGraphqlSchema,
+      },
+      ui: {
+        // Show the UI only for users who have canAccessDashboard permission
+        // (min access scope needed to access Admin UI)
+        isAccessAllowed: ({ session }) => permissions.canAccessDashboard({ session }),
+        basePath
+      },
+      session: statelessSessions(sessionConfig),
+    })
+  )
 );
