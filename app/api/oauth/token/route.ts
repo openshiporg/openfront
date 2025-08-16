@@ -30,11 +30,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('🟡 OPENFRONT TOKEN ENDPOINT:');
-    console.log('🟡 Received clientId:', clientId);
-    console.log('🟡 Received clientSecret:', clientSecret);
-    console.log('🟡 Received code:', code);
-    console.log('🟡 Grant type:', grantType);
 
     let oauthApp = null;
     
@@ -46,7 +41,6 @@ export async function POST(request: NextRequest) {
         query: 'id name clientSecret scopes status'
       });
 
-      console.log('🟡 Found OAuth app:', oauthApp);
 
       if (!oauthApp) {
         return NextResponse.json(
@@ -63,17 +57,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (oauthApp) {
-      console.log('🟡 Expected clientSecret:', JSON.stringify(oauthApp.clientSecret));
-      console.log('🟡 Received clientSecret:', JSON.stringify(clientSecret));
-      console.log('🟡 Expected length:', oauthApp.clientSecret?.length);
-      console.log('🟡 Received length:', clientSecret?.length);
-      console.log('🟡 Expected type:', typeof oauthApp.clientSecret);
-      console.log('🟡 Received type:', typeof clientSecret);
-      console.log('🟡 Expected bytes:', [...(oauthApp.clientSecret || '')].map(c => c.charCodeAt(0)));
-      console.log('🟡 Received bytes:', [...(clientSecret || '')].map(c => c.charCodeAt(0)));
-      console.log('🟡 Secrets match:', oauthApp.clientSecret === clientSecret);
-    }
 
     // Only verify client secret for authorization code grants
     // Refresh token grants don't need client credentials
@@ -187,10 +170,6 @@ async function handleAuthorizationCodeGrant({
     );
   }
 
-  // Validate redirect URI
-  console.log('🟡 Stored redirectUri:', authCode.redirectUri);
-  console.log('🟡 Received redirectUri:', redirectUri);
-  console.log('🟡 URIs match:', authCode.redirectUri === redirectUri);
   
   if (authCode.redirectUri !== redirectUri) {
     return NextResponse.json(

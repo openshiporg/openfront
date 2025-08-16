@@ -204,7 +204,7 @@ export function Sidebar({ adminMeta, user }: SidebarProps) {
           ))}
 
           {/* Platform Dropdown - Icon Mode */}
-          <div className="hidden group-has-[[data-collapsible=icon]]/sidebar-wrapper:block">
+          <SidebarMenu className="hidden group-has-[[data-collapsible=icon]]/sidebar-wrapper:block">
             {/* Standalone Items in Icon Mode */}
             {standaloneItemsWithBasePath.map((item) => (
               <SidebarMenuItem key={item.href}>
@@ -260,7 +260,7 @@ export function Sidebar({ adminMeta, user }: SidebarProps) {
                 </SidebarMenuItem>
               </DropdownMenu>
             ))}
-          </div>
+          </SidebarMenu>
         </SidebarGroup>
 
         {/* Models */}
@@ -307,7 +307,7 @@ export function Sidebar({ adminMeta, user }: SidebarProps) {
           </div>
 
           {/* Models Dropdown - Icon Mode */}
-          <div className="hidden group-has-[[data-collapsible=icon]]/sidebar-wrapper:block">
+          <SidebarMenu className="hidden group-has-[[data-collapsible=icon]]/sidebar-wrapper:block">
             <DropdownMenu>
               <SidebarMenuItem>
                 <DropdownMenuTrigger asChild>
@@ -349,7 +349,7 @@ export function Sidebar({ adminMeta, user }: SidebarProps) {
                 </DropdownMenuContent>
               </SidebarMenuItem>
             </DropdownMenu>
-          </div>
+          </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
       

@@ -88,15 +88,12 @@ export function statelessSessions({
       
       // Check for OAuth Bearer token authentication
       const authHeader = context.req.headers.authorization;
-      console.log('🔵 AUTH HEADER:', authHeader);
       
       if (authHeader?.startsWith("Bearer ")) {
         const accessToken = authHeader.replace("Bearer ", "");
-        console.log('🔵 ACCESS TOKEN (first 20):', accessToken.substring(0, 20));
         
         // Try to validate as OAuth token first
         try {
-          console.log('🔵 LOOKING UP OAUTH TOKEN...');
           const oauthToken = await context.sudo().query.OAuthToken.findOne({
             where: { token: accessToken },
             query: `id clientId scopes expiresAt tokenType isRevoked user { id }`
@@ -109,7 +106,6 @@ export function statelessSessions({
             
             // Check token type and revoked status
             if (oauthToken.tokenType !== "access_token") {
-              console.log('🔵 NOT AN ACCESS TOKEN');
               return; // Not an access token
             }
             
@@ -254,6 +250,8 @@ const { withAuth } = createAuth({
           canManageApps: true,
           canManageKeys: true,
           canManageOnboarding: true,
+          canReadWebhooks: true,
+          canManageWebhooks: true,
         },
       },
     },

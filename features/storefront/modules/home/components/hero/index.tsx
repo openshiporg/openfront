@@ -309,7 +309,12 @@ const DotsShader = (props: DotsShaderProps) => {
   return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />;
 };
 
-const Hero = () => {
+interface HeroProps {
+  title?: string;
+  description?: string;
+}
+
+const Hero = ({ title, description }: HeroProps) => {
   return (
     <div className="h-[75vh] w-full border-b border-border relative bg-muted/40">
       {/* Animated dots background */}
@@ -327,10 +332,10 @@ const Hero = () => {
       <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center sm:p-32 gap-6">
         <span>
           <h1 className="text-3xl leading-10 text-foreground font-medium">
-            E-commerce Starter Template
+            {title || "E-commerce Starter Template"}
           </h1>
           <h2 className="text-3xl leading-10 text-muted-foreground font-normal">
-            Powered by Openfront and Next.js
+            {description || "Powered by Openfront and Next.js"}
           </h2>
         </span>
         <a href="https://github.com/openshiporg/openfront" target="_blank">
@@ -340,6 +345,7 @@ const Hero = () => {
           </Button>
         </a>
       </div>
+
     </div>
   );
 };

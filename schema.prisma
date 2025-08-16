@@ -617,6 +617,7 @@ model OAuthApp {
   installUrl        String   @default("")
   uninstallUrl      String   @default("")
   description       String   @default("")
+  metadata          Json?    @default("{}")
   developerEmail    String   @default("")
   privacyPolicyUrl  String   @default("")
   termsOfServiceUrl String   @default("")
@@ -1365,6 +1366,8 @@ model Store {
   id                  String     @id @default(cuid())
   name                String     @default("Openfront Store")
   defaultCurrencyCode String     @default("usd")
+  homepageTitle       String     @default("Openfront Next.js Starter")
+  homepageDescription String     @default("A performant frontend e-commerce starter template with Next.js 15 and Openfront.")
   metadata            Json?
   swapLinkTemplate    String     @default("")
   paymentLinkTemplate String     @default("")

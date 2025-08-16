@@ -3419,14 +3419,10 @@ var generatedPermissions = Object.fromEntries(
   permissionsList.map((permission) => [
     permission,
     function({ session }) {
-      console.log(`\u{1F7E1} CHECKING PERMISSION: ${permission}`);
-      console.log(`\u{1F7E1} Session:`, JSON.stringify(session, null, 2));
       if (hasOAuthPermission(session, permission)) {
-        console.log(`\u{1F7E1} \u2705 OAuth permission granted for ${permission}`);
         return true;
       }
       const rolePermission = !!session?.data?.role?.[permission];
-      console.log(`\u{1F7E1} Role permission for ${permission}:`, rolePermission);
       return rolePermission;
     }
   ])
@@ -7628,7 +7624,7 @@ var OAuthApp = (0, import_core34.list)({
       ui: {
         createView: { fieldMode: "hidden" },
         itemView: { fieldMode: "read" },
-        displayMode: "textarea",
+        // displayMode: "textarea",
         description: "Auto-generated secret key. Keep this secure - it's used to authenticate your application."
       }
     }),
@@ -7672,11 +7668,13 @@ var OAuthApp = (0, import_core34.list)({
         displayMode: "textarea"
       }
     }),
-    developerEmail: (0, import_fields37.text)({
-      validation: {
-        isRequired: true
+    metadata: (0, import_fields37.json)({
+      defaultValue: {},
+      ui: {
+        description: "Additional app-specific configuration and settings"
       }
     }),
+    developerEmail: (0, import_fields37.text)(),
     privacyPolicyUrl: (0, import_fields37.text)(),
     termsOfServiceUrl: (0, import_fields37.text)(),
     supportUrl: (0, import_fields37.text)(),
@@ -10984,6 +10982,12 @@ var Store = (0, import_core76.list)({
         isRequired: true
       }
     }),
+    homepageTitle: (0, import_fields76.text)({
+      defaultValue: "Openfront Next.js Starter"
+    }),
+    homepageDescription: (0, import_fields76.text)({
+      defaultValue: "A performant frontend e-commerce starter template with Next.js 15 and Openfront."
+    }),
     metadata: (0, import_fields76.json)(),
     swapLinkTemplate: (0, import_fields76.text)(),
     paymentLinkTemplate: (0, import_fields76.text)(),
@@ -11801,18 +11805,14 @@ function withWebhooks(config2) {
         hooks: {
           ...listConfig.hooks,
           afterOperation: async (args) => {
-            console.log(`\u{1F680} WEBHOOK DEBUG: afterOperation triggered for ${listKey2}.${args.operation}`);
-            console.log(`\u{1F680} Item ID: ${args.item?.id}`);
             try {
               if (listConfig.hooks?.afterOperation) {
-                console.log(`\u{1F517} Calling original hook for ${listKey2}`);
                 await listConfig.hooks.afterOperation(args);
               }
             } catch (error) {
-              console.error(`\u274C Original hook failed for ${listKey2}:`, error);
+              console.error(`Original hook failed for ${listKey2}:`, error);
             }
             try {
-              console.log(`\u{1F4E1} Queueing webhook for ${listKey2}.${args.operation}`);
               await queueWebhook({
                 listKey: listKey2,
                 operation: args.operation,
@@ -11821,7 +11821,7 @@ function withWebhooks(config2) {
                 context: args.context.sudo()
               });
             } catch (error) {
-              console.error(`\u274C Webhook failed for ${listKey2}:`, error);
+              console.error(`Webhook failed for ${listKey2}:`, error);
             }
           }
         }
@@ -11834,10 +11834,8 @@ function withWebhooks(config2) {
   };
 }
 async function queueWebhook(payload) {
-  console.log(`\u{1F4E5} WEBHOOK DEBUG: Queued webhook for ${payload.listKey}.${payload.operation}`);
   webhookQueue.push(payload);
   if (!batchTimer) {
-    console.log(`\u23F0 WEBHOOK DEBUG: Starting batch timer`);
     batchTimer = setTimeout(processBatch, 100);
   }
 }
@@ -11845,13 +11843,10 @@ async function processBatch() {
   const batch = [...webhookQueue];
   webhookQueue = [];
   batchTimer = null;
-  console.log(`\u{1F504} WEBHOOK DEBUG: Processing batch of ${batch.length} webhooks`);
   if (batch.length === 0) {
-    console.log(`\u26A0\uFE0F WEBHOOK DEBUG: Empty batch, nothing to process`);
     return;
   }
   for (const webhook of batch) {
-    console.log(`\u{1F3AF} WEBHOOK DEBUG: Processing ${webhook.listKey}.${webhook.operation}`);
     await triggerWebhook(webhook);
   }
 }
@@ -11871,27 +11866,17 @@ async function triggerWebhook({ listKey: listKey2, operation, item, originalItem
       query: "id url secret events failureCount"
     });
     if (!webhooks || webhooks.length === 0) {
-      console.log(`No active webhooks found for event ${eventType}`);
       return;
     }
-    console.log(`Found ${webhooks.length} active webhook(s), checking subscriptions for event ${eventType}`);
-    webhooks.forEach((webhook) => {
-      console.log(`Webhook ${webhook.id}: URL=${webhook.url}, Events=${JSON.stringify(webhook.events)}`);
-    });
     const subscribedWebhooks = webhooks.filter((webhook) => {
       if (!webhook.events || !Array.isArray(webhook.events)) {
-        console.log(`Webhook ${webhook.id} has invalid events array:`, webhook.events);
         return false;
       }
-      const isSubscribed = webhook.events.includes(eventType) || webhook.events.includes("*");
-      console.log(`Webhook ${webhook.id} subscribed to ${eventType}? ${isSubscribed}`);
-      return isSubscribed;
+      return webhook.events.includes(eventType) || webhook.events.includes("*");
     });
     if (subscribedWebhooks.length === 0) {
-      console.log(`No webhooks subscribed to event ${eventType}`);
       return;
     }
-    console.log(`Found ${subscribedWebhooks.length} webhook(s) for event ${eventType}`);
     const payload = await formatPayload(listKey2, operation, item, originalItem, context);
     for (const webhook of subscribedWebhooks) {
       await deliverWebhook(webhook, eventType, payload, context);
@@ -12085,12 +12070,9 @@ function statelessSessions({
         }
       }
       const authHeader = context.req.headers.authorization;
-      console.log("\u{1F535} AUTH HEADER:", authHeader);
       if (authHeader?.startsWith("Bearer ")) {
         const accessToken = authHeader.replace("Bearer ", "");
-        console.log("\u{1F535} ACCESS TOKEN (first 20):", accessToken.substring(0, 20));
         try {
-          console.log("\u{1F535} LOOKING UP OAUTH TOKEN...");
           const oauthToken = await context.sudo().query.OAuthToken.findOne({
             where: { token: accessToken },
             query: `id clientId scopes expiresAt tokenType isRevoked user { id }`
@@ -12099,7 +12081,6 @@ function statelessSessions({
           if (oauthToken) {
             console.log("\u{1F535} OAUTH TOKEN DETAILS:", JSON.stringify(oauthToken, null, 2));
             if (oauthToken.tokenType !== "access_token") {
-              console.log("\u{1F535} NOT AN ACCESS TOKEN");
               return;
             }
             if (oauthToken.isRevoked === "true") {
@@ -12227,7 +12208,9 @@ var { withAuth } = (0, import_auth.createAuth)({
           canReadApps: true,
           canManageApps: true,
           canManageKeys: true,
-          canManageOnboarding: true
+          canManageOnboarding: true,
+          canReadWebhooks: true,
+          canManageWebhooks: true
         }
       }
     }

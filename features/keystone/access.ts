@@ -28,17 +28,14 @@ const generatedPermissions = Object.fromEntries(
   permissionsList.map((permission) => [
     permission,
     function ({ session }) {
-      console.log(`🟡 CHECKING PERMISSION: ${permission}`);
-      console.log(`🟡 Session:`, JSON.stringify(session, null, 2));
+
       
       // Check OAuth scopes first
       if (hasOAuthPermission(session, permission)) {
-        console.log(`🟡 ✅ OAuth permission granted for ${permission}`);
         return true;
       }
       // Then check role-based permissions
       const rolePermission = !!session?.data?.role?.[permission];
-      console.log(`🟡 Role permission for ${permission}:`, rolePermission);
       return rolePermission;
     },
   ])

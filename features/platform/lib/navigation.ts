@@ -7,7 +7,6 @@ import {
   BarChart3,
   LayoutList,
   Truck,
-  Settings,
   Ticket,
   Sparkles,
   LucideIcon,
@@ -142,6 +141,14 @@ export const platformNavItems: PlatformNavItem[] = [
 
   // Integrations
   {
+    title: 'Apps',
+    href: '/platform/apps',
+    color: 'orange',
+    description: 'Connect and manage third-party applications and integrations.',
+    icon: Package2,
+    group: 'integrations'
+  },
+  {
     title: 'Shipping Providers',
     href: '/platform/shipping-providers',
     color: 'cyan',
@@ -156,15 +163,7 @@ export const platformNavItems: PlatformNavItem[] = [
     description: 'Configure payment gateways and provider settings.',
     icon: CreditCard,
     group: 'integrations'
-  },
-  {
-    title: 'OMS',
-    href: '/platform/order-management-system',
-    color: 'orange',
-    description: 'OAuth authorization and app installation for order management systems.',
-    icon: Settings,
-    group: 'integrations'
-  },
+  }
 ];
 
 // Standalone navigation items (no grouping)

@@ -2,6 +2,7 @@ import { retrieveCart } from "@/features/storefront/lib/data/cart"
 import { getUser } from "@/features/storefront/lib/data/user"
 import Footer from "@/features/storefront/modules/layout/templates/footer"
 import Nav from "@/features/storefront/modules/layout/templates/nav"
+import OpenfrontCTA from "@/features/storefront/modules/layout/components/openfront-cta"
 import { Metadata } from "next"
 import InteractiveLink from "@/features/storefront/modules/common/components/interactive-link"
 
@@ -14,6 +15,7 @@ export async function MainLayout({ children }: { children: React.ReactNode }) {
       <Nav />
       {children}
       <Footer />
+      <OpenfrontCTA />
     </>
   )
 }

@@ -974,6 +974,8 @@ const OnboardingDialog: React.FC<OnboardingDialogProps> = ({
           data: {
             name: 'Impossible Tees',
             defaultCurrencyCode: 'usd',
+            homepageTitle: 'Modern Apparel Store',
+            homepageDescription: 'Quality clothing and unique designs.',
           },
         })) as { createStore: { id: string } };
         createdStoreId = storeResult.createStore.id;

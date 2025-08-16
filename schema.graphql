@@ -3911,6 +3911,7 @@ type OAuthApp {
   installUrl: String
   uninstallUrl: String
   description: String
+  metadata: JSON
   developerEmail: String
   privacyPolicyUrl: String
   termsOfServiceUrl: String
@@ -3989,6 +3990,7 @@ input OAuthAppUpdateInput {
   installUrl: String
   uninstallUrl: String
   description: String
+  metadata: JSON
   developerEmail: String
   privacyPolicyUrl: String
   termsOfServiceUrl: String
@@ -4013,6 +4015,7 @@ input OAuthAppCreateInput {
   installUrl: String
   uninstallUrl: String
   description: String
+  metadata: JSON
   developerEmail: String
   privacyPolicyUrl: String
   termsOfServiceUrl: String
@@ -7963,6 +7966,8 @@ type Store {
   id: ID!
   name: String
   defaultCurrencyCode: String
+  homepageTitle: String
+  homepageDescription: String
   metadata: JSON
   swapLinkTemplate: String
   paymentLinkTemplate: String
@@ -7984,6 +7989,8 @@ input StoreWhereInput {
   id: IDFilter
   name: StringFilter
   defaultCurrencyCode: StringFilter
+  homepageTitle: StringFilter
+  homepageDescription: StringFilter
   swapLinkTemplate: StringFilter
   paymentLinkTemplate: StringFilter
   inviteLinkTemplate: StringFilter
@@ -8002,6 +8009,8 @@ input StoreOrderByInput {
   id: OrderDirection
   name: OrderDirection
   defaultCurrencyCode: OrderDirection
+  homepageTitle: OrderDirection
+  homepageDescription: OrderDirection
   swapLinkTemplate: OrderDirection
   paymentLinkTemplate: OrderDirection
   inviteLinkTemplate: OrderDirection
@@ -8012,6 +8021,8 @@ input StoreOrderByInput {
 input StoreUpdateInput {
   name: String
   defaultCurrencyCode: String
+  homepageTitle: String
+  homepageDescription: String
   metadata: JSON
   swapLinkTemplate: String
   paymentLinkTemplate: String
@@ -8036,6 +8047,8 @@ input StoreUpdateArgs {
 input StoreCreateInput {
   name: String
   defaultCurrencyCode: String
+  homepageTitle: String
+  homepageDescription: String
   metadata: JSON
   swapLinkTemplate: String
   paymentLinkTemplate: String

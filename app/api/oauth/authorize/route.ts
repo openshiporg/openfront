@@ -10,7 +10,10 @@ export async function GET(request: NextRequest) {
     if (!sessionContext.session?.itemId) {
       // User not logged in - redirect to login with return URL
       const currentUrl = request.url;
-      const loginUrl = `/dashboard/signin?from=${encodeURIComponent(currentUrl)}`;
+      // Get the base URL from the request
+      const { protocol, host } = new URL(request.url);
+      const baseUrl = `${protocol}//${host}`;
+      const loginUrl = `${baseUrl}/dashboard/signin?from=${encodeURIComponent(currentUrl)}`;
       return NextResponse.redirect(loginUrl);
     }
     

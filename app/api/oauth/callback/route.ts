@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { keystoneContext } from '@/features/keystone/context';
+import crypto from 'crypto';
 
 export async function GET(request: NextRequest) {
   try {
@@ -87,7 +88,77 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Find the authorization code to get redirect information
+    // Check if this is an Openship setup redirect by examining state
+    let stateData = null;
+    if (state) {
+      try {
+        stateData = JSON.parse(atob(state));
+        console.log('🔵 OPENFRONT CALLBACK: Decoded state:', stateData);
+      } catch (e) {
+        console.error('Failed to decode state:', e);
+      }
+    }
+
+    // If this is an Openship setup redirect, handle it differently
+    if (stateData && stateData.redirect_type === 'openship_setup') {
+      console.log('🚀 OPENFRONT → OPENSHIP REDIRECT: Starting reverse OAuth flow');
+      
+      // Find the authorization code to validate it
+      const authCode = await keystoneContext.sudo().query.OAuthToken.findOne({
+        where: {
+          token: code,
+          tokenType: 'authorization_code',
+          isRevoked: 'false'
+        },
+        query: 'id clientId redirectUri state'
+      });
+
+      if (!authCode) {
+        return NextResponse.json(
+          { error: 'invalid_grant', error_description: 'Invalid authorization code' },
+          { status: 400 }
+        );
+      }
+
+      // Get client secret for the app
+      const app = await keystoneContext.sudo().query.OAuthApp.findOne({
+        where: { clientId: { equals: stateData.client_id } },
+        query: 'clientId clientSecret name'
+      });
+
+      if (!app) {
+        return NextResponse.json(
+          { error: 'invalid_client', error_description: 'OAuth app not found' },
+          { status: 400 }
+        );
+      }
+
+      // Generate access token by exchanging the authorization code
+      // For simplicity, we'll use the code as a temporary token identifier
+      // In a real implementation, you'd exchange this for a proper access token
+      const accessToken = `openfront_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+
+      // Build Openship URL with platform auto-create parameters
+      const openshipUrl = stateData.openship_url;
+      console.log('🔵 OPENFRONT CALLBACK: State data:', stateData);
+      console.log('🔵 OPENFRONT CALLBACK: Using Openship URL:', openshipUrl);
+      const setupUrl = new URL(`${openshipUrl}/dashboard/platform/shops`);
+      
+      // Use new parameter for auto platform + shop creation
+      setupUrl.searchParams.set('showCreateShopAndChannelAndPlatform', 'true');
+      setupUrl.searchParams.set('client_id', app.clientId);
+      setupUrl.searchParams.set('client_secret', app.clientSecret);
+      setupUrl.searchParams.set('app_name', app.name);
+      setupUrl.searchParams.set('accessToken', accessToken);
+      setupUrl.searchParams.set('domain', new URL(request.url).origin); // OpenFront domain
+      
+      console.log('🔄 Redirecting to Openship for auto-create:', setupUrl.toString());
+      
+      // Redirect to Openship for auto-platform/shop creation
+      return NextResponse.redirect(setupUrl.toString());
+    }
+
+    // Original flow - find the authorization code to get redirect information
     const authCode = await keystoneContext.sudo().query.OAuthToken.findOne({
       where: {
         token: code,

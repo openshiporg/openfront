@@ -7,6 +7,8 @@ interface Store {
   id: string;
   name: string;
   defaultCurrencyCode: string;
+  homepageTitle?: string;
+  homepageDescription?: string;
   metadata?: any;
 }
 
@@ -20,6 +22,8 @@ export async function getStore(): Promise<Store | null> {
         id
         name
         defaultCurrencyCode
+        homepageTitle
+        homepageDescription
         metadata
       }
     }

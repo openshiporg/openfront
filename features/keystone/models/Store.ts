@@ -28,6 +28,12 @@ export const Store = list({
         isRequired: true,
       },
     }),
+    homepageTitle: text({
+      defaultValue: "Openfront Next.js Starter",
+    }),
+    homepageDescription: text({
+      defaultValue: "A performant frontend e-commerce starter template with Next.js 15 and Openfront.",
+    }),
     metadata: json(),
     swapLinkTemplate: text(),
     paymentLinkTemplate: text(),

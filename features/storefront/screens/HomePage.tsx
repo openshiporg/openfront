@@ -4,12 +4,16 @@ import FeaturedProducts from "@/features/storefront/modules/home/components/feat
 import Hero from "@/features/storefront/modules/home/components/hero"
 import { getCollectionsListByRegion } from "@/features/storefront/lib/data/collections" // Assuming this function exists and takes regionId
 import { getRegion } from "@/features/storefront/lib/data/regions"
+import { getStore } from "@/features/storefront/lib/data/store"
 import type { StoreCollection, StoreRegion } from "@/features/storefront/types/storefront"
  
-export const metadata: Metadata = {
-  title: "Openfront Next.js Starter",
-  description:
-    "A performant frontend e-commerce starter template with Next.js 15 and Openfront.",
+export async function generateMetadata(): Promise<Metadata> {
+  const store = await getStore()
+  
+  return {
+    title: store?.homepageTitle || "Openfront Next.js Starter",
+    description: store?.homepageDescription || "A performant frontend e-commerce starter template with Next.js 15 and Openfront.",
+  }
 }
 
 export async function HomePage(props: {
@@ -20,6 +24,7 @@ export async function HomePage(props: {
   const { countryCode } = params
 
   const region: StoreRegion | undefined = await getRegion(countryCode)
+  const store = await getStore()
 
   // Assuming getCollectionsListByRegion takes offset, limit, regionId and returns { collections: [...] }
   const { collections }: { collections: StoreCollection[] } = region
@@ -34,7 +39,10 @@ export async function HomePage(props: {
 
   return (
     <>
-      <Hero />
+      <Hero 
+        title={store?.homepageTitle} 
+        description={store?.homepageDescription} 
+      />
       <div className="py-12">
         <ul className="flex flex-col gap-x-6">
           <FeaturedProducts collections={collections} region={region} />

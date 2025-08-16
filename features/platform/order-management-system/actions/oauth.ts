@@ -64,6 +64,7 @@ export async function getOAuthApp(clientId: string, scope: string, redirectUri: 
 
     // Validate redirect URI
     if (!oAuthApp.redirectUris?.includes(redirectUri)) {
+      console.log({oAuthApp, redirectUri});
       throw new Error("Redirect URI not registered");
     }
 

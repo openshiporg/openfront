@@ -28,22 +28,17 @@ export function withWebhooks<TypeInfo extends BaseListTypeInfo>(
         hooks: {
           ...listConfig.hooks,
           afterOperation: async (args) => {
-            console.log(`🚀 WEBHOOK DEBUG: afterOperation triggered for ${listKey}.${args.operation}`);
-            console.log(`🚀 Item ID: ${args.item?.id}`);
-            
             try {
               // Call original hook if it exists
               if (listConfig.hooks?.afterOperation) {
-                console.log(`🔗 Calling original hook for ${listKey}`);
                 await listConfig.hooks.afterOperation(args);
               }
             } catch (error) {
-              console.error(`❌ Original hook failed for ${listKey}:`, error);
+              console.error(`Original hook failed for ${listKey}:`, error);
               // Continue to webhooks even if original fails
             }
             
             try {
-              console.log(`📡 Queueing webhook for ${listKey}.${args.operation}`);
               // Trigger webhook for this operation
               await queueWebhook({
                 listKey,
@@ -54,7 +49,7 @@ export function withWebhooks<TypeInfo extends BaseListTypeInfo>(
               });
             } catch (error) {
               // Log but don't throw - webhooks shouldn't break operations
-              console.error(`❌ Webhook failed for ${listKey}:`, error);
+              console.error(`Webhook failed for ${listKey}:`, error);
             }
           }
         }
@@ -69,12 +64,10 @@ export function withWebhooks<TypeInfo extends BaseListTypeInfo>(
 }
 
 async function queueWebhook(payload: WebhookPayload) {
-  console.log(`📥 WEBHOOK DEBUG: Queued webhook for ${payload.listKey}.${payload.operation}`);
   webhookQueue.push(payload);
   
   // Batch webhooks every 100ms for performance
   if (!batchTimer) {
-    console.log(`⏰ WEBHOOK DEBUG: Starting batch timer`);
     batchTimer = setTimeout(processBatch, 100);
   }
 }
@@ -84,15 +77,11 @@ async function processBatch() {
   webhookQueue = [];
   batchTimer = null;
 
-  console.log(`🔄 WEBHOOK DEBUG: Processing batch of ${batch.length} webhooks`);
-
   if (batch.length === 0) {
-    console.log(`⚠️ WEBHOOK DEBUG: Empty batch, nothing to process`);
     return;
   }
 
   for (const webhook of batch) {
-    console.log(`🎯 WEBHOOK DEBUG: Processing ${webhook.listKey}.${webhook.operation}`);
     await triggerWebhook(webhook);
   }
 }
@@ -117,32 +106,20 @@ async function triggerWebhook({ listKey, operation, item, originalItem, context 
     });
 
     if (!webhooks || webhooks.length === 0) {
-      console.log(`No active webhooks found for event ${eventType}`);
       return;
     }
-
-    console.log(`Found ${webhooks.length} active webhook(s), checking subscriptions for event ${eventType}`);
-    webhooks.forEach(webhook => {
-      console.log(`Webhook ${webhook.id}: URL=${webhook.url}, Events=${JSON.stringify(webhook.events)}`);
-    });
 
     // Filter webhooks that are subscribed to this specific event
     const subscribedWebhooks = webhooks.filter(webhook => {
       if (!webhook.events || !Array.isArray(webhook.events)) {
-        console.log(`Webhook ${webhook.id} has invalid events array:`, webhook.events);
         return false;
       }
-      const isSubscribed = webhook.events.includes(eventType) || webhook.events.includes('*');
-      console.log(`Webhook ${webhook.id} subscribed to ${eventType}? ${isSubscribed}`);
-      return isSubscribed;
+      return webhook.events.includes(eventType) || webhook.events.includes('*');
     });
 
     if (subscribedWebhooks.length === 0) {
-      console.log(`No webhooks subscribed to event ${eventType}`);
       return;
     }
-
-    console.log(`Found ${subscribedWebhooks.length} webhook(s) for event ${eventType}`);
 
     // 2. Format the payload once
     const payload = await formatPayload(listKey, operation, item, originalItem, context);

@@ -49,7 +49,7 @@ export const OAuthApp = list({
       ui: {
         createView: { fieldMode: "hidden" },
         itemView: { fieldMode: "read" },
-        displayMode: "textarea",
+        // displayMode: "textarea",
         description: "Auto-generated secret key. Keep this secure - it's used to authenticate your application.",
       },
     }),
@@ -93,11 +93,13 @@ export const OAuthApp = list({
         displayMode: "textarea",
       },
     }),
-    developerEmail: text({
-      validation: {
-        isRequired: true,
+    metadata: json({
+      defaultValue: {},
+      ui: {
+        description: "Additional app-specific configuration and settings",
       },
     }),
+    developerEmail: text(),
     privacyPolicyUrl: text(),
     termsOfServiceUrl: text(),
     supportUrl: text(),
