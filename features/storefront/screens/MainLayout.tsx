@@ -10,12 +10,14 @@ export async function MainLayout({ children }: { children: React.ReactNode }) {
   await getUser()
   await retrieveCart()
 
+  const hideBranding = process.env.HIDE_OPENFRONT_BRANDING === 'true'
+
   return (
     <>
       <Nav />
       {children}
       <Footer />
-      <OpenfrontCTA />
+      {!hideBranding && <OpenfrontCTA />}
     </>
   )
 }
