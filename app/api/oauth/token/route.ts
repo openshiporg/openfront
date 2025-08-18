@@ -248,11 +248,12 @@ async function handleAuthorizationCodeGrant({
     }
   });
 
-  // Return refresh token as access_token (OpenShip will store this)
+  // Return proper OAuth 2.0 response with both tokens
   return NextResponse.json({
-    access_token: newRefreshToken, // This is actually the refresh token!
+    access_token: accessToken,           // Short-lived access token
+    refresh_token: newRefreshToken,      // Long-lived refresh token
     token_type: 'bearer',
-    expires_in: 2592000, // 30 days in seconds
+    expires_in: 3600,                    // 1 hour in seconds
     scope: authCode.scopes?.join(' ') || ''
   });
 }

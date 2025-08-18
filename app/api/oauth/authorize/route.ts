@@ -5,30 +5,22 @@ import crypto from 'crypto';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get the current user session
-    const sessionContext = await keystoneContext.withRequest(request as any, {} as any);
-    if (!sessionContext.session?.itemId) {
-      // User not logged in - redirect to login with return URL
-      const currentUrl = request.url;
-      // Get the base URL from the request
-      const { protocol, host } = new URL(request.url);
-      const baseUrl = `${protocol}//${host}`;
-      const loginUrl = `${baseUrl}/dashboard/signin?from=${encodeURIComponent(currentUrl)}`;
-      return NextResponse.redirect(loginUrl);
-    }
+    console.log('🔍 OAuth authorize endpoint hit:', request.url);
     
     const { searchParams } = new URL(request.url);
     
     const clientId = searchParams.get('client_id');
-    const redirectUri = searchParams.get('redirect_uri');
+    let redirectUri = searchParams.get('redirect_uri');
     const responseType = searchParams.get('response_type');
     const scope = searchParams.get('scope') || 'read_products';
     const state = searchParams.get('state');
     const codeChallenge = searchParams.get('code_challenge');
     const codeChallengeMethod = searchParams.get('code_challenge_method');
+    
+    console.log('🔍 OAuth params:', { clientId, redirectUri, responseType, scope, state });
 
     // Validate required parameters
-    if (!clientId || !redirectUri || !responseType) {
+    if (!clientId || !responseType) {
       return NextResponse.json(
         { error: 'invalid_request', error_description: 'Missing required parameters' },
         { status: 400 }
@@ -43,12 +35,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Find the OAuth app
+    console.log('🔍 Looking up OAuth app with clientId:', clientId);
     const oauthApp = await keystoneContext.sudo().query.OAuthApp.findOne({
       where: { clientId },
       query: 'id name redirectUris scopes status description'
     });
+    
+    console.log('🔍 Found OAuth app:', oauthApp);
 
     if (!oauthApp) {
+      console.log('🔍 ERROR: OAuth app not found');
       return NextResponse.json(
         { error: 'invalid_client', error_description: 'Client not found' },
         { status: 401 }
@@ -56,13 +52,29 @@ export async function GET(request: NextRequest) {
     }
 
     if (oauthApp.status !== 'active') {
+      console.log('🔍 ERROR: OAuth app not active, status:', oauthApp.status);
       return NextResponse.json(
         { error: 'unauthorized_client', error_description: 'Client is not active' },
         { status: 401 }
       );
     }
 
+    // Use the first redirect URI from the app if none was provided (marketplace flow)
+    if (!redirectUri && oauthApp.redirectUris?.length > 0) {
+      redirectUri = oauthApp.redirectUris[0];
+      console.log('🔍 Using first redirect URI from OAuth app:', redirectUri);
+    }
+    
+    console.log('🔍 Final redirectUri being used:', redirectUri);
+
     // Validate redirect URI
+    if (!redirectUri) {
+      return NextResponse.json(
+        { error: 'invalid_redirect_uri', error_description: 'No redirect URI provided and none registered' },
+        { status: 400 }
+      );
+    }
+
     if (!oauthApp.redirectUris?.includes(redirectUri)) {
       return NextResponse.json(
         { error: 'invalid_redirect_uri', error_description: 'Redirect URI not registered' },
@@ -110,7 +122,7 @@ export async function GET(request: NextRequest) {
         codeChallenge,
         codeChallengeMethod,
         isRevoked: 'false',
-        user: { connect: { id: sessionContext.session.itemId } } // Connect to the logged-in user
+        // No user connection - OAuth tokens can exist without a user for marketplace flows
       }
     });
 

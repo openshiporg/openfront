@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createOpenshipOAuthApp } from "../actions"
 import { toast } from "sonner"
-import { ReverseOAuthInstallDialog } from "../components/ReverseOAuthInstallDialog"
 
 // Available apps that can be activated
 const AVAILABLE_APPS = [
@@ -34,33 +33,6 @@ const AVAILABLE_APPS = [
   }
 ]
 
-// Quick install function for when user has existing apps
-const handleQuickInstall = (app: any, openshipUrl: string) => {
-  if (!openshipUrl.trim()) return
-  
-  let cleanUrl = openshipUrl.trim()
-  if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
-    cleanUrl = `https://${cleanUrl}`
-  }
-  cleanUrl = cleanUrl.replace(/\/$/, '')
-
-  const metadata = app.metadata
-  const appType = metadata?.type
-  
-  // Build platform-initiated setup URL for quick install
-  const setupUrl = new URL(`${cleanUrl}/api/setup/from-openfront`)
-  setupUrl.searchParams.set('client_id', app.clientId)
-  setupUrl.searchParams.set('app_name', app.name)
-  setupUrl.searchParams.set('app_type', appType || 'shop')
-  setupUrl.searchParams.set('redirect_uri', app.redirectUris[0] || `${window.location.origin}/api/oauth/callback`)
-  setupUrl.searchParams.set('scopes', app.scopes.join(' '))
-  setupUrl.searchParams.set('openfront_domain', window.location.origin)
-  setupUrl.searchParams.set('state', crypto.randomUUID())
-  setupUrl.searchParams.set('quick_install', 'true') // Flag for immediate processing
-  
-  console.log('⚡ Quick install URL:', setupUrl.toString())
-  window.location.href = setupUrl.toString()
-}
 
 interface AvailableApp {
   id: string
@@ -156,9 +128,6 @@ export function AppsPageClient({ existingApps = [] }: AppsPageClientProps) {
   const [openshipUrl, setOpenshipUrl] = useState('')
   const [isCreatingApp, setIsCreatingApp] = useState(false)
   
-  // Install flow state
-  const [isInstallDialogOpen, setIsInstallDialogOpen] = useState(false)
-  const [selectedExistingApp, setSelectedExistingApp] = useState<ExistingApp | null>(null)
 
   const handleActivate = useCallback((appId: string) => {
     const app = AVAILABLE_APPS.find(a => a.id === appId)
@@ -205,8 +174,42 @@ export function AppsPageClient({ existingApps = [] }: AppsPageClientProps) {
   }, [selectedApp, openshipUrl])
 
   const handleInstall = useCallback((app: ExistingApp) => {
-    setSelectedExistingApp(app)
-    setIsInstallDialogOpen(true)
+    console.log('🔴 INSTALL BUTTON CLICKED - handleInstall called with app:', app);
+    
+    // Check if app has redirect URI configured
+    if (!app.redirectUris || app.redirectUris.length === 0) {
+      console.log('🔴 ERROR: No redirect URIs found for app');
+      toast.error('No redirect URI configured for this app')
+      return
+    }
+
+    console.log('🔴 App redirect URIs:', app.redirectUris);
+
+    // Build OAuth state (marketplace flow)
+    const state = JSON.stringify({
+      type: 'marketplace',
+      client_id: app.clientId,
+      client_secret: app.clientSecret,
+      app_name: app.name,
+      adapter_slug: 'openfront', // Identifies which adapter to use for platform creation
+      nonce: crypto.randomUUID()
+    })
+
+    // Set URL parameters to show OAuth install dialog (same as when coming from Openship)
+    const currentUrl = new URL(window.location.href)
+    currentUrl.searchParams.set('install', 'true')
+    currentUrl.searchParams.set('client_id', app.clientId)
+    currentUrl.searchParams.set('scope', app.scopes.join(' '))
+    currentUrl.searchParams.set('redirect_uri', app.redirectUris[0])
+    currentUrl.searchParams.set('response_type', 'code')
+    currentUrl.searchParams.set('state', state)
+
+    console.log('🔴 Setting URL params to show OAuth dialog:', currentUrl.toString())
+    
+    window.history.pushState({}, '', currentUrl.toString())
+    
+    // Force page refresh to show dialog
+    window.location.reload()
   }, [])
 
 
@@ -292,22 +295,6 @@ export function AppsPageClient({ existingApps = [] }: AppsPageClientProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Install Dialog */}
-      {selectedExistingApp && (
-        <ReverseOAuthInstallDialog
-          isOpen={isInstallDialogOpen}
-          onClose={() => setIsInstallDialogOpen(false)}
-          onInstall={() => {}} // Not used since dialog handles it directly
-          app={{
-            id: selectedExistingApp.id,
-            name: selectedExistingApp.name,
-            description: selectedExistingApp.description,
-            scopes: selectedExistingApp.scopes,
-            clientId: selectedExistingApp.clientId,
-            clientSecret: selectedExistingApp.clientSecret,
-          }}
-        />
-      )}
     </div>
   )
 }

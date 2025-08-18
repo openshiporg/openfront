@@ -5,11 +5,11 @@ import {
   Dialog,
   DialogContent,
   DialogTrigger,
+  DialogTitle,
 } from "@/components/ui/dialog"
 
 import useToggleState from "@/features/storefront/lib/hooks/use-toggle-state"
 import ChevronDown from "@/features/storefront/modules/common/icons/chevron-down"
-import X from "@/features/storefront/modules/common/icons/x"
 
 import { getProductPrice } from "@/features/storefront/lib/util/get-product-price"
 import OptionSelect from "./option-select"
@@ -163,15 +163,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                   className="w-full h-screen max-w-none rounded-none p-0 gap-0"
                   data-testid="mobile-actions-modal"
                 >
-                  <div className="w-full flex justify-end pr-6 pt-6">
-                    <button
-                      onClick={() => setOptionsDialogOpen(false)}
-                      className="bg-background w-12 h-12 rounded-full text-foreground flex justify-center items-center border"
-                      data-testid="close-modal-button"
-                    >
-                      <X />
-                    </button>
-                  </div>
+                  <DialogTitle className="sr-only">Select Product Options</DialogTitle>
                   <div className="bg-background px-6 py-12 flex-1">
                     {(product.productVariants?.length ?? 0) > 1 && ( // Use productVariants
                       <div className="flex flex-col gap-y-6">
