@@ -73,7 +73,7 @@ export async function sendPasswordResetEmail(resetToken: string, to: string, bas
     }),
   });
   if (process.env.MAIL_USER?.includes("ethereal.email")) {
-    console.log(`� Message Sent!  Preview it at ${getTestMessageUrl(info)}`);
+    console.log(`📧 Message Sent!  Preview it at ${getTestMessageUrl(info as any)}`);
   }
 }
 
@@ -344,7 +344,7 @@ export async function sendOrderConfirmationEmail(order: any, baseUrl?: string): 
     });
 
     if (process.env.SMTP_USER?.includes("ethereal.email")) {
-      console.log(`✉️ Order confirmation email sent! Preview it at ${getTestMessageUrl(info)}`);
+      console.log(`✉️ Order confirmation email sent! Preview it at ${getTestMessageUrl(info as any)}`);
     } else {
       console.log(`✉️ Order confirmation email sent to ${order.email} for order #${order.displayId}`);
     }
@@ -376,7 +376,7 @@ export async function sendOrderFulfillmentEmail(order: any, fulfillment: any, ba
     });
 
     if (process.env.SMTP_USER?.includes("ethereal.email")) {
-      console.log(`✉️ Order fulfillment email sent! Preview it at ${getTestMessageUrl(info)}`);
+      console.log(`✉️ Order fulfillment email sent! Preview it at ${getTestMessageUrl(info as any)}`);
     } else {
       console.log(`✉️ Order fulfillment email sent to ${order.email} for order #${order.displayId}`);
     }

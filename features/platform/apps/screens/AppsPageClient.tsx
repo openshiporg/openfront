@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { createOpenshipOAuthApp } from "../actions"
 import { toast } from "sonner"
+import { MarketplaceInstallDialog } from "../components/MarketplaceInstallDialog"
 
 // Available apps that can be activated
 const AVAILABLE_APPS = [
@@ -80,7 +81,7 @@ const AvailableAppCard = ({ app, isActivated, onActivate }: AvailableAppCardProp
             onClick={onActivate}
             disabled={isActivated}
           >
-            {isActivated ? 'Activated' : 'Activate'}
+            {isActivated ? 'Installed' : 'Install'}
             {!isActivated && <ChevronRight className="ml-0 !size-3.5 opacity-50" />}
           </Button>
         </div>
@@ -123,55 +124,24 @@ const ExistingAppCard = ({ app, onInstall }: ExistingAppCardProps) => {
 
 export function AppsPageClient({ existingApps = [] }: AppsPageClientProps) {
   const [activatedApps, setActivatedApps] = useState<string[]>([])
-  const [isActivationDialogOpen, setIsActivationDialogOpen] = useState(false)
+  const [isMarketplaceDialogOpen, setIsMarketplaceDialogOpen] = useState(false)
   const [selectedApp, setSelectedApp] = useState<AvailableApp | null>(null)
-  const [openshipUrl, setOpenshipUrl] = useState('')
-  const [isCreatingApp, setIsCreatingApp] = useState(false)
   
 
-  const handleActivate = useCallback((appId: string) => {
+  const handleInstallMarketplaceApp = useCallback((appId: string) => {
     const app = AVAILABLE_APPS.find(a => a.id === appId)
     if (app) {
       setSelectedApp(app)
-      setOpenshipUrl('')
-      setIsActivationDialogOpen(true)
+      setIsMarketplaceDialogOpen(true)
     }
   }, [])
 
-  const handleCreateApp = useCallback(async () => {
-    if (!selectedApp || !openshipUrl.trim()) {
-      return
-    }
-
-    setIsCreatingApp(true)
-    
-    try {
-      const result = await createOpenshipOAuthApp({
-        appType: selectedApp.id as 'openship-shop' | 'openship-channel',
-        openshipUrl: openshipUrl.trim()
-      })
-
-      if (result.success) {
-        toast.success(`${selectedApp.title} OAuth app created successfully!`)
-        
-        // Mark as activated
-        setActivatedApps(prev => [...prev, selectedApp.id])
-        
-        // Close dialog
-        setIsActivationDialogOpen(false)
-        setSelectedApp(null)
-        setOpenshipUrl('')
-      } else {
-        toast.error(result.error || 'Failed to create OAuth app')
-      }
-      
-    } catch (error) {
-      console.error('Failed to create OAuth app:', error)
-      toast.error('An unexpected error occurred')
-    } finally {
-      setIsCreatingApp(false)
-    }
-  }, [selectedApp, openshipUrl])
+  // Handle successful installation from marketplace dialog
+  const handleInstallSuccess = useCallback((appId: string) => {
+    setActivatedApps(prev => [...prev, appId])
+    setSelectedApp(null)
+    setIsMarketplaceDialogOpen(false)
+  }, [])
 
   const handleInstall = useCallback((app: ExistingApp) => {
     console.log('🔴 INSTALL BUTTON CLICKED - handleInstall called with app:', app);
@@ -216,27 +186,27 @@ export function AppsPageClient({ existingApps = [] }: AppsPageClientProps) {
 
   return (
     <div className="px-4 md:px-6 pb-6">
-      {/* Available Apps Section */}
+      {/* Marketplace Section */}
       <div className="mb-8">
-        <h2 className="text-lg font-medium mb-4">Available Apps</h2>
+        <h2 className="text-lg font-medium mb-4">Marketplace</h2>
         <div className="grid gap-3 sm:grid-cols-2 max-w-2xl">
           {AVAILABLE_APPS.map((app) => (
             <AvailableAppCard
               key={app.id}
               app={app}
               isActivated={activatedApps.includes(app.id)}
-              onActivate={() => handleActivate(app.id)}
+              onActivate={() => handleInstallMarketplaceApp(app.id)}
             />
           ))}
         </div>
       </div>
 
-      {/* Existing Apps Section */}
+      {/* Installed Apps Section */}
       <div>
-        <h2 className="text-lg font-medium mb-4">Existing Apps</h2>
+        <h2 className="text-lg font-medium mb-4">Installed</h2>
         {existingApps.length === 0 ? (
           <div className="text-muted-foreground text-sm">
-            No existing OAuth apps found. Activate a recommended app above to get started.
+            No installed apps found. Install an app from the marketplace above to get started.
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -251,49 +221,12 @@ export function AppsPageClient({ existingApps = [] }: AppsPageClientProps) {
         )}
       </div>
 
-      {/* Activation Dialog */}
-      <Dialog open={isActivationDialogOpen} onOpenChange={setIsActivationDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Activate {selectedApp?.title}</DialogTitle>
-            <DialogDescription>
-              Enter your Openship URL to create the OAuth application.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="openship-url">Openship URL</Label>
-              <Input
-                id="openship-url"
-                value={openshipUrl}
-                onChange={(e) => setOpenshipUrl(e.target.value)}
-                placeholder="https://openship.mydomain.com"
-                disabled={isCreatingApp}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Enter the full URL where your Openship instance is hosted
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsActivationDialogOpen(false)}
-              disabled={isCreatingApp}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateApp}
-              disabled={!openshipUrl.trim() || isCreatingApp}
-            >
-              {isCreatingApp ? 'Creating...' : 'Create App'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Marketplace Install Dialog */}
+      <MarketplaceInstallDialog 
+        isOpen={isMarketplaceDialogOpen}
+        onOpenChange={setIsMarketplaceDialogOpen}
+        app={selectedApp}
+      />
 
     </div>
   )

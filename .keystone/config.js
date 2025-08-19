@@ -5996,7 +5996,7 @@ async function sendPasswordResetEmail(resetToken, to, baseUrl) {
     })
   });
   if (process.env.MAIL_USER?.includes("ethereal.email")) {
-    console.log(`\uFFFD Message Sent!  Preview it at ${(0, import_nodemailer.getTestMessageUrl)(info)}`);
+    console.log(`\u{1F4E7} Message Sent!  Preview it at ${(0, import_nodemailer.getTestMessageUrl)(info)}`);
   }
 }
 function orderConfirmationEmail({ order, orderUrl }) {
