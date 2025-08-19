@@ -161,6 +161,7 @@ export function AppsPageClient({ existingApps = [] }: AppsPageClientProps) {
       client_id: app.clientId,
       client_secret: app.clientSecret,
       app_name: app.name,
+      app_type: app.metadata?.type || 'shop', // Include app type for proper routing
       adapter_slug: 'openfront', // Identifies which adapter to use for platform creation
       nonce: crypto.randomUUID()
     })

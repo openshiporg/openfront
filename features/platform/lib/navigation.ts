@@ -22,7 +22,8 @@ import {
   Layers,
   RefreshCw,
   Building,
-  ShieldCheck
+  ShieldCheck,
+  Key
 } from 'lucide-react';
 
 export interface PlatformNavItem {
@@ -162,6 +163,14 @@ export const platformNavItems: PlatformNavItem[] = [
     color: 'slate',
     description: 'Configure payment gateways and provider settings.',
     icon: CreditCard,
+    group: 'integrations'
+  },
+  {
+    title: 'API Keys',
+    href: '/platform/api-keys',
+    color: 'violet',
+    description: 'Manage API keys for programmatic access to Openfront.',
+    icon: Key,
     group: 'integrations'
   }
 ];

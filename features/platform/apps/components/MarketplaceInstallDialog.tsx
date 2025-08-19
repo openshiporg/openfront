@@ -78,6 +78,7 @@ export const MarketplaceInstallDialog: React.FC<MarketplaceInstallDialogProps> =
           client_id: result.data.clientId,
           client_secret: result.data.clientSecret,
           app_name: app?.title,
+          app_type: app?.type, // Include app type for proper routing
           adapter_slug: 'openfront',
           nonce: crypto.randomUUID()
         });

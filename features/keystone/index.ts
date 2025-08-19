@@ -9,6 +9,7 @@ import { sendPasswordResetEmail } from "./lib/mail";
 import Iron from "@hapi/iron";
 import * as cookie from "cookie";
 import { permissions } from "./access";
+import bcryptjs from "bcryptjs";
 import { withWebhooks } from "../webhooks/webhook-plugin";
 // Add rate limiting on storefront queries and mutations
 // import { ApolloArmor } from "@escape.tech/graphql-armor";
@@ -66,31 +67,142 @@ export function statelessSessions({
     async get({ context }: { context: any }) {
       if (!context?.req) return;
       
-      // Check for API Key authentication
-      const apiKey = context.req.headers["x-api-key"];
-      // console.log({ apiKey });
-      if (apiKey) {
-        try {
-          const data = await context.sudo().query.ApiKey.findOne({
-            where: {
-              id: apiKey,
-            },
-            query: `id user { id }`,
-          });
-          // console.log({ data });
-          if (!data?.user?.id) return;
-          return { itemId: data.user.id, listKey };
-        } catch (err) {
-          console.log({ err });
-          return;
-        }
-      }
-      
       // Check for OAuth Bearer token authentication
       const authHeader = context.req.headers.authorization;
       
       if (authHeader?.startsWith("Bearer ")) {
         const accessToken = authHeader.replace("Bearer ", "");
+        
+        // Try to validate as API key first
+        if (accessToken.startsWith("of_")) {
+          console.log('🔑 API KEY DETECTED, VALIDATING...');
+          try {
+            // Get client IP address for IP restriction validation
+            const clientIP = context.req.headers['x-forwarded-for'] || 
+                           context.req.headers['x-real-ip'] ||
+                           context.req.connection?.remoteAddress ||
+                           context.req.socket?.remoteAddress ||
+                           (context.req.connection?.socket as any)?.remoteAddress ||
+                           '127.0.0.1';
+            
+            // Handle comma-separated IPs from x-forwarded-for (use first one)
+            const actualClientIP = typeof clientIP === 'string' ? clientIP.split(',')[0].trim() : '127.0.0.1';
+            
+            console.log('🔑 CLIENT IP:', actualClientIP);
+            
+            // Get all active API keys and test the token against each one
+            const apiKeys = await context.sudo().query.ApiKey.findMany({
+              where: { status: { equals: 'active' } },
+              query: `
+                id
+                name
+                scopes
+                status
+                expiresAt
+                usageCount
+                restrictedToIPs
+                tokenSecret { isSet }
+                user { id }
+              `,
+            });
+            
+            console.log('🔑 CHECKING AGAINST', apiKeys.length, 'ACTIVE API KEYS');
+            
+            let matchingApiKey = null;
+            
+            // Test token against each API key using bcryptjs (same as Keystone's default KDF)
+            for (const apiKey of apiKeys) {
+              try {
+                if (!apiKey.tokenSecret?.isSet) continue;
+                
+                // Get the full API key item with the tokenSecret value
+                const fullApiKey = await context.sudo().db.ApiKey.findOne({
+                  where: { id: apiKey.id },
+                });
+                
+                if (!fullApiKey || typeof fullApiKey.tokenSecret !== 'string') {
+                  continue;
+                }
+                
+                // Use bcryptjs to compare - this is exactly what Keystone does internally
+                const isValid = await bcryptjs.compare(accessToken, fullApiKey.tokenSecret);
+                
+                if (isValid) {
+                  matchingApiKey = apiKey;
+                  console.log('🔑 FOUND MATCHING API KEY:', apiKey.id);
+                  break;
+                }
+              } catch (error) {
+                console.log('🔑 ERROR VERIFYING API KEY:', error);
+                continue;
+              }
+            }
+            
+            if (!matchingApiKey) {
+              console.log('🔑 NO MATCHING API KEY FOUND');
+              return; // API key not found or invalid
+            }
+            
+            // Check IP restrictions if configured
+            if (matchingApiKey.restrictedToIPs && Array.isArray(matchingApiKey.restrictedToIPs) && matchingApiKey.restrictedToIPs.length > 0) {
+              const allowedIPs = matchingApiKey.restrictedToIPs;
+              const isAllowedIP = allowedIPs.includes(actualClientIP);
+              
+              console.log('🔑 IP RESTRICTION CHECK:');
+              console.log('🔑 Client IP:', actualClientIP);
+              console.log('🔑 Allowed IPs:', allowedIPs);
+              console.log('🔑 Is Allowed:', isAllowedIP);
+              
+              if (!isAllowedIP) {
+                console.log('🔑 API KEY BLOCKED: IP NOT ALLOWED');
+                return; // IP not in allowed list
+              }
+            }
+            
+            if (matchingApiKey.status !== 'active') {
+              console.log('🔑 API KEY NOT ACTIVE:', matchingApiKey.status);
+              return; // API key is inactive
+            }
+            
+            if (matchingApiKey.expiresAt && new Date() > new Date(matchingApiKey.expiresAt)) {
+              console.log('🔑 API KEY EXPIRED');
+              // Auto-revoke expired keys
+              await context.sudo().query.ApiKey.updateOne({
+                where: { id: matchingApiKey.id },
+                data: { status: 'revoked' },
+              });
+              return; // API key has expired
+            }
+            
+            // Update usage statistics (async, don't wait)
+            const today = new Date().toISOString().split('T')[0];
+            const usage = matchingApiKey.usageCount || { total: 0, daily: {} };
+            usage.total = (usage.total || 0) + 1;
+            usage.daily[today] = (usage.daily[today] || 0) + 1;
+            
+            context.sudo().query.ApiKey.updateOne({
+              where: { id: matchingApiKey.id },
+              data: {
+                lastUsedAt: new Date(),
+                usageCount: usage,
+              },
+            }).catch(console.error);
+            
+            // Return user session with API key scopes attached
+            if (matchingApiKey.user?.id) {
+              const session = { 
+                itemId: matchingApiKey.user.id, 
+                listKey,
+                apiKeyScopes: matchingApiKey.scopes || [] // Attach scopes for permission checking
+              };
+              console.log('🔑 RETURNING SESSION:', JSON.stringify(session, null, 2));
+              return session;
+            }
+          } catch (err) {
+            console.log('🔑 API Key validation error:', err);
+            return;
+          }
+        }
         
         // Try to validate as OAuth token first
         try {

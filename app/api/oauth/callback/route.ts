@@ -142,10 +142,15 @@ export async function GET(request: NextRequest) {
       const openshipUrl = stateData.openship_url;
       console.log('🔵 OPENFRONT CALLBACK: State data:', stateData);
       console.log('🔵 OPENFRONT CALLBACK: Using Openship URL:', openshipUrl);
-      const setupUrl = new URL(`${openshipUrl}/dashboard/platform/shops`);
       
-      // Use new parameter for auto platform + shop creation
-      setupUrl.searchParams.set('showCreateShopAndChannelAndPlatform', 'true');
+      // Determine the correct endpoint based on app type
+      const appType = stateData.app_type || 'shop'; // default to shop for backward compatibility
+      const endpoint = appType === 'channel' ? 'channels' : 'shops';
+      const setupUrl = new URL(`${openshipUrl}/dashboard/platform/${endpoint}`);
+      
+      // Use correct parameter based on app type
+      const setupParam = appType === 'channel' ? 'showCreateChannelAndChannelAndPlatform' : 'showCreateShopAndChannelAndPlatform';
+      setupUrl.searchParams.set(setupParam, 'true');
       setupUrl.searchParams.set('client_id', app.clientId);
       setupUrl.searchParams.set('client_secret', app.clientSecret);
       setupUrl.searchParams.set('app_name', app.name);

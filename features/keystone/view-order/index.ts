@@ -15,10 +15,10 @@ export const VIEW_ORDER = [
   "json",
   "relationship",
   "timestamp",
+  "password",
   "select",
   "integer",
   "image",
   "float",
-  "document",
-  "password"
+  "document"
 ];

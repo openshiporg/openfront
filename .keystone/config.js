@@ -3415,10 +3415,25 @@ function hasOAuthPermission(session, permission) {
   });
   return grantedPermissions.has(permission);
 }
+function hasApiKeyPermission(session, permission) {
+  if (!session?.apiKeyScopes) return false;
+  const scopes = session.apiKeyScopes;
+  const grantedPermissions = /* @__PURE__ */ new Set();
+  scopes.forEach((scope) => {
+    const scopePermissions = SCOPE_TO_PERMISSIONS[scope];
+    if (scopePermissions) {
+      scopePermissions.forEach((p) => grantedPermissions.add(p));
+    }
+  });
+  return grantedPermissions.has(permission);
+}
 var generatedPermissions = Object.fromEntries(
   permissionsList.map((permission) => [
     permission,
     function({ session }) {
+      if (hasApiKeyPermission(session, permission)) {
+        return true;
+      }
       if (hasOAuthPermission(session, permission)) {
         return true;
       }
@@ -3429,6 +3444,58 @@ var generatedPermissions = Object.fromEntries(
 );
 var permissions = {
   ...generatedPermissions
+};
+var rules = {
+  canManageOrders({ session }) {
+    if (!isSignedIn({ session })) {
+      return false;
+    }
+    if (permissions.canManageProducts({ session })) {
+      return true;
+    }
+  },
+  canManageProducts({ session }) {
+    if (!isSignedIn({ session })) {
+      return false;
+    }
+    if (permissions.canManageProducts({ session })) {
+      return true;
+    }
+  },
+  canManageOrderItems({ session }) {
+    if (!isSignedIn({ session })) {
+      return false;
+    }
+    if (permissions.canManageCart({ session })) {
+      return true;
+    }
+  },
+  canReadProducts({ session }) {
+    if (!isSignedIn({ session })) {
+      return false;
+    }
+    if (permissions.canManageProducts({ session })) {
+      return true;
+    }
+  },
+  canManageUsers({ session }) {
+    if (!isSignedIn({ session })) {
+      return false;
+    }
+    if (permissions.canManageUsers({ session })) {
+      return true;
+    }
+    return { id: { equals: session?.itemId } };
+  },
+  canManageKeys({ session }) {
+    if (!isSignedIn({ session })) {
+      return false;
+    }
+    if (permissions.canManageKeys({ session })) {
+      return true;
+    }
+    return { user: { id: { equals: session?.itemId } } };
+  }
 };
 
 // features/keystone/mutations/getRatesForOrder.ts
@@ -4160,72 +4227,120 @@ var Address = (0, import_core.list)({
 // features/keystone/models/ApiKey.ts
 var import_fields5 = require("@keystone-6/core/fields");
 var import_core2 = require("@keystone-6/core");
-var canReadKeys = ({ session }) => {
-  if (!session) {
-    return false;
-  }
-  if (permissions.canReadUsers({ session })) {
-    return true;
-  }
-  return { user: { id: { equals: session.itemId } } };
-};
-var canUpdateKeys = ({ session }) => {
-  if (!session) {
-    return false;
-  }
-  if (permissions.canManageUsers({ session })) {
-    return true;
-  }
-  return { user: { id: { equals: session.itemId } } };
-};
 var ApiKey = (0, import_core2.list)({
-  // hooks: {
-  //   beforeOperation: async ({
-  //     listKey,
-  //     operation,
-  //     inputData,
-  //     item,
-  //     resolvedData,
-  //     context,
-  //   }) => {
-  //     if (operation === "create") {
-  //       const aIds = await context.query.ApiKey.findMany({
-  //         where: { user: { id: { equals: context.session.itemId } } },
-  //       });
-  //       if (aIds.length > 0)
-  //         await context.query.apiKey.deleteMany({
-  //           where: aIds,
-  //         });
-  //     }
-  //   },
-  // },
   access: {
     operation: {
-      create: isSignedIn,
       query: isSignedIn,
-      delete: isSignedIn,
-      update: isSignedIn
+      create: permissions.canManageKeys,
+      update: permissions.canManageKeys,
+      delete: permissions.canManageKeys
     },
     filter: {
-      // we use user rules since ApiKey is connected to the user
-      query: canReadKeys,
-      update: canUpdateKeys,
-      delete: canUpdateKeys
+      query: rules.canManageKeys,
+      update: rules.canManageKeys,
+      delete: rules.canManageKeys
+    }
+  },
+  hooks: {
+    validate: {
+      create: async ({ resolvedData, addValidationError }) => {
+        if (!resolvedData.scopes || resolvedData.scopes.length === 0) {
+          addValidationError("At least one scope is required for API keys");
+        }
+      }
+    },
+    resolveInput: {
+      create: async ({ resolvedData, context }) => {
+        return {
+          ...resolvedData,
+          user: resolvedData.user || (context.session?.itemId ? { connect: { id: context.session.itemId } } : void 0)
+        };
+      }
     }
   },
   fields: {
+    name: (0, import_fields5.text)({
+      validation: { isRequired: true },
+      ui: {
+        description: "A descriptive name for this API key (e.g. 'Production Bot', 'Analytics Dashboard')"
+      }
+    }),
+    tokenSecret: (0, import_fields5.password)({
+      validation: { isRequired: true },
+      ui: {
+        createView: { fieldMode: "hidden" },
+        itemView: { fieldMode: "hidden" },
+        listView: { fieldMode: "hidden" },
+        description: "Secure API key token (hashed and never displayed)"
+      }
+    }),
+    tokenPreview: (0, import_fields5.text)({
+      ui: {
+        createView: { fieldMode: "hidden" },
+        itemView: { fieldMode: "read" },
+        listView: { fieldMode: "read" },
+        description: "Preview of the API key (actual key is hidden for security)"
+      }
+    }),
+    scopes: (0, import_fields5.json)({
+      defaultValue: [],
+      ui: {
+        description: "Array of scopes for this API key. Available scopes: orders:read, orders:write, shops:read, shops:write, channels:read, channels:write, etc."
+      }
+    }),
+    status: (0, import_fields5.select)({
+      type: "enum",
+      options: [
+        { label: "Active", value: "active" },
+        { label: "Inactive", value: "inactive" },
+        { label: "Revoked", value: "revoked" }
+      ],
+      defaultValue: "active",
+      ui: {
+        description: "Current status of this API key"
+      }
+    }),
+    expiresAt: (0, import_fields5.timestamp)({
+      ui: {
+        description: "When this API key expires (optional - leave blank for no expiration)"
+      }
+    }),
+    lastUsedAt: (0, import_fields5.timestamp)({
+      ui: {
+        createView: { fieldMode: "hidden" },
+        itemView: { fieldMode: "read" },
+        description: "Last time this API key was used"
+      }
+    }),
+    usageCount: (0, import_fields5.json)({
+      defaultValue: { total: 0, daily: {} },
+      ui: {
+        createView: { fieldMode: "hidden" },
+        itemView: { fieldMode: "read" },
+        description: "Usage statistics for this API key"
+      }
+    }),
+    restrictedToIPs: (0, import_fields5.json)({
+      defaultValue: [],
+      ui: {
+        description: "Optional: Restrict this key to specific IP addresses (array of IPs)"
+      }
+    }),
     user: (0, import_fields5.relationship)({
       ref: "User.apiKeys",
-      hooks: {
-        resolveInput({ operation, resolvedData, context }) {
-          if (operation === "create" && !resolvedData.user && context.session?.itemId) {
-            return { connect: { id: context.session?.itemId } };
-          }
-          return resolvedData.user;
-        }
+      ui: {
+        createView: { fieldMode: "hidden" },
+        itemView: { fieldMode: "read" }
       }
     }),
     ...trackingFields
+  },
+  ui: {
+    labelField: "name",
+    listView: {
+      initialColumns: ["name", "tokenPreview", "scopes", "status", "lastUsedAt", "expiresAt"]
+    },
+    description: "Secure API keys for programmatic access to Openfront"
   }
 });
 
@@ -11791,6 +11906,7 @@ var models = {
 // features/keystone/index.ts
 var import_iron = __toESM(require("@hapi/iron"));
 var cookie = __toESM(require("cookie"));
+var import_bcryptjs = __toESM(require("bcryptjs"));
 
 // features/webhooks/webhook-plugin.ts
 var import_crypto2 = __toESM(require("crypto"));
@@ -12053,25 +12169,105 @@ function statelessSessions({
   return {
     async get({ context }) {
       if (!context?.req) return;
-      const apiKey = context.req.headers["x-api-key"];
-      if (apiKey) {
-        try {
-          const data = await context.sudo().query.ApiKey.findOne({
-            where: {
-              id: apiKey
-            },
-            query: `id user { id }`
-          });
-          if (!data?.user?.id) return;
-          return { itemId: data.user.id, listKey };
-        } catch (err) {
-          console.log({ err });
-          return;
-        }
-      }
       const authHeader = context.req.headers.authorization;
       if (authHeader?.startsWith("Bearer ")) {
         const accessToken = authHeader.replace("Bearer ", "");
+        if (accessToken.startsWith("of_")) {
+          console.log("\u{1F511} API KEY DETECTED, VALIDATING...");
+          try {
+            const clientIP = context.req.headers["x-forwarded-for"] || context.req.headers["x-real-ip"] || context.req.connection?.remoteAddress || context.req.socket?.remoteAddress || context.req.connection?.socket?.remoteAddress || "127.0.0.1";
+            const actualClientIP = typeof clientIP === "string" ? clientIP.split(",")[0].trim() : "127.0.0.1";
+            console.log("\u{1F511} CLIENT IP:", actualClientIP);
+            const apiKeys = await context.sudo().query.ApiKey.findMany({
+              where: { status: { equals: "active" } },
+              query: `
+                id
+                name
+                scopes
+                status
+                expiresAt
+                usageCount
+                restrictedToIPs
+                tokenSecret { isSet }
+                user { id }
+              `
+            });
+            console.log("\u{1F511} CHECKING AGAINST", apiKeys.length, "ACTIVE API KEYS");
+            let matchingApiKey = null;
+            for (const apiKey of apiKeys) {
+              try {
+                if (!apiKey.tokenSecret?.isSet) continue;
+                const fullApiKey = await context.sudo().db.ApiKey.findOne({
+                  where: { id: apiKey.id }
+                });
+                if (!fullApiKey || typeof fullApiKey.tokenSecret !== "string") {
+                  continue;
+                }
+                const isValid = await import_bcryptjs.default.compare(accessToken, fullApiKey.tokenSecret);
+                if (isValid) {
+                  matchingApiKey = apiKey;
+                  console.log("\u{1F511} FOUND MATCHING API KEY:", apiKey.id);
+                  break;
+                }
+              } catch (error) {
+                console.log("\u{1F511} ERROR VERIFYING API KEY:", error);
+                continue;
+              }
+            }
+            if (!matchingApiKey) {
+              console.log("\u{1F511} NO MATCHING API KEY FOUND");
+              return;
+            }
+            if (matchingApiKey.restrictedToIPs && Array.isArray(matchingApiKey.restrictedToIPs) && matchingApiKey.restrictedToIPs.length > 0) {
+              const allowedIPs = matchingApiKey.restrictedToIPs;
+              const isAllowedIP = allowedIPs.includes(actualClientIP);
+              console.log("\u{1F511} IP RESTRICTION CHECK:");
+              console.log("\u{1F511} Client IP:", actualClientIP);
+              console.log("\u{1F511} Allowed IPs:", allowedIPs);
+              console.log("\u{1F511} Is Allowed:", isAllowedIP);
+              if (!isAllowedIP) {
+                console.log("\u{1F511} API KEY BLOCKED: IP NOT ALLOWED");
+                return;
+              }
+            }
+            if (matchingApiKey.status !== "active") {
+              console.log("\u{1F511} API KEY NOT ACTIVE:", matchingApiKey.status);
+              return;
+            }
+            if (matchingApiKey.expiresAt && /* @__PURE__ */ new Date() > new Date(matchingApiKey.expiresAt)) {
+              console.log("\u{1F511} API KEY EXPIRED");
+              await context.sudo().query.ApiKey.updateOne({
+                where: { id: matchingApiKey.id },
+                data: { status: "revoked" }
+              });
+              return;
+            }
+            const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+            const usage = matchingApiKey.usageCount || { total: 0, daily: {} };
+            usage.total = (usage.total || 0) + 1;
+            usage.daily[today] = (usage.daily[today] || 0) + 1;
+            context.sudo().query.ApiKey.updateOne({
+              where: { id: matchingApiKey.id },
+              data: {
+                lastUsedAt: /* @__PURE__ */ new Date(),
+                usageCount: usage
+              }
+            }).catch(console.error);
+            if (matchingApiKey.user?.id) {
+              const session = {
+                itemId: matchingApiKey.user.id,
+                listKey,
+                apiKeyScopes: matchingApiKey.scopes || []
+                // Attach scopes for permission checking
+              };
+              console.log("\u{1F511} RETURNING SESSION:", JSON.stringify(session, null, 2));
+              return session;
+            }
+          } catch (err) {
+            console.log("\u{1F511} API Key validation error:", err);
+            return;
+          }
+        }
         try {
           const oauthToken = await context.sudo().query.OAuthToken.findOne({
             where: { token: accessToken },

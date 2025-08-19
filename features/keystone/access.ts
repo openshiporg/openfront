@@ -24,17 +24,38 @@ function hasOAuthPermission(session: any, permission: string): boolean {
   return grantedPermissions.has(permission);
 }
 
+// Helper function to check if API key scopes grant a permission
+function hasApiKeyPermission(session: any, permission: string): boolean {
+  if (!session?.apiKeyScopes) return false;
+  
+  const scopes = session.apiKeyScopes as OAuthScope[]; // API keys use same scope format as OAuth
+  const grantedPermissions = new Set<string>();
+  
+  scopes.forEach(scope => {
+    const scopePermissions = SCOPE_TO_PERMISSIONS[scope];
+    if (scopePermissions) {
+      scopePermissions.forEach(p => grantedPermissions.add(p));
+    }
+  });
+  
+  return grantedPermissions.has(permission);
+}
+
 const generatedPermissions = Object.fromEntries(
   permissionsList.map((permission) => [
     permission,
     function ({ session }) {
-
+      // Check API key scopes first
+      if (hasApiKeyPermission(session, permission)) {
+        return true;
+      }
       
-      // Check OAuth scopes first
+      // Check OAuth scopes second
       if (hasOAuthPermission(session, permission)) {
         return true;
       }
-      // Then check role-based permissions
+      
+      // Finally check role-based permissions
       const rolePermission = !!session?.data?.role?.[permission];
       return rolePermission;
     },
@@ -111,7 +132,7 @@ export const rules = {
     if (permissions.canManageKeys({ session })) {
       return true;
     }
-    // Otherwise they may only update themselves!
-    return { id: { equals: session?.itemId } };
+    // Otherwise they may only manage their own API keys
+    return { user: { id: { equals: session?.itemId } } };
   },
 };

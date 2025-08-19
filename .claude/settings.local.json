@@ -45,8 +45,12 @@
       "Bash(true)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:localhost)",
-      "WebFetch(domain:remixicon.com)"
+      "WebFetch(domain:remixicon.com)",
+      "WebSearch"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "/Users/junaid/code/openship"
+    ]
   }
 }

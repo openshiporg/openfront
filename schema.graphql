@@ -335,9 +335,28 @@ input SwapRelateToManyForCreateInput {
 
 type ApiKey {
   id: ID!
+  name: String
+  tokenSecret: PasswordState
+  tokenPreview: String
+  scopes: JSON
+  status: ApiKeyStatusType
+  expiresAt: DateTime
+  lastUsedAt: DateTime
+  usageCount: JSON
+  restrictedToIPs: JSON
   user: User
   createdAt: DateTime
   updatedAt: DateTime
+}
+
+type PasswordState {
+  isSet: Boolean!
+}
+
+enum ApiKeyStatusType {
+  active
+  inactive
+  revoked
 }
 
 input ApiKeyWhereUniqueInput {
@@ -349,18 +368,55 @@ input ApiKeyWhereInput {
   OR: [ApiKeyWhereInput!]
   NOT: [ApiKeyWhereInput!]
   id: IDFilter
+  name: StringFilter
+  tokenPreview: StringFilter
+  status: ApiKeyStatusTypeNullableFilter
+  expiresAt: DateTimeNullableFilter
+  lastUsedAt: DateTimeNullableFilter
   user: UserWhereInput
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
 
+input ApiKeyStatusTypeNullableFilter {
+  equals: ApiKeyStatusType
+  in: [ApiKeyStatusType!]
+  notIn: [ApiKeyStatusType!]
+  not: ApiKeyStatusTypeNullableFilter
+}
+
+input DateTimeNullableFilter {
+  equals: DateTime
+  in: [DateTime!]
+  notIn: [DateTime!]
+  lt: DateTime
+  lte: DateTime
+  gt: DateTime
+  gte: DateTime
+  not: DateTimeNullableFilter
+}
+
 input ApiKeyOrderByInput {
   id: OrderDirection
+  name: OrderDirection
+  tokenPreview: OrderDirection
+  status: OrderDirection
+  expiresAt: OrderDirection
+  lastUsedAt: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
 }
 
 input ApiKeyUpdateInput {
+  name: String
+  tokenSecret: String
+  tokenPreview: String
+  scopes: JSON
+  status: ApiKeyStatusType
+  expiresAt: DateTime
+  lastUsedAt: DateTime
+  usageCount: JSON
+  restrictedToIPs: JSON
   user: UserRelateToOneForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
@@ -372,6 +428,15 @@ input ApiKeyUpdateArgs {
 }
 
 input ApiKeyCreateInput {
+  name: String
+  tokenSecret: String
+  tokenPreview: String
+  scopes: JSON
+  status: ApiKeyStatusType
+  expiresAt: DateTime
+  lastUsedAt: DateTime
+  usageCount: JSON
+  restrictedToIPs: JSON
   user: UserRelateToOneForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
@@ -448,17 +513,6 @@ input IntNullableFilter {
   gt: Int
   gte: Int
   not: IntNullableFilter
-}
-
-input DateTimeNullableFilter {
-  equals: DateTime
-  in: [DateTime!]
-  notIn: [DateTime!]
-  lt: DateTime
-  lte: DateTime
-  gt: DateTime
-  gte: DateTime
-  not: DateTimeNullableFilter
 }
 
 input BatchJobOrderByInput {
@@ -8435,10 +8489,6 @@ type User {
   passwordResetToken: PasswordState
   passwordResetIssuedAt: DateTime
   passwordResetRedeemedAt: DateTime
-}
-
-type PasswordState {
-  isSet: Boolean!
 }
 
 input UserWhereUniqueInput {

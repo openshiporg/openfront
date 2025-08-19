@@ -46,11 +46,20 @@ model Address {
 }
 
 model ApiKey {
-  id        String   @id @default(cuid())
-  user      User?    @relation("ApiKey_user", fields: [userId], references: [id])
-  userId    String?  @map("user")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  id              String            @id @default(cuid())
+  name            String            @default("")
+  tokenSecret     String
+  tokenPreview    String            @default("")
+  scopes          Json?             @default("[]")
+  status          ApiKeyStatusType? @default(active)
+  expiresAt       DateTime?
+  lastUsedAt      DateTime?
+  usageCount      Json?             @default("{\"total\":0,\"daily\":{}}")
+  restrictedToIPs Json?             @default("[]")
+  user            User?             @relation("ApiKey_user", fields: [userId], references: [id])
+  userId          String?           @map("user")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @default(now()) @updatedAt
 
   @@index([userId])
 }
@@ -1521,6 +1530,12 @@ model WebhookEvent {
   createdAt        DateTime?        @default(now())
 
   @@index([endpointId])
+}
+
+enum ApiKeyStatusType {
+  active
+  inactive
+  revoked
 }
 
 enum BatchJobTypeType {
