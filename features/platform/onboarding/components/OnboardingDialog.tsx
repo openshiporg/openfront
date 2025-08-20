@@ -36,6 +36,13 @@ import {
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { RiLoader4Line } from '@remixicon/react';
 import { Badge } from '@/components/ui/badge-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -1480,15 +1487,17 @@ const OnboardingDialog: React.FC<OnboardingDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="overflow-hidden p-0 sm:max-w-3xl gap-0 max-w-[95vw]">
-        <DialogHeader className="border-b px-6 py-4 mb-0">
+      <DialogContent className="overflow-hidden p-0 sm:max-w-4xl gap-0 max-w-[95vw] max-h-[95vh]">
+        <DialogHeader className="border-b px-4 sm:px-6 py-4 mb-0">
           <DialogTitle>Onboarding</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col-reverse md:flex-row">
-          <div className="flex flex-col justify-between md:w-80 md:border-r">
+        <div className="flex flex-col lg:flex-row">
+          {/* Mobile-first layout: Store Setup header and Setup Type appear first */}
+          <div className="flex flex-col justify-between lg:w-80 lg:border-r order-1 lg:order-none">
             <div className="flex-1 grow">
-              <div className="border-t p-6 md:border-none">
+              <div className="p-4 sm:p-6">
+                {/* Store Setup Header - Always visible first on mobile */}
                 <div className="flex items-center space-x-3">
                   <div className="inline-flex shrink-0 items-center justify-center rounded-sm bg-muted p-3">
                     <Apps
@@ -1577,128 +1586,164 @@ const OnboardingDialog: React.FC<OnboardingDialogProps> = ({
                     <h4 className="text-sm font-medium text-foreground mb-4">
                       Setup Type
                     </h4>
-                    <RadioGroup
-                      value={selectedTemplate}
-                      onValueChange={(value) =>
-                        setSelectedTemplate(value as 'minimal' | 'full' | 'custom')
-                      }
-                      className="space-y-4"
-                    >
-                      <div
-                        className={`border p-4 rounded-md transition-colors cursor-pointer ${
-                          selectedTemplate === 'minimal'
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                            : 'hover:border-blue-200'
-                        }`}
-                        onClick={() => setSelectedTemplate('minimal')}
+                    
+                    {/* Mobile: Dropdown selector */}
+                    <div className="block lg:hidden">
+                      <Select 
+                        value={selectedTemplate} 
+                        onValueChange={(value) => setSelectedTemplate(value as 'minimal' | 'full' | 'custom')}
                       >
-                        <div className="flex gap-4">
-                          <div className="flex-shrink-0 mt-[3px]">
-                            <Package
-                              className={`h-5 w-5 ${
-                                selectedTemplate === 'minimal'
-                                  ? 'text-blue-600 dark:text-blue-400'
-                                  : 'text-muted-foreground'
-                              }`}
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <RadioGroupItem
-                              value="minimal"
-                              id="minimal"
-                              className="sr-only"
-                            />
-                            <Label
-                              htmlFor="minimal"
-                              className="flex-1 cursor-pointer"
-                            >
-                              <div className="font-medium text-base mb-1">
-                                Basic Setup
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                One region, one payment method, minimal products
-                              </div>
-                            </Label>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="minimal">
+                            <div className="flex flex-col items-start text-left">
+                              <span className="font-medium">Basic Setup</span>
+                              <span className="text-xs text-muted-foreground">One region, one payment method, minimal products</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="full">
+                            <div className="flex flex-col items-start text-left">
+                              <span className="font-medium">Complete Setup</span>
+                              <span className="text-xs text-muted-foreground">Multiple regions, payment methods, and products</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="custom">
+                            <div className="flex flex-col items-start text-left">
+                              <span className="font-medium">Custom Setup</span>
+                              <span className="text-xs text-muted-foreground">Copy JSON templates to create your own setup</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Desktop: Radio Group */}
+                    <div className="hidden lg:block">
+                      <RadioGroup
+                        value={selectedTemplate}
+                        onValueChange={(value) =>
+                          setSelectedTemplate(value as 'minimal' | 'full' | 'custom')
+                        }
+                        className="space-y-4"
+                      >
+                        <div
+                          className={`border p-4 rounded-md transition-colors cursor-pointer ${
+                            selectedTemplate === 'minimal'
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                              : 'hover:border-blue-200'
+                          }`}
+                          onClick={() => setSelectedTemplate('minimal')}
+                        >
+                          <div className="flex gap-4">
+                            <div className="flex-shrink-0 mt-[3px]">
+                              <Package
+                                className={`h-5 w-5 ${
+                                  selectedTemplate === 'minimal'
+                                    ? 'text-blue-600 dark:text-blue-400'
+                                    : 'text-muted-foreground'
+                                }`}
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <RadioGroupItem
+                                value="minimal"
+                                id="minimal"
+                                className="sr-only"
+                              />
+                              <Label
+                                htmlFor="minimal"
+                                className="flex-1 cursor-pointer"
+                              >
+                                <div className="font-medium text-base mb-1">
+                                  Basic Setup
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  One region, one payment method, minimal products
+                                </div>
+                              </Label>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div
-                        className={`border p-4 rounded-md transition-colors cursor-pointer ${
-                          selectedTemplate === 'full'
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                            : 'hover:border-blue-200'
-                        }`}
-                        onClick={() => setSelectedTemplate('full')}
-                      >
-                        <div className="flex gap-4">
-                          <div className="flex-shrink-0 mt-[3px]">
-                            <Building2
-                              className={`h-5 w-5 ${
-                                selectedTemplate === 'full'
-                                  ? 'text-blue-600 dark:text-blue-400'
-                                  : 'text-muted-foreground'
-                              }`}
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <RadioGroupItem
-                              value="full"
-                              id="full"
-                              className="sr-only"
-                            />
-                            <Label
-                              htmlFor="full"
-                              className="flex-1 cursor-pointer"
-                            >
-                              <div className="font-medium text-base mb-1">
-                                Complete Setup
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                Multiple regions, payment methods, and products
-                              </div>
-                            </Label>
-                          </div>
-                        </div>
-                      </div>
-                      <div
-                        className={`border p-4 rounded-md transition-colors cursor-pointer ${
-                          selectedTemplate === 'custom'
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                            : 'hover:border-blue-200'
-                        }`}
-                        onClick={() => setSelectedTemplate('custom')}
-                      >
-                        <div className="flex gap-4">
-                          <div className="flex-shrink-0 mt-[3px]">
-                            <CircleCheck
-                              className={`h-5 w-5 ${
-                                selectedTemplate === 'custom'
-                                  ? 'text-blue-600 dark:text-blue-400'
-                                  : 'text-muted-foreground'
-                              }`}
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <RadioGroupItem
-                              value="custom"
-                              id="custom"
-                              className="sr-only"
-                            />
-                            <Label
-                              htmlFor="custom"
-                              className="flex-1 cursor-pointer"
-                            >
-                              <div className="font-medium text-base mb-1">
-                                Custom Setup
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                Copy JSON templates to create your own setup
-                              </div>
-                            </Label>
+                        <div
+                          className={`border p-4 rounded-md transition-colors cursor-pointer ${
+                            selectedTemplate === 'full'
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                              : 'hover:border-blue-200'
+                          }`}
+                          onClick={() => setSelectedTemplate('full')}
+                        >
+                          <div className="flex gap-4">
+                            <div className="flex-shrink-0 mt-[3px]">
+                              <Building2
+                                className={`h-5 w-5 ${
+                                  selectedTemplate === 'full'
+                                    ? 'text-blue-600 dark:text-blue-400'
+                                    : 'text-muted-foreground'
+                                }`}
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <RadioGroupItem
+                                value="full"
+                                id="full"
+                                className="sr-only"
+                              />
+                              <Label
+                                htmlFor="full"
+                                className="flex-1 cursor-pointer"
+                              >
+                                <div className="font-medium text-base mb-1">
+                                  Complete Setup
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  Multiple regions, payment methods, and products
+                                </div>
+                              </Label>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </RadioGroup>
+                        <div
+                          className={`border p-4 rounded-md transition-colors cursor-pointer ${
+                            selectedTemplate === 'custom'
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                              : 'hover:border-blue-200'
+                          }`}
+                          onClick={() => setSelectedTemplate('custom')}
+                        >
+                          <div className="flex gap-4">
+                            <div className="flex-shrink-0 mt-[3px]">
+                              <CircleCheck
+                                className={`h-5 w-5 ${
+                                  selectedTemplate === 'custom'
+                                    ? 'text-blue-600 dark:text-blue-400'
+                                    : 'text-muted-foreground'
+                                }`}
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <RadioGroupItem
+                                value="custom"
+                                id="custom"
+                                className="sr-only"
+                              />
+                              <Label
+                                htmlFor="custom"
+                                className="flex-1 cursor-pointer"
+                              >
+                                <div className="font-medium text-base mb-1">
+                                  Custom Setup
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  Copy JSON templates to create your own setup
+                                </div>
+                              </Label>
+                            </div>
+                          </div>
+                        </div>
+                      </RadioGroup>
+                    </div>
                   </>
                 ) : (
                   <>
@@ -1717,18 +1762,12 @@ const OnboardingDialog: React.FC<OnboardingDialogProps> = ({
             <div className="flex flex-col border-t">
               {/* Error message above buttons */}
               {error && !isLoading && step !== 'done' && (
-                // <div className="px-4 py-2 text-sm text-red-600 dark:text-red-500 border-b">
-                //   <div className="flex gap-3">
-                //     <AlertCircle className="size-7" />
-                //     <span>Error: Please ensure you're using a fresh installation without existing data.</span>
-                //   </div>
-                // </div>
                 <Badge
                   color="rose"
                   className="rounded-none gap-3 text-sm border-b"
                 >
-                  <AlertCircle className="size-7" />
-                  <span>
+                  <AlertCircle className="size-4 sm:size-7" />
+                  <span className="text-xs sm:text-sm">
                     Error: Please ensure you're using a fresh installation
                     without existing data.
                   </span>
@@ -1738,13 +1777,13 @@ const OnboardingDialog: React.FC<OnboardingDialogProps> = ({
               {/* Buttons */}
               <div className="flex items-center justify-between p-4">
                 {step === 'done' ? (
-                  <div className="flex justify-between w-full">
+                  <div className="flex flex-col sm:flex-row gap-2 w-full">
                     <DialogClose asChild>
-                      <Button type="button" variant="outline">
+                      <Button type="button" variant="outline" className="w-full sm:w-auto">
                         Close
                       </Button>
                     </DialogClose>
-                    <Button asChild>
+                    <Button asChild className="w-full sm:w-auto">
                       <a href="/" target="_blank" rel="noopener noreferrer">
                         View your storefront
                         <ArrowUpRight className="ml-1.5 h-4 w-4" />
@@ -1752,31 +1791,34 @@ const OnboardingDialog: React.FC<OnboardingDialogProps> = ({
                     </Button>
                   </div>
                 ) : (
-                  <>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full">
                     <DialogClose asChild>
                       <Button
                         type="button"
                         variant="ghost"
                         disabled={isLoading}
+                        className="w-full sm:w-auto"
                       >
                         Cancel
                       </Button>
                     </DialogClose>
                     {isLoading ? (
-                      <Button disabled>
+                      <Button disabled className="w-full sm:w-auto">
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Creating...
                       </Button>
                     ) : (
-                      <Button onClick={runOnboarding}>Confirm</Button>
+                      <Button onClick={runOnboarding} className="w-full sm:w-auto">
+                        Confirm
+                      </Button>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="flex-1 max-h-[70vh] overflow-y-auto p-6 md:px-6 md:pb-8 md:pt-6">
+          <div className="flex-1 max-h-[60vh] lg:max-h-[70vh] overflow-y-auto p-4 sm:p-6 order-2 lg:order-none">
             {selectedTemplate === 'custom' && step === 'template' && !customJsonApplied ? (
               /* Custom JSON Editor */
               <FullJsonEditor
