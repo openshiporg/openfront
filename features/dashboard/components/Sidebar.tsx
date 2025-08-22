@@ -148,122 +148,63 @@ export function Sidebar({ adminMeta, user }: SidebarProps) {
         <SidebarGroup>
           <SidebarGroupLabel>Platform</SidebarGroupLabel>
           <SidebarMenu className="gap-0">
-            {/* Standalone Items in Expanded Mode */}
-            <div className="group-has-[[data-collapsible=icon]]/sidebar-wrapper:hidden">
-              {standaloneItemsWithBasePath.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={isLinkActive(item.href)}>
-                    <Link href={item.href} onClick={() => setOpenMobile(false)}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </div>
-          </SidebarMenu>
-          
-          {/* Platform Groups */}
-          {platformItems.map((platformItem) => (
-            <div key={platformItem.title} className="max-h-full overflow-y-auto group-has-[[data-collapsible=icon]]/sidebar-wrapper:hidden">
-              <Collapsible
-                asChild
-                defaultOpen={platformItem.isActive}
-                className="group/collapsible"
-              >
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton>
-                      <platformItem.icon className="h-4 w-4" />
-                      <span>{platformItem.title}</span>
-                      <ChevronRight className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub>
-                      {platformItem.items.map((link) => {
-                        const handleClick = () => {
-                          setOpenMobile(false)
-                        }
-
-                        return (
-                          <SidebarMenuSubItem key={link.href}>
-                            <SidebarMenuSubButton
-                              asChild
-                              isActive={isLinkActive(link.href)}
-                            >
-                              <Link href={link.href} onClick={handleClick}>
-                                <span>{link.title}</span>
-                              </Link>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        )
-                      })}
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </SidebarMenuItem>
-              </Collapsible>
-            </div>
-          ))}
-
-          {/* Platform Items - Icon Mode */}
-          <SidebarMenu className="hidden group-has-[[data-collapsible=icon]]/sidebar-wrapper:block">
-            {/* Standalone Items in Icon Mode */}
-            {standaloneItemsWithBasePath.map((item) => (
+            {/* All Platform Items - Expanded Mode */}
+            {[...standaloneItemsWithBasePath, ...platformItems.flatMap(group => group.items)].map((item) => (
               <SidebarMenuItem key={item.href}>
                 <SidebarMenuButton asChild isActive={isLinkActive(item.href)}>
                   <Link href={item.href} onClick={() => setOpenMobile(false)}>
-                    <item.icon className="h-4 w-4" />
+                    {item.icon && React.createElement(item.icon, { className: "h-4 w-4" })}
+                    <span>{item.title}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
-            
-            {/* Grouped Items in Icon Mode */}
-            {platformItems.map((platformItem) => (
-              <DropdownMenu key={platformItem.title}>
-                <SidebarMenuItem>
-                  <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
-                      <platformItem.icon className="h-4 w-4" />
-                    </SidebarMenuButton>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    side={isMobile ? "bottom" : "right"}
-                    align={isMobile ? "end" : "start"}
-                    className="min-w-56"
-                  >
-                    <div className="max-h-[calc(100vh-16rem)] overflow-y-auto py-1">
-                      {platformItem.items.map((link) => {
-                        const handleClick = () => {
-                          setOpenMobile(false)
-                        }
-
-                        return (
-                          <DropdownMenuItem
-                            asChild
-                            key={link.href}
-                            className={
-                              isLinkActive(link.href)
-                                ? "bg-blue-50 text-blue-600"
-                                : ""
-                            }
-                          >
-                            <Link href={link.href} onClick={handleClick}>
-                              <span>{link.title}</span>
-                              {isLinkActive(link.href) && (
-                                <div className="ml-auto h-2 w-2 rounded-full bg-blue-600" />
-                              )}
-                            </Link>
-                          </DropdownMenuItem>
-                        )
-                      })}
-                    </div>
-                  </DropdownMenuContent>
-                </SidebarMenuItem>
-              </DropdownMenu>
-            ))}
           </SidebarMenu>
+          
+          {/* Platform Dropdown - Icon Mode */}
+          <div className="hidden group-has-[[data-collapsible=icon]]/sidebar-wrapper:block">
+            <DropdownMenu>
+              <SidebarMenuItem>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground">
+                    <Package className="h-4 w-4" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  side={isMobile ? "bottom" : "right"}
+                  align={isMobile ? "end" : "start"}
+                  className="min-w-56"
+                >
+                  <div className="max-h-[calc(100vh-16rem)] overflow-y-auto py-1">
+                    {[...standaloneItemsWithBasePath, ...platformItems.flatMap(group => group.items)].map((item) => {
+                      const handleClick = () => {
+                        setOpenMobile(false)
+                      }
+
+                      return (
+                        <DropdownMenuItem
+                          asChild
+                          key={item.href}
+                          className={
+                            isLinkActive(item.href)
+                              ? "bg-blue-50 text-blue-600"
+                              : ""
+                          }
+                        >
+                          <Link href={item.href} onClick={handleClick}>
+                            <span>{item.title}</span>
+                            {isLinkActive(item.href) && (
+                              <div className="ml-auto h-2 w-2 rounded-full bg-blue-600" />
+                            )}
+                          </Link>
+                        </DropdownMenuItem>
+                      )
+                    })}
+                  </div>
+                </DropdownMenuContent>
+              </SidebarMenuItem>
+            </DropdownMenu>
+          </div>
         </SidebarGroup>
 
         {/* Models */}

@@ -6,11 +6,9 @@ import { CircleCheck } from "lucide-react";
 import Divider from "@/features/storefront/modules/common/components/divider";
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams, useParams } from "next/navigation";
-import { useActionState } from "react";
 import BillingAddress from "../billing-address";
 import ErrorMessage from "../error-message";
 import ShippingAddress from "../shipping-address";
-import { SubmitButton } from "../submit-button";
 import { Button } from "@/components/ui/button";
 import { RiLoader2Fill } from "@remixicon/react";
 
@@ -33,6 +31,8 @@ const Addresses = ({
       ? compareAddresses(cart?.shippingAddress, cart?.billingAddress)
       : true
   );
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const toggleSameAsBilling = () => setSameAsBilling((prev) => !prev);
 
   const handleEdit = () => {
@@ -41,52 +41,80 @@ const Addresses = ({
 
   const params = useParams();
 
-  // Custom form action handler that will handle client-side redirection
-  const handleFormAction = async (prevState: any, formData: FormData) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    
+    const formData = new FormData(event.currentTarget);
     
     // Check for required fields before calling setAddresses
     if (!formData.get("shippingAddress.countryCode")) {
-      return "Please select a country.";
-    }
-
-    if (!formData.get("shippingAddress.firstName")) {
-      return "Please enter your first name.";
-    }
-
-    if (!formData.get("shippingAddress.lastName")) {
-      return "Please enter your last name.";
-    }
-
-    if (!formData.get("shippingAddress.address1")) {
-      return "Please enter your address.";
-    }
-
-    if (!formData.get("shippingAddress.city")) {
-      return "Please enter your city.";
-    }
-
-    if (!formData.get("shippingAddress.postalCode")) {
-      return "Please enter your postal code.";
-    }
-
-    if (!formData.get("email")) {
-      return "Please enter your email address.";
-    }
-
-    const result = await setAddresses(null, formData);
-
-    // If successful, redirect client-side
-    if (result && typeof result === 'object' && 'success' in result && result.success === true) {
-      const countryCode = params?.countryCode as string;
-      router.push(`/${countryCode}/checkout?step=delivery`);
+      setError("Please select a country.");
+      setIsLoading(false);
       return;
     }
 
-    // Otherwise return the error message
-    return result;
-  };
+    if (!formData.get("shippingAddress.firstName")) {
+      setError("Please enter your first name.");
+      setIsLoading(false);
+      return;
+    }
 
-  const [message, formAction] = useActionState(handleFormAction, null);
+    if (!formData.get("shippingAddress.lastName")) {
+      setError("Please enter your last name.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!formData.get("shippingAddress.address1")) {
+      setError("Please enter your address.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!formData.get("shippingAddress.city")) {
+      setError("Please enter your city.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!formData.get("shippingAddress.postalCode")) {
+      setError("Please enter your postal code.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (!formData.get("email")) {
+      setError("Please enter your email address.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const result = await setAddresses(null, formData);
+
+      // If successful, redirect client-side
+      if (result && typeof result === 'object' && 'success' in result && result.success === true) {
+        const countryCode = params?.countryCode as string;
+        router.push(`/${countryCode}/checkout?step=delivery`);
+        return;
+      }
+
+      // Otherwise set the error message
+      if (typeof result === 'string') {
+        setError(result);
+      } else if (result && typeof result === 'object' && 'message' in result) {
+        setError(result.message as string);
+      } else {
+        setError("An unexpected error occurred.");
+      }
+    } catch (err: any) {
+      setError(err.message || err.toString());
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="bg-background">
@@ -109,7 +137,7 @@ const Addresses = ({
         )}
       </div>
       {isOpen ? (
-        <form action={formAction}>
+        <form onSubmit={handleSubmit}>
           <div className="pb-8">
             <ShippingAddress
               customer={customer}
@@ -128,10 +156,17 @@ const Addresses = ({
                 <BillingAddress cart={cart} />
               </div>
             )}
-            <SubmitButton size="lg" className="mt-6" data-testid="submit-address-button">
+            <Button 
+              size="lg" 
+              className="mt-6" 
+              data-testid="submit-address-button"
+              type="submit"
+              disabled={isLoading}
+            >
+              {isLoading && <RiLoader2Fill className="mr-2 h-4 w-4 animate-spin" />}
               Continue to delivery
-            </SubmitButton>
-            <ErrorMessage error={message as string | null} data-testid="address-error-message" />
+            </Button>
+            <ErrorMessage error={error} data-testid="address-error-message" />
           </div>
         </form>
       ) : (

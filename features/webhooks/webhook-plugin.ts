@@ -1,5 +1,6 @@
 import { BaseListTypeInfo, KeystoneConfig, KeystoneContext } from '@keystone-6/core/types';
 import crypto from 'crypto';
+import { webhookEnricherRegistry } from './enrichers';
 
 // No more hardcoded URLs - we'll query from the database
 
@@ -256,19 +257,34 @@ async function formatPayload(
     operation,
   };
 
+  // Check if we have an enricher registered for this entity type
+  let enrichedData = item;
+  if (webhookEnricherRegistry.has(listKey) && item?.id) {
+    try {
+      const enricher = webhookEnricherRegistry.get(listKey);
+      if (enricher) {
+        enrichedData = await enricher.enrich(item, context);
+      }
+    } catch (error) {
+      console.error(`Error enriching webhook payload for ${listKey}:`, error);
+      // Fall back to original item if enrichment fails
+      enrichedData = item;
+    }
+  }
+
   switch (operation) {
     case 'create':
       return {
         ...basePayload,
-        data: item,
+        data: enrichedData || item,
       };
     
     case 'update':
       return {
         ...basePayload,
-        data: item,
+        data: enrichedData || item,
         previousData: originalItem,
-        changes: getChangedFields(originalItem, item),
+        changes: getChangedFields(originalItem, enrichedData || item),
       };
     
     case 'delete':
@@ -280,7 +296,7 @@ async function formatPayload(
     default:
       return {
         ...basePayload,
-        data: item,
+        data: enrichedData || item,
       };
   }
 }
