@@ -144,20 +144,23 @@ export function Sidebar({ adminMeta, user }: SidebarProps) {
           </SidebarMenu>
         </SidebarGroup>
 
-        {/* Platform Routes - Standalone Items */}
+        {/* Platform Routes */}
         <SidebarGroup>
           <SidebarGroupLabel>Platform</SidebarGroupLabel>
-            <SidebarMenu className="gap-0">
-            {standaloneItemsWithBasePath.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild isActive={isLinkActive(item.href)}>
-                  <Link href={item.href} onClick={() => setOpenMobile(false)}>
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.title}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+          <SidebarMenu className="gap-0">
+            {/* Standalone Items in Expanded Mode */}
+            <div className="group-has-[[data-collapsible=icon]]/sidebar-wrapper:hidden">
+              {standaloneItemsWithBasePath.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton asChild isActive={isLinkActive(item.href)}>
+                    <Link href={item.href} onClick={() => setOpenMobile(false)}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </div>
           </SidebarMenu>
           
           {/* Platform Groups */}
@@ -203,7 +206,7 @@ export function Sidebar({ adminMeta, user }: SidebarProps) {
             </div>
           ))}
 
-          {/* Platform Dropdown - Icon Mode */}
+          {/* Platform Items - Icon Mode */}
           <SidebarMenu className="hidden group-has-[[data-collapsible=icon]]/sidebar-wrapper:block">
             {/* Standalone Items in Icon Mode */}
             {standaloneItemsWithBasePath.map((item) => (
