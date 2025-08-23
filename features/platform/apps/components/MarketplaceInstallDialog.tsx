@@ -123,6 +123,7 @@ export const MarketplaceInstallDialog: React.FC<MarketplaceInstallDialogProps> =
                 onChange={(e) => setOpenshipUrl(e.target.value)}
                 placeholder="https://openship.mydomain.com"
                 disabled={isProcessing}
+                className="mt-2"
               />
               <p className="text-xs text-muted-foreground mt-1">
                 Enter the full URL where your Openship instance is hosted
@@ -160,7 +161,6 @@ export const MarketplaceInstallDialog: React.FC<MarketplaceInstallDialogProps> =
               disabled={isProcessing}
               className="flex-1"
             >
-              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Cancel
             </Button>
             <Button

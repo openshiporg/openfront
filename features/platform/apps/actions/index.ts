@@ -268,3 +268,43 @@ export async function updateOAuthAppStatus(id: string, status: 'active' | 'inact
     }
   }
 }
+
+/**
+ * Update OAuth app redirect URIs
+ */
+export async function updateOAuthAppRedirectUris(id: string, redirectUris: string[]) {
+  try {
+    const updateResponse = await keystoneClient(`
+      mutation UpdateOAuthApp($where: OAuthAppWhereUniqueInput!, $data: OAuthAppUpdateInput!) {
+        updateOAuthApp(where: $where, data: $data) {
+          id
+          name
+          redirectUris
+        }
+      }
+    `, {
+      where: { id },
+      data: { redirectUris }
+    })
+
+    if (!updateResponse.success) {
+      throw new Error(updateResponse.error || 'Failed to update OAuth app redirect URIs')
+    }
+
+    // Revalidate the apps page
+    revalidatePath('/dashboard/platform/apps')
+
+    return {
+      success: true,
+      data: updateResponse.data.updateOAuthApp
+    }
+
+  } catch (error) {
+    console.error('Error updating OAuth app redirect URIs:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update OAuth app redirect URIs',
+      data: null
+    }
+  }
+}
