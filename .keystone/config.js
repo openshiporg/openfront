@@ -11910,6 +11910,186 @@ var import_bcryptjs = __toESM(require("bcryptjs"));
 
 // features/webhooks/webhook-plugin.ts
 var import_crypto2 = __toESM(require("crypto"));
+
+// features/webhooks/enrichers/base-enricher.ts
+var BaseWebhookEnricher = class {
+  /**
+   * Helper method to query the entity with enriched data
+   */
+  async queryEnrichedEntity(item, context) {
+    if (!item?.id) {
+      return item;
+    }
+    try {
+      const result = await context.query[this.entityType].findOne({
+        where: { id: item.id },
+        query: this.getQueryFields()
+      });
+      return result || item;
+    } catch (error) {
+      console.error(`Error querying ${this.entityType} for webhook enrichment:`, error);
+      return item;
+    }
+  }
+};
+
+// features/webhooks/enrichers/order-enricher.ts
+var OrderWebhookEnricher = class extends BaseWebhookEnricher {
+  constructor() {
+    super(...arguments);
+    this.entityType = "Order";
+  }
+  async enrich(item, context) {
+    const enrichedItem = await this.queryEnrichedEntity(item, context);
+    return enrichedItem || item;
+  }
+  getQueryFields() {
+    return `
+      id
+      displayId
+      email
+      status
+      rawTotal
+      total
+      subtotal
+      shipping
+      discount
+      tax
+      canceledAt
+      metadata
+      idempotencyKey
+      noNotification
+      externalId
+      currency {
+        id
+        code
+        symbol
+        noDivisionCurrency
+      }
+      shippingAddress {
+        id
+        firstName
+        lastName
+        company
+        address1
+        address2
+        city
+        province
+        postalCode
+        phone
+        country {
+          id
+          iso2
+          displayName
+        }
+      }
+      billingAddress {
+        id
+        firstName
+        lastName
+        company
+        address1
+        address2
+        city
+        province
+        postalCode
+        phone
+        country {
+          id
+          iso2
+          displayName
+        }
+      }
+      lineItems {
+        id
+        title
+        quantity
+        sku
+        variantTitle
+        thumbnail
+        formattedUnitPrice
+        formattedTotal
+        moneyAmount {
+          amount
+          originalAmount
+        }
+        productVariant {
+          id
+          title
+          sku
+          product {
+            id
+            title
+            handle
+            thumbnail
+          }
+        }
+        productData
+        variantData
+      }
+      discounts {
+        id
+        discountRule {
+          type
+          value
+        }
+      }
+      shippingMethods {
+        id
+        price
+        shippingOption {
+          name
+          profile {
+            name
+          }
+        }
+      }
+      region {
+        id
+        name
+        taxRate
+        currency {
+          code
+          symbol
+          noDivisionCurrency
+        }
+      }
+      createdAt
+      updatedAt
+    `;
+  }
+};
+
+// features/webhooks/enrichers/registry.ts
+var WebhookEnricherRegistry = class {
+  constructor() {
+    this.enrichers = /* @__PURE__ */ new Map();
+  }
+  register(entityType, enricher) {
+    this.enrichers.set(entityType, enricher);
+  }
+  get(entityType) {
+    return this.enrichers.get(entityType);
+  }
+  has(entityType) {
+    return this.enrichers.has(entityType);
+  }
+  /**
+   * Get all registered entity types
+   */
+  getRegisteredTypes() {
+    return Array.from(this.enrichers.keys());
+  }
+};
+var webhookEnricherRegistry = new WebhookEnricherRegistry();
+function registerWebhookEnricher(enricher) {
+  webhookEnricherRegistry.register(enricher.entityType, enricher);
+}
+
+// features/webhooks/enrichers/index.ts
+registerWebhookEnricher(new OrderWebhookEnricher());
+
+// features/webhooks/webhook-plugin.ts
 var webhookQueue = [];
 var batchTimer = null;
 function withWebhooks(config2) {
@@ -12095,18 +12275,30 @@ async function formatPayload(listKey2, operation, item, originalItem, context) {
     listKey: listKey2,
     operation
   };
+  let enrichedData = item;
+  if (webhookEnricherRegistry.has(listKey2) && item?.id) {
+    try {
+      const enricher = webhookEnricherRegistry.get(listKey2);
+      if (enricher) {
+        enrichedData = await enricher.enrich(item, context);
+      }
+    } catch (error) {
+      console.error(`Error enriching webhook payload for ${listKey2}:`, error);
+      enrichedData = item;
+    }
+  }
   switch (operation) {
     case "create":
       return {
         ...basePayload,
-        data: item
+        data: enrichedData || item
       };
     case "update":
       return {
         ...basePayload,
-        data: item,
+        data: enrichedData || item,
         previousData: originalItem,
-        changes: getChangedFields(originalItem, item)
+        changes: getChangedFields(originalItem, enrichedData || item)
       };
     case "delete":
       return {
@@ -12116,7 +12308,7 @@ async function formatPayload(listKey2, operation, item, originalItem, context) {
     default:
       return {
         ...basePayload,
-        data: item
+        data: enrichedData || item
       };
   }
 }
