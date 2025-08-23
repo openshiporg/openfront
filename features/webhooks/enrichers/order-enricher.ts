@@ -93,37 +93,16 @@ export class OrderWebhookEnricher extends BaseWebhookEnricher<OrderItem> {
             title
             handle
             thumbnail
+            productImages {
+              image {
+                url
+              }
+              imagePath
+            }
           }
         }
         productData
         variantData
-      }
-      discounts {
-        id
-        discountRule {
-          type
-          value
-        }
-      }
-      shippingMethods {
-        id
-        price
-        shippingOption {
-          name
-          profile {
-            name
-          }
-        }
-      }
-      region {
-        id
-        name
-        taxRate
-        currency {
-          code
-          symbol
-          noDivisionCurrency
-        }
       }
       createdAt
       updatedAt

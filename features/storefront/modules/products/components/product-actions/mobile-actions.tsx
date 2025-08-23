@@ -55,7 +55,7 @@ type MobileActionsProps = {
   region: RegionInfoForActions; // Use updated type
   variant?: ProductVariantInfoForActions; // Use updated type
   options: Record<string, string | undefined>;
-  updateOptions: (optionId: string, value: string) => void; // Changed first arg name to match usage
+  updateOptions: (update: Record<string, string>) => void;
   inStock?: boolean;
   handleAddToCart: () => void;
   isAdding?: boolean;
@@ -99,7 +99,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
     <>
       {/* Bottom action bar */}
       <div
-        className={cn("z-10 lg:hidden inset-x-0 bottom-0 fixed transition-opacity duration-300", { 
+        className={cn("z-[60] lg:hidden inset-x-0 bottom-0 fixed transition-opacity duration-300", { 
           "opacity-0 pointer-events-none": !show,
           "opacity-100": show,
         })}
@@ -160,7 +160,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                   </Button>
                 </DialogTrigger>
                 <DialogContent 
-                  className="w-full h-screen max-w-none rounded-none p-0 gap-0"
+                  className="w-full h-screen max-w-none rounded-none p-0 gap-0 flex flex-col"
                   data-testid="mobile-actions-modal"
                 >
                   <DialogTitle className="sr-only">Select Product Options</DialogTitle>
@@ -173,7 +173,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                               <OptionSelect
                                 option={option}
                                 current={options[option.id]}
-                                updateOption={(value) => updateOptions(option.id, value)}
+                                updateOption={updateOptions}
                                 title={option.title}
                                 disabled={optionsDisabled}
                               />
@@ -182,6 +182,26 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                         })}
                       </div>
                     )}
+                  </div>
+                  {/* Add to Cart button inside dialog */}
+                  <div className="bg-background px-6 pb-6 border-t">
+                    <Button
+                      onClick={async () => {
+                        await handleAddToCart();
+                        setOptionsDialogOpen(false);
+                      }}
+                      disabled={!inStock || !variant || !!isAdding}
+                      className="w-full"
+                      data-testid="mobile-cart-button-dialog"
+                    >
+                      {isAdding
+                        ? "Adding..."
+                        : !variant
+                          ? "Select variant"
+                          : !inStock
+                            ? "Out of stock"
+                            : "Add to cart"}
+                    </Button>
                   </div>
                 </DialogContent>
               </Dialog>

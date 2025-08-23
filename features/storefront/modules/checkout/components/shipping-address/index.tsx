@@ -118,47 +118,58 @@ const ShippingAddress = ({
         name="hasModifiedFields"
         value={""}
       />
-      <div className="grid grid-cols-2 gap-4">
-        <Input
-          placeholder="First name"
-          name="shippingAddress.firstName"
-          autoComplete="given-name"
-          value={formData["shippingAddress.firstName"]}
-          onChange={handleChange}
-          required
-        />
-        <Input
-          placeholder="Last name"
-          name="shippingAddress.lastName"
-          autoComplete="family-name"
-          value={formData["shippingAddress.lastName"]}
-          onChange={handleChange}
-          required
-        />
-        <Input
-          placeholder="Address"
-          name="shippingAddress.address1"
-          autoComplete="address-line1"
-          value={formData["shippingAddress.address1"]}
-          onChange={handleChange}
-          required
-        />
-        <Input
-          placeholder="Company"
-          name="shippingAddress.company"
-          value={formData["shippingAddress.company"]}
-          onChange={handleChange}
-          autoComplete="organization"
-        />
-        <Input
-          placeholder="City"
-          name="shippingAddress.city"
-          autoComplete="address-level2"
-          value={formData["shippingAddress.city"]}
-          onChange={handleChange}
-          required
-        />
-        <div className="grid grid-cols-2 gap-x-2">
+      <div className="grid gap-4">
+        {/* First name and Last name - always together */}
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            placeholder="First name"
+            name="shippingAddress.firstName"
+            autoComplete="given-name"
+            value={formData["shippingAddress.firstName"]}
+            onChange={handleChange}
+            required
+          />
+          <Input
+            placeholder="Last name"
+            name="shippingAddress.lastName"
+            autoComplete="family-name"
+            value={formData["shippingAddress.lastName"]}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        
+        {/* Address - full width on mobile, but can be 2 columns on larger screens */}
+        <div className="grid sm:grid-cols-2 gap-4">
+          <Input
+            placeholder="Address"
+            name="shippingAddress.address1"
+            autoComplete="address-line1"
+            value={formData["shippingAddress.address1"]}
+            onChange={handleChange}
+            required
+            className="sm:col-span-1"
+          />
+          <Input
+            placeholder="Company"
+            name="shippingAddress.company"
+            value={formData["shippingAddress.company"]}
+            onChange={handleChange}
+            autoComplete="organization"
+            className="sm:col-span-1"
+          />
+        </div>
+        
+        {/* City and State - together on mobile and desktop */}
+        <div className="grid grid-cols-2 gap-4">
+          <Input
+            placeholder="City"
+            name="shippingAddress.city"
+            autoComplete="address-level2"
+            value={formData["shippingAddress.city"]}
+            onChange={handleChange}
+            required
+          />
           <Input
             placeholder="State / Province"
             name="shippingAddress.province"
@@ -166,6 +177,10 @@ const ShippingAddress = ({
             value={formData["shippingAddress.province"]}
             onChange={handleChange}
           />
+        </div>
+        
+        {/* ZIP and Country - together on mobile, but can be 2 columns on larger screens */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
           <Input
             placeholder="ZIP / Postal code"
             name="shippingAddress.postalCode"
@@ -174,16 +189,16 @@ const ShippingAddress = ({
             onChange={handleChange}
             required
           />
-        </div>
-        <div className="space-y-2">
-          <CountrySelect
-            id="country"
-            name="shippingAddress.countryCode"
-            region={cart?.region}
-            value={formData["shippingAddress.countryCode"]}
-            onChange={handleChange}
-            required
-          />
+          <div>
+            <CountrySelect
+              id="country"
+              name="shippingAddress.countryCode"
+              region={cart?.region}
+              value={formData["shippingAddress.countryCode"]}
+              onChange={handleChange}
+              required
+            />
+          </div>
         </div>
       </div>
       <div className="my-8">

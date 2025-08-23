@@ -1,7 +1,7 @@
 "use client"
 
 import { setShippingMethod } from "@/features/storefront/lib/data/cart" 
-import { CheckCircle } from "lucide-react" 
+import { CircleCheck } from "lucide-react" 
 import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
@@ -93,7 +93,7 @@ const Shipping: React.FC<ShippingProps> = ({
         >
           Delivery
           {!isOpen && (cart?.shippingMethods?.length ?? 0) > 0 && ( 
-            <CheckCircle className="h-5 w-5" /> 
+            <CircleCheck className="h-5 w-5" /> 
           )}
         </h2>
         {!isOpen &&

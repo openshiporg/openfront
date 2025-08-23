@@ -257,12 +257,13 @@ const Payment = ({ cart, availablePaymentMethods }: PaymentProps) => {
             size="lg"
             disabled={
               (!selectedPaymentMethod && !paidByGiftcard) ||
-              !cart?.shippingMethods?.length
+              !cart?.shippingMethods?.length ||
+              isLoading
             }
             data-testid="submit-payment-button"
             className="mt-6"
           >
-            {isLoading && <RiLoader2Fill className="animate-spin"/>}
+            {isLoading && <RiLoader2Fill className="mr-2 h-4 w-4 animate-spin"/>}
             {isStripePayment && !cardComplete
               ? "Enter card details"
               : "Continue to review"}
