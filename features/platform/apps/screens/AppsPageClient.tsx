@@ -301,7 +301,11 @@ export function AppsPageClient({ existingApps = [] }: AppsPageClientProps) {
 
 
   const handleInstall = useCallback((appOrDefault?: ExistingApp) => {
-    const app = appOrDefault || apps[0] // fallback to first app if none provided
+    const app = appOrDefault
+    if (!app) {
+      console.error('No app provided to handleInstall');
+      return;
+    }
     console.log('🔴 INSTALL BUTTON CLICKED - handleInstall called with app:', app);
     
     // Check if app has redirect URI configured
@@ -373,7 +377,7 @@ export function AppsPageClient({ existingApps = [] }: AppsPageClientProps) {
               <ExistingAppCard
                 key={app.id}
                 app={app}
-                onInstall={() => handleInstall(app)}
+                onInstall={(appOverride) => handleInstall(appOverride || app)}
                 onRedirectUrisUpdate={handleRedirectUrisUpdate}
               />
             ))}

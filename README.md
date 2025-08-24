@@ -174,7 +174,7 @@ const rates = await shippingProviderAdapter.getRatesFunction({
 
 ## Documentation
 
-For comprehensive technical documentation, see [docs.openship.org/openfront/ecommerce](https://docs.openship.org/openfront/ecommerce) which covers:
+For comprehensive technical documentation, see [docs.openship.org/docs/openfront/ecommerce](https://docs.openship.org/docs/openfront/ecommerce/) which covers:
 - Complete data model specifications (78+ models)
 - GraphQL API reference and operations
 - Payment and shipping adapter systems
@@ -231,15 +231,6 @@ Openfront is production-ready and can be deployed to:
 - CDN integration for static assets
 - Comprehensive monitoring and alerting
 
-## Foundation
-
-This project is built on [next-keystone-starter](https://github.com/junaid33/next-keystone-starter), which provides:
-- Modern full-stack architecture
-- KeystoneJS 6 integration with Next.js 15
-- Authentication and session management
-- Database setup with Prisma
-- Development tooling and configuration
-
 ## Contributing
 
 We welcome contributions! Please see our contributing guidelines for details on:
@@ -254,7 +245,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-- **Documentation**: Check our comprehensive documentation at [docs.openship.org/openfront/ecommerce](https://docs.openship.org/openfront/ecommerce)
+- **Documentation**: Check our comprehensive documentation at [docs.openship.org/docs/openfront/ecommerce](https://docs.openship.org/docs/openfront/ecommerce/)
 - **Issues**: Report bugs and feature requests on GitHub Issues
 - **Community**: Join our community discussions
 - **Enterprise**: Contact us for enterprise support and custom development
@@ -262,4 +253,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **Openfront** - Enterprise E-commerce Platform  
-Built with Next.js 15 and KeystoneJS 6 on [next-keystone-starter](https://github.com/junaid33/next-keystone-starter)
+Built with Next.js 15 and KeystoneJS 6

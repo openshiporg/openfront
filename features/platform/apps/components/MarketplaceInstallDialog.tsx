@@ -158,7 +158,6 @@ export const MarketplaceInstallDialog: React.FC<MarketplaceInstallDialogProps> =
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isProcessing}
               className="flex-1"
             >
               Cancel
