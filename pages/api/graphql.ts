@@ -16,17 +16,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   return createYoga({
-    plugins: [
-      {
-        onParams({ params }) {
-          console.log('🚀 GRAPHQL REQUEST:', {
-            query: params.query,
-            variables: params.variables,
-            operationName: params.operationName
-          });
-        }
-      }
-    ],
     renderGraphiQL: () => {
       return `
         <!DOCTYPE html>
