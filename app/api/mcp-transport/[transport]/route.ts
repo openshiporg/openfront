@@ -26,14 +26,14 @@ function getSimpleTypeName(type: any): string {
 }
 
 // Execute GraphQL query with authentication
-async function executeGraphQL(query: string, graphqlEndpoint: string, cookie: string): Promise<any> {
+async function executeGraphQL(query: string, graphqlEndpoint: string, cookie: string, variables?: any): Promise<any> {
   const response = await fetch(graphqlEndpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Cookie': cookie,
     },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, variables }),
   });
 
   const result = await response.json();
@@ -116,7 +116,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
         headers: { 'Content-Type': 'application/json' },
       });
     } else if (body.method === 'tools/list') {
-      // Return tools
+      // Return tools with comprehensive e-commerce workflow guidance
       const tools: Tool[] = [{
         name: 'listModels',
         description: 'List all available GraphQL models/types in the system',
@@ -268,6 +268,378 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             }
           },
           required: ['modelName', 'searchQuery', 'fields']
+        }
+      }, 
+      // Commerce-specific tools
+      {
+        name: 'searchProducts',
+        description: 'Search for products with filtering capabilities. IMPORTANT: If countryCode is missing, you MUST first call getAvailableCountries to get the list of countries we ship to, then ask the user "Which country should I show pricing for?" or "Where would you like this shipped?" Present the available countries in a friendly way. This is required for accurate pricing.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            countryCode: {
+              type: 'string',
+              description: 'Country code for regional pricing and shipping (e.g., "US", "CA", "GB"). If not provided, you must ask the user where they want items shipped with friendly language.'
+            }
+          },
+          required: ['countryCode']
+        }
+      }, {
+        name: 'getProduct',
+        description: 'Get detailed product information by ID',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            productId: {
+              type: 'string',
+              description: 'Product ID'
+            },
+            countryCode: {
+              type: 'string',
+              description: 'Country code for pricing (e.g., "US", "CA", "GB")'
+            }
+          },
+          required: ['productId', 'countryCode']
+        }
+      }, {
+        name: 'createCart',
+        description: 'Create a new shopping cart for a specific country/region',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            countryCode: {
+              type: 'string',
+              description: 'Country code (e.g., "US", "CA", "GB")'
+            }
+          },
+          required: ['countryCode']
+        }
+      }, {
+        name: 'getCart',
+        description: 'Get cart details including items, totals, and addresses',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            cartId: {
+              type: 'string',
+              description: 'Cart ID'
+            }
+          },
+          required: ['cartId']
+        }
+      }, {
+        name: 'addToCart',
+        description: 'Add a product variant to the cart',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            cartId: {
+              type: 'string',
+              description: 'Cart ID'
+            },
+            variantId: {
+              type: 'string',
+              description: 'Product variant ID to add'
+            },
+            quantity: {
+              type: 'number',
+              description: 'Quantity to add (default: 1)'
+            }
+          },
+          required: ['cartId', 'variantId', 'quantity']
+        }
+      }, {
+        name: 'updateCartItem',
+        description: 'Update quantity of an item in the cart',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            cartId: {
+              type: 'string',
+              description: 'Cart ID'
+            },
+            lineItemId: {
+              type: 'string',
+              description: 'Line item ID to update'
+            },
+            quantity: {
+              type: 'number',
+              description: 'New quantity'
+            }
+          },
+          required: ['cartId', 'lineItemId', 'quantity']
+        }
+      }, {
+        name: 'removeCartItem',
+        description: 'Remove an item from the cart',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            cartId: {
+              type: 'string',
+              description: 'Cart ID'
+            },
+            lineItemId: {
+              type: 'string',
+              description: 'Line item ID to remove'
+            }
+          },
+          required: ['cartId', 'lineItemId']
+        }
+      }, {
+        name: 'applyDiscount',
+        description: 'Apply a discount code to the cart',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            cartId: {
+              type: 'string',
+              description: 'Cart ID'
+            },
+            discountCode: {
+              type: 'string',
+              description: 'Discount code to apply'
+            }
+          },
+          required: ['cartId', 'discountCode']
+        }
+      }, {
+        name: 'setShippingAddress',
+        description: 'Set shipping address for the cart (creates guest user if needed)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            cartId: {
+              type: 'string',
+              description: 'Cart ID'
+            },
+            email: {
+              type: 'string',
+              description: 'Customer email'
+            },
+            firstName: {
+              type: 'string',
+              description: 'First name'
+            },
+            lastName: {
+              type: 'string',
+              description: 'Last name'
+            },
+            address1: {
+              type: 'string',
+              description: 'Address line 1'
+            },
+            city: {
+              type: 'string',
+              description: 'City'
+            },
+            postalCode: {
+              type: 'string',
+              description: 'Postal/ZIP code'
+            },
+            countryCode: {
+              type: 'string',
+              description: 'Country code (e.g., "US", "CA", "GB")'
+            },
+            province: {
+              type: 'string',
+              description: 'State or Province'
+            },
+            company: {
+              type: 'string',
+              description: 'Company name'
+            },
+            phone: {
+              type: 'string',
+              description: 'Phone number'
+            }
+          },
+          required: ['cartId', 'email', 'firstName', 'lastName', 'address1', 'city', 'postalCode', 'countryCode', 'province', 'company', 'phone']
+        }
+      }, {
+        name: 'getShippingOptions',
+        description: 'Get available shipping methods for the cart',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            cartId: {
+              type: 'string',
+              description: 'Cart ID'
+            }
+          },
+          required: ['cartId']
+        }
+      }, {
+        name: 'setShippingMethod',
+        description: 'Select a shipping method for the cart',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            cartId: {
+              type: 'string',
+              description: 'Cart ID'
+            },
+            shippingMethodId: {
+              type: 'string',
+              description: 'Shipping method ID'
+            }
+          },
+          required: ['cartId', 'shippingMethodId']
+        }
+      }, {
+        name: 'setPaymentMethod',
+        description: 'Set payment provider for the cart',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            cartId: {
+              type: 'string',
+              description: 'Cart ID'
+            },
+            providerId: {
+              type: 'string',
+              description: 'Payment provider ID'
+            }
+          },
+          required: ['cartId', 'providerId']
+        }
+      }, {
+        name: 'placeOrder',
+        description: 'Complete the checkout and create an order',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            cartId: {
+              type: 'string',
+              description: 'Cart ID to complete'
+            }
+          },
+          required: ['cartId']
+        }
+      }, {
+        name: 'getOrder',
+        description: 'Get order details by ID',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            orderId: {
+              type: 'string',
+              description: 'Order ID'
+            },
+            secretKey: {
+              type: 'string',
+              description: 'Secret key for guest orders'
+            }
+          },
+          required: ['orderId', 'secretKey']
+        }
+      }, {
+        name: 'getAvailableRegions',
+        description: 'Get list of countries we ship to. Use this when user first asks about shopping by asking "Where would you like these items shipped?" since we sell different products in different countries.',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+          required: []
+        }
+      }, {
+        name: 'getAvailableCountries',
+        description: 'Get list of countries we ship to for customer selection. Use this when user asks about products but hasn\'t specified their country.',
+        inputSchema: {
+          type: 'object',
+          properties: {},
+          required: []
+        }
+      }, {
+        name: 'setBillingAddress',
+        description: 'Set billing address for the cart (separate from shipping address)',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            cartId: {
+              type: 'string',
+              description: 'Cart ID'
+            },
+            firstName: {
+              type: 'string',
+              description: 'First name'
+            },
+            lastName: {
+              type: 'string',
+              description: 'Last name'
+            },
+            address1: {
+              type: 'string',
+              description: 'Address line 1'
+            },
+            city: {
+              type: 'string',
+              description: 'City'
+            },
+            postalCode: {
+              type: 'string',
+              description: 'Postal/ZIP code'
+            },
+            countryCode: {
+              type: 'string',
+              description: 'Country code (e.g., "US", "CA", "GB")'
+            },
+            province: {
+              type: 'string',
+              description: 'State or Province'
+            },
+            company: {
+              type: 'string',
+              description: 'Company name'
+            },
+            phone: {
+              type: 'string',
+              description: 'Phone number'
+            }
+          },
+          required: ['cartId', 'firstName', 'lastName', 'address1', 'city', 'postalCode', 'countryCode', 'province', 'company', 'phone']
+        }
+      }, {
+        name: 'getPaymentProviders',
+        description: 'Get available payment providers for the cart',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            cartId: {
+              type: 'string',
+              description: 'Cart ID'
+            }
+          },
+          required: ['cartId']
+        }
+      }, {
+        name: 'createPaymentSessions',
+        description: 'Initialize payment sessions for the cart before payment method selection',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            cartId: {
+              type: 'string',
+              description: 'Cart ID'
+            }
+          },
+          required: ['cartId']
+        }
+      }, {
+        name: 'getCheckoutLink',
+        description: 'Generate a secure, time-limited checkout link when programmatic order creation fails',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            cartId: {
+              type: 'string',
+              description: 'Cart ID to create checkout link for'
+            },
+            countryCode: {
+              type: 'string',
+              description: 'Country code for the checkout URL (e.g., "US", "CA", "GB")'
+            }
+          },
+          required: ['cartId', 'countryCode']
         }
       }];
       
@@ -823,7 +1195,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
           }
           
           // Add text field search (case-insensitive contains) for fields that exist
-          const commonSearchFields = ['name', 'title', 'label', 'description', 'email'];
+          const commonSearchFields = ['name', 'title', 'label', 'email', 'handle'];
           const validSearchFields = commonSearchFields.filter(field => availableFields.includes(field));
           
           for (const fieldName of validSearchFields) {
@@ -865,6 +1237,971 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
                   queryUsed: queryString,
                   results: result,
                   total: result?.data?.[operationName]?.length || 0
+                }, null, 2),
+              }],
+            }
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        
+        // Commerce tool handlers
+        if (name === 'searchProducts') {
+          const { countryCode, limit = 10 } = args;
+          
+          // Simple query to get all products - filtering will be basic
+          const queryString = `
+            query {
+              products(take: ${limit}) {
+                id
+                title
+                handle
+                thumbnail
+                description {
+                  document
+                }
+                productVariants {
+                  id
+                  title
+                  sku
+                  inventoryQuantity
+                  prices(where: { region: { countries: { some: { iso2: { equals: "${countryCode.toUpperCase()}" } } } } }) {
+                    id
+                    amount
+                    currency {
+                      code
+                      symbol
+                    }
+                    calculatedPrice {
+                      calculatedAmount
+                      originalAmount
+                      currencyCode
+                    }
+                  }
+                  productOptionValues {
+                    id
+                    value
+                    productOption {
+                      id
+                      title
+                    }
+                  }
+                }
+                productOptions {
+                  id
+                  title
+                  productOptionValues {
+                    id
+                    value
+                  }
+                }
+              }
+            }
+          `;
+          
+          const result = await executeGraphQL(queryString, graphqlEndpoint, cookie || '');
+          
+          // Add guidance for variant selection
+          const guidance = result.data?.products?.some((p: any) => p.productVariants?.length > 1) ?
+            "Note: Some products have multiple variants (sizes, colors, etc.). When adding to cart, you'll need to specify the exact variant ID. Use getProduct to see all variants and their options." : null;
+          
+          return new Response(JSON.stringify({
+            jsonrpc: '2.0',
+            id: body.id,
+            result: {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  countryCode,
+                  guidance,
+                  products: result.data?.products || [],
+                  totalCount: result.data?.productsCount || 0,
+                  hasVariants: result.data?.products?.some((p: any) => p.productVariants?.length > 1) || false
+                }, null, 2),
+              }],
+            }
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        
+        if (name === 'getProduct') {
+          const { productId, productHandle, countryCode } = args;
+          
+          const whereClause = productId ? { id: productId } : { handle: productHandle };
+          if (!productId && !productHandle) {
+            throw new Error('Either productId or productHandle is required');
+          }
+          
+          const queryString = `
+            query GetProduct($where: ProductWhereUniqueInput!) {
+              product(where: $where) {
+                id
+                title
+                handle
+                thumbnail
+                description {
+                  document
+                }
+                productImages {
+                  id
+                  image {
+                    url
+                  }
+                }
+                productOptions {
+                  id
+                  title
+                  productOptionValues {
+                    id
+                    value
+                  }
+                }
+                productVariants {
+                  id
+                  title
+                  sku
+                  inventoryQuantity
+                  allowBackorder
+                  prices(where: { region: { countries: { some: { iso2: { equals: "${countryCode.toUpperCase()}" } } } } }) {
+                    id
+                    amount
+                    currency {
+                      code
+                      symbol
+                    }
+                    calculatedPrice {
+                      calculatedAmount
+                      originalAmount
+                      currencyCode
+                    }
+                  }
+                  productOptionValues {
+                    id
+                    value
+                    productOption {
+                      id
+                      title
+                    }
+                  }
+                }
+              }
+            }
+          `;
+          
+          const result = await executeGraphQL(queryString, graphqlEndpoint, cookie || '', { where: whereClause });
+          const product = result.data?.product;
+          
+          let variantGuidance = null;
+          if (product?.productVariants?.length > 1) {
+            const options = product.productOptions?.map((opt: any) => ({
+              option: opt.title,
+              values: opt.productOptionValues.map((val: any) => val.value)
+            }));
+            
+            variantGuidance = `This product has ${product.productVariants.length} variants. Available options: ${options?.map((o: any) => `${o.option}: ${o.values.join(', ')}`).join('; ')}. When adding to cart, you must specify the exact variant ID.`;
+          }
+          
+          return new Response(JSON.stringify({
+            jsonrpc: '2.0',
+            id: body.id,
+            result: {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  product,
+                  variantGuidance,
+                  countryCode,
+                  hasMultipleVariants: product?.productVariants?.length > 1,
+                  availableOptions: product?.productOptions || []
+                }, null, 2),
+              }],
+            }
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        
+        if (name === 'createCart') {
+          const { countryCode } = args;
+          
+          // First get region for country code
+          const regionQuery = `
+            query {
+              regions(where: { countries: { some: { iso2: { equals: "${countryCode.toLowerCase()}" } } } }) {
+                id
+                name
+                currency {
+                  code
+                }
+              }
+            }
+          `;
+          
+          const regionResult = await executeGraphQL(regionQuery, graphqlEndpoint, cookie || '');
+          const region = regionResult.data?.regions?.[0];
+          
+          if (!region) {
+            throw new Error(`No region found for country code: ${countryCode}`);
+          }
+          
+          const createCartMutation = `
+            mutation CreateCart {
+              createCart(data: { region: { connect: { id: "${region.id}" } } }) {
+                id
+                email
+                type
+                lineItems {
+                  id
+                  quantity
+                  productVariant {
+                    id
+                    title
+                    product {
+                      thumbnail
+                      title
+                    }
+                    prices {
+                      amount
+                      currency {
+                        code
+                      }
+                      calculatedPrice {
+                        calculatedAmount
+                        originalAmount
+                        currencyCode
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          `;
+          
+          const cartResult = await executeGraphQL(createCartMutation, graphqlEndpoint, cookie || '');
+          
+          return new Response(JSON.stringify({
+            jsonrpc: '2.0',
+            id: body.id,
+            result: {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  cart: cartResult.data?.createCart,
+                  countryCode,
+                  region,
+                  message: `Cart created successfully for ${countryCode.toUpperCase()}. Cart ID: ${cartResult.data?.createCart?.id}`
+                }, null, 2),
+              }],
+            }
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        
+        if (name === 'getCart') {
+          const { cartId } = args;
+          
+          const queryString = `
+            query GetCart($cartId: ID!) {
+              activeCart(cartId: $cartId) {
+                id
+                email
+                type
+                status
+                total
+                subtotal
+                taxTotal
+                discountTotal
+                giftCardTotal
+                shippingTotal
+                region {
+                  id
+                  name
+                  currencyCode
+                  countries {
+                    id
+                    iso2
+                    displayName
+                  }
+                }
+                lineItems {
+                  id
+                  quantity
+                  title
+                  unitPrice
+                  originalPrice
+                  total
+                  productVariant {
+                    id
+                    title
+                    sku
+                    product {
+                      id
+                      title
+                      handle
+                      thumbnail
+                    }
+                    prices {
+                      amount
+                      currency {
+                        code
+                        symbol
+                      }
+                      calculatedPrice {
+                        calculatedAmount
+                        originalAmount
+                        currencyCode
+                      }
+                    }
+                  }
+                }
+                shippingAddress {
+                  id
+                  firstName
+                  lastName
+                  address1
+                  address2
+                  city
+                  province
+                  postalCode
+                  phone
+                  country {
+                    id
+                    iso2
+                    displayName
+                  }
+                }
+                billingAddress {
+                  id
+                  firstName
+                  lastName
+                  address1
+                  address2
+                  city
+                  province
+                  postalCode
+                  phone
+                  country {
+                    id
+                    iso2
+                    displayName
+                  }
+                }
+                shippingMethods {
+                  id
+                  name
+                  price
+                  shippingOption {
+                    id
+                    name
+                    priceType
+                  }
+                }
+                paymentSessions {
+                  id
+                  status
+                  paymentProvider {
+                    id
+                    code
+                  }
+                }
+                discounts {
+                  id
+                  code
+                  discountRule {
+                    id
+                    type
+                    value
+                    allocation
+                  }
+                }
+                giftCards {
+                  id
+                  code
+                  balance
+                  region {
+                    id
+                    currencyCode
+                  }
+                }
+              }
+            }
+          `;
+          
+          const result = await executeGraphQL(queryString, graphqlEndpoint, cookie || '', { cartId });
+          
+          return new Response(JSON.stringify({
+            jsonrpc: '2.0',
+            id: body.id,
+            result: {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  cart: result.data?.activeCart,
+                  itemCount: result.data?.activeCart?.lineItems?.length || 0,
+                  isEmpty: !result.data?.activeCart?.lineItems?.length
+                }, null, 2),
+              }],
+            }
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        
+        if (name === 'addToCart') {
+          const { cartId, variantId, quantity = 1 } = args;
+          
+          // Copy EXACT mutation from cart.ts - using updateActiveCart NOT updateCart
+          const addToCartMutation = `
+            mutation UpdateActiveCart($cartId: ID!, $data: CartUpdateInput!) {
+              updateActiveCart(cartId: $cartId, data: $data) {
+                id
+                lineItems {
+                  id
+                  quantity
+                  productVariant {
+                    id
+                    title
+                    prices {
+                      amount
+                      currency {
+                        code
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          `;
+          
+          // Copy EXACT data structure from cart.ts  
+          const result = await executeGraphQL(addToCartMutation, graphqlEndpoint, cookie || '', {
+            cartId,
+            data: {
+              lineItems: {
+                create: [
+                  {
+                    productVariant: {
+                      connect: { id: variantId }
+                    },
+                    quantity
+                  }
+                ]
+              }
+            }
+          });
+          
+          // Mark that data has changed
+          dataHasChanged = true;
+          
+          return new Response(JSON.stringify({
+            jsonrpc: '2.0',
+            id: body.id,
+            result: {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  cart: result.data?.updateActiveCart,
+                  message: `Added ${quantity} item(s) to cart`,
+                  addedVariantId: variantId,
+                  newItemCount: result.data?.updateActiveCart?.lineItems?.length || 0
+                }, null, 2),
+              }],
+            }
+          }), {
+            status: 200,
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Data-Changed': 'true'
+            },
+          });
+        }
+
+        if (name === 'setShippingAddress') {
+          const { cartId, email, firstName, lastName, address1, city, postalCode, countryCode, province, company, phone } = args;
+          
+          // This is a simplified version - full implementation would need user creation logic
+          const setShippingAddressMutation = `
+            mutation SetShippingAddress($cartId: ID!, $email: String!, $shippingAddress: AddressCreateInput!, $billingAddress: AddressCreateInput!) {
+              updateActiveCart(
+                cartId: $cartId
+                data: {
+                  email: $email
+                  shippingAddress: {
+                    create: $shippingAddress
+                  }
+                  billingAddress: {
+                    create: $billingAddress
+                  }
+                }
+              ) {
+                id
+                email
+                shippingAddress {
+                  id
+                  firstName
+                  lastName
+                  address1
+                  address2
+                  city
+                  province
+                  postalCode
+                  phone
+                  country {
+                    id
+                    iso2
+                    displayName
+                  }
+                }
+                total
+                subtotal
+              }
+            }
+          `;
+          
+          const addressData = {
+            firstName,
+            lastName,
+            address1,
+            address2: "",
+            city,
+            province,
+            postalCode,
+            phone,
+            company,
+            country: {
+              connect: {
+                iso2: countryCode.toLowerCase()
+              }
+            }
+          };
+          
+          const result = await executeGraphQL(setShippingAddressMutation, graphqlEndpoint, cookie || '', {
+            cartId,
+            email,
+            shippingAddress: addressData,
+            billingAddress: addressData
+          });
+          
+          // Mark that data has changed
+          dataHasChanged = true;
+          
+          return new Response(JSON.stringify({
+            jsonrpc: '2.0',
+            id: body.id,
+            result: {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  cart: result.data?.updateCart,
+                  message: `Shipping address set successfully`,
+                }, null, 2),
+              }],
+            }
+          }), {
+            status: 200,
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Data-Changed': 'true'
+            },
+          });
+        }
+
+        if (name === 'getAvailableRegions') {
+          const queryString = `
+            query {
+              regions {
+                id
+                name
+                currency {
+                  code
+                  symbol
+                }
+                countries {
+                  iso2
+                  displayName
+                }
+              }
+            }
+          `;
+          
+          const result = await executeGraphQL(queryString, graphqlEndpoint, cookie || '');
+          
+          // Create a flat list of countries for customer-friendly display
+          const allCountries = result.data?.regions?.flatMap((region: any) => 
+            region.countries.map((country: any) => ({
+              countryCode: country.iso2.toUpperCase(),
+              countryName: country.displayName,
+              regionId: region.id,
+              regionName: region.name,
+              currency: region.currency.code.toUpperCase(),
+              currencySymbol: region.currency.symbol
+            }))
+          ) || [];
+          
+          // Sort countries alphabetically by name
+          allCountries.sort((a: any, b: any) => a.countryName.localeCompare(b.countryName));
+          
+          return new Response(JSON.stringify({
+            jsonrpc: '2.0',
+            id: body.id,
+            result: {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  countries: allCountries,
+                  totalCountries: allCountries.length,
+                  message: 'Available shipping destinations',
+                  instruction: 'Please choose your country to see products and pricing for your area.',
+                  friendlyCountryList: allCountries.map((c: any) => c.countryName).join(', ')
+                }, null, 2),
+              }],
+            }
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        
+        if (name === 'getAvailableCountries') {
+          const queryString = `
+            query {
+              regions {
+                id
+                name
+                currency {
+                  code
+                }
+                countries {
+                  id
+                  iso2
+                  iso3
+                  displayName
+                  numCode
+                }
+              }
+            }
+          `;
+          
+          const result = await executeGraphQL(queryString, graphqlEndpoint, cookie || '');
+          
+          // Create a flat list of countries for customer-facing display
+          const allCountries = result.data?.regions?.flatMap((region: any) => 
+            region.countries.map((country: any) => ({
+              code: country.iso2,
+              name: country.displayName,
+              countryCode: country.iso2.toLowerCase(),
+              currency: region.currency.code
+            }))
+          ) || [];
+          
+          // Sort countries alphabetically by name
+          allCountries.sort((a: any, b: any) => a.name.localeCompare(b.name));
+          
+          return new Response(JSON.stringify({
+            jsonrpc: '2.0',
+            id: body.id,
+            result: {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  countries: allCountries,
+                  totalCountries: allCountries.length,
+                  availableCurrencies: [...new Set(allCountries.map((c: any) => c.currency))],
+                  friendlyCountryList: allCountries.map((c: any) => c.name).join(', '),
+                  message: `We ship to ${allCountries.length} countries worldwide!`
+                }, null, 2),
+              }],
+            }
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        
+        if (name === 'getPaymentProviders') {
+          const { cartId } = args;
+          
+          // First get the cart to find the region ID
+          const cartQuery = `
+            query {
+              activeCart(cartId: "${cartId}") {
+                region {
+                  id
+                }
+              }
+            }
+          `;
+          
+          const cartResult = await executeGraphQL(cartQuery, graphqlEndpoint, cookie || '');
+          const regionId = cartResult.data?.activeCart?.region?.id;
+          
+          if (!regionId) {
+            throw new Error('Cart not found or missing region information');
+          }
+          
+          const paymentProvidersQuery = `
+            query {
+              activeCartPaymentProviders(regionId: "${regionId}") {
+                id
+                name
+                code
+                isInstalled
+              }
+            }
+          `;
+          
+          const result = await executeGraphQL(paymentProvidersQuery, graphqlEndpoint, cookie || '');
+          
+          return new Response(JSON.stringify({
+            jsonrpc: '2.0',
+            id: body.id,
+            result: {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  paymentProviders: result.data?.activeCartPaymentProviders || [],
+                  availableCount: result.data?.activeCartPaymentProviders?.length || 0,
+                  cartId,
+                  regionId
+                }, null, 2),
+              }],
+            }
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        
+        if (name === 'createPaymentSessions') {
+          const { cartId } = args;
+          
+          const createSessionsMutation = `
+            mutation {
+              createActiveCartPaymentSessions(cartId: "${cartId}") {
+                id
+                paymentSessions {
+                  id
+                  paymentProvider {
+                    id
+                    code
+                  }
+                }
+              }
+            }
+          `;
+          
+          const result = await executeGraphQL(createSessionsMutation, graphqlEndpoint, cookie || '');
+          
+          // Mark that data has changed
+          dataHasChanged = true;
+          
+          return new Response(JSON.stringify({
+            jsonrpc: '2.0',
+            id: body.id,
+            result: {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  cart: result.data?.createActiveCartPaymentSessions,
+                  message: 'Payment sessions created successfully',
+                  sessionsCount: result.data?.createActiveCartPaymentSessions?.paymentSessions?.length || 0
+                }, null, 2),
+              }],
+            }
+          }), {
+            status: 200,
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Data-Changed': 'true'
+            },
+          });
+        }
+        
+        if (name === 'setBillingAddress') {
+          const { cartId, firstName, lastName, address1, city, postalCode, countryCode, province, company, phone } = args;
+          
+          // Create billing address
+          const createAddressMutation = `
+            mutation {
+              createAddress(data: {
+                firstName: "${firstName}"
+                lastName: "${lastName}"
+                address1: "${address1}"
+                address2: ""
+                city: "${city}"
+                postalCode: "${postalCode}"
+                province: "${province || ''}"
+                company: "${company || ''}"
+                phone: "${phone || ''}"
+                country: { connect: { iso2: "${countryCode.toUpperCase()}" } }
+              }) {
+                id
+              }
+            }
+          `;
+          
+          const addressResult = await executeGraphQL(createAddressMutation, graphqlEndpoint, cookie || '');
+          const addressId = addressResult.data?.createAddress?.id;
+          
+          if (!addressId) {
+            throw new Error('Failed to create billing address');
+          }
+          
+          // Update cart with billing address
+          const updateCartMutation = `
+            mutation {
+              updateActiveCart(
+                cartId: "${cartId}",
+                data: {
+                  billingAddress: { connect: { id: "${addressId}" } }
+                }
+              ) {
+                id
+                billingAddress {
+                  id
+                  firstName
+                  lastName
+                  address1
+                  city
+                  postalCode
+                  country {
+                    iso2
+                    displayName
+                  }
+                }
+              }
+            }
+          `;
+          
+          const result = await executeGraphQL(updateCartMutation, graphqlEndpoint, cookie || '');
+          
+          // Mark that data has changed
+          dataHasChanged = true;
+          
+          return new Response(JSON.stringify({
+            jsonrpc: '2.0',
+            id: body.id,
+            result: {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  cart: result.data?.updateActiveCart,
+                  message: 'Billing address set successfully',
+                  addressId
+                }, null, 2),
+              }],
+            }
+          }), {
+            status: 200,
+            headers: { 
+              'Content-Type': 'application/json',
+              'X-Data-Changed': 'true'
+            },
+          });
+        }
+
+        if (name === 'placeOrder') {
+          const { cartId } = args;
+          
+          const completeOrderMutation = `
+            mutation {
+              completeActiveCart(cartId: "${cartId}") {
+                id
+                displayId
+                status
+                total
+                subtotal
+                customer {
+                  id
+                  email
+                }
+                region {
+                  id
+                  name
+                  currency {
+                    code
+                  }
+                }
+              }
+            }
+          `;
+          
+          try {
+            const result = await executeGraphQL(completeOrderMutation, graphqlEndpoint, cookie || '');
+            
+            // Mark that data has changed
+            dataHasChanged = true;
+            
+            return new Response(JSON.stringify({
+              jsonrpc: '2.0',
+              id: body.id,
+              result: {
+                content: [{
+                  type: 'text',
+                  text: JSON.stringify({
+                    order: result.data?.completeActiveCart,
+                    success: true,
+                    message: 'Order placed successfully!',
+                    orderId: result.data?.completeActiveCart?.id
+                  }, null, 2),
+                }],
+              }
+            }), {
+              status: 200,
+              headers: { 
+                'Content-Type': 'application/json',
+                'X-Data-Changed': 'true'
+              },
+            });
+          } catch (error) {
+            // Order failed - likely due to missing business account or payment issues
+            return new Response(JSON.stringify({
+              jsonrpc: '2.0',
+              id: body.id,
+              result: {
+                content: [{
+                  type: 'text',
+                  text: JSON.stringify({
+                    success: false,
+                    error: 'PROGRAMMATIC_ORDER_FAILED',
+                    message: 'Unable to place order programmatically. You may need a business account for automated orders, or there may be missing payment information. Would you like me to create a secure checkout link where you can complete this order manually?',
+                    cartId,
+                    canCreateCheckoutUrl: true
+                  }, null, 2),
+                }],
+              }
+            }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+        }
+
+        if (name === 'getCheckoutLink') {
+          const { cartId, countryCode } = args;
+          
+          // Generate checkout link URL with country code
+          const baseUrl = await getBaseUrl();
+          const checkoutUrl = `${baseUrl}/${countryCode.toLowerCase()}/account/checkout-link?cartId=${cartId}`;
+          
+          return new Response(JSON.stringify({
+            jsonrpc: '2.0',
+            id: body.id,
+            result: {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  checkoutUrl,
+                  cartId,
+                  message: 'Checkout link created! Sign in to complete your order securely.',
+                  instructions: 'Click the checkout URL to complete your order with payment details.'
                 }, null, 2),
               }],
             }

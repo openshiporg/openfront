@@ -23,6 +23,11 @@ import { GiftCard } from "./GiftCard";
 import { GiftCardTransaction } from "./GiftCardTransaction";
 import { IdempotencyKey } from "./IdempotencyKey";
 import { Invite } from "./Invite";
+import { Account } from "./Account";
+import { AccountLineItem } from "./AccountLineItem";
+import { Invoice } from "./Invoice";
+import { InvoiceLineItem } from "./InvoiceLineItem";
+import { BusinessAccountRequest } from "./BusinessAccountRequest";
 import { LineItem } from "./LineItem";
 import { LineItemAdjustment } from "./LineItemAdjustment";
 import { LineItemTaxLine } from "./LineItemTaxLine";
@@ -81,6 +86,8 @@ import { WebhookEndpoint } from "./WebhookEndpoint";
 import { WebhookEvent } from "./WebhookEvent";
 
 export const models = {
+  Account,
+  AccountLineItem,
   Address,
   ApiKey,
   BatchJob,
@@ -105,6 +112,9 @@ export const models = {
   GiftCardTransaction,
   IdempotencyKey,
   Invite,
+  Invoice,
+  InvoiceLineItem,
+  BusinessAccountRequest,
   LineItem,
   LineItemAdjustment,
   LineItemTaxLine,

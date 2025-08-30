@@ -96,6 +96,10 @@ export const Region = list({
       ref: "ShippingProvider.regions",
       many: true,
     }),
+    accountLineItems: relationship({
+      ref: "AccountLineItem.region",
+      many: true,
+    }),
     ...trackingFields
   },
 });

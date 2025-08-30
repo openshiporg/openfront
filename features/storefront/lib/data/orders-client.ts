@@ -210,8 +210,8 @@ const ORDER_BY_DISPLAY_ID_QUERY = gql`
 
 // Order mutations
 const COMPLETE_CART_MUTATION = gql`
-  mutation CompleteCart($cartId: ID!) {
-    completeCart(id: $cartId) {
+  mutation CompleteActiveCart($cartId: ID!, $paymentMethodId: ID) {
+    completeActiveCart(cartId: $cartId, paymentMethodId: $paymentMethodId) {
       type
       ... on Order {
         id
@@ -298,7 +298,7 @@ export async function getOrderByDisplayId(displayId: string) {
   }
 }
 
-export async function completeCart(cartId?: string) {
+export async function completeCart(cartId?: string, paymentMethodId?: string) {
   const id = cartId || getCartId();
   if (!id) throw new Error('Cart ID is required');
 
@@ -306,12 +306,12 @@ export async function completeCart(cartId?: string) {
   const headers = token ? { authorization: `Bearer ${token}` } : {};
 
   try {
-    const { completeCart } = await openfrontClient.request(
+    const { completeActiveCart } = await openfrontClient.request(
       COMPLETE_CART_MUTATION,
-      { cartId: id },
+      { cartId: id, paymentMethodId },
       headers
     );
-    return completeCart;
+    return completeActiveCart;
   } catch (error) {
     console.error('Error completing cart:', error);
     throw error;

@@ -317,6 +317,17 @@ export const Order = list({
       ref: "Swap.order",
       many: true,
     }),
+    
+    // Account relationship for Openship integration
+    account: relationship({
+      ref: 'Account.orders',
+      many: false,
+    }),
+    
+    accountLineItems: relationship({
+      ref: 'AccountLineItem.order',
+      many: true,
+    }),
     secretKey: text({
       hooks: {
         resolveInput: ({ operation }) => {

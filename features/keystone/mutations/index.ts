@@ -29,6 +29,12 @@ import validateShippingAddress from './validateShippingAddress';
 import trackShipment from './trackShipment';
 import cancelShippingLabel from './cancelShippingLabel';
 import createProviderShippingLabel from './createProviderShippingLabel';
+import regenerateCustomerToken from './regenerateCustomerToken';
+import getCustomerAccount from './getCustomerAccount';
+import getCustomerAccounts from './getCustomerAccounts';
+import payInvoice from './payInvoice';
+import createInvoiceFromLineItems from './createInvoiceFromLineItems';
+import getUnpaidLineItemsByRegion from './getUnpaidLineItemsByRegion';
 
 const graphql = String.raw;
 
@@ -48,6 +54,9 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         activeCartRegion(countryCode: String!): Region
         getCustomerOrder(orderId: ID!, secretKey: String): JSON
         getCustomerOrders(limit: Int, offset: Int): JSON
+        getCustomerAccount(accountId: ID!): JSON
+        getCustomerAccounts(limit: Int, offset: Int): JSON
+        getUnpaidLineItemsByRegion(accountId: ID!): UnpaidLineItemsByRegionResult!
         getAnalytics(timeframe: String): JSON
       }
 
@@ -130,6 +139,50 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         success: Boolean!
       }
 
+
+      type CustomerTokenResult {
+        success: Boolean!
+        token: String
+      }
+
+      input PaymentInput {
+        paymentMethod: String!
+        paymentMethodId: String
+        orderId: String
+        data: JSON
+      }
+
+      type PaymentResult {
+        success: Boolean!
+        invoice: Invoice
+        payment: Payment
+        message: String
+        error: String
+      }
+
+      type InvoiceCreationResult {
+        success: Boolean!
+        invoice: Invoice
+        message: String
+        error: String
+      }
+
+      type RegionLineItems {
+        region: JSON!
+        lineItems: [JSON!]!
+        totalAmount: Int!
+        formattedTotalAmount: String!
+        itemCount: Int!
+      }
+
+      type UnpaidLineItemsByRegionResult {
+        success: Boolean!
+        regions: [RegionLineItems!]!
+        totalRegions: Int!
+        totalUnpaidItems: Int!
+        message: String
+      }
+
       type Mutation {
         updateActiveUser(data: UserUpdateProfileInput!): User
         updateActiveCart(cartId: ID!, data: CartUpdateInput, code: String): Cart
@@ -146,7 +199,7 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         removeDiscountFromActiveCart(cartId: ID!, code: String!): Cart
         createActiveCartPaymentSessions(cartId: ID!): Cart
         setActiveCartPaymentSession(cartId: ID!, providerId: ID!): Cart
-        completeActiveCart(cartId: ID!): JSON
+        completeActiveCart(cartId: ID!, paymentSessionId: ID): JSON
         addActiveCartShippingMethod(cartId: ID!, shippingMethodId: ID!): Cart
         initiatePaymentSession(
           cartId: ID!
@@ -166,6 +219,9 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
           dimensions: DimensionsInput
           lineItems: [LineItemInput!]
         ): ProviderShippingLabel
+        regenerateCustomerToken: CustomerTokenResult!
+        payInvoice(invoiceId: ID!, paymentData: PaymentInput!): PaymentResult!
+        createInvoiceFromLineItems(accountId: ID!, regionId: ID!, lineItemIds: [ID!]!, dueDate: String): InvoiceCreationResult!
       }
     `,
     resolvers: {
@@ -177,6 +233,9 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         activeCartRegion,
         getCustomerOrder,
         getCustomerOrders,
+        getCustomerAccount,
+        getCustomerAccounts,
+        getUnpaidLineItemsByRegion,
         getAnalytics,
       },
       Mutation: {
@@ -202,6 +261,9 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         trackShipment,
         cancelShippingLabel,
         createProviderShippingLabel,
+        regenerateCustomerToken,
+        payInvoice,
+        createInvoiceFromLineItems,
       }
     },
   });

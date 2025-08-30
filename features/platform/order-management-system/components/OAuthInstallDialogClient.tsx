@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,12 @@ export const OAuthInstallDialogClient: React.FC<OAuthInstallDialogClientProps> =
   initialData,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const router = useRouter();
+
+  const handleClose = () => {
+    // Clear search params to close the dialog
+    router.replace('/dashboard/platform/apps');
+  };
 
   const handleAuthorize = async () => {
     try {
@@ -80,7 +87,7 @@ export const OAuthInstallDialogClient: React.FC<OAuthInstallDialogClientProps> =
   if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} modal>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()} modal>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <div className="flex items-center gap-3">
@@ -135,11 +142,9 @@ export const OAuthInstallDialogClient: React.FC<OAuthInstallDialogClientProps> =
           <div className="flex gap-2 w-full">
             <Button
               variant="outline"
-              onClick={handleDeny}
-              disabled={isProcessing}
+              onClick={handleClose}
               className="flex-1"
             >
-              {isProcessing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               Cancel
             </Button>
             <Button

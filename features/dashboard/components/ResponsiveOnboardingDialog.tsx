@@ -99,7 +99,7 @@ const STORE_TEMPLATES = {
     ],
     displayNames: {
       regions: ['North America (USD)', 'Europe (EUR)', 'United Kingdom (GBP)'],
-      paymentProviders: ['Stripe', 'PayPal', 'Manual Payment'],
+      paymentProviders: ['Stripe', 'PayPal', 'Cash on Delivery'],
       shipping: ['Standard Shipping', 'Express Shipping', 'Return Shipping'],
       categories: ['Shirts', 'Hoodies', 'Accessories', 'Pants'],
       collections: ['Latest Picks', 'New Arrivals', 'Trending'],
@@ -130,7 +130,7 @@ const STORE_TEMPLATES = {
     products: ['penrose-triangle-tshirt'],
     displayNames: {
       regions: ['North America (USD)'],
-      paymentProviders: ['Manual Payment'],
+      paymentProviders: ['Cash on Delivery'],
       shipping: ['Standard Shipping'],
       categories: ['Shirts'],
       collections: ['Latest Picks'],
@@ -150,7 +150,7 @@ const STORE_TEMPLATES = {
     products: ['penrose-triangle-tshirt'],
     displayNames: {
       regions: ['North America (USD)'],
-      paymentProviders: ['Manual Payment'],
+      paymentProviders: ['Cash on Delivery'],
       shipping: ['Standard Shipping'],
       categories: ['Shirts'],
       collections: ['Latest Picks'],

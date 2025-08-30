@@ -8,6 +8,7 @@ import {
   relationship,
   checkbox,
   virtual,
+  timestamp,
 } from '@keystone-6/core/fields';
 import { isSignedIn, permissions, rules } from '../access';
 import { trackingFields } from './trackingFields';
@@ -123,6 +124,30 @@ export const User = list({
       ],
       defaultValue: 'not_started',
     }),
+
+    // Account system fields
+    accounts: relationship({
+      ref: 'Account.user',
+      many: true,
+    }),
+    invoices: relationship({
+      ref: 'Invoice.user',
+      many: true,
+    }),
+    businessAccountRequest: relationship({
+      ref: 'BusinessAccountRequest.user', 
+      many: false,
+    }),
+    customerToken: text({
+      ui: { 
+        createView: { fieldMode: 'hidden' },
+        itemView: { fieldMode: 'read' }
+      },
+      db: {
+        isNullable: true,
+      },
+    }),
+    tokenGeneratedAt: timestamp(),
     ...group({
       label: 'Virtual Fields',
       description: 'Calculated fields for user display and cart status',

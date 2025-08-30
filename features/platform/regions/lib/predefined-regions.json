@@ -31,7 +31,7 @@
       "defaultPaymentProviders": [
         { "code": "pp_stripe_stripe", "name": "Stripe" },
         { "code": "pp_paypal_paypal", "name": "PayPal" },
-        { "code": "pp_system_default", "name": "Manual Payment" }
+        { "code": "pp_system_default", "name": "Cash on Delivery" }
       ],
       "defaultFulfillmentProviders": [
         { "code": "fp_manual", "name": "Manual Fulfillment" }
@@ -172,7 +172,7 @@
       "defaultPaymentProviders": [
         { "code": "pp_stripe_stripe", "name": "Stripe" },
         { "code": "pp_paypal_paypal", "name": "PayPal" },
-        { "code": "pp_system_default", "name": "Manual Payment" }
+        { "code": "pp_system_default", "name": "Cash on Delivery" }
       ],
       "defaultFulfillmentProviders": [
         { "code": "fp_manual", "name": "Manual Fulfillment" }
@@ -201,7 +201,7 @@
       "defaultPaymentProviders": [
         { "code": "pp_stripe_stripe", "name": "Stripe" },
         { "code": "pp_paypal_paypal", "name": "PayPal" },
-        { "code": "pp_system_default", "name": "Manual Payment" }
+        { "code": "pp_system_default", "name": "Cash on Delivery" }
       ],
       "defaultFulfillmentProviders": [
         { "code": "fp_manual", "name": "Manual Fulfillment" }
@@ -278,7 +278,7 @@
       "defaultPaymentProviders": [
         { "code": "pp_stripe_stripe", "name": "Stripe" },
         { "code": "pp_paypal_paypal", "name": "PayPal" },
-        { "code": "pp_system_default", "name": "Manual Payment" }
+        { "code": "pp_system_default", "name": "Cash on Delivery" }
       ],
       "defaultFulfillmentProviders": [
         { "code": "fp_manual", "name": "Manual Fulfillment" }
@@ -363,7 +363,7 @@
       "defaultPaymentProviders": [
         { "code": "pp_stripe_stripe", "name": "Stripe" },
         { "code": "pp_paypal_paypal", "name": "PayPal" },
-        { "code": "pp_system_default", "name": "Manual Payment" }
+        { "code": "pp_system_default", "name": "Cash on Delivery" }
       ],
       "defaultFulfillmentProviders": [
         { "code": "fp_manual", "name": "Manual Fulfillment" }
@@ -424,7 +424,7 @@
       "defaultPaymentProviders": [
         { "code": "pp_stripe_stripe", "name": "Stripe" },
         { "code": "pp_paypal_paypal", "name": "PayPal" },
-        { "code": "pp_system_default", "name": "Manual Payment" }
+        { "code": "pp_system_default", "name": "Cash on Delivery" }
       ],
       "defaultFulfillmentProviders": [
         { "code": "fp_manual", "name": "Manual Fulfillment" }
@@ -509,7 +509,7 @@
       "defaultPaymentProviders": [
         { "code": "pp_stripe_stripe", "name": "Stripe" },
         { "code": "pp_paypal_paypal", "name": "PayPal" },
-        { "code": "pp_system_default", "name": "Manual Payment" }
+        { "code": "pp_system_default", "name": "Cash on Delivery" }
       ],
       "defaultFulfillmentProviders": [
         { "code": "fp_manual", "name": "Manual Fulfillment" }
@@ -578,7 +578,7 @@
       "defaultPaymentProviders": [
         { "code": "pp_stripe_stripe", "name": "Stripe" },
         { "code": "pp_paypal_paypal", "name": "PayPal" },
-        { "code": "pp_system_default", "name": "Manual Payment" }
+        { "code": "pp_system_default", "name": "Cash on Delivery" }
       ],
       "defaultFulfillmentProviders": [
         { "code": "fp_manual", "name": "Manual Fulfillment" }
@@ -607,7 +607,7 @@
       "defaultPaymentProviders": [
         { "code": "pp_stripe_stripe", "name": "Stripe" },
         { "code": "pp_paypal_paypal", "name": "PayPal" },
-        { "code": "pp_system_default", "name": "Manual Payment" }
+        { "code": "pp_system_default", "name": "Cash on Delivery" }
       ],
       "defaultFulfillmentProviders": [
         { "code": "fp_manual", "name": "Manual Fulfillment" }
@@ -634,7 +634,7 @@
         }
       ],
       "defaultPaymentProviders": [
-        { "code": "pp_system_default", "name": "Manual Payment" }
+        { "code": "pp_system_default", "name": "Cash on Delivery" }
       ],
       "defaultFulfillmentProviders": [
         { "code": "fp_manual", "name": "Manual Fulfillment" }
@@ -662,7 +662,7 @@
       ],
       "defaultPaymentProviders": [
         { "code": "pp_stripe_stripe", "name": "Stripe" },
-        { "code": "pp_system_default", "name": "Manual Payment" }
+        { "code": "pp_system_default", "name": "Cash on Delivery" }
       ],
       "defaultFulfillmentProviders": [
         { "code": "fp_manual", "name": "Manual Fulfillment" }
@@ -690,7 +690,7 @@
       ],
       "defaultPaymentProviders": [
         { "code": "pp_stripe_stripe", "name": "Stripe" },
-        { "code": "pp_system_default", "name": "Manual Payment" }
+        { "code": "pp_system_default", "name": "Cash on Delivery" }
       ],
       "defaultFulfillmentProviders": [
         { "code": "fp_manual", "name": "Manual Fulfillment" }
@@ -719,7 +719,7 @@
       "defaultPaymentProviders": [
         { "code": "pp_stripe_stripe", "name": "Stripe" },
         { "code": "pp_paypal_paypal", "name": "PayPal" },
-        { "code": "pp_system_default", "name": "Manual Payment" }
+        { "code": "pp_system_default", "name": "Cash on Delivery" }
       ],
       "defaultFulfillmentProviders": [
         { "code": "fp_manual", "name": "Manual Fulfillment" }

@@ -57,7 +57,7 @@ const FULFILLMENT_PROVIDERS = [
 const PAYMENT_PROVIDERS = [
   { code: 'pp_stripe_stripe', name: 'Stripe' },
   { code: 'pp_paypal_paypal', name: 'PayPal' },
-  { code: 'pp_system_default', name: 'Manual Payment' },
+  { code: 'pp_system_default', name: 'Cash on Delivery' },
 ]
 
 export function RegionCreateDrawer({ 

@@ -9,26 +9,31 @@ const statusConfig = {
   pending: {
     label: "Pending",
     icon: RotateCcw,
+    iconColor: "text-blue-500",
     color: "blue"
   },
   completed: {
     label: "Completed",
     icon: Check,
+    iconColor: "text-emerald-500",
     color: "emerald"
   },
   archived: {
     label: "Archived",
     icon: Archive,
+    iconColor: "text-zinc-500",
     color: "zinc"
   },
   canceled: {
     label: "Canceled",
     icon: X,
+    iconColor: "text-red-500",
     color: "rose"
   },
   requires_action: {
     label: "Requires Action",
     icon: AlertTriangle,
+    iconColor: "text-orange-500",
     color: "orange"
   },
 } as const;
@@ -128,7 +133,7 @@ export function StatusTabs({ statusCounts, entityName = "Items" }: StatusTabsPro
       />
 
       <div
-        className="absolute bottom-[-1px] h-[2px] bg-foreground transition-all duration-300 ease-out ml-4 md:ml-6"
+        className="absolute bottom-[-1px] h-[2px] bg-blue-500 transition-all duration-300 ease-out ml-4 md:ml-6"
         style={{
           left: `${activeTabOffsetLeft - scrollOffset}px`,
           width: `${activeTabWidth}px`,
@@ -157,6 +162,8 @@ export function StatusTabs({ statusCounts, entityName = "Items" }: StatusTabsPro
           </div>
           {statuses.map((status, index) => {
             const StatusIcon = statusConfig[status.value as keyof typeof statusConfig].icon;
+            const iconColor = statusConfig[status.value as keyof typeof statusConfig].iconColor;
+            
             return (
               <div
                 key={status.value}
@@ -171,10 +178,11 @@ export function StatusTabs({ statusCounts, entityName = "Items" }: StatusTabsPro
                 onClick={() => handleStatusChange(status.value)}
               >
                 <div className="text-sm font-medium leading-5 whitespace-nowrap flex items-center justify-center h-full gap-2">
+                  <StatusIcon className={`h-4 w-4 ${iconColor}`} />
                   {status.label}
-                  <Badge color={statusConfig[status.value as keyof typeof statusConfig].color} className="px-1.5 py-0 text-[10px] leading-[14px] rounded-sm shadow-xs inline-flex items-center h-[18px]">
+                  <span className="rounded-sm bg-background border shadow-xs px-1.5 py-0 text-[10px] leading-[14px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 inline-flex items-center h-[18px]">
                     {status.count}
-                  </Badge>
+                  </span>
                 </div>
               </div>
             );

@@ -19,7 +19,7 @@ interface AdminPaymentSelectionProps {
 }
 
 const paymentInfoMap: Record<string, { title: string; icon: React.ReactNode }> = {
-  manual: { title: "Manual Payment", icon: <DollarSign className="h-5 w-5" /> },
+  manual: { title: "Cash on Delivery", icon: <DollarSign className="h-5 w-5" /> },
   stripe: { title: "Stripe", icon: <CreditCard className="h-5 w-5" /> },
   paypal: { title: "PayPal", icon: <CreditCard className="h-5 w-5" /> },
 };

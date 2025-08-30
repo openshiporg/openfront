@@ -28,6 +28,18 @@ export async function retrieveCart() {
   return activeCart;
 }
 
+export async function retrieveCartById(cartId: string) {
+  if (!cartId) return null;
+
+  const { activeCart } = await openfrontClient.request(
+    CART_QUERY,
+    { cartId },
+    {}
+  );
+
+  return activeCart;
+}
+
 export async function getCart(cartId: string) {
   const GET_CART_QUERY = gql`
     query GetCart($cartId: ID!) {
@@ -998,7 +1010,8 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
         );
 
         if (authenticateUserWithPassword.__typename === "UserAuthenticationWithPasswordFailure") {
-          throw new Error(authenticateUserWithPassword.message);
+          // This shouldn't happen for guest users we just created, but handle gracefully
+          throw new Error("Authentication failed. Please try again or contact support.");
         }
 
         // Set the auth token for the guest user session
@@ -1010,7 +1023,23 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
         shippingAddress.user = { connect: { id: guestUser.id } };
       } catch (error) {
         console.error("Error creating guest user:", error);
-        return error instanceof Error ? error.message : String(error);
+        
+        // Check if this is a unique constraint error (user already exists)
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorStr = JSON.stringify(error).toLowerCase();
+        
+        if (errorMessage.includes('Unique constraint') || 
+            errorMessage.includes('already exists') || 
+            errorMessage.includes('duplicate') ||
+            errorMessage.toLowerCase().includes('unique') ||
+            errorStr.includes('unique constraint') ||
+            errorStr.includes('duplicate') ||
+            errorStr.includes('email_unique') ||
+            (error as any)?.code === 'P2002') { // Prisma unique constraint error code
+          return "This email address already has an account. Please use a different email or sign in to continue with your order.";
+        }
+        
+        return errorMessage;
       }
     }
 
@@ -1188,19 +1217,20 @@ export async function setPaymentMethod(providerId: string) {
   }
 }
 
-export async function placeOrder() {
+export async function placeOrder(paymentSessionId?: string) {
   const cartId = (await cookies()).get("_openfront_cart_id")?.value;
   if (!cartId) throw new Error("No cartId cookie found");
 
   try {
     const { completeActiveCart } = await openfrontClient.request(
       gql`
-        mutation CompleteActiveCart($cartId: ID!) {
-          completeActiveCart(cartId: $cartId)
+        mutation CompleteActiveCart($cartId: ID!, $paymentSessionId: ID) {
+          completeActiveCart(cartId: $cartId, paymentSessionId: $paymentSessionId)
         }
       `,
       {
         cartId,
+        paymentSessionId,
       }
     );
 

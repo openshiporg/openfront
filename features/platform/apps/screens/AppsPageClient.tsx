@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ChevronRight, ChevronDown, Plus, Loader2 } from "lucide-react"
@@ -275,6 +276,7 @@ const ExistingAppCard = ({ app, onInstall, onRedirectUrisUpdate }: ExistingAppCa
 }
 
 export function AppsPageClient({ existingApps = [] }: AppsPageClientProps) {
+  const router = useRouter()
   const [activatedApps, setActivatedApps] = useState<string[]>([])
   const [isMarketplaceDialogOpen, setIsMarketplaceDialogOpen] = useState(false)
   const [selectedApp, setSelectedApp] = useState<AvailableApp | null>(null)
@@ -328,22 +330,20 @@ export function AppsPageClient({ existingApps = [] }: AppsPageClientProps) {
       nonce: crypto.randomUUID()
     })
 
-    // Set URL parameters to show OAuth install dialog (same as when coming from Openship)
-    const currentUrl = new URL(window.location.href)
-    currentUrl.searchParams.set('install', 'true')
-    currentUrl.searchParams.set('client_id', app.clientId)
-    currentUrl.searchParams.set('scope', app.scopes.join(' '))
-    currentUrl.searchParams.set('redirect_uri', app.redirectUris[0])
-    currentUrl.searchParams.set('response_type', 'code')
-    currentUrl.searchParams.set('state', state)
+    // Build URL parameters to show OAuth install dialog (same as when coming from Openship)
+    const searchParams = new URLSearchParams()
+    searchParams.set('install', 'true')
+    searchParams.set('client_id', app.clientId)
+    searchParams.set('scope', app.scopes.join(' '))
+    searchParams.set('redirect_uri', app.redirectUris[0])
+    searchParams.set('response_type', 'code')
+    searchParams.set('state', state)
 
-    console.log('🔴 Setting URL params to show OAuth dialog:', currentUrl.toString())
+    console.log('🔴 Setting URL params to show OAuth dialog:', searchParams.toString())
     
-    window.history.pushState({}, '', currentUrl.toString())
-    
-    // Force page refresh to show dialog
-    window.location.reload()
-  }, [apps])
+    // Navigate with search params to trigger dialog without page refresh
+    router.push(`/dashboard/platform/apps?${searchParams.toString()}`)
+  }, [router])
 
 
 

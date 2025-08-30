@@ -35,6 +35,102 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
+// features/keystone/utils/currencyConversion.ts
+var currencyConversion_exports = {};
+__export(currencyConversion_exports, {
+  convertCurrency: () => convertCurrency,
+  default: () => currencyConversion_default,
+  formatCurrencyAmount: () => formatCurrencyAmount,
+  getCurrentExchangeRates: () => getCurrentExchangeRates,
+  getSupportedCurrencies: () => getSupportedCurrencies,
+  isConversionSupported: () => isConversionSupported,
+  updateExchangeRates: () => updateExchangeRates
+});
+async function convertCurrency(amount, fromCurrency, toCurrency) {
+  if (fromCurrency === toCurrency) {
+    return amount;
+  }
+  const from = fromCurrency.toUpperCase();
+  const to = toCurrency.toUpperCase();
+  try {
+    const rate = getConversionRate(from, to);
+    if (!rate) {
+      console.warn(`No conversion rate found for ${from} to ${to}, defaulting to 1:1`);
+      return amount;
+    }
+    const convertedAmount = Math.round(amount * rate);
+    console.log(`Currency conversion: ${amount} ${from} = ${convertedAmount} ${to} (rate: ${rate})`);
+    return convertedAmount;
+  } catch (error) {
+    console.error(`Error converting currency from ${from} to ${to}:`, error);
+    return amount;
+  }
+}
+function getConversionRate(fromCurrency, toCurrency) {
+  const rates = STATIC_EXCHANGE_RATES[fromCurrency];
+  if (!rates) {
+    return null;
+  }
+  return rates[toCurrency] || null;
+}
+function getSupportedCurrencies() {
+  return Object.keys(STATIC_EXCHANGE_RATES);
+}
+function isConversionSupported(fromCurrency, toCurrency) {
+  const from = fromCurrency.toUpperCase();
+  const to = toCurrency.toUpperCase();
+  return Boolean(STATIC_EXCHANGE_RATES[from]?.[to]);
+}
+function updateExchangeRates(rates) {
+  Object.assign(STATIC_EXCHANGE_RATES, rates);
+}
+function getCurrentExchangeRates() {
+  return { ...STATIC_EXCHANGE_RATES };
+}
+function formatCurrencyAmount(amount, currencyCode) {
+  const currency = currencyCode.toUpperCase();
+  const noDivisionCurrencies = ["JPY", "KRW", "VND"];
+  const divisor = noDivisionCurrencies.includes(currency) ? 1 : 100;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency
+  }).format(amount / divisor);
+}
+var STATIC_EXCHANGE_RATES, currencyConversion_default;
+var init_currencyConversion = __esm({
+  "features/keystone/utils/currencyConversion.ts"() {
+    "use strict";
+    STATIC_EXCHANGE_RATES = {
+      USD: {
+        EUR: 0.85,
+        GBP: 0.73,
+        CAD: 1.35,
+        AUD: 1.52,
+        JPY: 110,
+        USD: 1
+      },
+      EUR: {
+        USD: 1.18,
+        GBP: 0.86,
+        CAD: 1.59,
+        AUD: 1.79,
+        JPY: 129.5,
+        EUR: 1
+      },
+      GBP: {
+        USD: 1.37,
+        EUR: 1.16,
+        CAD: 1.85,
+        AUD: 2.08,
+        JPY: 150.6,
+        GBP: 1
+      }
+      // Add more currencies as needed
+    };
+    currencyConversion_default = convertCurrency;
+  }
+});
+
 // features/integrations/payment/stripe.ts
 var stripe_exports = {};
 __export(stripe_exports, {
@@ -1248,7 +1344,7 @@ module.exports = __toCommonJS(keystone_exports);
 
 // features/keystone/index.ts
 var import_auth = require("@keystone-6/auth");
-var import_core85 = require("@keystone-6/core");
+var import_core90 = require("@keystone-6/core");
 
 // features/keystone/models/fields.ts
 var import_fields = require("@keystone-6/core/fields");
@@ -2048,8 +2144,9 @@ async function setActiveCartPaymentSession(root, { cartId, providerId }, context
 var setActiveCartPaymentSession_default = setActiveCartPaymentSession;
 
 // features/keystone/mutations/completeActiveCart.ts
-async function completeActiveCart(root, { cartId }, context) {
+async function completeActiveCart(root, { cartId, paymentSessionId }, context) {
   const sudoContext = context.sudo();
+  const user = context.session?.itemId;
   const cart = await sudoContext.query.Cart.findOne({
     where: { id: cartId },
     query: `
@@ -2130,12 +2227,13 @@ async function completeActiveCart(root, { cartId }, context) {
       paymentCollection {
         id
         amount
-        paymentSessions(where: { isSelected: { equals: true }}) {
+        paymentSessions {
           id
           amount
           data
           paymentProvider {
             id
+            code
           }
         }
       }
@@ -2144,13 +2242,293 @@ async function completeActiveCart(root, { cartId }, context) {
   if (!cart) {
     throw new Error("Cart not found");
   }
-  const selectedSession = cart.paymentCollection?.paymentSessions?.[0];
-  if (!selectedSession) {
-    throw new Error("No payment session selected");
+  if (!paymentSessionId) {
+    return await handleAccountOrder(cart, user, sudoContext);
+  } else {
+    return await handlePaidOrder(cart, paymentSessionId, sudoContext);
   }
+}
+async function handleAccountOrder(cart, user, sudoContext) {
+  if (!user) {
+    throw new Error("Authentication required for account orders");
+  }
+  const cartCurrency = cart.region?.currency?.code;
+  if (!cartCurrency) {
+    throw new Error("Cart region or currency not found");
+  }
+  const accounts = await sudoContext.query.Account.findMany({
+    where: {
+      user: { id: { equals: user } },
+      accountType: { equals: "business" },
+      status: { equals: "active" }
+    },
+    query: `
+      id
+      totalAmount
+      paidAmount
+      creditLimit
+      currency {
+        id
+        code
+        noDivisionCurrency
+      }
+      user {
+        id
+        email
+      }
+    `
+  });
+  const activeAccount = accounts[0];
+  if (!activeAccount) {
+    throw new Error(`No active business account found. Contact administrator to set up business account access.`);
+  }
+  const convertCurrency2 = (await Promise.resolve().then(() => (init_currencyConversion(), currencyConversion_exports))).default;
+  const orderInAccountCurrency = await convertCurrency2(
+    cart.rawTotal,
+    cartCurrency,
+    activeAccount.currency.code
+  );
+  const accountWithBalance = await sudoContext.query.Account.findOne({
+    where: { id: activeAccount.id },
+    query: "availableCreditInAccountCurrency"
+  });
+  const availableCredit = accountWithBalance.availableCreditInAccountCurrency || 0;
+  if (orderInAccountCurrency > availableCredit) {
+    const { formatCurrencyAmount: formatCurrencyAmount3 } = await Promise.resolve().then(() => (init_currencyConversion(), currencyConversion_exports));
+    const availableCreditFormatted = formatCurrencyAmount3(availableCredit, activeAccount.currency.code);
+    const requiredCreditFormatted = formatCurrencyAmount3(orderInAccountCurrency, activeAccount.currency.code);
+    throw new Error(
+      `Insufficient credit. Available: ${availableCreditFormatted}, Required: ${requiredCreditFormatted}. Please contact billing to increase your credit limit or make a payment.`
+    );
+  }
+  const order = await createOrderFromCartData(cart, sudoContext);
+  await addOrderToAccount(activeAccount.id, order, sudoContext);
+  return order;
+}
+async function handlePaidOrder(cart, paymentSessionId, sudoContext) {
+  const selectedSession = cart.paymentCollection?.paymentSessions?.find(
+    (session) => session.id === paymentSessionId
+  );
+  if (!selectedSession) {
+    throw new Error(`Payment session not found. Looking for session ID: ${paymentSessionId}`);
+  }
+  if (!selectedSession.paymentProvider) {
+    throw new Error("Payment provider not found in session");
+  }
+  if (!selectedSession.paymentProvider.code) {
+    throw new Error("Payment provider code is missing");
+  }
+  let paymentResult;
+  switch (selectedSession.paymentProvider.code) {
+    case "pp_stripe_stripe":
+      paymentResult = await captureStripePayment(selectedSession);
+      break;
+    case "pp_paypal_paypal":
+      paymentResult = await capturePayPalPayment(selectedSession);
+      break;
+    case "pp_system_default":
+      paymentResult = { status: "manual_pending", paymentIntentId: null };
+      break;
+    default:
+      throw new Error(`Unsupported payment provider: ${selectedSession.paymentProvider.code}`);
+  }
+  if (paymentResult.status !== "succeeded" && paymentResult.status !== "manual_pending") {
+    throw new Error(`Payment failed: ${paymentResult.error}`);
+  }
+  const order = await createOrderFromCartData(cart, sudoContext);
+  await createPaymentRecord(paymentResult, order, cart, sudoContext);
+  return order;
+}
+async function captureStripePayment(session) {
+  const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+  if (!stripe) {
+    throw new Error("Stripe not configured");
+  }
+  try {
+    const paymentIntentId = session.data.clientSecret?.split("_secret_")[0];
+    console.log("=== captureStripePayment Debug ===");
+    console.log("session.data:", session.data);
+    console.log("paymentIntentId:", paymentIntentId);
+    if (!paymentIntentId) {
+      throw new Error("Invalid Stripe payment intent");
+    }
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    console.log("PaymentIntent status:", paymentIntent.status);
+    console.log("PaymentIntent amount:", paymentIntent.amount);
+    if (paymentIntent.status === "succeeded") {
+      return {
+        status: "succeeded",
+        paymentIntentId: paymentIntent.id,
+        error: null
+      };
+    } else if (paymentIntent.status === "requires_capture") {
+      const captured = await stripe.paymentIntents.capture(paymentIntentId);
+      return {
+        status: captured.status === "succeeded" ? "succeeded" : "failed",
+        paymentIntentId: captured.id,
+        error: captured.status !== "succeeded" ? "Payment capture failed" : null
+      };
+    } else {
+      return {
+        status: "failed",
+        paymentIntentId: paymentIntent.id,
+        error: `Payment status: ${paymentIntent.status}`
+      };
+    }
+  } catch (error) {
+    return {
+      status: "failed",
+      paymentIntentId: null,
+      error: error.message
+    };
+  }
+}
+async function capturePayPalPayment(session) {
+  if (!session.data.orderId) {
+    return {
+      status: "failed",
+      paymentIntentId: null,
+      error: "PayPal order ID not found"
+    };
+  }
+  try {
+    const authResponse = await fetch(`${process.env.PAYPAL_API_URL || "https://api.paypal.com"}/v1/oauth2/token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Authorization": `Basic ${Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString("base64")}`
+      },
+      body: "grant_type=client_credentials"
+    });
+    if (!authResponse.ok) {
+      throw new Error("PayPal authentication failed");
+    }
+    const authData = await authResponse.json();
+    const accessToken = authData.access_token;
+    const orderResponse = await fetch(`${process.env.PAYPAL_API_URL || "https://api.paypal.com"}/v2/checkout/orders/${session.data.orderId}`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      }
+    });
+    if (!orderResponse.ok) {
+      throw new Error(`PayPal order verification failed: ${orderResponse.status}`);
+    }
+    const orderData = await orderResponse.json();
+    console.log("=== capturePayPalPayment Debug ===");
+    console.log("PayPal Order ID:", session.data.orderId);
+    console.log("PayPal Order Status:", orderData.status);
+    console.log("PayPal Order Amount:", orderData.purchase_units?.[0]?.amount);
+    if (orderData.status === "COMPLETED" || orderData.status === "APPROVED") {
+      return {
+        status: "succeeded",
+        paymentIntentId: session.data.orderId,
+        error: null
+      };
+    } else {
+      return {
+        status: "failed",
+        paymentIntentId: session.data.orderId,
+        error: `PayPal order status: ${orderData.status}`
+      };
+    }
+  } catch (error) {
+    console.error("PayPal verification error:", error);
+    return {
+      status: "failed",
+      paymentIntentId: session.data.orderId,
+      error: error.message
+    };
+  }
+}
+async function addOrderToAccount(accountId, order, sudoContext) {
+  const account = await sudoContext.query.Account.findOne({
+    where: { id: accountId },
+    query: `
+      id
+      totalAmount
+      currency {
+        code
+      }
+    `
+  });
+  const orderDetails = await sudoContext.query.Order.findOne({
+    where: { id: order.id },
+    query: `
+      id
+      displayId
+      rawTotal
+      region {
+        id
+        name
+        currency {
+          code
+        }
+      }
+      currency {
+        code
+      }
+      lineItems {
+        id
+      }
+    `
+  });
+  try {
+    await sudoContext.prisma.$transaction(async (tx) => {
+      await sudoContext.query.AccountLineItem.createOne({
+        data: {
+          account: { connect: { id: accountId } },
+          order: { connect: { id: order.id } },
+          region: { connect: { id: orderDetails.region.id } },
+          description: `Order #${orderDetails.displayId} - ${orderDetails.lineItems?.length || 0} items`,
+          amount: orderDetails.rawTotal || 0,
+          orderDisplayId: String(orderDetails.displayId),
+          itemCount: orderDetails.lineItems?.length || 0,
+          paymentStatus: "unpaid"
+        }
+      });
+      await sudoContext.query.Account.updateOne({
+        where: { id: accountId },
+        data: {
+          totalAmount: (account.totalAmount || 0) + (orderDetails.rawTotal || 0)
+        }
+      });
+      await sudoContext.query.Order.updateOne({
+        where: { id: order.id },
+        data: {
+          account: { connect: { id: accountId } }
+        }
+      });
+    });
+    console.log(`Order #${orderDetails.displayId} added to account ${accountId} for ${orderDetails.rawTotal} ${orderDetails.currency.code}`);
+  } catch (error) {
+    console.error("Error adding order to account:", error);
+    throw new Error(`Failed to add order to account: ${error.message}`);
+  }
+}
+async function createPaymentRecord(paymentResult, order, cart, sudoContext) {
+  const selectedSession = cart.paymentCollection?.paymentSessions?.[0];
+  await sudoContext.query.Payment.createOne({
+    data: {
+      status: paymentResult.status === "succeeded" ? "captured" : "pending",
+      amount: cart.rawTotal,
+      currencyCode: cart.region.currency.code,
+      data: {
+        ...selectedSession.data,
+        paymentIntentId: paymentResult.paymentIntentId
+      },
+      capturedAt: paymentResult.status === "succeeded" ? (/* @__PURE__ */ new Date()).toISOString() : null,
+      paymentCollection: { connect: { id: cart.paymentCollection.id } },
+      order: { connect: { id: order.id } },
+      user: order.user?.id ? { connect: { id: order.user.id } } : void 0
+    }
+  });
+}
+async function createOrderFromCartData(cart, sudoContext) {
   const userId = cart.user?.id || cart.shippingAddress?.user?.id;
   const hasAccount = cart.user?.hasAccount || cart.shippingAddress?.user?.hasAccount || false;
-  const secretKey = !hasAccount ? require("crypto").randomBytes(32).toString("hex") : void 0;
+  const secretKey = !userId ? require("crypto").randomBytes(32).toString("hex") : void 0;
   const formatCurrency5 = (amount, currencyCode) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -2224,7 +2602,7 @@ async function completeActiveCart(root, { cartId }, context) {
   }
   const order = await sudoContext.query.Order.createOne({
     data: {
-      cart: { connect: { id: cartId } },
+      cart: { connect: { id: cart.id } },
       email: cart.email,
       user: userId ? { connect: { id: userId } } : void 0,
       region: { connect: { id: cart.region.id } },
@@ -2242,27 +2620,15 @@ async function completeActiveCart(root, { cartId }, context) {
         create: {
           type: "ORDER_PLACED",
           data: {
-            cartId,
+            cartId: cart.id,
             isGuestOrder: !hasAccount
           }
         }
       }
     }
   });
-  await sudoContext.query.Payment.createOne({
-    data: {
-      status: "captured",
-      amount: cart.rawTotal,
-      currencyCode: cart.region.currency.code,
-      data: selectedSession.data,
-      capturedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      paymentCollection: { connect: { id: cart.paymentCollection.id } },
-      order: { connect: { id: order.id } },
-      user: userId ? { connect: { id: userId } } : void 0
-    }
-  });
   await sudoContext.query.Cart.updateOne({
-    where: { id: cartId },
+    where: { id: cart.id },
     data: {
       order: { connect: { id: order.id } }
     }
@@ -3900,6 +4266,652 @@ async function createProviderShippingLabel(root, { orderId, providerId, rateId, 
 }
 var createProviderShippingLabel_default = createProviderShippingLabel;
 
+// features/keystone/mutations/regenerateCustomerToken.ts
+async function regenerateCustomerToken(root, args, context) {
+  const userId = context.session?.itemId;
+  if (!userId) {
+    throw new Error("Authentication required");
+  }
+  const sudoContext = context.sudo();
+  try {
+    const accounts = await sudoContext.query.Account.findMany({
+      where: {
+        user: { id: { equals: userId } },
+        status: { equals: "active" },
+        accountType: { equals: "business" }
+      },
+      query: "id"
+    });
+    const activeAccount = accounts[0];
+    if (!activeAccount) {
+      throw new Error("No active account found. Customer token can only be regenerated for users with active accounts.");
+    }
+    const crypto3 = require("crypto");
+    const newToken = "ctok_" + crypto3.randomBytes(32).toString("hex");
+    await sudoContext.query.User.updateOne({
+      where: { id: userId },
+      data: {
+        customerToken: newToken,
+        tokenGeneratedAt: (/* @__PURE__ */ new Date()).toISOString()
+      }
+    });
+    return {
+      success: true,
+      token: newToken
+    };
+  } catch (error) {
+    console.error("Error regenerating customer token:", error);
+    throw error;
+  }
+}
+var regenerateCustomerToken_default = regenerateCustomerToken;
+
+// features/keystone/mutations/getCustomerAccount.ts
+async function getCustomerAccount(root, { accountId }, context) {
+  if (!context.session?.itemId) {
+    throw new Error("Not authenticated");
+  }
+  const sudoContext = context.sudo();
+  const account = await sudoContext.query.Account.findOne({
+    where: { id: accountId },
+    query: `
+      id
+      accountNumber
+      title
+      description
+      status
+      totalAmount
+      paidAmount
+      creditLimit
+      formattedTotal
+      formattedBalance
+      formattedCreditLimit
+      availableCredit
+      formattedAvailableCredit
+      balanceDue
+      dueDate
+      paidAt
+      createdAt
+      accountType
+      currency {
+        id
+        code
+        symbol
+      }
+      user {
+        id
+        email
+        name
+      }
+      orders {
+        id
+        displayId
+        status
+        total
+        createdAt
+        lineItems {
+          id
+          title
+          quantity
+          thumbnail
+        }
+      }
+      lineItems {
+        id
+        description
+        amount
+        formattedAmount
+        orderDisplayId
+        itemCount
+        paymentStatus
+        createdAt
+        orderDetails
+      }
+    `
+  });
+  if (!account) {
+    throw new Error("Account not found");
+  }
+  if (account.user?.id !== context.session.itemId) {
+    throw new Error("Account not found");
+  }
+  return account;
+}
+var getCustomerAccount_default = getCustomerAccount;
+
+// features/keystone/mutations/getCustomerAccounts.ts
+async function getCustomerAccounts(root, { limit = 10, offset = 0 }, context) {
+  if (!context.session?.itemId) {
+    throw new Error("Not authenticated");
+  }
+  const sudoContext = context.sudo();
+  const accounts = await sudoContext.query.Account.findMany({
+    where: {
+      user: { id: { equals: context.session.itemId } }
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    skip: offset,
+    query: `
+      id
+      accountNumber
+      title
+      status
+      totalAmount
+      paidAmount
+      creditLimit
+      formattedTotal
+      formattedBalance
+      formattedCreditLimit
+      availableCredit
+      formattedAvailableCredit
+      balanceDue
+      dueDate
+      createdAt
+      accountType
+      currency {
+        id
+        code
+        symbol
+      }
+      lineItems {
+        id
+        description
+        amount
+        formattedAmount
+        orderDisplayId
+        itemCount
+        paymentStatus
+        createdAt
+      }
+    `
+  });
+  return accounts;
+}
+var getCustomerAccounts_default = getCustomerAccounts;
+
+// features/keystone/mutations/payInvoice.ts
+async function payInvoice(root, { invoiceId, paymentData }, context) {
+  const sudoContext = context.sudo();
+  const invoice = await sudoContext.query.Invoice.findOne({
+    where: { id: invoiceId },
+    query: `
+      id
+      totalAmount
+      status
+      currency {
+        id
+        code
+        noDivisionCurrency
+      }
+      account {
+        id
+        totalAmount
+        paidAmount
+        currency {
+          id
+          code
+        }
+      }
+      user {
+        id
+        email
+      }
+      lineItems {
+        id
+        accountLineItem {
+          id
+          amount
+          paymentStatus
+        }
+      }
+    `
+  });
+  if (!invoice) {
+    throw new Error("Invoice not found");
+  }
+  if (invoice.status === "paid") {
+    throw new Error("Invoice is already paid");
+  }
+  if (!context.session?.itemId || invoice.user.id !== context.session.itemId) {
+    throw new Error("Unauthorized to pay this invoice");
+  }
+  try {
+    let paymentResult;
+    switch (paymentData.paymentMethod) {
+      case "stripe":
+        paymentResult = await processStripePayment(paymentData, invoice);
+        break;
+      case "paypal":
+        paymentResult = await processPayPalPayment(paymentData, invoice);
+        break;
+      case "manual":
+        paymentResult = {
+          status: "succeeded",
+          paymentIntentId: `manual_${Date.now()}`,
+          data: paymentData
+        };
+        break;
+      default:
+        throw new Error(`Unsupported payment method: ${paymentData.paymentMethod}`);
+    }
+    if (paymentResult.status !== "succeeded") {
+      throw new Error(`Payment failed: ${paymentResult.error}`);
+    }
+    const updates = await sudoContext.prisma.$transaction(async (tx) => {
+      const updatedInvoice = await sudoContext.query.Invoice.updateOne({
+        where: { id: invoiceId },
+        data: {
+          status: "paid",
+          paidAt: (/* @__PURE__ */ new Date()).toISOString(),
+          metadata: {
+            ...invoice.metadata,
+            paymentResult,
+            paidAt: (/* @__PURE__ */ new Date()).toISOString()
+          }
+        }
+      });
+      const lineItemUpdates = [];
+      for (const lineItem of invoice.lineItems) {
+        if (lineItem.accountLineItem.paymentStatus !== "paid") {
+          const updated = await sudoContext.query.AccountLineItem.updateOne({
+            where: { id: lineItem.accountLineItem.id },
+            data: { paymentStatus: "paid" }
+          });
+          lineItemUpdates.push(updated);
+        }
+      }
+      const totalLineItemAmount = invoice.lineItems.reduce(
+        (sum, item) => sum + (item.accountLineItem.amount || 0),
+        0
+      );
+      const convertCurrency2 = (init_currencyConversion(), __toCommonJS(currencyConversion_exports)).default;
+      const convertedAmount = invoice.currency.code !== invoice.account.currency.code ? await convertCurrency2(totalLineItemAmount, invoice.currency.code, invoice.account.currency.code) : totalLineItemAmount;
+      const updatedAccount = await sudoContext.query.Account.updateOne({
+        where: { id: invoice.account.id },
+        data: {
+          paidAmount: (invoice.account.paidAmount || 0) + convertedAmount
+        }
+      });
+      const payment = await sudoContext.query.Payment.createOne({
+        data: {
+          status: "captured",
+          amount: invoice.totalAmount,
+          currencyCode: invoice.currency.code,
+          data: paymentResult,
+          capturedAt: (/* @__PURE__ */ new Date()).toISOString(),
+          user: { connect: { id: invoice.user.id } },
+          // Note: Need to add invoice relationship to Payment model
+          metadata: {
+            invoiceId,
+            paymentMethod: paymentData.paymentMethod,
+            accountId: invoice.account.id
+          }
+        }
+      });
+      return {
+        invoice: updatedInvoice,
+        account: updatedAccount,
+        payment,
+        lineItemUpdates
+      };
+    });
+    return {
+      success: true,
+      invoice: updates.invoice,
+      payment: updates.payment,
+      message: `Payment of ${invoice.totalAmount / (invoice.currency.noDivisionCurrency ? 1 : 100)} ${invoice.currency.code} processed successfully`
+    };
+  } catch (error) {
+    console.error("Payment processing error:", error);
+    throw new Error(`Payment failed: ${error.message}`);
+  }
+}
+async function processStripePayment(paymentData, invoice) {
+  const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+  if (!stripe) {
+    throw new Error("Stripe not configured");
+  }
+  try {
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: invoice.totalAmount,
+      currency: invoice.currency.code.toLowerCase(),
+      payment_method: paymentData.paymentMethodId,
+      confirmation_method: "manual",
+      confirm: true,
+      metadata: {
+        invoiceId: invoice.id,
+        accountId: invoice.account.id,
+        userId: invoice.user.id
+      }
+    });
+    return {
+      status: paymentIntent.status === "succeeded" ? "succeeded" : "failed",
+      paymentIntentId: paymentIntent.id,
+      error: paymentIntent.status !== "succeeded" ? `Stripe status: ${paymentIntent.status}` : null,
+      data: paymentIntent
+    };
+  } catch (error) {
+    return {
+      status: "failed",
+      paymentIntentId: null,
+      error: error.message,
+      data: error
+    };
+  }
+}
+async function processPayPalPayment(paymentData, invoice) {
+  try {
+    const authResponse = await fetch(`${process.env.PAYPAL_API_URL || "https://api.paypal.com"}/v1/oauth2/token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Authorization": `Basic ${Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString("base64")}`
+      },
+      body: "grant_type=client_credentials"
+    });
+    if (!authResponse.ok) {
+      throw new Error("PayPal authentication failed");
+    }
+    const authData = await authResponse.json();
+    const accessToken = authData.access_token;
+    const captureResponse = await fetch(`${process.env.PAYPAL_API_URL || "https://api.paypal.com"}/v2/checkout/orders/${paymentData.orderId}/capture`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      }
+    });
+    if (!captureResponse.ok) {
+      throw new Error(`PayPal capture failed: ${captureResponse.status}`);
+    }
+    const captureData = await captureResponse.json();
+    return {
+      status: captureData.status === "COMPLETED" ? "succeeded" : "failed",
+      paymentIntentId: paymentData.orderId,
+      error: captureData.status !== "COMPLETED" ? `PayPal status: ${captureData.status}` : null,
+      data: captureData
+    };
+  } catch (error) {
+    return {
+      status: "failed",
+      paymentIntentId: paymentData.orderId,
+      error: error.message,
+      data: error
+    };
+  }
+}
+var payInvoice_default = payInvoice;
+
+// features/keystone/mutations/createInvoiceFromLineItems.ts
+async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemIds, dueDate }, context) {
+  const sudoContext = context.sudo();
+  if (!context.session?.itemId) {
+    throw new Error("Authentication required");
+  }
+  const account = await sudoContext.query.Account.findOne({
+    where: { id: accountId },
+    query: `
+      id
+      user {
+        id
+        email
+      }
+      currency {
+        id
+        code
+        symbol
+        noDivisionCurrency
+      }
+      totalAmount
+      paidAmount
+    `
+  });
+  if (!account) {
+    throw new Error("Account not found");
+  }
+  if (account.user.id !== context.session.itemId) {
+    throw new Error("Unauthorized access to account");
+  }
+  const region2 = await sudoContext.query.Region.findOne({
+    where: { id: regionId },
+    query: `
+      id
+      name
+      currency {
+        id
+        code
+        symbol
+        noDivisionCurrency
+      }
+    `
+  });
+  if (!region2) {
+    throw new Error("Region not found");
+  }
+  const lineItems = await sudoContext.query.AccountLineItem.findMany({
+    where: {
+      id: { in: lineItemIds },
+      account: { id: { equals: accountId } },
+      region: { id: { equals: regionId } },
+      paymentStatus: { equals: "unpaid" }
+    },
+    query: `
+      id
+      amount
+      description
+      orderDisplayId
+      itemCount
+      paymentStatus
+      createdAt
+      region {
+        id
+        currency {
+          code
+        }
+      }
+    `
+  });
+  if (!lineItems.length) {
+    throw new Error("No valid unpaid line items found");
+  }
+  if (lineItems.length !== lineItemIds.length) {
+    throw new Error(`Some line items were not found, are already paid, or are not from ${region2.name} region`);
+  }
+  const totalAmount = lineItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+  if (totalAmount <= 0) {
+    throw new Error("Invoice total must be greater than zero");
+  }
+  try {
+    const result = await sudoContext.prisma.$transaction(async (tx) => {
+      const invoice = await sudoContext.query.Invoice.createOne({
+        data: {
+          user: { connect: { id: account.user.id } },
+          account: { connect: { id: accountId } },
+          currency: { connect: { id: region2.currency.id } },
+          totalAmount,
+          title: `${region2.name} Invoice for Account ${account.id}`,
+          description: `Payment invoice for ${lineItems.length} ${region2.name} orders (${lineItems.map((item) => `#${item.orderDisplayId}`).join(", ")})`,
+          status: "sent",
+          // Ready for payment
+          dueDate: dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1e3).toISOString(),
+          // Default 30 days
+          metadata: {
+            regionId,
+            regionName: region2.name,
+            createdFromLineItems: lineItemIds,
+            orderDisplayIds: lineItems.map((item) => item.orderDisplayId),
+            itemCount: lineItems.reduce((sum, item) => sum + (item.itemCount || 0), 0)
+          }
+        }
+      });
+      const invoiceLineItems = [];
+      for (const lineItem of lineItems) {
+        const invoiceLineItem = await sudoContext.query.InvoiceLineItem.createOne({
+          data: {
+            invoice: { connect: { id: invoice.id } },
+            accountLineItem: { connect: { id: lineItem.id } }
+          }
+        });
+        invoiceLineItems.push(invoiceLineItem);
+      }
+      return {
+        invoice: {
+          ...invoice,
+          lineItems: invoiceLineItems
+        }
+      };
+    });
+    const completeInvoice = await sudoContext.query.Invoice.findOne({
+      where: { id: result.invoice.id },
+      query: `
+        id
+        invoiceNumber
+        title
+        description
+        totalAmount
+        formattedTotal
+        status
+        dueDate
+        createdAt
+        currency {
+          code
+          symbol
+        }
+        lineItems {
+          id
+          orderDisplayId
+          formattedAmount
+          accountLineItem {
+            id
+            description
+            orderDisplayId
+            itemCount
+          }
+        }
+        itemCount
+      `
+    });
+    return {
+      success: true,
+      invoice: completeInvoice,
+      message: `Invoice created with ${lineItems.length} orders totaling ${completeInvoice.formattedTotal}`
+    };
+  } catch (error) {
+    console.error("Invoice creation error:", error);
+    throw new Error(`Failed to create invoice: ${error.message}`);
+  }
+}
+var createInvoiceFromLineItems_default = createInvoiceFromLineItems;
+
+// features/keystone/mutations/getUnpaidLineItemsByRegion.ts
+async function getUnpaidLineItemsByRegion(root, { accountId }, context) {
+  const sudoContext = context.sudo();
+  if (!context.session?.itemId) {
+    throw new Error("Authentication required");
+  }
+  const account = await sudoContext.query.Account.findOne({
+    where: { id: accountId },
+    query: `
+      id
+      user {
+        id
+        email
+      }
+    `
+  });
+  if (!account) {
+    throw new Error("Account not found");
+  }
+  if (account.user.id !== context.session.itemId) {
+    throw new Error("Unauthorized access to account");
+  }
+  try {
+    const unpaidLineItems = await sudoContext.query.AccountLineItem.findMany({
+      where: {
+        account: { id: { equals: accountId } },
+        paymentStatus: { equals: "unpaid" }
+      },
+      query: `
+        id
+        amount
+        description
+        orderDisplayId
+        itemCount
+        createdAt
+        region {
+          id
+          name
+          currency {
+            id
+            code
+            symbol
+            noDivisionCurrency
+          }
+        }
+      `,
+      orderBy: { createdAt: "desc" }
+    });
+    const lineItemsByRegion = unpaidLineItems.reduce((acc, item) => {
+      const regionId = item.region.id;
+      const regionName = item.region.name;
+      const currency = item.region.currency;
+      if (!acc[regionId]) {
+        acc[regionId] = {
+          region: {
+            id: regionId,
+            name: regionName,
+            currency
+          },
+          lineItems: [],
+          totalAmount: 0,
+          itemCount: 0
+        };
+      }
+      acc[regionId].lineItems.push({
+        id: item.id,
+        amount: item.amount,
+        description: item.description,
+        orderDisplayId: item.orderDisplayId,
+        itemCount: item.itemCount,
+        createdAt: item.createdAt,
+        formattedAmount: formatCurrencyAmount2(item.amount, currency.code)
+      });
+      acc[regionId].totalAmount += item.amount || 0;
+      acc[regionId].itemCount += item.itemCount || 0;
+      return acc;
+    }, {});
+    const regionsWithLineItems = Object.values(lineItemsByRegion).map((regionData) => ({
+      ...regionData,
+      formattedTotalAmount: formatCurrencyAmount2(
+        regionData.totalAmount,
+        regionData.region.currency.code
+      )
+    }));
+    regionsWithLineItems.sort((a, b) => b.totalAmount - a.totalAmount);
+    return {
+      success: true,
+      regions: regionsWithLineItems,
+      totalRegions: regionsWithLineItems.length,
+      totalUnpaidItems: unpaidLineItems.length,
+      message: `Found ${unpaidLineItems.length} unpaid orders across ${regionsWithLineItems.length} regions`
+    };
+  } catch (error) {
+    console.error("Error getting unpaid line items by region:", error);
+    throw new Error(`Failed to get unpaid line items: ${error.message}`);
+  }
+}
+function formatCurrencyAmount2(amount, currencyCode) {
+  const currency = currencyCode.toUpperCase();
+  const noDivisionCurrencies = ["JPY", "KRW", "VND"];
+  const divisor = noDivisionCurrencies.includes(currency) ? 1 : 100;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency
+  }).format(amount / divisor);
+}
+var getUnpaidLineItemsByRegion_default = getUnpaidLineItemsByRegion;
+
 // features/keystone/mutations/index.ts
 var graphql = String.raw;
 var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
@@ -3917,6 +4929,9 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
         activeCartRegion(countryCode: String!): Region
         getCustomerOrder(orderId: ID!, secretKey: String): JSON
         getCustomerOrders(limit: Int, offset: Int): JSON
+        getCustomerAccount(accountId: ID!): JSON
+        getCustomerAccounts(limit: Int, offset: Int): JSON
+        getUnpaidLineItemsByRegion(accountId: ID!): UnpaidLineItemsByRegionResult!
         getAnalytics(timeframe: String): JSON
       }
 
@@ -3999,6 +5014,50 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
         success: Boolean!
       }
 
+
+      type CustomerTokenResult {
+        success: Boolean!
+        token: String
+      }
+
+      input PaymentInput {
+        paymentMethod: String!
+        paymentMethodId: String
+        orderId: String
+        data: JSON
+      }
+
+      type PaymentResult {
+        success: Boolean!
+        invoice: Invoice
+        payment: Payment
+        message: String
+        error: String
+      }
+
+      type InvoiceCreationResult {
+        success: Boolean!
+        invoice: Invoice
+        message: String
+        error: String
+      }
+
+      type RegionLineItems {
+        region: JSON!
+        lineItems: [JSON!]!
+        totalAmount: Int!
+        formattedTotalAmount: String!
+        itemCount: Int!
+      }
+
+      type UnpaidLineItemsByRegionResult {
+        success: Boolean!
+        regions: [RegionLineItems!]!
+        totalRegions: Int!
+        totalUnpaidItems: Int!
+        message: String
+      }
+
       type Mutation {
         updateActiveUser(data: UserUpdateProfileInput!): User
         updateActiveCart(cartId: ID!, data: CartUpdateInput, code: String): Cart
@@ -4015,7 +5074,7 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
         removeDiscountFromActiveCart(cartId: ID!, code: String!): Cart
         createActiveCartPaymentSessions(cartId: ID!): Cart
         setActiveCartPaymentSession(cartId: ID!, providerId: ID!): Cart
-        completeActiveCart(cartId: ID!): JSON
+        completeActiveCart(cartId: ID!, paymentSessionId: ID): JSON
         addActiveCartShippingMethod(cartId: ID!, shippingMethodId: ID!): Cart
         initiatePaymentSession(
           cartId: ID!
@@ -4035,6 +5094,9 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
           dimensions: DimensionsInput
           lineItems: [LineItemInput!]
         ): ProviderShippingLabel
+        regenerateCustomerToken: CustomerTokenResult!
+        payInvoice(invoiceId: ID!, paymentData: PaymentInput!): PaymentResult!
+        createInvoiceFromLineItems(accountId: ID!, regionId: ID!, lineItemIds: [ID!]!, dueDate: String): InvoiceCreationResult!
       }
     `,
   resolvers: {
@@ -4046,6 +5108,9 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
       activeCartRegion: activeCartRegion_default,
       getCustomerOrder: getCustomerOrder_default,
       getCustomerOrders: getCustomerOrders_default,
+      getCustomerAccount: getCustomerAccount_default,
+      getCustomerAccounts: getCustomerAccounts_default,
+      getUnpaidLineItemsByRegion: getUnpaidLineItemsByRegion_default,
       getAnalytics: getAnalytics_default
     },
     Mutation: {
@@ -4070,7 +5135,10 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
       validateShippingAddress: validateShippingAddress_default,
       trackShipment: trackShipment_default,
       cancelShippingLabel: cancelShippingLabel_default,
-      createProviderShippingLabel: createProviderShippingLabel_default
+      createProviderShippingLabel: createProviderShippingLabel_default,
+      regenerateCustomerToken: regenerateCustomerToken_default,
+      payInvoice: payInvoice_default,
+      createInvoiceFromLineItems: createInvoiceFromLineItems_default
     }
   }
 });
@@ -5667,6 +6735,14 @@ var Currency = (0, import_core11.list)({
       ref: "Store.currencies",
       many: true
     }),
+    accounts: (0, import_fields14.relationship)({
+      ref: "Account.currency",
+      many: true
+    }),
+    invoices: (0, import_fields14.relationship)({
+      ref: "Invoice.currency",
+      many: true
+    }),
     ...(0, import_core11.group)({
       label: "Virtual Fields",
       description: "Virtual fields for currency",
@@ -6876,16 +7952,1032 @@ var Invite = (0, import_core24.list)({
   }
 });
 
-// features/keystone/models/LineItem.ts
+// features/keystone/models/Account.ts
 var import_core25 = require("@keystone-6/core");
 var import_fields28 = require("@keystone-6/core/fields");
+var Account = (0, import_core25.list)({
+  access: {
+    operation: {
+      query: permissions.canManageOrders,
+      create: permissions.canManageOrders,
+      update: permissions.canManageOrders,
+      delete: permissions.canManageOrders
+    }
+  },
+  fields: {
+    // Core account data
+    user: (0, import_fields28.relationship)({
+      ref: "User.accounts",
+      many: false,
+      validation: { isRequired: true }
+    }),
+    accountNumber: (0, import_fields28.text)({
+      validation: { isRequired: true },
+      isIndexed: "unique"
+    }),
+    title: (0, import_fields28.text)({
+      validation: { isRequired: true },
+      defaultValue: "Business Account"
+    }),
+    description: (0, import_fields28.text)({
+      ui: { displayMode: "textarea" },
+      defaultValue: "Running business account for automated orders placed through API integration"
+    }),
+    // Financial fields (amounts in cents)
+    totalAmount: (0, import_fields28.integer)({
+      defaultValue: 0
+    }),
+    paidAmount: (0, import_fields28.integer)({
+      defaultValue: 0
+    }),
+    creditLimit: (0, import_fields28.integer)({
+      validation: { isRequired: true },
+      defaultValue: 1e5
+      // $1000 default
+    }),
+    currency: (0, import_fields28.relationship)({
+      ref: "Currency.accounts",
+      many: false,
+      validation: { isRequired: true }
+    }),
+    // Status and dates
+    status: (0, import_fields28.select)({
+      options: [
+        { label: "Active", value: "active" },
+        { label: "Suspended", value: "suspended" },
+        { label: "Not Approved", value: "not_approved" },
+        { label: "Paid", value: "paid" },
+        { label: "Overdue", value: "overdue" }
+      ],
+      defaultValue: "active",
+      validation: { isRequired: true }
+    }),
+    dueDate: (0, import_fields28.timestamp)(),
+    paidAt: (0, import_fields28.timestamp)(),
+    suspendedAt: (0, import_fields28.timestamp)(),
+    notApprovedAt: (0, import_fields28.timestamp)(),
+    // Account type
+    accountType: (0, import_fields28.select)({
+      options: [
+        { label: "Business", value: "business" },
+        { label: "Personal", value: "personal" }
+      ],
+      defaultValue: "business",
+      validation: { isRequired: true }
+    }),
+    // Metadata for additional context
+    metadata: (0, import_fields28.json)({
+      defaultValue: {}
+    }),
+    // Relationships
+    orders: (0, import_fields28.relationship)({
+      ref: "Order.account",
+      many: true
+    }),
+    lineItems: (0, import_fields28.relationship)({
+      ref: "AccountLineItem.account",
+      many: true
+    }),
+    invoices: (0, import_fields28.relationship)({
+      ref: "Invoice.account",
+      many: true
+    }),
+    // Virtual computed fields
+    ...(0, import_core25.group)({
+      label: "Computed Fields",
+      description: "Auto-calculated fields for account display",
+      fields: {
+        balanceDue: (0, import_fields28.virtual)({
+          field: import_core25.graphql.field({
+            type: import_core25.graphql.Int,
+            resolve(item) {
+              return (item.totalAmount || 0) - (item.paidAmount || 0);
+            }
+          })
+        }),
+        formattedTotal: (0, import_fields28.virtual)({
+          field: import_core25.graphql.field({
+            type: import_core25.graphql.String,
+            async resolve(item, args, context) {
+              const account = await context.sudo().query.Account.findOne({
+                where: { id: item.id },
+                query: `
+                  totalAmount
+                  currency {
+                    code
+                    symbol
+                    noDivisionCurrency
+                  }
+                `
+              });
+              if (!account?.currency) return "$0.00";
+              const divisor = account.currency.noDivisionCurrency ? 1 : 100;
+              const amount = (account.totalAmount || 0) / divisor;
+              return new Intl.NumberFormat("en-US", {
+                style: "currency",
+                currency: account.currency.code
+              }).format(amount);
+            }
+          })
+        }),
+        formattedBalance: (0, import_fields28.virtual)({
+          field: import_core25.graphql.field({
+            type: import_core25.graphql.String,
+            async resolve(item, args, context) {
+              const account = await context.sudo().query.Account.findOne({
+                where: { id: item.id },
+                query: `
+                  totalAmount
+                  paidAmount
+                  currency {
+                    code
+                    symbol
+                    noDivisionCurrency
+                  }
+                `
+              });
+              if (!account?.currency) return "$0.00";
+              const divisor = account.currency.noDivisionCurrency ? 1 : 100;
+              const balance = ((account.totalAmount || 0) - (account.paidAmount || 0)) / divisor;
+              return new Intl.NumberFormat("en-US", {
+                style: "currency",
+                currency: account.currency.code
+              }).format(balance);
+            }
+          })
+        }),
+        formattedCreditLimit: (0, import_fields28.virtual)({
+          field: import_core25.graphql.field({
+            type: import_core25.graphql.String,
+            async resolve(item, args, context) {
+              const account = await context.sudo().query.Account.findOne({
+                where: { id: item.id },
+                query: `
+                  creditLimit
+                  currency {
+                    code
+                    symbol
+                    noDivisionCurrency
+                  }
+                `
+              });
+              if (!account?.currency) return "$0.00";
+              const divisor = account.currency.noDivisionCurrency ? 1 : 100;
+              const limit = (account.creditLimit || 0) / divisor;
+              return new Intl.NumberFormat("en-US", {
+                style: "currency",
+                currency: account.currency.code
+              }).format(limit);
+            }
+          })
+        }),
+        availableCredit: (0, import_fields28.virtual)({
+          field: import_core25.graphql.field({
+            type: import_core25.graphql.Int,
+            resolve(item) {
+              const used = (item.totalAmount || 0) - (item.paidAmount || 0);
+              return Math.max(0, (item.creditLimit || 0) - used);
+            }
+          })
+        }),
+        formattedAvailableCredit: (0, import_fields28.virtual)({
+          field: import_core25.graphql.field({
+            type: import_core25.graphql.String,
+            async resolve(item, args, context) {
+              const account = await context.sudo().query.Account.findOne({
+                where: { id: item.id },
+                query: `
+                  totalAmount
+                  paidAmount
+                  creditLimit
+                  currency {
+                    code
+                    symbol
+                    noDivisionCurrency
+                  }
+                `
+              });
+              if (!account?.currency) return "$0.00";
+              const divisor = account.currency.noDivisionCurrency ? 1 : 100;
+              const used = ((account.totalAmount || 0) - (account.paidAmount || 0)) / divisor;
+              const available = Math.max(0, (account.creditLimit || 0) / divisor - used);
+              return new Intl.NumberFormat("en-US", {
+                style: "currency",
+                currency: account.currency.code
+              }).format(available);
+            }
+          })
+        }),
+        // New currency-aware fields for multi-region support
+        totalOwedInAccountCurrency: (0, import_fields28.virtual)({
+          field: import_core25.graphql.field({
+            type: import_core25.graphql.Int,
+            async resolve(item, args, context) {
+              const convertCurrency2 = (await Promise.resolve().then(() => (init_currencyConversion(), currencyConversion_exports))).default;
+              const account = await context.sudo().query.Account.findOne({
+                where: { id: item.id },
+                query: `
+                  currency { code }
+                `
+              });
+              if (!account?.currency?.code) return 0;
+              const unpaidItems = await context.sudo().query.AccountLineItem.findMany({
+                where: {
+                  account: { id: { equals: item.id } },
+                  paymentStatus: { equals: "unpaid" }
+                },
+                query: `
+                  amount
+                  region {
+                    currency { code }
+                  }
+                `
+              });
+              let totalInAccountCurrency = 0;
+              for (const lineItem of unpaidItems) {
+                if (lineItem.region?.currency?.code) {
+                  const converted = await convertCurrency2(
+                    lineItem.amount || 0,
+                    lineItem.region.currency.code,
+                    account.currency.code
+                  );
+                  totalInAccountCurrency += converted;
+                }
+              }
+              return totalInAccountCurrency;
+            }
+          })
+        }),
+        availableCreditInAccountCurrency: (0, import_fields28.virtual)({
+          field: import_core25.graphql.field({
+            type: import_core25.graphql.Int,
+            async resolve(item, args, context) {
+              const convertCurrency2 = (await Promise.resolve().then(() => (init_currencyConversion(), currencyConversion_exports))).default;
+              const account = await context.sudo().query.Account.findOne({
+                where: { id: item.id },
+                query: `
+                  creditLimit
+                  currency { code }
+                `
+              });
+              if (!account?.currency?.code) return 0;
+              const unpaidItems = await context.sudo().query.AccountLineItem.findMany({
+                where: {
+                  account: { id: { equals: item.id } },
+                  paymentStatus: { equals: "unpaid" }
+                },
+                query: `
+                  amount
+                  region {
+                    currency { code }
+                  }
+                `
+              });
+              let totalOwedInAccountCurrency = 0;
+              for (const lineItem of unpaidItems) {
+                if (lineItem.region?.currency?.code) {
+                  const converted = await convertCurrency2(
+                    lineItem.amount || 0,
+                    lineItem.region.currency.code,
+                    account.currency.code
+                  );
+                  totalOwedInAccountCurrency += converted;
+                }
+              }
+              const creditLimit = account.creditLimit || 0;
+              return Math.max(0, creditLimit - totalOwedInAccountCurrency);
+            }
+          })
+        }),
+        formattedTotalOwedInAccountCurrency: (0, import_fields28.virtual)({
+          field: import_core25.graphql.field({
+            type: import_core25.graphql.String,
+            async resolve(item, args, context) {
+              const { formatCurrencyAmount: formatCurrencyAmount3 } = await Promise.resolve().then(() => (init_currencyConversion(), currencyConversion_exports));
+              const account = await context.sudo().query.Account.findOne({
+                where: { id: item.id },
+                query: `
+                  currency { code }
+                  totalOwedInAccountCurrency
+                `
+              });
+              if (!account?.currency?.code) return "$0.00";
+              return formatCurrencyAmount3(
+                account.totalOwedInAccountCurrency || 0,
+                account.currency.code
+              );
+            }
+          })
+        }),
+        formattedAvailableCreditInAccountCurrency: (0, import_fields28.virtual)({
+          field: import_core25.graphql.field({
+            type: import_core25.graphql.String,
+            async resolve(item, args, context) {
+              const { formatCurrencyAmount: formatCurrencyAmount3 } = await Promise.resolve().then(() => (init_currencyConversion(), currencyConversion_exports));
+              const account = await context.sudo().query.Account.findOne({
+                where: { id: item.id },
+                query: `
+                  currency { code }
+                  availableCreditInAccountCurrency
+                `
+              });
+              if (!account?.currency?.code) return "$0.00";
+              return formatCurrencyAmount3(
+                account.availableCreditInAccountCurrency || 0,
+                account.currency.code
+              );
+            }
+          })
+        })
+      }
+    }),
+    ...trackingFields
+  },
+  hooks: {
+    resolveInput({ operation, resolvedData }) {
+      if (operation === "create" && !resolvedData.accountNumber) {
+        const timestamp29 = Date.now();
+        resolvedData.accountNumber = `ACC-${(/* @__PURE__ */ new Date()).getFullYear()}-${String(timestamp29).slice(-6)}`;
+      }
+      return resolvedData;
+    }
+  }
+});
+
+// features/keystone/models/AccountLineItem.ts
+var import_core26 = require("@keystone-6/core");
+var import_fields29 = require("@keystone-6/core/fields");
+var AccountLineItem = (0, import_core26.list)({
+  access: {
+    operation: {
+      query: permissions.canManageOrders,
+      create: permissions.canManageOrders,
+      update: permissions.canManageOrders,
+      delete: permissions.canManageOrders
+    }
+  },
+  fields: {
+    // Core relationships
+    account: (0, import_fields29.relationship)({
+      ref: "Account.lineItems",
+      many: false,
+      validation: { isRequired: true }
+    }),
+    order: (0, import_fields29.relationship)({
+      ref: "Order.accountLineItems",
+      many: false,
+      validation: { isRequired: true }
+    }),
+    region: (0, import_fields29.relationship)({
+      ref: "Region.accountLineItems",
+      many: false
+    }),
+    // Line item details
+    description: (0, import_fields29.text)({
+      validation: { isRequired: true },
+      defaultValue: "Order line item"
+    }),
+    amount: (0, import_fields29.integer)({
+      validation: { isRequired: true },
+      label: "Amount (in cents)"
+    }),
+    orderDisplayId: (0, import_fields29.text)({
+      validation: { isRequired: true },
+      isIndexed: true
+    }),
+    itemCount: (0, import_fields29.integer)({
+      validation: { isRequired: true },
+      defaultValue: 0
+    }),
+    paymentStatus: (0, import_fields29.select)({
+      options: [
+        { label: "Unpaid", value: "unpaid" },
+        { label: "Paid", value: "paid" }
+      ],
+      defaultValue: "unpaid",
+      validation: { isRequired: true }
+    }),
+    // Junction relationship to track which invoices paid this item
+    invoiceLineItems: (0, import_fields29.relationship)({
+      ref: "InvoiceLineItem.accountLineItem",
+      many: true
+    }),
+    // Virtual computed fields
+    ...(0, import_core26.group)({
+      label: "Computed Fields",
+      description: "Auto-calculated fields for line item display",
+      fields: {
+        formattedAmount: (0, import_fields29.virtual)({
+          field: import_core26.graphql.field({
+            type: import_core26.graphql.String,
+            async resolve(item, args, context) {
+              const lineItem = await context.sudo().query.AccountLineItem.findOne({
+                where: { id: item.id },
+                query: `
+                  amount
+                  account {
+                    currency {
+                      code
+                      symbol
+                      noDivisionCurrency
+                    }
+                  }
+                `
+              });
+              if (!lineItem?.account?.currency) return "$0.00";
+              const divisor = lineItem.account.currency.noDivisionCurrency ? 1 : 100;
+              const amount = (lineItem.amount || 0) / divisor;
+              return new Intl.NumberFormat("en-US", {
+                style: "currency",
+                currency: lineItem.account.currency.code
+              }).format(amount);
+            }
+          })
+        }),
+        orderDetails: (0, import_fields29.virtual)({
+          field: import_core26.graphql.field({
+            type: import_core26.graphql.JSON,
+            async resolve(item, args, context) {
+              const lineItem = await context.sudo().query.AccountLineItem.findOne({
+                where: { id: item.id },
+                query: `
+                  order {
+                    id
+                    displayId
+                    status
+                    email
+                    createdAt
+                    total
+                    subtotal
+                    shipping
+                    tax
+                    lineItems {
+                      id
+                      title
+                      quantity
+                      sku
+                      variantTitle
+                      formattedUnitPrice
+                      formattedTotal
+                      thumbnail
+                    }
+                  }
+                `
+              });
+              return lineItem?.order || null;
+            }
+          })
+        })
+      }
+    }),
+    ...trackingFields
+  },
+  hooks: {
+    resolveInput: async ({ resolvedData, context, operation }) => {
+      if (operation === "create") {
+        if (resolvedData.order?.connect?.id && (!resolvedData.description || !resolvedData.amount)) {
+          const order = await context.sudo().query.Order.findOne({
+            where: { id: resolvedData.order.connect.id },
+            query: `
+              displayId
+              rawTotal
+              lineItems {
+                id
+              }
+            `
+          });
+          if (order) {
+            return {
+              ...resolvedData,
+              description: resolvedData.description || `Order #${order.displayId} - ${order.lineItems?.length || 0} items`,
+              amount: resolvedData.amount || order.rawTotal || 0,
+              orderDisplayId: resolvedData.orderDisplayId || order.displayId,
+              itemCount: resolvedData.itemCount || order.lineItems?.length || 0
+            };
+          }
+        }
+      }
+      return resolvedData;
+    }
+  }
+});
+
+// features/keystone/models/Invoice.ts
+var import_core27 = require("@keystone-6/core");
+var import_fields30 = require("@keystone-6/core/fields");
+var Invoice = (0, import_core27.list)({
+  access: {
+    operation: {
+      query: permissions.canManageOrders,
+      create: permissions.canManageOrders,
+      update: permissions.canManageOrders,
+      delete: permissions.canManageOrders
+    }
+  },
+  fields: {
+    // Core invoice data
+    user: (0, import_fields30.relationship)({
+      ref: "User.invoices",
+      many: false,
+      validation: { isRequired: true }
+    }),
+    invoiceNumber: (0, import_fields30.text)({
+      validation: { isRequired: true },
+      isIndexed: "unique"
+    }),
+    title: (0, import_fields30.text)({
+      validation: { isRequired: true },
+      defaultValue: "Payment Invoice"
+    }),
+    description: (0, import_fields30.text)({
+      ui: { displayMode: "textarea" },
+      defaultValue: "Invoice for selected orders payment"
+    }),
+    // Financial fields (amounts in cents)
+    totalAmount: (0, import_fields30.integer)({
+      validation: { isRequired: true },
+      defaultValue: 0
+    }),
+    currency: (0, import_fields30.relationship)({
+      ref: "Currency.invoices",
+      many: false,
+      validation: { isRequired: true }
+    }),
+    // Status and dates
+    status: (0, import_fields30.select)({
+      options: [
+        { label: "Draft", value: "draft" },
+        { label: "Sent", value: "sent" },
+        { label: "Paid", value: "paid" },
+        { label: "Overdue", value: "overdue" },
+        { label: "Cancelled", value: "cancelled" }
+      ],
+      defaultValue: "paid",
+      // Most invoices will be immediately paid
+      validation: { isRequired: true }
+    }),
+    dueDate: (0, import_fields30.timestamp)(),
+    paidAt: (0, import_fields30.timestamp)({
+      defaultValue: { kind: "now" }
+      // Default to now since most are paid immediately
+    }),
+    // Metadata for payment details
+    metadata: (0, import_fields30.json)({
+      defaultValue: {}
+    }),
+    // Relationships
+    account: (0, import_fields30.relationship)({
+      ref: "Account.invoices",
+      many: false,
+      validation: { isRequired: true }
+    }),
+    lineItems: (0, import_fields30.relationship)({
+      ref: "InvoiceLineItem.invoice",
+      many: true
+    }),
+    // Virtual computed fields
+    ...(0, import_core27.group)({
+      label: "Computed Fields",
+      description: "Auto-calculated fields for invoice display",
+      fields: {
+        formattedTotal: (0, import_fields30.virtual)({
+          field: import_core27.graphql.field({
+            type: import_core27.graphql.String,
+            async resolve(item, args, context) {
+              const invoice = await context.sudo().query.Invoice.findOne({
+                where: { id: item.id },
+                query: `
+                  totalAmount
+                  currency {
+                    code
+                    symbol
+                    noDivisionCurrency
+                  }
+                `
+              });
+              if (!invoice?.currency) return "$0.00";
+              const divisor = invoice.currency.noDivisionCurrency ? 1 : 100;
+              const amount = (invoice.totalAmount || 0) / divisor;
+              return new Intl.NumberFormat("en-US", {
+                style: "currency",
+                currency: invoice.currency.code
+              }).format(amount);
+            }
+          })
+        }),
+        itemCount: (0, import_fields30.virtual)({
+          field: import_core27.graphql.field({
+            type: import_core27.graphql.Int,
+            async resolve(item, args, context) {
+              const invoice = await context.sudo().query.Invoice.findOne({
+                where: { id: item.id },
+                query: `
+                  lineItems {
+                    id
+                  }
+                `
+              });
+              return invoice?.lineItems?.length || 0;
+            }
+          })
+        })
+      }
+    }),
+    ...trackingFields
+  },
+  hooks: {
+    resolveInput({ operation, resolvedData }) {
+      if (operation === "create" && !resolvedData.invoiceNumber) {
+        const timestamp29 = Date.now();
+        resolvedData.invoiceNumber = `INV-${(/* @__PURE__ */ new Date()).getFullYear()}-${String(timestamp29).slice(-6)}`;
+      }
+      return resolvedData;
+    }
+  }
+});
+
+// features/keystone/models/InvoiceLineItem.ts
+var import_core28 = require("@keystone-6/core");
+var import_fields31 = require("@keystone-6/core/fields");
+var InvoiceLineItem = (0, import_core28.list)({
+  access: {
+    operation: {
+      query: permissions.canManageOrders,
+      create: permissions.canManageOrders,
+      update: permissions.canManageOrders,
+      delete: permissions.canManageOrders
+    }
+  },
+  fields: {
+    // Junction table relationships
+    invoice: (0, import_fields31.relationship)({
+      ref: "Invoice.lineItems",
+      many: false,
+      validation: { isRequired: true }
+    }),
+    accountLineItem: (0, import_fields31.relationship)({
+      ref: "AccountLineItem.invoiceLineItems",
+      many: false,
+      validation: { isRequired: true }
+    }),
+    // Virtual computed fields
+    ...(0, import_core28.group)({
+      label: "Computed Fields",
+      description: "Auto-calculated fields from related account line item",
+      fields: {
+        orderDisplayId: (0, import_fields31.virtual)({
+          field: import_core28.graphql.field({
+            type: import_core28.graphql.String,
+            async resolve(item, args, context) {
+              const invoiceLineItem = await context.sudo().query.InvoiceLineItem.findOne({
+                where: { id: item.id },
+                query: `
+                  accountLineItem {
+                    orderDisplayId
+                  }
+                `
+              });
+              return invoiceLineItem?.accountLineItem?.orderDisplayId || "";
+            }
+          })
+        }),
+        formattedAmount: (0, import_fields31.virtual)({
+          field: import_core28.graphql.field({
+            type: import_core28.graphql.String,
+            async resolve(item, args, context) {
+              const invoiceLineItem = await context.sudo().query.InvoiceLineItem.findOne({
+                where: { id: item.id },
+                query: `
+                  accountLineItem {
+                    formattedAmount
+                  }
+                `
+              });
+              return invoiceLineItem?.accountLineItem?.formattedAmount || "$0.00";
+            }
+          })
+        }),
+        orderDetails: (0, import_fields31.virtual)({
+          field: import_core28.graphql.field({
+            type: import_core28.graphql.JSON,
+            async resolve(item, args, context) {
+              const invoiceLineItem = await context.sudo().query.InvoiceLineItem.findOne({
+                where: { id: item.id },
+                query: `
+                  accountLineItem {
+                    orderDetails
+                  }
+                `
+              });
+              return invoiceLineItem?.accountLineItem?.orderDetails || null;
+            }
+          })
+        })
+      }
+    }),
+    ...trackingFields
+  }
+});
+
+// features/keystone/models/BusinessAccountRequest.ts
+var import_core29 = require("@keystone-6/core");
+var import_fields32 = require("@keystone-6/core/fields");
+var BusinessAccountRequest = (0, import_core29.list)({
+  access: {
+    operation: {
+      query: ({ session }) => {
+        if (permissions.canManageOrders({ session })) return true;
+        return isSignedIn({ session });
+      },
+      create: isSignedIn,
+      // Any authenticated user can create requests
+      update: permissions.canManageOrders,
+      // Only admins can update/approve
+      delete: permissions.canManageOrders
+      // Only admins can delete
+    },
+    filter: {
+      query: ({ session }) => {
+        if (permissions.canManageOrders({ session })) return true;
+        return { user: { id: { equals: session?.itemId } } };
+      }
+    }
+  },
+  fields: {
+    // Core relationship
+    user: (0, import_fields32.relationship)({
+      ref: "User.businessAccountRequest",
+      many: false,
+      validation: { isRequired: true }
+    }),
+    // Request details
+    businessName: (0, import_fields32.text)({
+      validation: { isRequired: true }
+    }),
+    businessType: (0, import_fields32.select)({
+      options: [
+        { label: "Wholesale Partner", value: "wholesale" },
+        { label: "Distribution Channel", value: "distribution" },
+        { label: "Authorized Reseller", value: "reseller" },
+        { label: "B2B Platform", value: "b2b_platform" },
+        { label: "Other", value: "other" }
+      ],
+      validation: { isRequired: true }
+    }),
+    monthlyOrderVolume: (0, import_fields32.select)({
+      options: [
+        { label: "1-50 orders/month", value: "low" },
+        { label: "51-200 orders/month", value: "medium" },
+        { label: "201-1000 orders/month", value: "high" },
+        { label: "1000+ orders/month", value: "enterprise" }
+      ],
+      validation: { isRequired: true }
+    }),
+    requestedCreditLimit: (0, import_fields32.integer)({
+      validation: { isRequired: true },
+      label: "Requested Credit Limit (in cents)"
+    }),
+    businessDescription: (0, import_fields32.text)({
+      ui: { displayMode: "textarea" },
+      validation: { isRequired: true }
+    }),
+    // Status tracking
+    status: (0, import_fields32.select)({
+      options: [
+        { label: "Pending", value: "pending" },
+        { label: "Approved", value: "approved" },
+        { label: "Not Approved", value: "not_approved" },
+        { label: "Requires Info", value: "requires_info" }
+      ],
+      defaultValue: "pending",
+      validation: { isRequired: true }
+    }),
+    // Admin fields
+    reviewedBy: (0, import_fields32.relationship)({
+      ref: "User",
+      many: false,
+      label: "Reviewed By Admin"
+    }),
+    reviewNotes: (0, import_fields32.text)({
+      ui: { displayMode: "textarea" },
+      label: "Admin Review Notes"
+    }),
+    approvedCreditLimit: (0, import_fields32.integer)({
+      label: "Approved Credit Limit (in cents)"
+    }),
+    // Timestamps
+    submittedAt: (0, import_fields32.timestamp)({
+      defaultValue: { kind: "now" },
+      validation: { isRequired: true }
+    }),
+    reviewedAt: (0, import_fields32.timestamp)(),
+    // Generated account (once approved)
+    generatedAccount: (0, import_fields32.relationship)({
+      ref: "Account",
+      many: false,
+      label: "Generated Account"
+    }),
+    // Virtual computed fields
+    ...(0, import_core29.group)({
+      label: "Computed Fields",
+      description: "Auto-calculated fields for request display",
+      fields: {
+        formattedRequestedCredit: (0, import_fields32.virtual)({
+          field: import_core29.graphql.field({
+            type: import_core29.graphql.String,
+            resolve(item) {
+              const amount = (item.requestedCreditLimit || 0) / 100;
+              return new Intl.NumberFormat("en-US", {
+                style: "currency",
+                currency: "USD"
+              }).format(amount);
+            }
+          })
+        }),
+        formattedApprovedCredit: (0, import_fields32.virtual)({
+          field: import_core29.graphql.field({
+            type: import_core29.graphql.String,
+            resolve(item) {
+              if (!item.approvedCreditLimit) return null;
+              const amount = (item.approvedCreditLimit || 0) / 100;
+              return new Intl.NumberFormat("en-US", {
+                style: "currency",
+                currency: "USD"
+              }).format(amount);
+            }
+          })
+        }),
+        businessTypeLabel: (0, import_fields32.virtual)({
+          field: import_core29.graphql.field({
+            type: import_core29.graphql.String,
+            resolve(item) {
+              const typeMap = {
+                wholesale: "Wholesale Partner",
+                distribution: "Distribution Channel",
+                reseller: "Authorized Reseller",
+                b2b_platform: "B2B Platform",
+                other: "Other"
+              };
+              return typeMap[item.businessType] || item.businessType;
+            }
+          })
+        }),
+        volumeLabel: (0, import_fields32.virtual)({
+          field: import_core29.graphql.field({
+            type: import_core29.graphql.String,
+            resolve(item) {
+              const volumeMap = {
+                low: "1-50 orders/month",
+                medium: "51-200 orders/month",
+                high: "201-1000 orders/month",
+                enterprise: "1000+ orders/month"
+              };
+              return volumeMap[item.monthlyOrderVolume] || item.monthlyOrderVolume;
+            }
+          })
+        }),
+        statusLabel: (0, import_fields32.virtual)({
+          field: import_core29.graphql.field({
+            type: import_core29.graphql.String,
+            resolve(item) {
+              const statusMap = {
+                pending: "Pending Review",
+                approved: "Approved",
+                not_approved: "Not Approved",
+                requires_info: "Requires Additional Information"
+              };
+              return statusMap[item.status] || item.status;
+            }
+          })
+        })
+      }
+    }),
+    ...trackingFields
+  },
+  hooks: {
+    beforeOperation: async ({ operation, item, originalItem, inputData, context }) => {
+      console.log("=== BusinessAccountRequest beforeOperation Hook ===");
+      console.log("operation:", operation);
+      console.log("inputData:", JSON.stringify(inputData, null, 2));
+      if (operation === "update" && inputData?.where?.id) {
+        console.log("\u{1F50D} Fetching current item with ID:", inputData.where.id);
+        const currentItem = await context.sudo().query.BusinessAccountRequest.findOne({
+          where: { id: inputData.where.id },
+          query: "id status"
+        });
+        console.log("\u{1F3AF} currentItem:", JSON.stringify(currentItem, null, 2));
+        console.log("\u{1F4E5} inputData.data.status:", inputData.data?.status);
+        if (inputData.data?.status === "approved" && currentItem?.status !== "approved") {
+          console.log("\u2705 Hook conditions met - calling createAccountFromApprovedRequest");
+          const accountId = await createAccountFromApprovedRequest(
+            { id: inputData.where.id, ...inputData.data },
+            context
+          );
+          if (accountId) {
+            console.log("\u{1F517} Adding generated account to input data:", accountId);
+            inputData.data.generatedAccount = { connect: { id: accountId } };
+            console.log("\u{1F4DD} Updated inputData.data:", JSON.stringify(inputData.data, null, 2));
+          }
+        } else {
+          console.log("\u274C Hook conditions not met");
+          console.log('  - inputData.data?.status === "approved":', inputData.data?.status === "approved");
+          console.log('  - currentItem?.status !== "approved":', currentItem?.status !== "approved");
+        }
+      } else {
+        console.log("\u274C Not an update operation or missing where.id");
+      }
+    }
+  }
+});
+async function createAccountFromApprovedRequest(request, context) {
+  console.log("\u{1F504} Starting createAccountFromApprovedRequest");
+  console.log("request.id:", request.id);
+  try {
+    console.log("\u{1F4DD} Fetching full request data...");
+    const fullRequest = await context.sudo().query.BusinessAccountRequest.findOne({
+      where: { id: request.id },
+      query: `
+        id
+        businessName
+        businessType
+        approvedCreditLimit
+        user {
+          id
+          email
+          name
+        }
+      `
+    });
+    console.log("fullRequest:", JSON.stringify(fullRequest, null, 2));
+    if (!fullRequest) {
+      console.error("\u274C Full request not found!");
+      return null;
+    }
+    console.log("\u{1F4B0} Looking for USD currency...");
+    const defaultCurrency = await context.sudo().query.Currency.findOne({
+      where: { code: "usd" },
+      query: "id code"
+    });
+    console.log("defaultCurrency:", defaultCurrency);
+    if (!defaultCurrency) {
+      console.error("\u274C Default USD currency not found");
+      return null;
+    }
+    console.log("\u{1F3E6} Creating business account...");
+    const account = await context.sudo().query.Account.createOne({
+      data: {
+        user: { connect: { id: fullRequest.user.id } },
+        title: "Business Account",
+        description: `Running business account for automated orders placed through API integration - ${fullRequest.businessName}`,
+        currency: { connect: { id: defaultCurrency.id } },
+        status: "active",
+        creditLimit: request.approvedCreditLimit || fullRequest.approvedCreditLimit || 1e5,
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1e3).toISOString(),
+        // 30 days from now
+        accountType: "business",
+        metadata: {
+          createdFromRequest: fullRequest.id,
+          businessType: fullRequest.businessType,
+          businessName: fullRequest.businessName,
+          approvedCreditLimit: request.approvedCreditLimit || fullRequest.approvedCreditLimit
+        }
+      }
+    });
+    console.log("\u2705 Account created:", JSON.stringify(account, null, 2));
+    console.log("\u{1F511} Generating customer token...");
+    const customerToken = generateSecureToken();
+    console.log("Generated token:", customerToken);
+    console.log("\u{1F464} Updating user with customer token...");
+    await context.sudo().query.User.updateOne({
+      where: { id: fullRequest.user.id },
+      data: {
+        customerToken,
+        tokenGeneratedAt: (/* @__PURE__ */ new Date()).toISOString()
+      }
+    });
+    console.log("\u2705 User updated with customer token");
+    console.log(`Account created for user ${fullRequest.user.email}, token: ${customerToken}`);
+    return account.id;
+  } catch (error) {
+    console.error("Error creating account from approved request:", error);
+    return null;
+  }
+}
+function generateSecureToken() {
+  const crypto3 = require("crypto");
+  return "ctok_" + crypto3.randomBytes(32).toString("hex");
+}
+
+// features/keystone/models/LineItem.ts
+var import_core30 = require("@keystone-6/core");
+var import_fields33 = require("@keystone-6/core/fields");
 var formatCurrency2 = (amount, currencyCode) => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: currencyCode
   }).format(amount);
 };
-var LineItem = (0, import_core25.list)({
+var LineItem = (0, import_core30.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -6917,55 +9009,55 @@ var LineItem = (0, import_core25.list)({
   },
   fields: {
     // Core fields
-    quantity: (0, import_fields28.integer)({
+    quantity: (0, import_fields33.integer)({
       validation: { isRequired: true }
     }),
-    metadata: (0, import_fields28.json)(),
-    isReturn: (0, import_fields28.checkbox)(),
-    isGiftcard: (0, import_fields28.checkbox)(),
-    shouldMerge: (0, import_fields28.checkbox)({
+    metadata: (0, import_fields33.json)(),
+    isReturn: (0, import_fields33.checkbox)(),
+    isGiftcard: (0, import_fields33.checkbox)(),
+    shouldMerge: (0, import_fields33.checkbox)({
       defaultValue: true
     }),
-    allowDiscounts: (0, import_fields28.checkbox)({
+    allowDiscounts: (0, import_fields33.checkbox)({
       defaultValue: true
     }),
-    hasShipping: (0, import_fields28.checkbox)(),
+    hasShipping: (0, import_fields33.checkbox)(),
     // Relationships
-    claimOrder: (0, import_fields28.relationship)({
+    claimOrder: (0, import_fields33.relationship)({
       ref: "ClaimOrder.lineItems"
     }),
-    cart: (0, import_fields28.relationship)({
+    cart: (0, import_fields33.relationship)({
       ref: "Cart.lineItems"
     }),
-    swap: (0, import_fields28.relationship)({
+    swap: (0, import_fields33.relationship)({
       ref: "Swap.lineItems"
     }),
-    productVariant: (0, import_fields28.relationship)({
+    productVariant: (0, import_fields33.relationship)({
       ref: "ProductVariant.lineItems"
     }),
-    claimItems: (0, import_fields28.relationship)({
+    claimItems: (0, import_fields33.relationship)({
       ref: "ClaimItem.lineItem",
       many: true
     }),
-    lineItemAdjustments: (0, import_fields28.relationship)({
+    lineItemAdjustments: (0, import_fields33.relationship)({
       ref: "LineItemAdjustment.lineItem",
       many: true
     }),
-    lineItemTaxLines: (0, import_fields28.relationship)({
+    lineItemTaxLines: (0, import_fields33.relationship)({
       ref: "LineItemTaxLine.lineItem",
       many: true
     }),
-    returnItems: (0, import_fields28.relationship)({
+    returnItems: (0, import_fields33.relationship)({
       ref: "ReturnItem.lineItem",
       many: true
     }),
-    ...(0, import_core25.group)({
+    ...(0, import_core30.group)({
       label: "Virtual Fields",
       description: "Virtual fields for line item",
       fields: {
-        title: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.String,
+        title: (0, import_fields33.virtual)({
+          field: import_core30.graphql.field({
+            type: import_core30.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const lineItem = await sudoContext.query.LineItem.findOne({
@@ -6979,9 +9071,9 @@ var LineItem = (0, import_core25.list)({
             }
           })
         }),
-        thumbnail: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.String,
+        thumbnail: (0, import_fields33.virtual)({
+          field: import_core30.graphql.field({
+            type: import_core30.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const lineItem = await sudoContext.query.LineItem.findOne({
@@ -6995,9 +9087,9 @@ var LineItem = (0, import_core25.list)({
             }
           })
         }),
-        description: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.JSON,
+        description: (0, import_fields33.virtual)({
+          field: import_core30.graphql.field({
+            type: import_core30.graphql.JSON,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const lineItem = await sudoContext.query.LineItem.findOne({
@@ -7011,9 +9103,9 @@ var LineItem = (0, import_core25.list)({
             }
           })
         }),
-        originalPrice: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.String,
+        originalPrice: (0, import_fields33.virtual)({
+          field: import_core30.graphql.field({
+            type: import_core30.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const { cart } = await sudoContext.query.LineItem.findOne({
@@ -7049,9 +9141,9 @@ var LineItem = (0, import_core25.list)({
             }
           })
         }),
-        unitPrice: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.String,
+        unitPrice: (0, import_fields33.virtual)({
+          field: import_core30.graphql.field({
+            type: import_core30.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const { cart } = await sudoContext.query.LineItem.findOne({
@@ -7097,9 +9189,9 @@ var LineItem = (0, import_core25.list)({
             }
           })
         }),
-        total: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.String,
+        total: (0, import_fields33.virtual)({
+          field: import_core30.graphql.field({
+            type: import_core30.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const { cart, quantity } = await sudoContext.query.LineItem.findOne({
@@ -7146,9 +9238,9 @@ var LineItem = (0, import_core25.list)({
             }
           })
         }),
-        availableInRegion: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.String,
+        availableInRegion: (0, import_fields33.virtual)({
+          field: import_core30.graphql.field({
+            type: import_core30.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const { cart } = await sudoContext.query.LineItem.findOne({
@@ -7177,9 +9269,9 @@ var LineItem = (0, import_core25.list)({
             }
           })
         }),
-        percentageOff: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.Int,
+        percentageOff: (0, import_fields33.virtual)({
+          field: import_core30.graphql.field({
+            type: import_core30.graphql.Int,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const { cart, quantity } = await sudoContext.query.LineItem.findOne({
@@ -7217,9 +9309,9 @@ var LineItem = (0, import_core25.list)({
             }
           })
         }),
-        fulfillmentStatus: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.String,
+        fulfillmentStatus: (0, import_fields33.virtual)({
+          field: import_core30.graphql.field({
+            type: import_core30.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const lineItem = await sudoContext.query.LineItem.findOne({
@@ -7249,9 +9341,9 @@ var LineItem = (0, import_core25.list)({
 });
 
 // features/keystone/models/LineItemAdjustment.ts
-var import_core26 = require("@keystone-6/core");
-var import_fields29 = require("@keystone-6/core/fields");
-var LineItemAdjustment = (0, import_core26.list)({
+var import_core31 = require("@keystone-6/core");
+var import_fields34 = require("@keystone-6/core/fields");
+var LineItemAdjustment = (0, import_core31.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -7261,21 +9353,21 @@ var LineItemAdjustment = (0, import_core26.list)({
     }
   },
   fields: {
-    description: (0, import_fields29.text)({
+    description: (0, import_fields34.text)({
       validation: {
         isRequired: true
       }
     }),
-    amount: (0, import_fields29.integer)({
+    amount: (0, import_fields34.integer)({
       validation: {
         isRequired: true
       }
     }),
-    metadata: (0, import_fields29.json)(),
-    discount: (0, import_fields29.relationship)({
+    metadata: (0, import_fields34.json)(),
+    discount: (0, import_fields34.relationship)({
       ref: "Discount.lineItemAdjustments"
     }),
-    lineItem: (0, import_fields29.relationship)({
+    lineItem: (0, import_fields34.relationship)({
       ref: "LineItem.lineItemAdjustments"
     }),
     ...trackingFields
@@ -7283,9 +9375,9 @@ var LineItemAdjustment = (0, import_core26.list)({
 });
 
 // features/keystone/models/LineItemTaxLine.ts
-var import_core27 = require("@keystone-6/core");
-var import_fields30 = require("@keystone-6/core/fields");
-var LineItemTaxLine = (0, import_core27.list)({
+var import_core32 = require("@keystone-6/core");
+var import_fields35 = require("@keystone-6/core/fields");
+var LineItemTaxLine = (0, import_core32.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -7295,19 +9387,19 @@ var LineItemTaxLine = (0, import_core27.list)({
     }
   },
   fields: {
-    rate: (0, import_fields30.float)({
+    rate: (0, import_fields35.float)({
       validation: {
         isRequired: true
       }
     }),
-    name: (0, import_fields30.text)({
+    name: (0, import_fields35.text)({
       validation: {
         isRequired: true
       }
     }),
-    code: (0, import_fields30.text)(),
-    metadata: (0, import_fields30.json)(),
-    lineItem: (0, import_fields30.relationship)({
+    code: (0, import_fields35.text)(),
+    metadata: (0, import_fields35.json)(),
+    lineItem: (0, import_fields35.relationship)({
       ref: "LineItem.lineItemTaxLines"
     }),
     ...trackingFields
@@ -7315,9 +9407,9 @@ var LineItemTaxLine = (0, import_core27.list)({
 });
 
 // features/keystone/models/Location.ts
-var import_core28 = require("@keystone-6/core");
-var import_fields31 = require("@keystone-6/core/fields");
-var Location = (0, import_core28.list)({
+var import_core33 = require("@keystone-6/core");
+var import_fields36 = require("@keystone-6/core/fields");
+var Location = (0, import_core33.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadProducts({ session }) || permissions.canManageProducts({ session }),
@@ -7327,12 +9419,12 @@ var Location = (0, import_core28.list)({
     }
   },
   fields: {
-    name: (0, import_fields31.text)({
+    name: (0, import_fields36.text)({
       validation: { isRequired: true }
     }),
-    description: (0, import_fields31.text)(),
-    address: (0, import_fields31.text)(),
-    variants: (0, import_fields31.relationship)({
+    description: (0, import_fields36.text)(),
+    address: (0, import_fields36.text)(),
+    variants: (0, import_fields36.relationship)({
       ref: "ProductVariant.location",
       many: true
     }),
@@ -7349,13 +9441,13 @@ var Location = (0, import_core28.list)({
 });
 
 // features/keystone/models/Measurement.ts
-var import_core29 = require("@keystone-6/core");
-var import_fields32 = require("@keystone-6/core/fields");
+var import_core34 = require("@keystone-6/core");
+var import_fields37 = require("@keystone-6/core/fields");
 var UNITS = {
   weight: ["g", "kg", "oz", "lb"],
   dimensions: ["cm", "m", "in", "ft"]
 };
-var Measurement = (0, import_core29.list)({
+var Measurement = (0, import_core34.list)({
   access: {
     operation: {
       query: () => true,
@@ -7365,13 +9457,13 @@ var Measurement = (0, import_core29.list)({
     }
   },
   fields: {
-    value: (0, import_fields32.float)({
+    value: (0, import_fields37.float)({
       validation: {
         isRequired: true,
         min: 0
       }
     }),
-    unit: (0, import_fields32.select)({
+    unit: (0, import_fields37.select)({
       type: "string",
       validation: {
         isRequired: true
@@ -7385,7 +9477,7 @@ var Measurement = (0, import_core29.list)({
         displayMode: "select"
       }
     }),
-    type: (0, import_fields32.select)({
+    type: (0, import_fields37.select)({
       type: "string",
       validation: {
         isRequired: true
@@ -7401,7 +9493,7 @@ var Measurement = (0, import_core29.list)({
         displayMode: "select"
       }
     }),
-    productVariant: (0, import_fields32.relationship)({
+    productVariant: (0, import_fields37.relationship)({
       ref: "ProductVariant.measurements"
     }),
     ...trackingFields
@@ -7409,9 +9501,9 @@ var Measurement = (0, import_core29.list)({
 });
 
 // features/keystone/models/MoneyAmount.ts
-var import_core30 = require("@keystone-6/core");
-var import_fields33 = require("@keystone-6/core/fields");
-var MoneyAmount = (0, import_core30.list)({
+var import_core35 = require("@keystone-6/core");
+var import_fields38 = require("@keystone-6/core/fields");
+var MoneyAmount = (0, import_core35.list)({
   access: {
     operation: {
       query: () => true,
@@ -7421,40 +9513,40 @@ var MoneyAmount = (0, import_core30.list)({
     }
   },
   fields: {
-    amount: (0, import_fields33.integer)({
+    amount: (0, import_fields38.integer)({
       validation: {
         isRequired: true
       }
     }),
-    compareAmount: (0, import_fields33.integer)(),
-    minQuantity: (0, import_fields33.integer)(),
-    maxQuantity: (0, import_fields33.integer)(),
-    productVariant: (0, import_fields33.relationship)({
+    compareAmount: (0, import_fields38.integer)(),
+    minQuantity: (0, import_fields38.integer)(),
+    maxQuantity: (0, import_fields38.integer)(),
+    productVariant: (0, import_fields38.relationship)({
       ref: "ProductVariant.prices"
     }),
-    region: (0, import_fields33.relationship)({
+    region: (0, import_fields38.relationship)({
       ref: "Region.moneyAmounts"
     }),
-    currency: (0, import_fields33.relationship)({
+    currency: (0, import_fields38.relationship)({
       ref: "Currency.moneyAmounts"
     }),
-    priceList: (0, import_fields33.relationship)({
+    priceList: (0, import_fields38.relationship)({
       ref: "PriceList.moneyAmounts"
     }),
-    priceSet: (0, import_fields33.relationship)({
+    priceSet: (0, import_fields38.relationship)({
       ref: "PriceSet.prices"
     }),
-    priceRules: (0, import_fields33.relationship)({
+    priceRules: (0, import_fields38.relationship)({
       ref: "PriceRule.moneyAmounts",
       many: true
     }),
-    ...(0, import_core30.group)({
+    ...(0, import_core35.group)({
       label: "Virtual Fields",
       description: "Virtual fields for money amount",
       fields: {
-        displayPrice: (0, import_fields33.virtual)({
-          field: import_core30.graphql.field({
-            type: import_core30.graphql.String,
+        displayPrice: (0, import_fields38.virtual)({
+          field: import_core35.graphql.field({
+            type: import_core35.graphql.String,
             resolve: async (item, args, context) => {
               const { currency, amount } = await context.query.MoneyAmount.findOne({
                 where: { id: item.id },
@@ -7464,18 +9556,18 @@ var MoneyAmount = (0, import_core30.list)({
             }
           })
         }),
-        calculatedPrice: (0, import_fields33.virtual)({
-          field: import_core30.graphql.field({
-            type: import_core30.graphql.object()({
+        calculatedPrice: (0, import_fields38.virtual)({
+          field: import_core35.graphql.field({
+            type: import_core35.graphql.object()({
               name: "CalculatedPrice",
               fields: {
-                calculatedAmount: import_core30.graphql.field({ type: import_core30.graphql.Int }),
-                originalAmount: import_core30.graphql.field({ type: import_core30.graphql.Int }),
-                currencyCode: import_core30.graphql.field({ type: import_core30.graphql.String }),
-                moneyAmountId: import_core30.graphql.field({ type: import_core30.graphql.ID }),
-                variantId: import_core30.graphql.field({ type: import_core30.graphql.ID }),
-                priceListId: import_core30.graphql.field({ type: import_core30.graphql.ID }),
-                priceListType: import_core30.graphql.field({ type: import_core30.graphql.String })
+                calculatedAmount: import_core35.graphql.field({ type: import_core35.graphql.Int }),
+                originalAmount: import_core35.graphql.field({ type: import_core35.graphql.Int }),
+                currencyCode: import_core35.graphql.field({ type: import_core35.graphql.String }),
+                moneyAmountId: import_core35.graphql.field({ type: import_core35.graphql.ID }),
+                variantId: import_core35.graphql.field({ type: import_core35.graphql.ID }),
+                priceListId: import_core35.graphql.field({ type: import_core35.graphql.ID }),
+                priceListType: import_core35.graphql.field({ type: import_core35.graphql.String })
               }
             }),
             resolve: async (item, args, context) => {
@@ -7591,9 +9683,9 @@ var MoneyAmount = (0, import_core30.list)({
 });
 
 // features/keystone/models/Note.ts
-var import_core31 = require("@keystone-6/core");
-var import_fields34 = require("@keystone-6/core/fields");
-var Note = (0, import_core31.list)({
+var import_core36 = require("@keystone-6/core");
+var import_fields39 = require("@keystone-6/core/fields");
+var Note = (0, import_core36.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -7603,31 +9695,31 @@ var Note = (0, import_core31.list)({
     }
   },
   fields: {
-    value: (0, import_fields34.text)({
+    value: (0, import_fields39.text)({
       validation: {
         isRequired: true
       }
     }),
-    resourceType: (0, import_fields34.text)({
+    resourceType: (0, import_fields39.text)({
       validation: {
         isRequired: true
       }
     }),
-    resourceId: (0, import_fields34.text)({
+    resourceId: (0, import_fields39.text)({
       validation: {
         isRequired: true
       }
     }),
-    authorId: (0, import_fields34.text)(),
-    metadata: (0, import_fields34.json)(),
+    authorId: (0, import_fields39.text)(),
+    metadata: (0, import_fields39.json)(),
     ...trackingFields
   }
 });
 
 // features/keystone/models/Notification.ts
-var import_core32 = require("@keystone-6/core");
-var import_fields35 = require("@keystone-6/core/fields");
-var Notification = (0, import_core32.list)({
+var import_core37 = require("@keystone-6/core");
+var import_fields40 = require("@keystone-6/core/fields");
+var Notification = (0, import_core37.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadUsers({ session }) || permissions.canManageUsers({ session }),
@@ -7637,31 +9729,31 @@ var Notification = (0, import_core32.list)({
     }
   },
   fields: {
-    eventName: (0, import_fields35.text)(),
-    resourceType: (0, import_fields35.text)({
+    eventName: (0, import_fields40.text)(),
+    resourceType: (0, import_fields40.text)({
       validation: {
         isRequired: true
       }
     }),
-    resourceId: (0, import_fields35.text)({
+    resourceId: (0, import_fields40.text)({
       validation: {
         isRequired: true
       }
     }),
-    to: (0, import_fields35.text)({
+    to: (0, import_fields40.text)({
       validation: {
         isRequired: true
       }
     }),
-    data: (0, import_fields35.json)(),
-    parentId: (0, import_fields35.text)(),
-    notificationProvider: (0, import_fields35.relationship)({
+    data: (0, import_fields40.json)(),
+    parentId: (0, import_fields40.text)(),
+    notificationProvider: (0, import_fields40.relationship)({
       ref: "NotificationProvider.notifications"
     }),
-    user: (0, import_fields35.relationship)({
+    user: (0, import_fields40.relationship)({
       ref: "User.notifications"
     }),
-    otherNotifications: (0, import_fields35.relationship)({
+    otherNotifications: (0, import_fields40.relationship)({
       ref: "Notification",
       many: true
     }),
@@ -7670,9 +9762,9 @@ var Notification = (0, import_core32.list)({
 });
 
 // features/keystone/models/NotificationProvider.ts
-var import_core33 = require("@keystone-6/core");
-var import_fields36 = require("@keystone-6/core/fields");
-var NotificationProvider = (0, import_core33.list)({
+var import_core38 = require("@keystone-6/core");
+var import_fields41 = require("@keystone-6/core/fields");
+var NotificationProvider = (0, import_core38.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadUsers({ session }) || permissions.canManageUsers({ session }),
@@ -7682,10 +9774,10 @@ var NotificationProvider = (0, import_core33.list)({
     }
   },
   fields: {
-    isInstalled: (0, import_fields36.checkbox)({
+    isInstalled: (0, import_fields41.checkbox)({
       defaultValue: true
     }),
-    notifications: (0, import_fields36.relationship)({
+    notifications: (0, import_fields41.relationship)({
       ref: "Notification.notificationProvider",
       many: true
     }),
@@ -7694,9 +9786,9 @@ var NotificationProvider = (0, import_core33.list)({
 });
 
 // features/keystone/models/OAuthApp.ts
-var import_core34 = require("@keystone-6/core");
-var import_fields37 = require("@keystone-6/core/fields");
-var OAuthApp = (0, import_core34.list)({
+var import_core39 = require("@keystone-6/core");
+var import_fields42 = require("@keystone-6/core/fields");
+var OAuthApp = (0, import_core39.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadApps({ session }) || permissions.canManageApps({ session }),
@@ -7706,12 +9798,12 @@ var OAuthApp = (0, import_core34.list)({
     }
   },
   fields: {
-    name: (0, import_fields37.text)({
+    name: (0, import_fields42.text)({
       validation: {
         isRequired: true
       }
     }),
-    clientId: (0, import_fields37.text)({
+    clientId: (0, import_fields42.text)({
       isIndexed: "unique",
       hooks: {
         resolveInput: ({ operation, resolvedData }) => {
@@ -7727,7 +9819,7 @@ var OAuthApp = (0, import_core34.list)({
         description: "Auto-generated unique identifier for your application."
       }
     }),
-    clientSecret: (0, import_fields37.text)({
+    clientSecret: (0, import_fields42.text)({
       hooks: {
         resolveInput: ({ operation, resolvedData }) => {
           if (operation === "create" && !resolvedData.clientSecret) {
@@ -7743,24 +9835,24 @@ var OAuthApp = (0, import_core34.list)({
         description: "Auto-generated secret key. Keep this secure - it's used to authenticate your application."
       }
     }),
-    redirectUris: (0, import_fields37.json)({
+    redirectUris: (0, import_fields42.json)({
       defaultValue: [],
       ui: {
         description: "Array of allowed redirect URIs for OAuth callbacks"
       }
     }),
-    scopes: (0, import_fields37.json)({
+    scopes: (0, import_fields42.json)({
       defaultValue: DEFAULT_SCOPES,
       ui: {
         description: "Array of allowed OAuth scopes that map to permissions"
       }
     }),
-    webhookUrl: (0, import_fields37.text)({
+    webhookUrl: (0, import_fields42.text)({
       ui: {
         description: "URL to receive webhook notifications"
       }
     }),
-    status: (0, import_fields37.select)({
+    status: (0, import_fields42.select)({
       options: [
         { label: "Active", value: "active" },
         { label: "Suspended", value: "suspended" },
@@ -7768,31 +9860,31 @@ var OAuthApp = (0, import_core34.list)({
       ],
       defaultValue: "active"
     }),
-    installUrl: (0, import_fields37.text)({
+    installUrl: (0, import_fields42.text)({
       ui: {
         description: "URL where users can install this app"
       }
     }),
-    uninstallUrl: (0, import_fields37.text)({
+    uninstallUrl: (0, import_fields42.text)({
       ui: {
         description: "URL to handle app uninstallation"
       }
     }),
-    description: (0, import_fields37.text)({
+    description: (0, import_fields42.text)({
       ui: {
         displayMode: "textarea"
       }
     }),
-    metadata: (0, import_fields37.json)({
+    metadata: (0, import_fields42.json)({
       defaultValue: {},
       ui: {
         description: "Additional app-specific configuration and settings"
       }
     }),
-    developerEmail: (0, import_fields37.text)(),
-    privacyPolicyUrl: (0, import_fields37.text)(),
-    termsOfServiceUrl: (0, import_fields37.text)(),
-    supportUrl: (0, import_fields37.text)(),
+    developerEmail: (0, import_fields42.text)(),
+    privacyPolicyUrl: (0, import_fields42.text)(),
+    termsOfServiceUrl: (0, import_fields42.text)(),
+    supportUrl: (0, import_fields42.text)(),
     ...trackingFields
   },
   ui: {
@@ -7804,9 +9896,9 @@ var OAuthApp = (0, import_core34.list)({
 });
 
 // features/keystone/models/OAuthToken.ts
-var import_core35 = require("@keystone-6/core");
-var import_fields38 = require("@keystone-6/core/fields");
-var OAuthToken = (0, import_core35.list)({
+var import_core40 = require("@keystone-6/core");
+var import_fields43 = require("@keystone-6/core/fields");
+var OAuthToken = (0, import_core40.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadApps({ session }) || permissions.canManageApps({ session }),
@@ -7816,7 +9908,7 @@ var OAuthToken = (0, import_core35.list)({
     }
   },
   fields: {
-    tokenType: (0, import_fields38.select)({
+    tokenType: (0, import_fields43.select)({
       options: [
         { label: "Authorization Code", value: "authorization_code" },
         { label: "Access Token", value: "access_token" },
@@ -7826,73 +9918,73 @@ var OAuthToken = (0, import_core35.list)({
         isRequired: true
       }
     }),
-    token: (0, import_fields38.text)({
+    token: (0, import_fields43.text)({
       validation: {
         isRequired: true
       },
       isIndexed: "unique"
     }),
-    clientId: (0, import_fields38.text)({
+    clientId: (0, import_fields43.text)({
       validation: {
         isRequired: true
       },
       isIndexed: true
     }),
-    user: (0, import_fields38.relationship)({
+    user: (0, import_fields43.relationship)({
       ref: "User",
       ui: {
         description: "The user who authorized this token"
       }
     }),
-    scopes: (0, import_fields38.json)({
+    scopes: (0, import_fields43.json)({
       defaultValue: [],
       ui: {
         description: "Array of granted scopes"
       }
     }),
-    redirectUri: (0, import_fields38.text)({
+    redirectUri: (0, import_fields43.text)({
       ui: {
         description: "The redirect URI used during authorization"
       }
     }),
-    expiresAt: (0, import_fields38.timestamp)({
+    expiresAt: (0, import_fields43.timestamp)({
       ui: {
         description: "When this token expires"
       }
     }),
-    isRevoked: (0, import_fields38.select)({
+    isRevoked: (0, import_fields43.select)({
       options: [
         { label: "Active", value: "false" },
         { label: "Revoked", value: "true" }
       ],
       defaultValue: "false"
     }),
-    authorizationCode: (0, import_fields38.text)({
+    authorizationCode: (0, import_fields43.text)({
       ui: {
         description: "The authorization code that was exchanged for this token (for access tokens)"
       }
     }),
-    refreshToken: (0, import_fields38.text)({
+    refreshToken: (0, import_fields43.text)({
       ui: {
         description: "Associated refresh token (for access tokens)"
       }
     }),
-    accessToken: (0, import_fields38.text)({
+    accessToken: (0, import_fields43.text)({
       ui: {
         description: "Associated access token (for refresh tokens)"
       }
     }),
-    state: (0, import_fields38.text)({
+    state: (0, import_fields43.text)({
       ui: {
         description: "OAuth state parameter for CSRF protection"
       }
     }),
-    codeChallenge: (0, import_fields38.text)({
+    codeChallenge: (0, import_fields43.text)({
       ui: {
         description: "PKCE code challenge"
       }
     }),
-    codeChallengeMethod: (0, import_fields38.select)({
+    codeChallengeMethod: (0, import_fields43.select)({
       options: [
         { label: "Plain", value: "plain" },
         { label: "SHA256", value: "S256" }
@@ -7923,15 +10015,15 @@ var OAuthToken = (0, import_core35.list)({
 });
 
 // features/keystone/models/Order.ts
-var import_core36 = require("@keystone-6/core");
-var import_fields39 = require("@keystone-6/core/fields");
+var import_core41 = require("@keystone-6/core");
+var import_fields44 = require("@keystone-6/core/fields");
 var formatCurrency3 = (amount, currencyCode) => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: currencyCode
   }).format(amount);
 };
-var Order = (0, import_core36.list)({
+var Order = (0, import_core41.list)({
   access: {
     operation: {
       query: permissions.canManageOrders,
@@ -7995,7 +10087,7 @@ var Order = (0, import_core36.list)({
     }
   },
   fields: {
-    status: (0, import_fields39.select)({
+    status: (0, import_fields44.select)({
       type: "enum",
       options: [
         {
@@ -8043,50 +10135,50 @@ var Order = (0, import_core36.list)({
         }
       }
     }),
-    displayId: (0, import_fields39.integer)({
+    displayId: (0, import_fields44.integer)({
       validation: {
         isRequired: true
       }
     }),
-    email: (0, import_fields39.text)({
+    email: (0, import_fields44.text)({
       validation: {
         isRequired: true
       }
     }),
-    taxRate: (0, import_fields39.float)(),
-    canceledAt: (0, import_fields39.timestamp)(),
-    metadata: (0, import_fields39.json)(),
-    idempotencyKey: (0, import_fields39.text)(),
-    noNotification: (0, import_fields39.checkbox)(),
-    externalId: (0, import_fields39.text)(),
-    shippingAddress: (0, import_fields39.relationship)({
+    taxRate: (0, import_fields44.float)(),
+    canceledAt: (0, import_fields44.timestamp)(),
+    metadata: (0, import_fields44.json)(),
+    idempotencyKey: (0, import_fields44.text)(),
+    noNotification: (0, import_fields44.checkbox)(),
+    externalId: (0, import_fields44.text)(),
+    shippingAddress: (0, import_fields44.relationship)({
       ref: "Address.ordersUsingAsShippingAddress",
       many: false
     }),
-    billingAddress: (0, import_fields39.relationship)({
+    billingAddress: (0, import_fields44.relationship)({
       ref: "Address.ordersUsingAsBillingAddress",
       many: false
     }),
-    currency: (0, import_fields39.relationship)({
+    currency: (0, import_fields44.relationship)({
       ref: "Currency.orders"
     }),
-    draftOrder: (0, import_fields39.relationship)({
+    draftOrder: (0, import_fields44.relationship)({
       ref: "DraftOrder.order"
     }),
-    cart: (0, import_fields39.relationship)({
+    cart: (0, import_fields44.relationship)({
       ref: "Cart.order"
     }),
-    user: (0, import_fields39.relationship)({
+    user: (0, import_fields44.relationship)({
       ref: "User.orders"
     }),
-    region: (0, import_fields39.relationship)({
+    region: (0, import_fields44.relationship)({
       ref: "Region.orders"
     }),
-    claimOrders: (0, import_fields39.relationship)({
+    claimOrders: (0, import_fields44.relationship)({
       ref: "ClaimOrder.order",
       many: true
     }),
-    fulfillments: (0, import_fields39.relationship)({
+    fulfillments: (0, import_fields44.relationship)({
       ref: "Fulfillment.order",
       many: true,
       hooks: {
@@ -8125,23 +10217,23 @@ var Order = (0, import_core36.list)({
         }
       }
     }),
-    giftCards: (0, import_fields39.relationship)({
+    giftCards: (0, import_fields44.relationship)({
       ref: "GiftCard.order",
       many: true
     }),
-    giftCardTransactions: (0, import_fields39.relationship)({
+    giftCardTransactions: (0, import_fields44.relationship)({
       ref: "GiftCardTransaction.order",
       many: true
     }),
-    lineItems: (0, import_fields39.relationship)({
+    lineItems: (0, import_fields44.relationship)({
       ref: "OrderLineItem.order",
       many: true
     }),
-    discounts: (0, import_fields39.relationship)({
+    discounts: (0, import_fields44.relationship)({
       ref: "Discount.orders",
       many: true
     }),
-    payments: (0, import_fields39.relationship)({
+    payments: (0, import_fields44.relationship)({
       ref: "Payment.order",
       many: true,
       hooks: {
@@ -8172,7 +10264,7 @@ var Order = (0, import_core36.list)({
         }
       }
     }),
-    returns: (0, import_fields39.relationship)({
+    returns: (0, import_fields44.relationship)({
       ref: "Return.order",
       many: true,
       hooks: {
@@ -8194,15 +10286,24 @@ var Order = (0, import_core36.list)({
         }
       }
     }),
-    shippingMethods: (0, import_fields39.relationship)({
+    shippingMethods: (0, import_fields44.relationship)({
       ref: "ShippingMethod.order",
       many: true
     }),
-    swaps: (0, import_fields39.relationship)({
+    swaps: (0, import_fields44.relationship)({
       ref: "Swap.order",
       many: true
     }),
-    secretKey: (0, import_fields39.text)({
+    // Account relationship for Openship integration
+    account: (0, import_fields44.relationship)({
+      ref: "Account.orders",
+      many: false
+    }),
+    accountLineItems: (0, import_fields44.relationship)({
+      ref: "AccountLineItem.order",
+      many: true
+    }),
+    secretKey: (0, import_fields44.text)({
       hooks: {
         resolveInput: ({ operation }) => {
           if (operation === "create") {
@@ -8213,13 +10314,13 @@ var Order = (0, import_core36.list)({
         }
       }
     }),
-    ...(0, import_core36.group)({
+    ...(0, import_core41.group)({
       label: "Virtual Fields",
       description: "Calculated fields for order display and totals",
       fields: {
-        subtotal: (0, import_fields39.virtual)({
-          field: import_core36.graphql.field({
-            type: import_core36.graphql.String,
+        subtotal: (0, import_fields44.virtual)({
+          field: import_core41.graphql.field({
+            type: import_core41.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const order = await sudoContext.query.Order.findOne({
@@ -8260,9 +10361,9 @@ var Order = (0, import_core36.list)({
             }
           })
         }),
-        shipping: (0, import_fields39.virtual)({
-          field: import_core36.graphql.field({
-            type: import_core36.graphql.String,
+        shipping: (0, import_fields44.virtual)({
+          field: import_core41.graphql.field({
+            type: import_core41.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const order = await sudoContext.query.Order.findOne({
@@ -8290,9 +10391,9 @@ var Order = (0, import_core36.list)({
             }
           })
         }),
-        discount: (0, import_fields39.virtual)({
-          field: import_core36.graphql.field({
-            type: import_core36.graphql.String,
+        discount: (0, import_fields44.virtual)({
+          field: import_core41.graphql.field({
+            type: import_core41.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const order = await sudoContext.query.Order.findOne({
@@ -8361,9 +10462,9 @@ var Order = (0, import_core36.list)({
             }
           })
         }),
-        tax: (0, import_fields39.virtual)({
-          field: import_core36.graphql.field({
-            type: import_core36.graphql.String,
+        tax: (0, import_fields44.virtual)({
+          field: import_core41.graphql.field({
+            type: import_core41.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const order = await sudoContext.query.Order.findOne({
@@ -8424,9 +10525,9 @@ var Order = (0, import_core36.list)({
             }
           })
         }),
-        total: (0, import_fields39.virtual)({
-          field: import_core36.graphql.field({
-            type: import_core36.graphql.String,
+        total: (0, import_fields44.virtual)({
+          field: import_core41.graphql.field({
+            type: import_core41.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const order = await sudoContext.query.Order.findOne({
@@ -8501,9 +10602,9 @@ var Order = (0, import_core36.list)({
             }
           })
         }),
-        rawTotal: (0, import_fields39.virtual)({
-          field: import_core36.graphql.field({
-            type: import_core36.graphql.Int,
+        rawTotal: (0, import_fields44.virtual)({
+          field: import_core41.graphql.field({
+            type: import_core41.graphql.Int,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const order = await sudoContext.query.Order.findOne({
@@ -8575,9 +10676,9 @@ var Order = (0, import_core36.list)({
             }
           })
         }),
-        fulfillmentDetails: (0, import_fields39.virtual)({
-          field: import_core36.graphql.field({
-            type: import_core36.graphql.JSON,
+        fulfillmentDetails: (0, import_fields44.virtual)({
+          field: import_core41.graphql.field({
+            type: import_core41.graphql.JSON,
             async resolve(item, args, context) {
               const order = await context.sudo().query.Order.findOne({
                 where: { id: item.id },
@@ -8642,9 +10743,9 @@ var Order = (0, import_core36.list)({
             }
           })
         }),
-        unfulfilled: (0, import_fields39.virtual)({
-          field: import_core36.graphql.field({
-            type: import_core36.graphql.JSON,
+        unfulfilled: (0, import_fields44.virtual)({
+          field: import_core41.graphql.field({
+            type: import_core41.graphql.JSON,
             async resolve(item, args, context) {
               const order = await context.sudo().query.Order.findOne({
                 where: { id: item.id },
@@ -8706,9 +10807,9 @@ var Order = (0, import_core36.list)({
             }
           })
         }),
-        fulfillmentStatus: (0, import_fields39.virtual)({
-          field: import_core36.graphql.field({
-            type: import_core36.graphql.JSON,
+        fulfillmentStatus: (0, import_fields44.virtual)({
+          field: import_core41.graphql.field({
+            type: import_core41.graphql.JSON,
             async resolve(item, args, context) {
               const order = await context.sudo().query.Order.findOne({
                 where: { id: item.id },
@@ -8748,9 +10849,9 @@ var Order = (0, import_core36.list)({
             }
           })
         }),
-        paymentDetails: (0, import_fields39.virtual)({
-          field: import_core36.graphql.field({
-            type: import_core36.graphql.JSON,
+        paymentDetails: (0, import_fields44.virtual)({
+          field: import_core41.graphql.field({
+            type: import_core41.graphql.JSON,
             async resolve(item, args, context) {
               const order = await context.sudo().query.Order.findOne({
                 where: { id: item.id },
@@ -8792,9 +10893,9 @@ var Order = (0, import_core36.list)({
             }
           })
         }),
-        totalPaid: (0, import_fields39.virtual)({
-          field: import_core36.graphql.field({
-            type: import_core36.graphql.Int,
+        totalPaid: (0, import_fields44.virtual)({
+          field: import_core41.graphql.field({
+            type: import_core41.graphql.Int,
             async resolve(item, args, context) {
               const order = await context.sudo().query.Order.findOne({
                 where: { id: item.id },
@@ -8814,9 +10915,9 @@ var Order = (0, import_core36.list)({
             }
           })
         }),
-        formattedTotalPaid: (0, import_fields39.virtual)({
-          field: import_core36.graphql.field({
-            type: import_core36.graphql.String,
+        formattedTotalPaid: (0, import_fields44.virtual)({
+          field: import_core41.graphql.field({
+            type: import_core41.graphql.String,
             async resolve(item, args, context) {
               const order = await context.sudo().query.Order.findOne({
                 where: { id: item.id },
@@ -8844,14 +10945,14 @@ var Order = (0, import_core36.list)({
         })
       }
     }),
-    events: (0, import_fields39.relationship)({
+    events: (0, import_fields44.relationship)({
       ref: "OrderEvent.order",
       many: true
     }),
-    note: (0, import_fields39.text)({
+    note: (0, import_fields44.text)({
       label: "Note"
     }),
-    shippingLabels: (0, import_fields39.relationship)({
+    shippingLabels: (0, import_fields44.relationship)({
       ref: "ShippingLabel.order",
       many: true
     }),
@@ -8860,15 +10961,15 @@ var Order = (0, import_core36.list)({
 });
 
 // features/keystone/models/OrderEvent.ts
-var import_core37 = require("@keystone-6/core");
-var import_fields40 = require("@keystone-6/core/fields");
-var OrderEvent = (0, import_core37.list)({
+var import_core42 = require("@keystone-6/core");
+var import_fields45 = require("@keystone-6/core/fields");
+var OrderEvent = (0, import_core42.list)({
   fields: {
-    order: (0, import_fields40.relationship)({
+    order: (0, import_fields45.relationship)({
       ref: "Order.events",
       many: false
     }),
-    user: (0, import_fields40.relationship)({
+    user: (0, import_fields45.relationship)({
       ref: "User.orderEvents",
       many: false,
       hooks: {
@@ -8880,7 +10981,7 @@ var OrderEvent = (0, import_core37.list)({
         }
       }
     }),
-    type: (0, import_fields40.select)({
+    type: (0, import_fields45.select)({
       type: "enum",
       options: [
         { label: "Order Placed", value: "ORDER_PLACED" },
@@ -8897,13 +10998,13 @@ var OrderEvent = (0, import_core37.list)({
       validation: { isRequired: true },
       defaultValue: "STATUS_CHANGE"
     }),
-    data: (0, import_fields40.json)({
+    data: (0, import_fields45.json)({
       defaultValue: {}
     }),
-    time: (0, import_fields40.timestamp)({
+    time: (0, import_fields45.timestamp)({
       defaultValue: { kind: "now" }
     }),
-    createdBy: (0, import_fields40.relationship)({
+    createdBy: (0, import_fields45.relationship)({
       ref: "User",
       many: false,
       ui: {
@@ -8938,9 +11039,9 @@ var OrderEvent = (0, import_core37.list)({
 });
 
 // features/keystone/models/OrderLineItem.ts
-var import_core38 = require("@keystone-6/core");
-var import_fields41 = require("@keystone-6/core/fields");
-var import_core39 = require("@keystone-6/core");
+var import_core43 = require("@keystone-6/core");
+var import_fields46 = require("@keystone-6/core/fields");
+var import_core44 = require("@keystone-6/core");
 var isS3SignedUrl = (url) => {
   try {
     const parsedUrl = new URL(url);
@@ -8971,7 +11072,7 @@ var checkUrlIsAccessible = async (url) => {
     return false;
   }
 };
-var OrderLineItem = (0, import_core38.list)({
+var OrderLineItem = (0, import_core43.list)({
   access: {
     operation: {
       query: permissions.canManageOrders,
@@ -8981,16 +11082,16 @@ var OrderLineItem = (0, import_core38.list)({
     }
   },
   fields: {
-    quantity: (0, import_fields41.integer)({
+    quantity: (0, import_fields46.integer)({
       validation: { isRequired: true }
     }),
-    title: (0, import_fields41.text)({
+    title: (0, import_fields46.text)({
       validation: { isRequired: true }
     }),
-    sku: (0, import_fields41.text)(),
-    thumbnail: (0, import_fields41.virtual)({
-      field: import_core39.graphql.field({
-        type: import_core39.graphql.String,
+    sku: (0, import_fields46.text)(),
+    thumbnail: (0, import_fields46.virtual)({
+      field: import_core44.graphql.field({
+        type: import_core44.graphql.String,
         async resolve(item, args, context) {
           const sudoContext = context.sudo();
           if (item.productData?.thumbnail) {
@@ -9027,32 +11128,32 @@ var OrderLineItem = (0, import_core38.list)({
         }
       })
     }),
-    metadata: (0, import_fields41.json)(),
-    productData: (0, import_fields41.json)({
+    metadata: (0, import_fields46.json)(),
+    productData: (0, import_fields46.json)({
       description: "Snapshot of product data at time of order"
     }),
-    variantData: (0, import_fields41.json)({
+    variantData: (0, import_fields46.json)({
       description: "Snapshot of variant data at time of order"
     }),
     // Formatted values for display
-    variantTitle: (0, import_fields41.text)(),
-    formattedUnitPrice: (0, import_fields41.text)(),
-    formattedTotal: (0, import_fields41.text)(),
-    order: (0, import_fields41.relationship)({
+    variantTitle: (0, import_fields46.text)(),
+    formattedUnitPrice: (0, import_fields46.text)(),
+    formattedTotal: (0, import_fields46.text)(),
+    order: (0, import_fields46.relationship)({
       ref: "Order.lineItems"
     }),
-    productVariant: (0, import_fields41.relationship)({
+    productVariant: (0, import_fields46.relationship)({
       ref: "ProductVariant",
       description: "Optional reference to product variant (may be deleted)"
     }),
-    moneyAmount: (0, import_fields41.relationship)({
+    moneyAmount: (0, import_fields46.relationship)({
       ref: "OrderMoneyAmount.orderLineItem"
     }),
-    originalLineItem: (0, import_fields41.relationship)({
+    originalLineItem: (0, import_fields46.relationship)({
       ref: "LineItem",
       description: "Reference to the original cart line item"
     }),
-    fulfillmentItems: (0, import_fields41.relationship)({
+    fulfillmentItems: (0, import_fields46.relationship)({
       ref: "FulfillmentItem.lineItem",
       many: true
     }),
@@ -9061,9 +11162,9 @@ var OrderLineItem = (0, import_core38.list)({
 });
 
 // features/keystone/models/OrderMoneyAmount.ts
-var import_core40 = require("@keystone-6/core");
-var import_fields42 = require("@keystone-6/core/fields");
-var OrderMoneyAmount = (0, import_core40.list)({
+var import_core45 = require("@keystone-6/core");
+var import_fields47 = require("@keystone-6/core/fields");
+var OrderMoneyAmount = (0, import_core45.list)({
   access: {
     operation: {
       query: permissions.canManageOrders,
@@ -9073,23 +11174,23 @@ var OrderMoneyAmount = (0, import_core40.list)({
     }
   },
   fields: {
-    amount: (0, import_fields42.integer)({
+    amount: (0, import_fields47.integer)({
       validation: { isRequired: true }
     }),
-    originalAmount: (0, import_fields42.integer)({
+    originalAmount: (0, import_fields47.integer)({
       validation: { isRequired: true }
     }),
-    priceData: (0, import_fields42.json)({
+    priceData: (0, import_fields47.json)({
       description: "Snapshot of complete price data including rules, lists, etc."
     }),
-    metadata: (0, import_fields42.json)(),
-    orderLineItem: (0, import_fields42.relationship)({
+    metadata: (0, import_fields47.json)(),
+    orderLineItem: (0, import_fields47.relationship)({
       ref: "OrderLineItem.moneyAmount"
     }),
-    currency: (0, import_fields42.relationship)({
+    currency: (0, import_fields47.relationship)({
       ref: "Currency"
     }),
-    region: (0, import_fields42.relationship)({
+    region: (0, import_fields47.relationship)({
       ref: "Region"
     }),
     ...trackingFields
@@ -9097,10 +11198,10 @@ var OrderMoneyAmount = (0, import_core40.list)({
 });
 
 // features/keystone/models/Payment.ts
-var import_core41 = require("@keystone-6/core");
-var import_fields43 = require("@keystone-6/core/fields");
-var import_core42 = require("@keystone-6/core");
-var Payment = (0, import_core41.list)({
+var import_core46 = require("@keystone-6/core");
+var import_fields48 = require("@keystone-6/core/fields");
+var import_core47 = require("@keystone-6/core");
+var Payment = (0, import_core46.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadPayments({ session }) || permissions.canManagePayments({ session }),
@@ -9110,7 +11211,7 @@ var Payment = (0, import_core41.list)({
     }
   },
   fields: {
-    status: (0, import_fields43.select)({
+    status: (0, import_fields48.select)({
       type: "enum",
       options: [
         { label: "Pending", value: "pending" },
@@ -9176,56 +11277,56 @@ var Payment = (0, import_core41.list)({
         }
       }
     }),
-    amount: (0, import_fields43.integer)({
+    amount: (0, import_fields48.integer)({
       validation: {
         isRequired: true
       }
     }),
-    currencyCode: (0, import_fields43.text)({
+    currencyCode: (0, import_fields48.text)({
       validation: {
         isRequired: true
       }
     }),
-    amountRefunded: (0, import_fields43.integer)({
+    amountRefunded: (0, import_fields48.integer)({
       defaultValue: 0,
       validation: {
         isRequired: true
       }
     }),
-    data: (0, import_fields43.json)(),
-    capturedAt: (0, import_fields43.timestamp)(),
-    canceledAt: (0, import_fields43.timestamp)(),
-    metadata: (0, import_fields43.json)(),
-    idempotencyKey: (0, import_fields43.text)(),
-    cart: (0, import_fields43.relationship)({
+    data: (0, import_fields48.json)(),
+    capturedAt: (0, import_fields48.timestamp)(),
+    canceledAt: (0, import_fields48.timestamp)(),
+    metadata: (0, import_fields48.json)(),
+    idempotencyKey: (0, import_fields48.text)(),
+    cart: (0, import_fields48.relationship)({
       ref: "Cart.payment"
     }),
-    paymentCollection: (0, import_fields43.relationship)({
+    paymentCollection: (0, import_fields48.relationship)({
       ref: "PaymentCollection.payments"
     }),
-    swap: (0, import_fields43.relationship)({
+    swap: (0, import_fields48.relationship)({
       ref: "Swap.payment"
     }),
-    currency: (0, import_fields43.relationship)({
+    currency: (0, import_fields48.relationship)({
       ref: "Currency.payments"
     }),
-    order: (0, import_fields43.relationship)({
+    order: (0, import_fields48.relationship)({
       ref: "Order.payments"
     }),
-    captures: (0, import_fields43.relationship)({
+    captures: (0, import_fields48.relationship)({
       ref: "Capture.payment",
       many: true
     }),
-    refunds: (0, import_fields43.relationship)({
+    refunds: (0, import_fields48.relationship)({
       ref: "Refund.payment",
       many: true
     }),
-    user: (0, import_fields43.relationship)({
+    user: (0, import_fields48.relationship)({
       ref: "User.payments"
     }),
-    paymentLink: (0, import_fields43.virtual)({
-      field: import_core42.graphql.field({
-        type: import_core42.graphql.String,
+    paymentLink: (0, import_fields48.virtual)({
+      field: import_core47.graphql.field({
+        type: import_core47.graphql.String,
         resolve(item) {
           if (!item.data) return null;
           if (item.data.provider_id?.startsWith("pp_stripe_")) {
@@ -9249,9 +11350,9 @@ var Payment = (0, import_core41.list)({
 });
 
 // features/keystone/models/PaymentCollection.ts
-var import_core43 = require("@keystone-6/core");
-var import_fields44 = require("@keystone-6/core/fields");
-var PaymentCollection = (0, import_core43.list)({
+var import_core48 = require("@keystone-6/core");
+var import_fields49 = require("@keystone-6/core/fields");
+var PaymentCollection = (0, import_core48.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadPayments({ session }) || permissions.canManagePayments({ session }),
@@ -9261,7 +11362,7 @@ var PaymentCollection = (0, import_core43.list)({
     }
   },
   fields: {
-    description: (0, import_fields44.select)({
+    description: (0, import_fields49.select)({
       type: "enum",
       options: [
         { label: "Default", value: "default" },
@@ -9269,25 +11370,25 @@ var PaymentCollection = (0, import_core43.list)({
       ],
       defaultValue: "default"
     }),
-    amount: (0, import_fields44.integer)({
+    amount: (0, import_fields49.integer)({
       validation: { isRequired: true }
     }),
-    authorizedAmount: (0, import_fields44.integer)({
+    authorizedAmount: (0, import_fields49.integer)({
       defaultValue: 0
     }),
-    refundedAmount: (0, import_fields44.integer)({
+    refundedAmount: (0, import_fields49.integer)({
       defaultValue: 0
     }),
-    metadata: (0, import_fields44.json)(),
-    paymentSessions: (0, import_fields44.relationship)({
+    metadata: (0, import_fields49.json)(),
+    paymentSessions: (0, import_fields49.relationship)({
       ref: "PaymentSession.paymentCollection",
       many: true
     }),
-    payments: (0, import_fields44.relationship)({
+    payments: (0, import_fields49.relationship)({
       ref: "Payment.paymentCollection",
       many: true
     }),
-    cart: (0, import_fields44.relationship)({
+    cart: (0, import_fields49.relationship)({
       ref: "Cart.paymentCollection"
     }),
     ...trackingFields
@@ -9295,9 +11396,9 @@ var PaymentCollection = (0, import_core43.list)({
 });
 
 // features/keystone/models/PaymentProvider.ts
-var import_core44 = require("@keystone-6/core");
-var import_fields45 = require("@keystone-6/core/fields");
-var PaymentProvider = (0, import_core44.list)({
+var import_core49 = require("@keystone-6/core");
+var import_fields50 = require("@keystone-6/core/fields");
+var PaymentProvider = (0, import_core49.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadPayments({ session }) || permissions.canManagePayments({ session }),
@@ -9307,10 +11408,10 @@ var PaymentProvider = (0, import_core44.list)({
     }
   },
   fields: {
-    name: (0, import_fields45.text)({
+    name: (0, import_fields50.text)({
       validation: { isRequired: true }
     }),
-    code: (0, import_fields45.text)({
+    code: (0, import_fields50.text)({
       isIndexed: "unique",
       validation: {
         isRequired: true,
@@ -9320,57 +11421,57 @@ var PaymentProvider = (0, import_core44.list)({
         }
       }
     }),
-    isInstalled: (0, import_fields45.checkbox)({
+    isInstalled: (0, import_fields50.checkbox)({
       defaultValue: true
     }),
-    credentials: (0, import_fields45.json)({
+    credentials: (0, import_fields50.json)({
       defaultValue: {}
     }),
-    metadata: (0, import_fields45.json)({
+    metadata: (0, import_fields50.json)({
       defaultValue: {}
     }),
     // Adapter function fields
-    createPaymentFunction: (0, import_fields45.text)({
+    createPaymentFunction: (0, import_fields50.text)({
       validation: { isRequired: true },
       ui: {
         description: "Name of the adapter function to create payments"
       }
     }),
-    capturePaymentFunction: (0, import_fields45.text)({
+    capturePaymentFunction: (0, import_fields50.text)({
       validation: { isRequired: true },
       ui: {
         description: "Name of the adapter function to capture payments"
       }
     }),
-    refundPaymentFunction: (0, import_fields45.text)({
+    refundPaymentFunction: (0, import_fields50.text)({
       validation: { isRequired: true },
       ui: {
         description: "Name of the adapter function to refund payments"
       }
     }),
-    getPaymentStatusFunction: (0, import_fields45.text)({
+    getPaymentStatusFunction: (0, import_fields50.text)({
       validation: { isRequired: true },
       ui: {
         description: "Name of the adapter function to check payment status"
       }
     }),
-    generatePaymentLinkFunction: (0, import_fields45.text)({
+    generatePaymentLinkFunction: (0, import_fields50.text)({
       validation: { isRequired: true },
       ui: {
         description: "Name of the adapter function to generate payment dashboard links"
       }
     }),
-    handleWebhookFunction: (0, import_fields45.text)({
+    handleWebhookFunction: (0, import_fields50.text)({
       validation: { isRequired: true },
       ui: {
         description: "Name of the adapter function to handle provider webhooks"
       }
     }),
-    regions: (0, import_fields45.relationship)({
+    regions: (0, import_fields50.relationship)({
       ref: "Region.paymentProviders",
       many: true
     }),
-    sessions: (0, import_fields45.relationship)({
+    sessions: (0, import_fields50.relationship)({
       ref: "PaymentSession.paymentProvider",
       many: true
     }),
@@ -9379,10 +11480,10 @@ var PaymentProvider = (0, import_core44.list)({
 });
 
 // features/keystone/models/PaymentSession.ts
-var import_core45 = require("@keystone-6/core");
-var import_fields46 = require("@keystone-6/core/fields");
-var import_core46 = require("@keystone-6/core");
-var PaymentSession = (0, import_core45.list)({
+var import_core50 = require("@keystone-6/core");
+var import_fields51 = require("@keystone-6/core/fields");
+var import_core51 = require("@keystone-6/core");
+var PaymentSession = (0, import_core50.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadPayments({ session }) || permissions.canManagePayments({ session }),
@@ -9392,18 +11493,18 @@ var PaymentSession = (0, import_core45.list)({
     }
   },
   fields: {
-    isSelected: (0, import_fields46.checkbox)({
+    isSelected: (0, import_fields51.checkbox)({
       defaultValue: false
     }),
-    isInitiated: (0, import_fields46.checkbox)({
+    isInitiated: (0, import_fields51.checkbox)({
       defaultValue: false
     }),
-    amount: (0, import_fields46.integer)({
+    amount: (0, import_fields51.integer)({
       validation: { isRequired: true }
     }),
-    formattedAmount: (0, import_fields46.virtual)({
-      field: import_core46.graphql.field({
-        type: import_core46.graphql.String,
+    formattedAmount: (0, import_fields51.virtual)({
+      field: import_core51.graphql.field({
+        type: import_core51.graphql.String,
         async resolve(item, args, context) {
           const { paymentCollection } = await context.query.PaymentSession.findOne({
             where: { id: item.id },
@@ -9429,28 +11530,28 @@ var PaymentSession = (0, import_core45.list)({
         }
       })
     }),
-    data: (0, import_fields46.json)({
+    data: (0, import_fields51.json)({
       defaultValue: {}
     }),
-    idempotencyKey: (0, import_fields46.text)({
+    idempotencyKey: (0, import_fields51.text)({
       isIndexed: true
     }),
-    paymentCollection: (0, import_fields46.relationship)({
+    paymentCollection: (0, import_fields51.relationship)({
       ref: "PaymentCollection.paymentSessions"
     }),
-    paymentProvider: (0, import_fields46.relationship)({
+    paymentProvider: (0, import_fields51.relationship)({
       ref: "PaymentProvider.sessions",
       many: false
     }),
-    paymentAuthorizedAt: (0, import_fields46.timestamp)(),
+    paymentAuthorizedAt: (0, import_fields51.timestamp)(),
     ...trackingFields
   }
 });
 
 // features/keystone/models/PriceList.ts
-var import_core47 = require("@keystone-6/core");
-var import_fields47 = require("@keystone-6/core/fields");
-var PriceList = (0, import_core47.list)({
+var import_core52 = require("@keystone-6/core");
+var import_fields52 = require("@keystone-6/core/fields");
+var PriceList = (0, import_core52.list)({
   access: {
     operation: {
       // Allow public read access
@@ -9461,17 +11562,17 @@ var PriceList = (0, import_core47.list)({
     }
   },
   fields: {
-    name: (0, import_fields47.text)({
+    name: (0, import_fields52.text)({
       validation: {
         isRequired: true
       }
     }),
-    description: (0, import_fields47.text)({
+    description: (0, import_fields52.text)({
       validation: {
         isRequired: true
       }
     }),
-    type: (0, import_fields47.select)({
+    type: (0, import_fields52.select)({
       type: "enum",
       options: [
         {
@@ -9488,7 +11589,7 @@ var PriceList = (0, import_core47.list)({
         isRequired: true
       }
     }),
-    status: (0, import_fields47.select)({
+    status: (0, import_fields52.select)({
       type: "enum",
       options: [
         {
@@ -9505,13 +11606,13 @@ var PriceList = (0, import_core47.list)({
         isRequired: true
       }
     }),
-    startsAt: (0, import_fields47.timestamp)(),
-    endsAt: (0, import_fields47.timestamp)(),
-    moneyAmounts: (0, import_fields47.relationship)({
+    startsAt: (0, import_fields52.timestamp)(),
+    endsAt: (0, import_fields52.timestamp)(),
+    moneyAmounts: (0, import_fields52.relationship)({
       ref: "MoneyAmount.priceList",
       many: true
     }),
-    customerGroups: (0, import_fields47.relationship)({
+    customerGroups: (0, import_fields52.relationship)({
       ref: "CustomerGroup.priceLists",
       many: true
     }),
@@ -9520,9 +11621,9 @@ var PriceList = (0, import_core47.list)({
 });
 
 // features/keystone/models/PriceRule.ts
-var import_core48 = require("@keystone-6/core");
-var import_fields48 = require("@keystone-6/core/fields");
-var PriceRule = (0, import_core48.list)({
+var import_core53 = require("@keystone-6/core");
+var import_fields53 = require("@keystone-6/core/fields");
+var PriceRule = (0, import_core53.list)({
   access: {
     operation: {
       query: () => true,
@@ -9532,7 +11633,7 @@ var PriceRule = (0, import_core48.list)({
     }
   },
   fields: {
-    type: (0, import_fields48.select)({
+    type: (0, import_fields53.select)({
       type: "enum",
       options: [
         { label: "Fixed", value: "fixed" },
@@ -9540,20 +11641,20 @@ var PriceRule = (0, import_core48.list)({
       ],
       validation: { isRequired: true }
     }),
-    value: (0, import_fields48.float)({ validation: { isRequired: true } }),
-    priority: (0, import_fields48.integer)({ defaultValue: 0 }),
-    ruleAttribute: (0, import_fields48.text)({ validation: { isRequired: true } }),
-    ruleValue: (0, import_fields48.text)({ validation: { isRequired: true } }),
-    moneyAmounts: (0, import_fields48.relationship)({ ref: "MoneyAmount.priceRules", many: true }),
-    priceSet: (0, import_fields48.relationship)({ ref: "PriceSet.priceRules" }),
+    value: (0, import_fields53.float)({ validation: { isRequired: true } }),
+    priority: (0, import_fields53.integer)({ defaultValue: 0 }),
+    ruleAttribute: (0, import_fields53.text)({ validation: { isRequired: true } }),
+    ruleValue: (0, import_fields53.text)({ validation: { isRequired: true } }),
+    moneyAmounts: (0, import_fields53.relationship)({ ref: "MoneyAmount.priceRules", many: true }),
+    priceSet: (0, import_fields53.relationship)({ ref: "PriceSet.priceRules" }),
     ...trackingFields
   }
 });
 
 // features/keystone/models/PriceSet.ts
-var import_core49 = require("@keystone-6/core");
-var import_fields49 = require("@keystone-6/core/fields");
-var PriceSet = (0, import_core49.list)({
+var import_core54 = require("@keystone-6/core");
+var import_fields54 = require("@keystone-6/core/fields");
+var PriceSet = (0, import_core54.list)({
   access: {
     operation: {
       query: () => true,
@@ -9563,18 +11664,18 @@ var PriceSet = (0, import_core49.list)({
     }
   },
   fields: {
-    prices: (0, import_fields49.relationship)({ ref: "MoneyAmount.priceSet", many: true }),
-    priceRules: (0, import_fields49.relationship)({ ref: "PriceRule.priceSet", many: true }),
-    ruleTypes: (0, import_fields49.relationship)({ ref: "RuleType.priceSets", many: true }),
+    prices: (0, import_fields54.relationship)({ ref: "MoneyAmount.priceSet", many: true }),
+    priceRules: (0, import_fields54.relationship)({ ref: "PriceRule.priceSet", many: true }),
+    ruleTypes: (0, import_fields54.relationship)({ ref: "RuleType.priceSets", many: true }),
     ...trackingFields
   }
 });
 
 // features/keystone/models/Product.ts
-var import_core50 = require("@keystone-6/core");
-var import_fields50 = require("@keystone-6/core/fields");
+var import_core55 = require("@keystone-6/core");
+var import_fields55 = require("@keystone-6/core/fields");
 var import_fields_document = require("@keystone-6/fields-document");
-var Product = (0, import_core50.list)({
+var Product = (0, import_core55.list)({
   access: {
     operation: {
       query: () => true,
@@ -9596,7 +11697,7 @@ var Product = (0, import_core50.list)({
     }
   },
   fields: {
-    title: (0, import_fields50.text)({
+    title: (0, import_fields55.text)({
       validation: {
         isRequired: true
       }
@@ -9611,14 +11712,14 @@ var Product = (0, import_core50.list)({
         [2, 1]
       ]
     }),
-    handle: (0, import_fields50.text)({
+    handle: (0, import_fields55.text)({
       isIndexed: "unique"
     }),
-    subtitle: (0, import_fields50.text)(),
-    isGiftcard: (0, import_fields50.checkbox)(),
-    thumbnail: (0, import_fields50.virtual)({
-      field: import_core50.graphql.field({
-        type: import_core50.graphql.String,
+    subtitle: (0, import_fields55.text)(),
+    isGiftcard: (0, import_fields55.checkbox)(),
+    thumbnail: (0, import_fields55.virtual)({
+      field: import_core55.graphql.field({
+        type: import_core55.graphql.String,
         resolve: async (item, args, context) => {
           const product = await context.query.Product.findOne({
             where: { id: item.id },
@@ -9628,9 +11729,9 @@ var Product = (0, import_core50.list)({
         }
       })
     }),
-    dimensionsRange: (0, import_fields50.virtual)({
-      field: import_core50.graphql.field({
-        type: import_core50.graphql.JSON,
+    dimensionsRange: (0, import_fields55.virtual)({
+      field: import_core55.graphql.field({
+        type: import_core55.graphql.JSON,
         resolve: async (item, args, context) => {
           const product = await context.query.Product.findOne({
             where: { id: item.id },
@@ -9668,9 +11769,9 @@ var Product = (0, import_core50.list)({
         }
       })
     }),
-    defaultDimensions: (0, import_fields50.virtual)({
-      field: import_core50.graphql.field({
-        type: import_core50.graphql.JSON,
+    defaultDimensions: (0, import_fields55.virtual)({
+      field: import_core55.graphql.field({
+        type: import_core55.graphql.JSON,
         resolve: async (item, args, context) => {
           const product = await context.query.Product.findOne({
             where: { id: item.id },
@@ -9696,11 +11797,11 @@ var Product = (0, import_core50.list)({
         }
       })
     }),
-    metadata: (0, import_fields50.json)(),
-    discountable: (0, import_fields50.checkbox)({
+    metadata: (0, import_fields55.json)(),
+    discountable: (0, import_fields55.checkbox)({
       defaultValue: true
     }),
-    status: (0, import_fields50.select)({
+    status: (0, import_fields55.select)({
       type: "enum",
       options: [
         {
@@ -9725,30 +11826,30 @@ var Product = (0, import_core50.list)({
         isRequired: true
       }
     }),
-    externalId: (0, import_fields50.text)(),
-    productCollections: (0, import_fields50.relationship)({
+    externalId: (0, import_fields55.text)(),
+    productCollections: (0, import_fields55.relationship)({
       ref: "ProductCollection.products",
       many: true
     }),
-    productCategories: (0, import_fields50.relationship)({
+    productCategories: (0, import_fields55.relationship)({
       ref: "ProductCategory.products",
       many: true
     }),
-    shippingProfile: (0, import_fields50.relationship)({
+    shippingProfile: (0, import_fields55.relationship)({
       ref: "ShippingProfile.products"
     }),
-    productType: (0, import_fields50.relationship)({
+    productType: (0, import_fields55.relationship)({
       ref: "ProductType.products"
     }),
-    discountConditions: (0, import_fields50.relationship)({
+    discountConditions: (0, import_fields55.relationship)({
       ref: "DiscountCondition.products",
       many: true
     }),
-    discountRules: (0, import_fields50.relationship)({
+    discountRules: (0, import_fields55.relationship)({
       ref: "DiscountRule.products",
       many: true
     }),
-    productImages: (0, import_fields50.relationship)({
+    productImages: (0, import_fields55.relationship)({
       ref: "ProductImage.products",
       many: true,
       ui: {
@@ -9761,19 +11862,19 @@ var Product = (0, import_core50.list)({
         linkToItem: false
       }
     }),
-    productOptions: (0, import_fields50.relationship)({
+    productOptions: (0, import_fields55.relationship)({
       ref: "ProductOption.product",
       many: true
     }),
-    productTags: (0, import_fields50.relationship)({
+    productTags: (0, import_fields55.relationship)({
       ref: "ProductTag.products",
       many: true
     }),
-    taxRates: (0, import_fields50.relationship)({
+    taxRates: (0, import_fields55.relationship)({
       ref: "TaxRate.products",
       many: true
     }),
-    productVariants: (0, import_fields50.relationship)({
+    productVariants: (0, import_fields55.relationship)({
       ref: "ProductVariant.product",
       many: true
     }),
@@ -9808,9 +11909,9 @@ var Product = (0, import_core50.list)({
 });
 
 // features/keystone/models/ProductCategory.ts
-var import_core51 = require("@keystone-6/core");
-var import_fields51 = require("@keystone-6/core/fields");
-var ProductCategory = (0, import_core51.list)({
+var import_core56 = require("@keystone-6/core");
+var import_fields56 = require("@keystone-6/core/fields");
+var ProductCategory = (0, import_core56.list)({
   access: {
     operation: {
       query: () => true,
@@ -9832,37 +11933,37 @@ var ProductCategory = (0, import_core51.list)({
     }
   },
   fields: {
-    title: (0, import_fields51.text)({
+    title: (0, import_fields56.text)({
       validation: {
         isRequired: true
       }
     }),
-    handle: (0, import_fields51.text)({
+    handle: (0, import_fields56.text)({
       isIndexed: "unique",
       validation: {
         isRequired: true
       }
     }),
-    metadata: (0, import_fields51.json)(),
-    isInternal: (0, import_fields51.checkbox)({
+    metadata: (0, import_fields56.json)(),
+    isInternal: (0, import_fields56.checkbox)({
       defaultValue: false
     }),
-    isActive: (0, import_fields51.checkbox)({
+    isActive: (0, import_fields56.checkbox)({
       defaultValue: true
     }),
-    discountConditions: (0, import_fields51.relationship)({
+    discountConditions: (0, import_fields56.relationship)({
       ref: "DiscountCondition.productCategories",
       many: true
     }),
-    products: (0, import_fields51.relationship)({
+    products: (0, import_fields56.relationship)({
       ref: "Product.productCategories",
       many: true
     }),
-    parentCategory: (0, import_fields51.relationship)({
+    parentCategory: (0, import_fields56.relationship)({
       ref: "ProductCategory.categoryChildren",
       many: false
     }),
-    categoryChildren: (0, import_fields51.relationship)({
+    categoryChildren: (0, import_fields56.relationship)({
       ref: "ProductCategory.parentCategory",
       many: true
     }),
@@ -9886,9 +11987,9 @@ var ProductCategory = (0, import_core51.list)({
 });
 
 // features/keystone/models/ProductCollection.ts
-var import_core52 = require("@keystone-6/core");
-var import_fields52 = require("@keystone-6/core/fields");
-var ProductCollection = (0, import_core52.list)({
+var import_core57 = require("@keystone-6/core");
+var import_fields57 = require("@keystone-6/core/fields");
+var ProductCollection = (0, import_core57.list)({
   access: {
     operation: {
       // Allow public read access
@@ -9899,23 +12000,23 @@ var ProductCollection = (0, import_core52.list)({
     }
   },
   fields: {
-    title: (0, import_fields52.text)({
+    title: (0, import_fields57.text)({
       validation: {
         isRequired: true
       }
     }),
-    handle: (0, import_fields52.text)({
+    handle: (0, import_fields57.text)({
       isIndexed: "unique",
       validation: {
         isRequired: true
       }
     }),
-    metadata: (0, import_fields52.json)(),
-    discountConditions: (0, import_fields52.relationship)({
+    metadata: (0, import_fields57.json)(),
+    discountConditions: (0, import_fields57.relationship)({
       ref: "DiscountCondition.productCollections",
       many: true
     }),
-    products: (0, import_fields52.relationship)({
+    products: (0, import_fields57.relationship)({
       ref: "Product.productCollections",
       many: true
     }),
@@ -9939,9 +12040,9 @@ var ProductCollection = (0, import_core52.list)({
 });
 
 // features/keystone/models/ProductImage.ts
-var import_core53 = require("@keystone-6/core");
-var import_fields53 = require("@keystone-6/core/fields");
-var ProductImage = (0, import_core53.list)({
+var import_core58 = require("@keystone-6/core");
+var import_fields58 = require("@keystone-6/core/fields");
+var ProductImage = (0, import_core58.list)({
   access: {
     operation: {
       // query: ({ session }) =>
@@ -9954,11 +12055,11 @@ var ProductImage = (0, import_core53.list)({
     }
   },
   fields: {
-    image: (0, import_fields53.image)({ storage: "my_images" }),
-    imagePath: (0, import_fields53.text)(),
-    altText: (0, import_fields53.text)(),
-    products: (0, import_fields53.relationship)({ ref: "Product.productImages", many: true }),
-    metadata: (0, import_fields53.json)(),
+    image: (0, import_fields58.image)({ storage: "my_images" }),
+    imagePath: (0, import_fields58.text)(),
+    altText: (0, import_fields58.text)(),
+    products: (0, import_fields58.relationship)({ ref: "Product.productImages", many: true }),
+    metadata: (0, import_fields58.json)(),
     ...trackingFields
   },
   ui: {
@@ -9969,9 +12070,9 @@ var ProductImage = (0, import_core53.list)({
 });
 
 // features/keystone/models/ProductOption.ts
-var import_core54 = require("@keystone-6/core");
-var import_fields54 = require("@keystone-6/core/fields");
-var ProductOption = (0, import_core54.list)({
+var import_core59 = require("@keystone-6/core");
+var import_fields59 = require("@keystone-6/core/fields");
+var ProductOption = (0, import_core59.list)({
   access: {
     operation: {
       // query: ({ session }) =>
@@ -9984,16 +12085,16 @@ var ProductOption = (0, import_core54.list)({
     }
   },
   fields: {
-    title: (0, import_fields54.text)({
+    title: (0, import_fields59.text)({
       validation: {
         isRequired: true
       }
     }),
-    metadata: (0, import_fields54.json)(),
-    product: (0, import_fields54.relationship)({
+    metadata: (0, import_fields59.json)(),
+    product: (0, import_fields59.relationship)({
       ref: "Product.productOptions"
     }),
-    productOptionValues: (0, import_fields54.relationship)({
+    productOptionValues: (0, import_fields59.relationship)({
       ref: "ProductOptionValue.productOption",
       many: true
     }),
@@ -10002,9 +12103,9 @@ var ProductOption = (0, import_core54.list)({
 });
 
 // features/keystone/models/ProductOptionValue.ts
-var import_core55 = require("@keystone-6/core");
-var import_fields55 = require("@keystone-6/core/fields");
-var ProductOptionValue = (0, import_core55.list)({
+var import_core60 = require("@keystone-6/core");
+var import_fields60 = require("@keystone-6/core/fields");
+var ProductOptionValue = (0, import_core60.list)({
   access: {
     operation: {
       // query: ({ session }) =>
@@ -10017,17 +12118,17 @@ var ProductOptionValue = (0, import_core55.list)({
     }
   },
   fields: {
-    value: (0, import_fields55.text)({
+    value: (0, import_fields60.text)({
       validation: {
         isRequired: true
       }
     }),
-    metadata: (0, import_fields55.json)(),
-    productVariants: (0, import_fields55.relationship)({
+    metadata: (0, import_fields60.json)(),
+    productVariants: (0, import_fields60.relationship)({
       ref: "ProductVariant.productOptionValues",
       many: true
     }),
-    productOption: (0, import_fields55.relationship)({
+    productOption: (0, import_fields60.relationship)({
       ref: "ProductOption.productOptionValues"
     }),
     ...trackingFields
@@ -10038,9 +12139,9 @@ var ProductOptionValue = (0, import_core55.list)({
 });
 
 // features/keystone/models/ProductTag.ts
-var import_core56 = require("@keystone-6/core");
-var import_fields56 = require("@keystone-6/core/fields");
-var ProductTag = (0, import_core56.list)({
+var import_core61 = require("@keystone-6/core");
+var import_fields61 = require("@keystone-6/core/fields");
+var ProductTag = (0, import_core61.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadProducts({ session }) || permissions.canManageProducts({ session }),
@@ -10050,25 +12151,25 @@ var ProductTag = (0, import_core56.list)({
     }
   },
   fields: {
-    value: (0, import_fields56.text)({
+    value: (0, import_fields61.text)({
       validation: {
         isRequired: true
       }
     }),
-    metadata: (0, import_fields56.json)(),
-    discountConditions: (0, import_fields56.relationship)({
+    metadata: (0, import_fields61.json)(),
+    discountConditions: (0, import_fields61.relationship)({
       ref: "DiscountCondition.productTags",
       many: true
     }),
-    products: (0, import_fields56.relationship)({ ref: "Product.productTags", many: true }),
+    products: (0, import_fields61.relationship)({ ref: "Product.productTags", many: true }),
     ...trackingFields
   }
 });
 
 // features/keystone/models/ProductType.ts
-var import_core57 = require("@keystone-6/core");
-var import_fields57 = require("@keystone-6/core/fields");
-var ProductType = (0, import_core57.list)({
+var import_core62 = require("@keystone-6/core");
+var import_fields62 = require("@keystone-6/core/fields");
+var ProductType = (0, import_core62.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadProducts({ session }) || permissions.canManageProducts({ session }),
@@ -10078,21 +12179,21 @@ var ProductType = (0, import_core57.list)({
     }
   },
   fields: {
-    value: (0, import_fields57.text)({
+    value: (0, import_fields62.text)({
       validation: {
         isRequired: true
       }
     }),
-    metadata: (0, import_fields57.json)(),
-    discountConditions: (0, import_fields57.relationship)({
+    metadata: (0, import_fields62.json)(),
+    discountConditions: (0, import_fields62.relationship)({
       ref: "DiscountCondition.productTypes",
       many: true
     }),
-    products: (0, import_fields57.relationship)({
+    products: (0, import_fields62.relationship)({
       ref: "Product.productType",
       many: true
     }),
-    taxRates: (0, import_fields57.relationship)({
+    taxRates: (0, import_fields62.relationship)({
       ref: "TaxRate.productTypes",
       many: true
     }),
@@ -10101,9 +12202,9 @@ var ProductType = (0, import_core57.list)({
 });
 
 // features/keystone/models/ProductVariant.ts
-var import_core58 = require("@keystone-6/core");
-var import_fields58 = require("@keystone-6/core/fields");
-var ProductVariant = (0, import_core58.list)({
+var import_core63 = require("@keystone-6/core");
+var import_fields63 = require("@keystone-6/core/fields");
+var ProductVariant = (0, import_core63.list)({
   access: {
     operation: {
       query: () => true,
@@ -10113,9 +12214,9 @@ var ProductVariant = (0, import_core58.list)({
     }
   },
   fields: {
-    fullTitle: (0, import_fields58.virtual)({
-      field: import_core58.graphql.field({
-        type: import_core58.graphql.String,
+    fullTitle: (0, import_fields63.virtual)({
+      field: import_core63.graphql.field({
+        type: import_core63.graphql.String,
         resolve: async (item, args, context) => {
           const { product } = await context.query.ProductVariant.findOne({
             where: { id: item.id.toString() },
@@ -10125,59 +12226,59 @@ var ProductVariant = (0, import_core58.list)({
         }
       })
     }),
-    title: (0, import_fields58.text)({
+    title: (0, import_fields63.text)({
       validation: {
         isRequired: true
       }
     }),
-    sku: (0, import_fields58.text)(),
-    barcode: (0, import_fields58.text)(),
-    ean: (0, import_fields58.text)(),
-    upc: (0, import_fields58.text)(),
-    inventoryQuantity: (0, import_fields58.integer)({
+    sku: (0, import_fields63.text)(),
+    barcode: (0, import_fields63.text)(),
+    ean: (0, import_fields63.text)(),
+    upc: (0, import_fields63.text)(),
+    inventoryQuantity: (0, import_fields63.integer)({
       validation: {
         isRequired: true
       }
     }),
-    allowBackorder: (0, import_fields58.checkbox)(),
-    manageInventory: (0, import_fields58.checkbox)({
+    allowBackorder: (0, import_fields63.checkbox)(),
+    manageInventory: (0, import_fields63.checkbox)({
       defaultValue: true
     }),
-    hsCode: (0, import_fields58.text)(),
-    originCountry: (0, import_fields58.text)(),
-    midCode: (0, import_fields58.text)(),
-    material: (0, import_fields58.text)(),
-    metadata: (0, import_fields58.json)(),
-    variantRank: (0, import_fields58.integer)({
+    hsCode: (0, import_fields63.text)(),
+    originCountry: (0, import_fields63.text)(),
+    midCode: (0, import_fields63.text)(),
+    material: (0, import_fields63.text)(),
+    metadata: (0, import_fields63.json)(),
+    variantRank: (0, import_fields63.integer)({
       defaultValue: 0
     }),
-    product: (0, import_fields58.relationship)({
+    product: (0, import_fields63.relationship)({
       ref: "Product.productVariants"
     }),
-    claimItems: (0, import_fields58.relationship)({
+    claimItems: (0, import_fields63.relationship)({
       ref: "ClaimItem.productVariant",
       many: true
     }),
-    lineItems: (0, import_fields58.relationship)({
+    lineItems: (0, import_fields63.relationship)({
       ref: "LineItem.productVariant",
       many: true
     }),
-    prices: (0, import_fields58.relationship)({
+    prices: (0, import_fields63.relationship)({
       ref: "MoneyAmount.productVariant",
       many: true
     }),
-    productOptionValues: (0, import_fields58.relationship)({
+    productOptionValues: (0, import_fields63.relationship)({
       ref: "ProductOptionValue.productVariants",
       many: true
     }),
-    location: (0, import_fields58.relationship)({
+    location: (0, import_fields63.relationship)({
       ref: "Location.variants"
     }),
-    stockMovements: (0, import_fields58.relationship)({
+    stockMovements: (0, import_fields63.relationship)({
       ref: "StockMovement.variant",
       many: true
     }),
-    measurements: (0, import_fields58.relationship)({
+    measurements: (0, import_fields63.relationship)({
       ref: "Measurement.productVariant",
       many: true
     }),
@@ -10189,9 +12290,9 @@ var ProductVariant = (0, import_core58.list)({
 });
 
 // features/keystone/models/Refund.ts
-var import_core59 = require("@keystone-6/core");
-var import_fields59 = require("@keystone-6/core/fields");
-var Refund = (0, import_core59.list)({
+var import_core64 = require("@keystone-6/core");
+var import_fields64 = require("@keystone-6/core/fields");
+var Refund = (0, import_core64.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadReturns({ session }) || permissions.canManageReturns({ session }),
@@ -10201,13 +12302,13 @@ var Refund = (0, import_core59.list)({
     }
   },
   fields: {
-    amount: (0, import_fields59.integer)({
+    amount: (0, import_fields64.integer)({
       validation: {
         isRequired: true
       }
     }),
-    note: (0, import_fields59.text)(),
-    reason: (0, import_fields59.select)({
+    note: (0, import_fields64.text)(),
+    reason: (0, import_fields64.select)({
       type: "enum",
       options: [
         {
@@ -10235,9 +12336,9 @@ var Refund = (0, import_core59.list)({
         isRequired: true
       }
     }),
-    metadata: (0, import_fields59.json)(),
-    idempotencyKey: (0, import_fields59.text)(),
-    payment: (0, import_fields59.relationship)({
+    metadata: (0, import_fields64.json)(),
+    idempotencyKey: (0, import_fields64.text)(),
+    payment: (0, import_fields64.relationship)({
       ref: "Payment.refunds"
     }),
     ...trackingFields
@@ -10245,9 +12346,9 @@ var Refund = (0, import_core59.list)({
 });
 
 // features/keystone/models/Region.ts
-var import_core60 = require("@keystone-6/core");
-var import_fields60 = require("@keystone-6/core/fields");
-var Region = (0, import_core60.list)({
+var import_core65 = require("@keystone-6/core");
+var import_fields65 = require("@keystone-6/core/fields");
+var Region = (0, import_core65.list)({
   access: {
     operation: {
       // Allow public read access
@@ -10258,78 +12359,82 @@ var Region = (0, import_core60.list)({
     }
   },
   fields: {
-    code: (0, import_fields60.text)({
+    code: (0, import_fields65.text)({
       isIndexed: "unique",
       validation: {
         isRequired: true
       }
     }),
-    name: (0, import_fields60.text)({
+    name: (0, import_fields65.text)({
       validation: {
         isRequired: true
       }
     }),
-    taxRate: (0, import_fields60.float)({
+    taxRate: (0, import_fields65.float)({
       validation: {
         isRequired: true
       }
     }),
-    taxCode: (0, import_fields60.text)(),
-    metadata: (0, import_fields60.json)(),
-    giftCardsTaxable: (0, import_fields60.checkbox)({
+    taxCode: (0, import_fields65.text)(),
+    metadata: (0, import_fields65.json)(),
+    giftCardsTaxable: (0, import_fields65.checkbox)({
       defaultValue: true
     }),
-    automaticTaxes: (0, import_fields60.checkbox)({
+    automaticTaxes: (0, import_fields65.checkbox)({
       defaultValue: true
     }),
-    currency: (0, import_fields60.relationship)({
+    currency: (0, import_fields65.relationship)({
       ref: "Currency.regions"
     }),
-    carts: (0, import_fields60.relationship)({
+    carts: (0, import_fields65.relationship)({
       ref: "Cart.region",
       many: true
     }),
-    countries: (0, import_fields60.relationship)({
+    countries: (0, import_fields65.relationship)({
       ref: "Country.region",
       many: true
     }),
-    discounts: (0, import_fields60.relationship)({
+    discounts: (0, import_fields65.relationship)({
       ref: "Discount.regions",
       many: true
     }),
-    giftCards: (0, import_fields60.relationship)({
+    giftCards: (0, import_fields65.relationship)({
       ref: "GiftCard.region",
       many: true
     }),
-    moneyAmounts: (0, import_fields60.relationship)({
+    moneyAmounts: (0, import_fields65.relationship)({
       ref: "MoneyAmount.region",
       many: true
     }),
-    orders: (0, import_fields60.relationship)({
+    orders: (0, import_fields65.relationship)({
       ref: "Order.region",
       many: true
     }),
-    taxProvider: (0, import_fields60.relationship)({
+    taxProvider: (0, import_fields65.relationship)({
       ref: "TaxProvider.regions"
     }),
-    fulfillmentProviders: (0, import_fields60.relationship)({
+    fulfillmentProviders: (0, import_fields65.relationship)({
       ref: "FulfillmentProvider.regions",
       many: true
     }),
-    paymentProviders: (0, import_fields60.relationship)({
+    paymentProviders: (0, import_fields65.relationship)({
       ref: "PaymentProvider.regions",
       many: true
     }),
-    shippingOptions: (0, import_fields60.relationship)({
+    shippingOptions: (0, import_fields65.relationship)({
       ref: "ShippingOption.region",
       many: true
     }),
-    taxRates: (0, import_fields60.relationship)({
+    taxRates: (0, import_fields65.relationship)({
       ref: "TaxRate.region",
       many: true
     }),
-    shippingProviders: (0, import_fields60.relationship)({
+    shippingProviders: (0, import_fields65.relationship)({
       ref: "ShippingProvider.regions",
+      many: true
+    }),
+    accountLineItems: (0, import_fields65.relationship)({
+      ref: "AccountLineItem.region",
       many: true
     }),
     ...trackingFields
@@ -10337,9 +12442,9 @@ var Region = (0, import_core60.list)({
 });
 
 // features/keystone/models/Return.ts
-var import_core61 = require("@keystone-6/core");
-var import_fields61 = require("@keystone-6/core/fields");
-var Return = (0, import_core61.list)({
+var import_core66 = require("@keystone-6/core");
+var import_fields66 = require("@keystone-6/core/fields");
+var Return = (0, import_core66.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadReturns({ session }) || permissions.canManageReturns({ session }),
@@ -10349,7 +12454,7 @@ var Return = (0, import_core61.list)({
     }
   },
   fields: {
-    status: (0, import_fields61.select)({
+    status: (0, import_fields66.select)({
       type: "enum",
       options: [
         {
@@ -10377,30 +12482,30 @@ var Return = (0, import_core61.list)({
         isRequired: true
       }
     }),
-    shippingData: (0, import_fields61.json)(),
-    refundAmount: (0, import_fields61.integer)({
+    shippingData: (0, import_fields66.json)(),
+    refundAmount: (0, import_fields66.integer)({
       validation: {
         isRequired: true
       }
     }),
-    receivedAt: (0, import_fields61.timestamp)(),
-    metadata: (0, import_fields61.json)(),
-    idempotencyKey: (0, import_fields61.text)(),
-    noNotification: (0, import_fields61.checkbox)(),
-    claimOrder: (0, import_fields61.relationship)({
+    receivedAt: (0, import_fields66.timestamp)(),
+    metadata: (0, import_fields66.json)(),
+    idempotencyKey: (0, import_fields66.text)(),
+    noNotification: (0, import_fields66.checkbox)(),
+    claimOrder: (0, import_fields66.relationship)({
       ref: "ClaimOrder.return"
     }),
-    swap: (0, import_fields61.relationship)({
+    swap: (0, import_fields66.relationship)({
       ref: "Swap.return"
     }),
-    order: (0, import_fields61.relationship)({
+    order: (0, import_fields66.relationship)({
       ref: "Order.returns"
     }),
-    returnItems: (0, import_fields61.relationship)({
+    returnItems: (0, import_fields66.relationship)({
       ref: "ReturnItem.return",
       many: true
     }),
-    shippingMethod: (0, import_fields61.relationship)({
+    shippingMethod: (0, import_fields66.relationship)({
       ref: "ShippingMethod.return"
     }),
     ...trackingFields
@@ -10408,9 +12513,9 @@ var Return = (0, import_core61.list)({
 });
 
 // features/keystone/models/ReturnItem.ts
-var import_core62 = require("@keystone-6/core");
-var import_fields62 = require("@keystone-6/core/fields");
-var ReturnItem = (0, import_core62.list)({
+var import_core67 = require("@keystone-6/core");
+var import_fields67 = require("@keystone-6/core/fields");
+var ReturnItem = (0, import_core67.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadReturns({ session }) || permissions.canManageReturns({ session }),
@@ -10420,25 +12525,25 @@ var ReturnItem = (0, import_core62.list)({
     }
   },
   fields: {
-    quantity: (0, import_fields62.integer)({
+    quantity: (0, import_fields67.integer)({
       validation: {
         isRequired: true
       }
     }),
-    isRequested: (0, import_fields62.checkbox)({
+    isRequested: (0, import_fields67.checkbox)({
       defaultValue: true
     }),
-    requestedQuantity: (0, import_fields62.integer)(),
-    receivedQuantity: (0, import_fields62.integer)(),
-    metadata: (0, import_fields62.json)(),
-    note: (0, import_fields62.text)(),
-    return: (0, import_fields62.relationship)({
+    requestedQuantity: (0, import_fields67.integer)(),
+    receivedQuantity: (0, import_fields67.integer)(),
+    metadata: (0, import_fields67.json)(),
+    note: (0, import_fields67.text)(),
+    return: (0, import_fields67.relationship)({
       ref: "Return.returnItems"
     }),
-    lineItem: (0, import_fields62.relationship)({
+    lineItem: (0, import_fields67.relationship)({
       ref: "LineItem.returnItems"
     }),
-    returnReason: (0, import_fields62.relationship)({
+    returnReason: (0, import_fields67.relationship)({
       ref: "ReturnReason.returnItems"
     }),
     ...trackingFields
@@ -10446,9 +12551,9 @@ var ReturnItem = (0, import_core62.list)({
 });
 
 // features/keystone/models/ReturnReason.ts
-var import_core63 = require("@keystone-6/core");
-var import_fields63 = require("@keystone-6/core/fields");
-var ReturnReason = (0, import_core63.list)({
+var import_core68 = require("@keystone-6/core");
+var import_fields68 = require("@keystone-6/core/fields");
+var ReturnReason = (0, import_core68.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadReturns({ session }) || permissions.canManageReturns({ session }),
@@ -10458,23 +12563,23 @@ var ReturnReason = (0, import_core63.list)({
     }
   },
   fields: {
-    value: (0, import_fields63.text)({
+    value: (0, import_fields68.text)({
       isIndexed: "unique",
       validation: {
         isRequired: true
       }
     }),
-    label: (0, import_fields63.text)({
+    label: (0, import_fields68.text)({
       validation: {
         isRequired: true
       }
     }),
-    description: (0, import_fields63.text)(),
-    metadata: (0, import_fields63.json)(),
-    parentReturnReason: (0, import_fields63.relationship)({
+    description: (0, import_fields68.text)(),
+    metadata: (0, import_fields68.json)(),
+    parentReturnReason: (0, import_fields68.relationship)({
       ref: "ReturnReason"
     }),
-    returnItems: (0, import_fields63.relationship)({
+    returnItems: (0, import_fields68.relationship)({
       ref: "ReturnItem.returnReason",
       many: true
     }),
@@ -10483,9 +12588,9 @@ var ReturnReason = (0, import_core63.list)({
 });
 
 // features/keystone/models/Role.ts
-var import_fields64 = require("@keystone-6/core/fields");
-var import_core64 = require("@keystone-6/core");
-var Role = (0, import_core64.list)({
+var import_fields69 = require("@keystone-6/core/fields");
+var import_core69 = require("@keystone-6/core");
+var Role = (0, import_core69.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadRoles({ session }) || permissions.canManageRoles({ session }),
@@ -10500,9 +12605,9 @@ var Role = (0, import_core64.list)({
     isHidden: (args) => !permissions.canManageRoles(args)
   },
   fields: {
-    name: (0, import_fields64.text)({ validation: { isRequired: true } }),
+    name: (0, import_fields69.text)({ validation: { isRequired: true } }),
     ...permissionFields,
-    assignedTo: (0, import_fields64.relationship)({
+    assignedTo: (0, import_fields69.relationship)({
       ref: "User.role",
       // TODO: Add this to the User
       many: true
@@ -10515,9 +12620,9 @@ var Role = (0, import_core64.list)({
 });
 
 // features/keystone/models/RuleType.ts
-var import_core65 = require("@keystone-6/core");
-var import_fields66 = require("@keystone-6/core/fields");
-var RuleType = (0, import_core65.list)({
+var import_core70 = require("@keystone-6/core");
+var import_fields71 = require("@keystone-6/core/fields");
+var RuleType = (0, import_core70.list)({
   access: {
     operation: {
       query: () => true,
@@ -10527,17 +12632,17 @@ var RuleType = (0, import_core65.list)({
     }
   },
   fields: {
-    name: (0, import_fields66.text)({ validation: { isRequired: true } }),
-    ruleAttribute: (0, import_fields66.text)({ validation: { isRequired: true }, isIndexed: "unique" }),
-    priceSets: (0, import_fields66.relationship)({ ref: "PriceSet.ruleTypes", many: true }),
+    name: (0, import_fields71.text)({ validation: { isRequired: true } }),
+    ruleAttribute: (0, import_fields71.text)({ validation: { isRequired: true }, isIndexed: "unique" }),
+    priceSets: (0, import_fields71.relationship)({ ref: "PriceSet.ruleTypes", many: true }),
     ...trackingFields
   }
 });
 
 // features/keystone/models/SalesChannel.ts
-var import_core66 = require("@keystone-6/core");
-var import_fields67 = require("@keystone-6/core/fields");
-var SalesChannel = (0, import_core66.list)({
+var import_core71 = require("@keystone-6/core");
+var import_fields72 = require("@keystone-6/core/fields");
+var SalesChannel = (0, import_core71.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadSalesChannels({ session }) || permissions.canManageSalesChannels({ session }),
@@ -10547,17 +12652,17 @@ var SalesChannel = (0, import_core66.list)({
     }
   },
   fields: {
-    name: (0, import_fields67.text)(),
-    description: (0, import_fields67.text)(),
-    isDisabled: (0, import_fields67.checkbox)(),
+    name: (0, import_fields72.text)(),
+    description: (0, import_fields72.text)(),
+    isDisabled: (0, import_fields72.checkbox)(),
     ...trackingFields
   }
 });
 
 // features/keystone/models/ShippingLabel.ts
-var import_core67 = require("@keystone-6/core");
-var import_fields68 = require("@keystone-6/core/fields");
-var ShippingLabel = (0, import_core67.list)({
+var import_core72 = require("@keystone-6/core");
+var import_fields73 = require("@keystone-6/core/fields");
+var ShippingLabel = (0, import_core72.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadFulfillments({ session }) || permissions.canManageFulfillments({ session }),
@@ -10567,7 +12672,7 @@ var ShippingLabel = (0, import_core67.list)({
     }
   },
   fields: {
-    status: (0, import_fields68.select)({
+    status: (0, import_fields73.select)({
       type: "enum",
       options: [
         { label: "Created", value: "created" },
@@ -10578,29 +12683,29 @@ var ShippingLabel = (0, import_core67.list)({
       defaultValue: "created"
     }),
     // Label information
-    labelUrl: (0, import_fields68.text)(),
-    carrier: (0, import_fields68.text)(),
-    service: (0, import_fields68.text)(),
-    rate: (0, import_fields68.json)(),
+    labelUrl: (0, import_fields73.text)(),
+    carrier: (0, import_fields73.text)(),
+    service: (0, import_fields73.text)(),
+    rate: (0, import_fields73.json)(),
     // Tracking information
-    trackingNumber: (0, import_fields68.text)(),
-    trackingUrl: (0, import_fields68.text)(),
+    trackingNumber: (0, import_fields73.text)(),
+    trackingUrl: (0, import_fields73.text)(),
     // Relationships
-    order: (0, import_fields68.relationship)({
+    order: (0, import_fields73.relationship)({
       ref: "Order.shippingLabels",
       many: false
     }),
-    provider: (0, import_fields68.relationship)({
+    provider: (0, import_fields73.relationship)({
       ref: "ShippingProvider.labels",
       many: false
     }),
-    fulfillment: (0, import_fields68.relationship)({
+    fulfillment: (0, import_fields73.relationship)({
       ref: "Fulfillment.shippingLabels",
       many: false
     }),
     // Additional data
-    data: (0, import_fields68.json)(),
-    metadata: (0, import_fields68.json)(),
+    data: (0, import_fields73.json)(),
+    metadata: (0, import_fields73.json)(),
     ...trackingFields
   },
   hooks: {
@@ -10615,9 +12720,9 @@ var ShippingLabel = (0, import_core67.list)({
 });
 
 // features/keystone/models/ShippingMethod.ts
-var import_core68 = require("@keystone-6/core");
-var import_fields69 = require("@keystone-6/core/fields");
-var ShippingMethod = (0, import_core68.list)({
+var import_core73 = require("@keystone-6/core");
+var import_fields74 = require("@keystone-6/core/fields");
+var ShippingMethod = (0, import_core73.list)({
   access: {
     operation: {
       // Allow public read access
@@ -10649,31 +12754,31 @@ var ShippingMethod = (0, import_core68.list)({
     }
   },
   fields: {
-    price: (0, import_fields69.integer)({
+    price: (0, import_fields74.integer)({
       validation: {
         isRequired: true
       }
     }),
-    data: (0, import_fields69.json)(),
-    return: (0, import_fields69.relationship)({
+    data: (0, import_fields74.json)(),
+    return: (0, import_fields74.relationship)({
       ref: "Return.shippingMethod"
     }),
-    order: (0, import_fields69.relationship)({
+    order: (0, import_fields74.relationship)({
       ref: "Order.shippingMethods"
     }),
-    claimOrder: (0, import_fields69.relationship)({
+    claimOrder: (0, import_fields74.relationship)({
       ref: "ClaimOrder.shippingMethods"
     }),
-    cart: (0, import_fields69.relationship)({
+    cart: (0, import_fields74.relationship)({
       ref: "Cart.shippingMethods"
     }),
-    swap: (0, import_fields69.relationship)({
+    swap: (0, import_fields74.relationship)({
       ref: "Swap.shippingMethods"
     }),
-    shippingOption: (0, import_fields69.relationship)({
+    shippingOption: (0, import_fields74.relationship)({
       ref: "ShippingOption.shippingMethods"
     }),
-    shippingMethodTaxLines: (0, import_fields69.relationship)({
+    shippingMethodTaxLines: (0, import_fields74.relationship)({
       ref: "ShippingMethodTaxLine.shippingMethod",
       many: true
     }),
@@ -10682,9 +12787,9 @@ var ShippingMethod = (0, import_core68.list)({
 });
 
 // features/keystone/models/ShippingMethodTaxLine.ts
-var import_core69 = require("@keystone-6/core");
-var import_fields70 = require("@keystone-6/core/fields");
-var ShippingMethodTaxLine = (0, import_core69.list)({
+var import_core74 = require("@keystone-6/core");
+var import_fields75 = require("@keystone-6/core/fields");
+var ShippingMethodTaxLine = (0, import_core74.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -10694,19 +12799,19 @@ var ShippingMethodTaxLine = (0, import_core69.list)({
     }
   },
   fields: {
-    rate: (0, import_fields70.float)({
+    rate: (0, import_fields75.float)({
       validation: {
         isRequired: true
       }
     }),
-    name: (0, import_fields70.text)({
+    name: (0, import_fields75.text)({
       validation: {
         isRequired: true
       }
     }),
-    code: (0, import_fields70.text)(),
-    metadata: (0, import_fields70.json)(),
-    shippingMethod: (0, import_fields70.relationship)({
+    code: (0, import_fields75.text)(),
+    metadata: (0, import_fields75.json)(),
+    shippingMethod: (0, import_fields75.relationship)({
       ref: "ShippingMethod.shippingMethodTaxLines"
     }),
     ...trackingFields
@@ -10714,16 +12819,16 @@ var ShippingMethodTaxLine = (0, import_core69.list)({
 });
 
 // features/keystone/models/ShippingOption.ts
-var import_core70 = require("@keystone-6/core");
-var import_fields71 = require("@keystone-6/core/fields");
-var import_core71 = require("@keystone-6/core");
+var import_core75 = require("@keystone-6/core");
+var import_fields76 = require("@keystone-6/core/fields");
+var import_core76 = require("@keystone-6/core");
 function formatCurrency4(amount, currencyCode = "USD") {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: currencyCode
   }).format(amount);
 }
-var ShippingOption = (0, import_core70.list)({
+var ShippingOption = (0, import_core75.list)({
   access: {
     operation: {
       query: () => true,
@@ -10733,16 +12838,16 @@ var ShippingOption = (0, import_core70.list)({
     }
   },
   fields: {
-    name: (0, import_fields71.text)({
+    name: (0, import_fields76.text)({
       validation: {
         isRequired: true
       }
     }),
-    uniqueKey: (0, import_fields71.text)({
+    uniqueKey: (0, import_fields76.text)({
       validation: { isRequired: true },
       isIndexed: "unique"
     }),
-    priceType: (0, import_fields71.select)({
+    priceType: (0, import_fields76.select)({
       type: "enum",
       options: [
         {
@@ -10762,43 +12867,43 @@ var ShippingOption = (0, import_core70.list)({
         isRequired: true
       }
     }),
-    amount: (0, import_fields71.integer)({
+    amount: (0, import_fields76.integer)({
       validation: {
         isRequired: false
       }
     }),
-    isReturn: (0, import_fields71.checkbox)(),
-    data: (0, import_fields71.json)(),
-    metadata: (0, import_fields71.json)(),
-    adminOnly: (0, import_fields71.checkbox)(),
-    region: (0, import_fields71.relationship)({
+    isReturn: (0, import_fields76.checkbox)(),
+    data: (0, import_fields76.json)(),
+    metadata: (0, import_fields76.json)(),
+    adminOnly: (0, import_fields76.checkbox)(),
+    region: (0, import_fields76.relationship)({
       ref: "Region.shippingOptions"
     }),
-    fulfillmentProvider: (0, import_fields71.relationship)({
+    fulfillmentProvider: (0, import_fields76.relationship)({
       ref: "FulfillmentProvider.shippingOptions"
     }),
-    shippingProfile: (0, import_fields71.relationship)({
+    shippingProfile: (0, import_fields76.relationship)({
       ref: "ShippingProfile.shippingOptions"
     }),
-    customShippingOptions: (0, import_fields71.relationship)({
+    customShippingOptions: (0, import_fields76.relationship)({
       ref: "CustomShippingOption.shippingOption",
       many: true
     }),
-    shippingMethods: (0, import_fields71.relationship)({
+    shippingMethods: (0, import_fields76.relationship)({
       ref: "ShippingMethod.shippingOption",
       many: true
     }),
-    shippingOptionRequirements: (0, import_fields71.relationship)({
+    shippingOptionRequirements: (0, import_fields76.relationship)({
       ref: "ShippingOptionRequirement.shippingOption",
       many: true
     }),
-    taxRates: (0, import_fields71.relationship)({
+    taxRates: (0, import_fields76.relationship)({
       ref: "TaxRate.shippingOptions",
       many: true
     }),
-    calculatedAmount: (0, import_fields71.virtual)({
-      field: import_core71.graphql.field({
-        type: import_core71.graphql.String,
+    calculatedAmount: (0, import_fields76.virtual)({
+      field: import_core76.graphql.field({
+        type: import_core76.graphql.String,
         async resolve(item, args, context) {
           const sudoContext = context.sudo();
           const shippingOption = await sudoContext.query.ShippingOption.findOne({
@@ -10825,9 +12930,9 @@ var ShippingOption = (0, import_core70.list)({
         }
       })
     }),
-    isTaxInclusive: (0, import_fields71.virtual)({
-      field: import_core71.graphql.field({
-        type: import_core71.graphql.Boolean,
+    isTaxInclusive: (0, import_fields76.virtual)({
+      field: import_core76.graphql.field({
+        type: import_core76.graphql.Boolean,
         resolve() {
           return true;
         }
@@ -10838,9 +12943,9 @@ var ShippingOption = (0, import_core70.list)({
 });
 
 // features/keystone/models/ShippingOptionRequirement.ts
-var import_core72 = require("@keystone-6/core");
-var import_fields72 = require("@keystone-6/core/fields");
-var ShippingOptionRequirement = (0, import_core72.list)({
+var import_core77 = require("@keystone-6/core");
+var import_fields77 = require("@keystone-6/core/fields");
+var ShippingOptionRequirement = (0, import_core77.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -10850,7 +12955,7 @@ var ShippingOptionRequirement = (0, import_core72.list)({
     }
   },
   fields: {
-    type: (0, import_fields72.select)({
+    type: (0, import_fields77.select)({
       type: "enum",
       options: [
         {
@@ -10866,12 +12971,12 @@ var ShippingOptionRequirement = (0, import_core72.list)({
         isRequired: true
       }
     }),
-    amount: (0, import_fields72.integer)({
+    amount: (0, import_fields77.integer)({
       validation: {
         isRequired: true
       }
     }),
-    shippingOption: (0, import_fields72.relationship)({
+    shippingOption: (0, import_fields77.relationship)({
       ref: "ShippingOption.shippingOptionRequirements"
     }),
     ...trackingFields
@@ -10879,9 +12984,9 @@ var ShippingOptionRequirement = (0, import_core72.list)({
 });
 
 // features/keystone/models/ShippingProfile.ts
-var import_core73 = require("@keystone-6/core");
-var import_fields73 = require("@keystone-6/core/fields");
-var ShippingProfile = (0, import_core73.list)({
+var import_core78 = require("@keystone-6/core");
+var import_fields78 = require("@keystone-6/core/fields");
+var ShippingProfile = (0, import_core78.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -10891,12 +12996,12 @@ var ShippingProfile = (0, import_core73.list)({
     }
   },
   fields: {
-    name: (0, import_fields73.text)({
+    name: (0, import_fields78.text)({
       validation: {
         isRequired: true
       }
     }),
-    type: (0, import_fields73.select)({
+    type: (0, import_fields78.select)({
       type: "enum",
       options: [
         {
@@ -10916,12 +13021,12 @@ var ShippingProfile = (0, import_core73.list)({
         isRequired: true
       }
     }),
-    metadata: (0, import_fields73.json)(),
-    products: (0, import_fields73.relationship)({
+    metadata: (0, import_fields78.json)(),
+    products: (0, import_fields78.relationship)({
       ref: "Product.shippingProfile",
       many: true
     }),
-    shippingOptions: (0, import_fields73.relationship)({
+    shippingOptions: (0, import_fields78.relationship)({
       ref: "ShippingOption.shippingProfile",
       many: true
     }),
@@ -10930,9 +13035,9 @@ var ShippingProfile = (0, import_core73.list)({
 });
 
 // features/keystone/models/ShippingProvider.ts
-var import_core74 = require("@keystone-6/core");
-var import_fields74 = require("@keystone-6/core/fields");
-var ShippingProvider = (0, import_core74.list)({
+var import_core79 = require("@keystone-6/core");
+var import_fields79 = require("@keystone-6/core/fields");
+var ShippingProvider = (0, import_core79.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -10942,64 +13047,64 @@ var ShippingProvider = (0, import_core74.list)({
     }
   },
   fields: {
-    name: (0, import_fields74.text)({
+    name: (0, import_fields79.text)({
       validation: { isRequired: true }
     }),
-    isActive: (0, import_fields74.checkbox)({
+    isActive: (0, import_fields79.checkbox)({
       defaultValue: false
     }),
-    accessToken: (0, import_fields74.text)({
+    accessToken: (0, import_fields79.text)({
       validation: { isRequired: true },
       ui: {
         itemView: { fieldMode: "hidden" }
       }
     }),
     // Adapter function fields
-    createLabelFunction: (0, import_fields74.text)({
+    createLabelFunction: (0, import_fields79.text)({
       validation: { isRequired: true },
       ui: {
         description: "Either an adapter name (e.g. 'shippo') or an HTTP endpoint that will be called with the order data"
       }
     }),
-    getRatesFunction: (0, import_fields74.text)({
+    getRatesFunction: (0, import_fields79.text)({
       validation: { isRequired: true },
       ui: {
         description: "Either an adapter name (e.g. 'shippo') or an HTTP endpoint that will be called with the order data"
       }
     }),
-    validateAddressFunction: (0, import_fields74.text)({
+    validateAddressFunction: (0, import_fields79.text)({
       validation: { isRequired: true },
       ui: {
         description: "Either an adapter name (e.g. 'shippo') or an HTTP endpoint that will be called with the address data"
       }
     }),
-    trackShipmentFunction: (0, import_fields74.text)({
+    trackShipmentFunction: (0, import_fields79.text)({
       validation: { isRequired: true },
       ui: {
         description: "Either an adapter name (e.g. 'shippo') or an HTTP endpoint that will be called with the tracking number"
       }
     }),
-    cancelLabelFunction: (0, import_fields74.text)({
+    cancelLabelFunction: (0, import_fields79.text)({
       validation: { isRequired: true },
       ui: {
         description: "Either an adapter name (e.g. 'shippo') or an HTTP endpoint that will be called with the label ID"
       }
     }),
-    metadata: (0, import_fields74.json)(),
+    metadata: (0, import_fields79.json)(),
     // Relationships
-    regions: (0, import_fields74.relationship)({
+    regions: (0, import_fields79.relationship)({
       ref: "Region.shippingProviders",
       many: true
     }),
-    labels: (0, import_fields74.relationship)({
+    labels: (0, import_fields79.relationship)({
       ref: "ShippingLabel.provider",
       many: true
     }),
-    fulfillmentProvider: (0, import_fields74.relationship)({
+    fulfillmentProvider: (0, import_fields79.relationship)({
       ref: "FulfillmentProvider.shippingProviders",
       many: false
     }),
-    fromAddress: (0, import_fields74.relationship)({
+    fromAddress: (0, import_fields79.relationship)({
       ref: "Address.shippingProviders",
       many: false
       // ui: {
@@ -11015,9 +13120,9 @@ var ShippingProvider = (0, import_core74.list)({
 });
 
 // features/keystone/models/StockMovement.ts
-var import_core75 = require("@keystone-6/core");
-var import_fields75 = require("@keystone-6/core/fields");
-var StockMovement = (0, import_core75.list)({
+var import_core80 = require("@keystone-6/core");
+var import_fields80 = require("@keystone-6/core/fields");
+var StockMovement = (0, import_core80.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadProducts({ session }) || permissions.canManageProducts({ session }),
@@ -11027,7 +13132,7 @@ var StockMovement = (0, import_core75.list)({
     }
   },
   fields: {
-    type: (0, import_fields75.select)({
+    type: (0, import_fields80.select)({
       type: "enum",
       options: [
         { label: "Receive", value: "RECEIVE" },
@@ -11035,16 +13140,16 @@ var StockMovement = (0, import_core75.list)({
       ],
       validation: { isRequired: true }
     }),
-    quantity: (0, import_fields75.integer)({
+    quantity: (0, import_fields80.integer)({
       validation: { isRequired: true }
     }),
-    reason: (0, import_fields75.text)(),
-    note: (0, import_fields75.text)(),
-    variant: (0, import_fields75.relationship)({
+    reason: (0, import_fields80.text)(),
+    note: (0, import_fields80.text)(),
+    variant: (0, import_fields80.relationship)({
       ref: "ProductVariant.stockMovements",
       many: false
     }),
-    createdAt: (0, import_fields75.timestamp)({
+    createdAt: (0, import_fields80.timestamp)({
       defaultValue: { kind: "now" }
     }),
     ...trackingFields
@@ -11072,9 +13177,9 @@ var StockMovement = (0, import_core75.list)({
 });
 
 // features/keystone/models/Store.ts
-var import_core76 = require("@keystone-6/core");
-var import_fields76 = require("@keystone-6/core/fields");
-var Store = (0, import_core76.list)({
+var import_core81 = require("@keystone-6/core");
+var import_fields81 = require("@keystone-6/core/fields");
+var Store = (0, import_core81.list)({
   access: {
     operation: {
       // Allow public read access
@@ -11085,32 +13190,32 @@ var Store = (0, import_core76.list)({
     }
   },
   fields: {
-    name: (0, import_fields76.text)({
+    name: (0, import_fields81.text)({
       defaultValue: "Openfront Store",
       validation: {
         isRequired: true
       }
     }),
-    defaultCurrencyCode: (0, import_fields76.text)({
+    defaultCurrencyCode: (0, import_fields81.text)({
       defaultValue: "usd",
       validation: {
         isRequired: true
       }
     }),
-    homepageTitle: (0, import_fields76.text)({
+    homepageTitle: (0, import_fields81.text)({
       defaultValue: "Openfront Next.js Starter"
     }),
-    homepageDescription: (0, import_fields76.text)({
+    homepageDescription: (0, import_fields81.text)({
       defaultValue: "A performant frontend e-commerce starter template with Next.js 15 and Openfront."
     }),
-    metadata: (0, import_fields76.json)(),
-    swapLinkTemplate: (0, import_fields76.text)(),
-    paymentLinkTemplate: (0, import_fields76.text)(),
-    inviteLinkTemplate: (0, import_fields76.text)(),
+    metadata: (0, import_fields81.json)(),
+    swapLinkTemplate: (0, import_fields81.text)(),
+    paymentLinkTemplate: (0, import_fields81.text)(),
+    inviteLinkTemplate: (0, import_fields81.text)(),
     // currency: relationship({
     //   ref: "Currency.stores",
     // }),
-    currencies: (0, import_fields76.relationship)({
+    currencies: (0, import_fields81.relationship)({
       ref: "Currency.stores",
       many: true
     }),
@@ -11119,9 +13224,9 @@ var Store = (0, import_core76.list)({
 });
 
 // features/keystone/models/Swap.ts
-var import_core77 = require("@keystone-6/core");
-var import_fields77 = require("@keystone-6/core/fields");
-var Swap = (0, import_core77.list)({
+var import_core82 = require("@keystone-6/core");
+var import_fields82 = require("@keystone-6/core/fields");
+var Swap = (0, import_core82.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -11131,7 +13236,7 @@ var Swap = (0, import_core77.list)({
     }
   },
   fields: {
-    fulfillmentStatus: (0, import_fields77.select)({
+    fulfillmentStatus: (0, import_fields82.select)({
       type: "enum",
       options: [
         {
@@ -11163,7 +13268,7 @@ var Swap = (0, import_core77.list)({
         isRequired: true
       }
     }),
-    paymentStatus: (0, import_fields77.select)({
+    paymentStatus: (0, import_fields82.select)({
       type: "enum",
       options: [
         {
@@ -11207,37 +13312,37 @@ var Swap = (0, import_core77.list)({
         isRequired: true
       }
     }),
-    differenceDue: (0, import_fields77.integer)(),
-    confirmedAt: (0, import_fields77.timestamp)(),
-    metadata: (0, import_fields77.json)(),
-    idempotencyKey: (0, import_fields77.text)(),
-    noNotification: (0, import_fields77.checkbox)(),
-    canceledAt: (0, import_fields77.timestamp)(),
-    allowBackorder: (0, import_fields77.checkbox)(),
-    cart: (0, import_fields77.relationship)({
+    differenceDue: (0, import_fields82.integer)(),
+    confirmedAt: (0, import_fields82.timestamp)(),
+    metadata: (0, import_fields82.json)(),
+    idempotencyKey: (0, import_fields82.text)(),
+    noNotification: (0, import_fields82.checkbox)(),
+    canceledAt: (0, import_fields82.timestamp)(),
+    allowBackorder: (0, import_fields82.checkbox)(),
+    cart: (0, import_fields82.relationship)({
       ref: "Cart.swap"
     }),
-    order: (0, import_fields77.relationship)({
+    order: (0, import_fields82.relationship)({
       ref: "Order.swaps"
     }),
-    address: (0, import_fields77.relationship)({
+    address: (0, import_fields82.relationship)({
       ref: "Address.swaps"
     }),
-    lineItems: (0, import_fields77.relationship)({
+    lineItems: (0, import_fields82.relationship)({
       ref: "LineItem.swap",
       many: true
     }),
-    fulfillments: (0, import_fields77.relationship)({
+    fulfillments: (0, import_fields82.relationship)({
       ref: "Fulfillment.swap",
       many: true
     }),
-    payment: (0, import_fields77.relationship)({
+    payment: (0, import_fields82.relationship)({
       ref: "Payment.swap"
     }),
-    return: (0, import_fields77.relationship)({
+    return: (0, import_fields82.relationship)({
       ref: "Return.swap"
     }),
-    shippingMethods: (0, import_fields77.relationship)({
+    shippingMethods: (0, import_fields82.relationship)({
       ref: "ShippingMethod.swap",
       many: true
     }),
@@ -11246,9 +13351,9 @@ var Swap = (0, import_core77.list)({
 });
 
 // features/keystone/models/TaxProvider.ts
-var import_core78 = require("@keystone-6/core");
-var import_fields78 = require("@keystone-6/core/fields");
-var TaxProvider = (0, import_core78.list)({
+var import_core83 = require("@keystone-6/core");
+var import_fields83 = require("@keystone-6/core/fields");
+var TaxProvider = (0, import_core83.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadUsers({ session }) || permissions.canManageUsers({ session }),
@@ -11258,10 +13363,10 @@ var TaxProvider = (0, import_core78.list)({
     }
   },
   fields: {
-    isInstalled: (0, import_fields78.checkbox)({
+    isInstalled: (0, import_fields83.checkbox)({
       defaultValue: true
     }),
-    regions: (0, import_fields78.relationship)({
+    regions: (0, import_fields83.relationship)({
       ref: "Region.taxProvider",
       many: true
     })
@@ -11269,9 +13374,9 @@ var TaxProvider = (0, import_core78.list)({
 });
 
 // features/keystone/models/TaxRate.ts
-var import_core79 = require("@keystone-6/core");
-var import_fields79 = require("@keystone-6/core/fields");
-var TaxRate = (0, import_core79.list)({
+var import_core84 = require("@keystone-6/core");
+var import_fields84 = require("@keystone-6/core/fields");
+var TaxRate = (0, import_core84.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadUsers({ session }) || permissions.canManageUsers({ session }),
@@ -11281,26 +13386,26 @@ var TaxRate = (0, import_core79.list)({
     }
   },
   fields: {
-    rate: (0, import_fields79.float)(),
-    code: (0, import_fields79.text)(),
-    name: (0, import_fields79.text)({
+    rate: (0, import_fields84.float)(),
+    code: (0, import_fields84.text)(),
+    name: (0, import_fields84.text)({
       validation: {
         isRequired: true
       }
     }),
-    metadata: (0, import_fields79.json)(),
-    products: (0, import_fields79.relationship)({
+    metadata: (0, import_fields84.json)(),
+    products: (0, import_fields84.relationship)({
       ref: "Product.taxRates",
       many: true
     }),
-    productTypes: (0, import_fields79.relationship)({
+    productTypes: (0, import_fields84.relationship)({
       ref: "ProductType.taxRates",
       many: true
     }),
-    region: (0, import_fields79.relationship)({
+    region: (0, import_fields84.relationship)({
       ref: "Region.taxRates"
     }),
-    shippingOptions: (0, import_fields79.relationship)({
+    shippingOptions: (0, import_fields84.relationship)({
       ref: "ShippingOption.taxRates",
       many: true
     }),
@@ -11309,8 +13414,8 @@ var TaxRate = (0, import_core79.list)({
 });
 
 // features/keystone/models/Team.ts
-var import_core80 = require("@keystone-6/core");
-var import_fields80 = require("@keystone-6/core/fields");
+var import_core85 = require("@keystone-6/core");
+var import_fields85 = require("@keystone-6/core/fields");
 var canManageTeams = ({ session }) => {
   if (!isSignedIn({ session })) {
     return false;
@@ -11320,7 +13425,7 @@ var canManageTeams = ({ session }) => {
   }
   return { id: { equals: session?.itemId } };
 };
-var Team = (0, import_core80.list)({
+var Team = (0, import_core85.list)({
   access: {
     operation: {
       create: isSignedIn,
@@ -11339,15 +13444,15 @@ var Team = (0, import_core80.list)({
     hideDelete: (args) => !permissions.canManageUsers(args)
   },
   fields: {
-    name: (0, import_fields80.text)({
+    name: (0, import_fields85.text)({
       validation: { isRequired: true }
     }),
-    description: (0, import_fields80.text)(),
-    members: (0, import_fields80.relationship)({
+    description: (0, import_fields85.text)(),
+    members: (0, import_fields85.relationship)({
       ref: "User.team",
       many: true
     }),
-    leader: (0, import_fields80.relationship)({
+    leader: (0, import_fields85.relationship)({
       ref: "User.teamLead",
       many: false
     }),
@@ -11383,8 +13488,8 @@ var Team = (0, import_core80.list)({
 });
 
 // features/keystone/models/User.ts
-var import_core81 = require("@keystone-6/core");
-var import_fields81 = require("@keystone-6/core/fields");
+var import_core86 = require("@keystone-6/core");
+var import_fields86 = require("@keystone-6/core/fields");
 var canManageUsers = ({ session }) => {
   if (!isSignedIn({ session })) {
     return false;
@@ -11394,7 +13499,7 @@ var canManageUsers = ({ session }) => {
   }
   return { id: { equals: session?.itemId } };
 };
-var User = (0, import_core81.list)({
+var User = (0, import_core86.list)({
   access: {
     operation: {
       create: () => true,
@@ -11413,18 +13518,18 @@ var User = (0, import_core81.list)({
     hideDelete: (args) => !permissions.canManageUsers(args)
   },
   fields: {
-    name: (0, import_fields81.text)({
+    name: (0, import_fields86.text)({
       validation: { isRequired: true }
     }),
-    email: (0, import_fields81.text)({ isIndexed: "unique", validation: { isRequired: true } }),
-    password: (0, import_fields81.password)({
+    email: (0, import_fields86.text)({ isIndexed: "unique", validation: { isRequired: true } }),
+    password: (0, import_fields86.password)({
       validation: {
         length: { min: 10, max: 1e3 },
         isRequired: true,
         rejectCommon: true
       }
     }),
-    role: (0, import_fields81.relationship)({
+    role: (0, import_fields86.relationship)({
       ref: "Role.assignedTo",
       access: {
         create: permissions.canManageUsers,
@@ -11436,54 +13541,54 @@ var User = (0, import_core81.list)({
         }
       }
     }),
-    apiKeys: (0, import_fields81.relationship)({ ref: "ApiKey.user", many: true }),
-    phone: (0, import_fields81.text)(),
-    hasAccount: (0, import_fields81.checkbox)(),
-    addresses: (0, import_fields81.relationship)({
+    apiKeys: (0, import_fields86.relationship)({ ref: "ApiKey.user", many: true }),
+    phone: (0, import_fields86.text)(),
+    hasAccount: (0, import_fields86.checkbox)(),
+    addresses: (0, import_fields86.relationship)({
       ref: "Address.user",
       many: true
     }),
-    orders: (0, import_fields81.relationship)({
+    orders: (0, import_fields86.relationship)({
       ref: "Order.user",
       many: true
     }),
-    orderEvents: (0, import_fields81.relationship)({
+    orderEvents: (0, import_fields86.relationship)({
       ref: "OrderEvent.user",
       many: true
     }),
-    carts: (0, import_fields81.relationship)({
+    carts: (0, import_fields86.relationship)({
       ref: "Cart.user",
       many: true
     }),
-    customerGroups: (0, import_fields81.relationship)({
+    customerGroups: (0, import_fields86.relationship)({
       ref: "CustomerGroup.users",
       many: true
     }),
-    notifications: (0, import_fields81.relationship)({
+    notifications: (0, import_fields86.relationship)({
       ref: "Notification.user",
       many: true
     }),
-    payments: (0, import_fields81.relationship)({
+    payments: (0, import_fields86.relationship)({
       ref: "Payment.user",
       many: true
     }),
-    batchJobs: (0, import_fields81.relationship)({
+    batchJobs: (0, import_fields86.relationship)({
       ref: "BatchJob.createdBy",
       many: true
     }),
-    team: (0, import_fields81.relationship)({
+    team: (0, import_fields86.relationship)({
       ref: "Team.members",
       many: false
     }),
-    teamLead: (0, import_fields81.relationship)({
+    teamLead: (0, import_fields86.relationship)({
       ref: "Team.leader",
       many: true
     }),
-    userField: (0, import_fields81.relationship)({
+    userField: (0, import_fields86.relationship)({
       ref: "UserField.user",
       many: false
     }),
-    onboardingStatus: (0, import_fields81.select)({
+    onboardingStatus: (0, import_fields86.select)({
       options: [
         { label: "Not Started", value: "not_started" },
         { label: "In Progress", value: "in_progress" },
@@ -11492,13 +13597,36 @@ var User = (0, import_core81.list)({
       ],
       defaultValue: "not_started"
     }),
-    ...(0, import_core81.group)({
+    // Account system fields
+    accounts: (0, import_fields86.relationship)({
+      ref: "Account.user",
+      many: true
+    }),
+    invoices: (0, import_fields86.relationship)({
+      ref: "Invoice.user",
+      many: true
+    }),
+    businessAccountRequest: (0, import_fields86.relationship)({
+      ref: "BusinessAccountRequest.user",
+      many: false
+    }),
+    customerToken: (0, import_fields86.text)({
+      ui: {
+        createView: { fieldMode: "hidden" },
+        itemView: { fieldMode: "read" }
+      },
+      db: {
+        isNullable: true
+      }
+    }),
+    tokenGeneratedAt: (0, import_fields86.timestamp)(),
+    ...(0, import_core86.group)({
       label: "Virtual Fields",
       description: "Calculated fields for user display and cart status",
       fields: {
-        firstName: (0, import_fields81.virtual)({
-          field: import_core81.graphql.field({
-            type: import_core81.graphql.String,
+        firstName: (0, import_fields86.virtual)({
+          field: import_core86.graphql.field({
+            type: import_core86.graphql.String,
             resolve(item) {
               if (!item.name) return "";
               const parts = item.name.trim().split(/\s+/);
@@ -11506,9 +13634,9 @@ var User = (0, import_core81.list)({
             }
           })
         }),
-        lastName: (0, import_fields81.virtual)({
-          field: import_core81.graphql.field({
-            type: import_core81.graphql.String,
+        lastName: (0, import_fields86.virtual)({
+          field: import_core86.graphql.field({
+            type: import_core86.graphql.String,
             resolve(item) {
               if (!item.name) return "";
               const parts = item.name.trim().split(/\s+/);
@@ -11520,9 +13648,9 @@ var User = (0, import_core81.list)({
             }
           })
         }),
-        activeCartId: (0, import_fields81.virtual)({
-          field: import_core81.graphql.field({
-            type: import_core81.graphql.String,
+        activeCartId: (0, import_fields86.virtual)({
+          field: import_core86.graphql.field({
+            type: import_core86.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const activeCarts = await sudoContext.query.Cart.findMany({
@@ -11548,8 +13676,8 @@ var User = (0, import_core81.list)({
             }
           })
         }),
-        billingAddress: (0, import_fields81.virtual)({
-          field: (lists) => import_core81.graphql.field({
+        billingAddress: (0, import_fields86.virtual)({
+          field: (lists) => import_core86.graphql.field({
             type: lists.Address.types.output,
             async resolve(item, args, context) {
               const address = await context.db.Address.findMany({
@@ -11588,9 +13716,9 @@ var User = (0, import_core81.list)({
 });
 
 // features/keystone/models/UserField.ts
-var import_core82 = require("@keystone-6/core");
-var import_fields82 = require("@keystone-6/core/fields");
-var UserField = (0, import_core82.list)({
+var import_core87 = require("@keystone-6/core");
+var import_fields87 = require("@keystone-6/core/fields");
+var UserField = (0, import_core87.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadUsers({ session }) || permissions.canManageUsers({ session }),
@@ -11600,25 +13728,25 @@ var UserField = (0, import_core82.list)({
     }
   },
   fields: {
-    user: (0, import_fields82.relationship)({
+    user: (0, import_fields87.relationship)({
       ref: "User.userField",
       many: false
     }),
-    lastLoginIp: (0, import_fields82.text)(),
-    lastLoginUserAgent: (0, import_fields82.text)(),
-    loginHistory: (0, import_fields82.json)({
+    lastLoginIp: (0, import_fields87.text)(),
+    lastLoginUserAgent: (0, import_fields87.text)(),
+    loginHistory: (0, import_fields87.json)({
       defaultValue: []
     }),
-    preferences: (0, import_fields82.json)({
+    preferences: (0, import_fields87.json)({
       defaultValue: {
         theme: "light",
         notifications: true,
         emailNotifications: true
       }
     }),
-    notes: (0, import_fields82.text)(),
-    lastPasswordChange: (0, import_fields82.timestamp)(),
-    failedLoginAttempts: (0, import_fields82.json)({
+    notes: (0, import_fields87.text)(),
+    lastPasswordChange: (0, import_fields87.timestamp)(),
+    failedLoginAttempts: (0, import_fields87.json)({
       defaultValue: {
         count: 0,
         lastAttempt: null,
@@ -11647,10 +13775,10 @@ var UserField = (0, import_core82.list)({
 });
 
 // features/keystone/models/WebhookEndpoint.ts
-var import_core83 = require("@keystone-6/core");
-var import_fields83 = require("@keystone-6/core/fields");
+var import_core88 = require("@keystone-6/core");
+var import_fields88 = require("@keystone-6/core/fields");
 var import_crypto = __toESM(require("crypto"));
-var WebhookEndpoint = (0, import_core83.list)({
+var WebhookEndpoint = (0, import_core88.list)({
   access: {
     operation: {
       query: permissions.canReadWebhooks,
@@ -11667,21 +13795,21 @@ var WebhookEndpoint = (0, import_core83.list)({
     }
   },
   fields: {
-    url: (0, import_fields83.text)({
+    url: (0, import_fields88.text)({
       validation: { isRequired: true },
       ui: { description: "The URL where webhook events will be sent" }
     }),
-    events: (0, import_fields83.json)({
+    events: (0, import_fields88.json)({
       defaultValue: [],
       ui: {
         description: 'Events to subscribe to, e.g., ["order.created", "product.updated", "cart.completed"]'
       }
     }),
-    isActive: (0, import_fields83.checkbox)({
+    isActive: (0, import_fields88.checkbox)({
       defaultValue: true,
       ui: { description: "Whether this webhook endpoint is currently active" }
     }),
-    secret: (0, import_fields83.text)({
+    secret: (0, import_fields88.text)({
       ui: {
         itemView: { fieldMode: "hidden" },
         description: "Secret key for webhook signature verification (auto-generated)"
@@ -11695,13 +13823,13 @@ var WebhookEndpoint = (0, import_core83.list)({
         }
       }
     }),
-    lastTriggered: (0, import_fields83.timestamp)({
+    lastTriggered: (0, import_fields88.timestamp)({
       ui: {
         itemView: { fieldMode: "read" },
         description: "Last time this webhook was triggered"
       }
     }),
-    failureCount: (0, import_fields83.integer)({
+    failureCount: (0, import_fields88.integer)({
       defaultValue: 0,
       ui: {
         itemView: { fieldMode: "read" },
@@ -11709,7 +13837,7 @@ var WebhookEndpoint = (0, import_core83.list)({
       }
     }),
     // Removed user relationship - webhooks are system-wide based on permissions
-    webhookEvents: (0, import_fields83.relationship)({
+    webhookEvents: (0, import_fields88.relationship)({
       ref: "WebhookEvent.endpoint",
       many: true,
       ui: {
@@ -11717,11 +13845,11 @@ var WebhookEndpoint = (0, import_core83.list)({
         description: "Events sent to this endpoint"
       }
     }),
-    createdAt: (0, import_fields83.timestamp)({
+    createdAt: (0, import_fields88.timestamp)({
       defaultValue: { kind: "now" },
       ui: { itemView: { fieldMode: "read" } }
     }),
-    updatedAt: (0, import_fields83.timestamp)({
+    updatedAt: (0, import_fields88.timestamp)({
       db: { updatedAt: true },
       ui: { itemView: { fieldMode: "read" } }
     })
@@ -11729,9 +13857,9 @@ var WebhookEndpoint = (0, import_core83.list)({
 });
 
 // features/keystone/models/WebhookEvent.ts
-var import_core84 = require("@keystone-6/core");
-var import_fields84 = require("@keystone-6/core/fields");
-var WebhookEvent = (0, import_core84.list)({
+var import_core89 = require("@keystone-6/core");
+var import_fields89 = require("@keystone-6/core/fields");
+var WebhookEvent = (0, import_core89.list)({
   access: {
     operation: {
       query: permissions.canReadWebhooks,
@@ -11751,68 +13879,68 @@ var WebhookEvent = (0, import_core84.list)({
     }
   },
   fields: {
-    eventType: (0, import_fields84.text)({
+    eventType: (0, import_fields89.text)({
       validation: { isRequired: true },
       ui: { description: 'The type of event (e.g., "order.created")' }
     }),
-    resourceId: (0, import_fields84.text)({
+    resourceId: (0, import_fields89.text)({
       validation: { isRequired: true },
       ui: { description: "ID of the resource that triggered the event" }
     }),
-    resourceType: (0, import_fields84.text)({
+    resourceType: (0, import_fields89.text)({
       validation: { isRequired: true },
       ui: { description: 'Type of resource (e.g., "Order", "Product")' }
     }),
-    payload: (0, import_fields84.json)({
+    payload: (0, import_fields89.json)({
       ui: {
         description: "The event payload sent to the webhook",
         itemView: { fieldMode: "read" }
       }
     }),
-    deliveryAttempts: (0, import_fields84.integer)({
+    deliveryAttempts: (0, import_fields89.integer)({
       defaultValue: 0,
       ui: {
         itemView: { fieldMode: "read" },
         description: "Number of delivery attempts"
       }
     }),
-    delivered: (0, import_fields84.checkbox)({
+    delivered: (0, import_fields89.checkbox)({
       defaultValue: false,
       ui: {
         itemView: { fieldMode: "read" },
         description: "Whether the webhook was successfully delivered"
       }
     }),
-    lastAttempt: (0, import_fields84.timestamp)({
+    lastAttempt: (0, import_fields89.timestamp)({
       ui: {
         itemView: { fieldMode: "read" },
         description: "Timestamp of the last delivery attempt"
       }
     }),
-    nextAttempt: (0, import_fields84.timestamp)({
+    nextAttempt: (0, import_fields89.timestamp)({
       ui: {
         itemView: { fieldMode: "read" },
         description: "Timestamp for the next retry attempt"
       }
     }),
-    responseStatus: (0, import_fields84.integer)({
+    responseStatus: (0, import_fields89.integer)({
       ui: {
         itemView: { fieldMode: "read" },
         description: "HTTP status code from the last delivery attempt"
       }
     }),
-    responseBody: (0, import_fields84.text)({
+    responseBody: (0, import_fields89.text)({
       ui: {
         itemView: { fieldMode: "read" },
         displayMode: "textarea",
         description: "Response body from the last delivery attempt"
       }
     }),
-    endpoint: (0, import_fields84.relationship)({
+    endpoint: (0, import_fields89.relationship)({
       ref: "WebhookEndpoint.webhookEvents",
       ui: { description: "The webhook endpoint this event was sent to" }
     }),
-    createdAt: (0, import_fields84.timestamp)({
+    createdAt: (0, import_fields89.timestamp)({
       defaultValue: { kind: "now" },
       ui: { itemView: { fieldMode: "read" } }
     })
@@ -11821,6 +13949,8 @@ var WebhookEvent = (0, import_core84.list)({
 
 // features/keystone/models/index.ts
 var models = {
+  Account,
+  AccountLineItem,
   Address,
   ApiKey,
   BatchJob,
@@ -11845,6 +13975,9 @@ var models = {
   GiftCardTransaction,
   IdempotencyKey,
   Invite,
+  Invoice,
+  InvoiceLineItem,
+  BusinessAccountRequest,
   LineItem,
   LineItemAdjustment,
   LineItemTaxLine,
@@ -12483,6 +14616,48 @@ function statelessSessions({
         } catch (err) {
           console.log("\u{1F535} OAUTH TOKEN LOOKUP ERROR:", err.message);
         }
+        if (accessToken.startsWith("ctok_")) {
+          console.log("\u{1F7E2} CUSTOMER TOKEN DETECTED, VALIDATING...");
+          try {
+            const users = await context.sudo().query.User.findMany({
+              where: { customerToken: { equals: accessToken } },
+              take: 1,
+              query: `
+                id
+                email
+                name
+                accounts(where: { status: { equals: "active" }, accountType: { equals: "business" } }) {
+                  id
+                  status
+                  availableCredit
+                }
+              `
+            });
+            const user = users[0];
+            if (!user) {
+              console.log("\u{1F7E2} CUSTOMER TOKEN NOT FOUND");
+              return;
+            }
+            const activeAccount = user.accounts?.[0];
+            if (!activeAccount) {
+              console.log("\u{1F7E2} NO ACTIVE ACCOUNT FOUND FOR USER");
+              return;
+            }
+            console.log("\u{1F7E2} CUSTOMER TOKEN VALID, CREATING SESSION");
+            console.log("\u{1F7E2} User:", user.email);
+            console.log("\u{1F7E2} Active Account:", activeAccount.id);
+            return {
+              itemId: user.id,
+              listKey,
+              customerToken: true,
+              // Flag for permission checking
+              activeAccountId: activeAccount.id
+            };
+          } catch (err) {
+            console.log("\u{1F7E2} CUSTOMER TOKEN VALIDATION ERROR:", err.message);
+            return;
+          }
+        }
         try {
           return await import_iron.default.unseal(accessToken, secret, ironOptions);
         } catch (err) {
@@ -12592,7 +14767,7 @@ var { withAuth } = (0, import_auth.createAuth)({
 });
 var keystone_default = withAuth(
   withWebhooks(
-    (0, import_core85.config)({
+    (0, import_core90.config)({
       db: {
         provider: "postgresql",
         url: databaseURL

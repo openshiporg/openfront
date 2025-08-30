@@ -49,6 +49,14 @@ export const Currency = list({
       ref: "Store.currencies",
       many: true,
     }),
+    accounts: relationship({
+      ref: "Account.currency",
+      many: true,
+    }),
+    invoices: relationship({
+      ref: "Invoice.currency",
+      many: true,
+    }),
     ...group({
       label: "Virtual Fields",
       description: "Virtual fields for currency",

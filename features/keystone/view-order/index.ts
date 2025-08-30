@@ -9,15 +9,15 @@
  * This defines the order of field types that correspond to view indices
  */
 export const VIEW_ORDER = [
-  "virtual",
-  "text",
-  "checkbox",
-  "json",
   "relationship",
-  "timestamp",
-  "password",
-  "select",
+  "text",
   "integer",
+  "select",
+  "timestamp",
+  "json",
+  "virtual",
+  "checkbox",
+  "password",
   "image",
   "float",
   "document"

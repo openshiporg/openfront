@@ -66,7 +66,7 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
       )
     case isManual(paymentSession?.paymentProvider?.code):
       return (
-        <ManualTestPaymentButton notReady={notReady} data-testid={dataTestId} />
+        <ManualTestPaymentButton notReady={notReady} cart={cart} data-testid={dataTestId} />
       )
     default:
       return <Button disabled size="lg">Select a payment method</Button>
@@ -88,13 +88,14 @@ const StripePaymentButton: React.FC<StripePaymentButtonProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const router = useRouter()
 
-  const onPaymentCompleted = async () => {
+  const onPaymentCompleted = async (paymentSessionId: string) => {
     try {
-      const result = await placeOrder()
+      const result = await placeOrder(paymentSessionId)
       if (result && typeof result === 'object' && 'success' in result && result.success && 'redirectTo' in result) {
         router.push(result.redirectTo as string)
       }
     } catch (err: any) {
+      console.error('Payment error:', err);
       setErrorMessage(err.message)
     } finally {
       setSubmitting(false)
@@ -113,60 +114,49 @@ const StripePaymentButton: React.FC<StripePaymentButtonProps> = ({
 
   const handlePayment = async () => {
     setSubmitting(true)
+    
 
-    if (!stripe || !elements || !card || !cart || !session?.data?.clientSecret) {
+    if (!stripe || !elements || !card || !cart || !session?.data?.clientSecret || !session.id) {
       setSubmitting(false)
-      setErrorMessage("Stripe not initialized or card element not found.")
+      setErrorMessage("Stripe not initialized or payment session not found.")
       return
     }
 
-    await stripe
-      .confirmCardPayment(session.data.clientSecret, {
-        payment_method: {
-          card: card,
-          billing_details: {
-            name: `${cart.billingAddress?.firstName || ''} ${cart.billingAddress?.lastName || ''}`.trim(),
-            address: {
-              city: cart.billingAddress?.city ?? undefined,
-              country: cart.billingAddress?.countryCode ?? undefined,
-              line1: cart.billingAddress?.address1 ?? undefined,
-              line2: cart.billingAddress?.address2 ?? undefined,
-              postal_code: cart.billingAddress?.postalCode ?? undefined,
-              state: cart.billingAddress?.province ?? undefined,
+    // Confirm the payment intent with the card details, then pass session ID to backend
+    try {
+      console.log('Confirming payment with Stripe...');
+      
+      const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
+        session.data.clientSecret,
+        {
+          payment_method: {
+            card: card,
+            billing_details: {
+              name: `${cart.shippingAddress?.firstName} ${cart.shippingAddress?.lastName}`,
+              email: cart.email,
             },
-            email: cart.email,
-            phone: cart.billingAddress?.phone ?? undefined,
           },
-        },
-      })
-      .then(({ error, paymentIntent }) => {
-        if (error) {
-          const pi = error.payment_intent
-          if (
-            (pi && pi.status === "requires_capture") ||
-            (pi && pi.status === "succeeded")
-          ) {
-            return onPaymentCompleted()
-          }
-          setErrorMessage(error.message || null)
-          return
         }
+      );
 
-        if (!paymentIntent) {
-          setErrorMessage("Payment intent not found.")
-          return
-        }
+      if (confirmError) {
+        console.error('Stripe confirmation error:', confirmError);
+        setErrorMessage(confirmError.message || "Payment confirmation failed.");
+        return;
+      }
 
-        if (paymentIntent.status === "succeeded" || paymentIntent.status === "requires_capture") {
-          onPaymentCompleted()
-        }
-      })
-      .catch(() => {
-        setErrorMessage("An unknown error occurred, please try again.")
-      })
-      .finally(() => {
-        setSubmitting(false)
-      })
+      if (paymentIntent?.status === 'succeeded' || paymentIntent?.status === 'requires_capture') {
+        console.log('Payment confirmed, sending to backend...');
+        await onPaymentCompleted(session.id);
+      } else {
+        setErrorMessage("Payment was not successful. Please try again.");
+      }
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      setErrorMessage(error.message || "An error occurred during payment processing.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -188,14 +178,18 @@ const StripePaymentButton: React.FC<StripePaymentButtonProps> = ({
   )
 }
 
-const ManualTestPaymentButton = ({ notReady, "data-testid": dataTestId }: { notReady: boolean, "data-testid"?: string }) => {
+const ManualTestPaymentButton = ({ notReady, cart, "data-testid": dataTestId }: { 
+  notReady: boolean, 
+  cart: PaymentButtonProps["cart"],
+  "data-testid"?: string 
+}) => {
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const router = useRouter()
 
-  const onPaymentCompleted = async () => {
+  const onPaymentCompleted = async (paymentSessionId?: string) => {
     try {
-      const result = await placeOrder()
+      const result = await placeOrder(paymentSessionId)
       if (result && typeof result === 'object' && 'success' in result && result.success && 'redirectTo' in result) {
         router.push(result.redirectTo as string)
       }
@@ -208,7 +202,19 @@ const ManualTestPaymentButton = ({ notReady, "data-testid": dataTestId }: { notR
 
   const handlePayment = () => {
     setSubmitting(true)
-    onPaymentCompleted()
+    
+    const session = cart.paymentCollection?.paymentSessions?.find(
+      (s) => s.isSelected && s.paymentProvider?.code === 'pp_system_default'
+    )
+    
+    if (!session?.id) {
+      setErrorMessage("Payment session not found. Please refresh and try again.");
+      setSubmitting(false);
+      return;
+    }
+    
+    // For Cash on Delivery payments, we still pass the session ID but no actual payment processing needed
+    onPaymentCompleted(session.id)
   }
 
   return (
@@ -224,7 +230,7 @@ const ManualTestPaymentButton = ({ notReady, "data-testid": dataTestId }: { notR
       </Button>
       <ErrorMessage
         error={errorMessage}
-        data-testid="manual-payment-error-message"
+        data-testid="cash-on-delivery-error-message"
       />
     </>
   )
@@ -245,13 +251,14 @@ const PayPalPaymentButton: React.FC<PayPalPaymentButtonProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const router = useRouter()
 
-  const onPaymentCompleted = async () => {
+  const onPaymentCompleted = async (paymentSessionId: string) => {
     try {
-      const result = await placeOrder()
+      const result = await placeOrder(paymentSessionId)
       if (result && typeof result === 'object' && 'success' in result && result.success && 'redirectTo' in result) {
         router.push(result.redirectTo as string)
       }
     } catch (err: any) {
+      console.error('Payment error:', err);
       setErrorMessage(err.message)
     } finally {
       setSubmitting(false)
@@ -259,26 +266,30 @@ const PayPalPaymentButton: React.FC<PayPalPaymentButtonProps> = ({
   }
 
   const session = cart.paymentCollection?.paymentSessions?.find(
-    (s) => s.isSelected
+    (s) => s.isSelected && s.paymentProvider?.code === 'pp_paypal_paypal'
   )
 
   const handlePayment = async (
     _data: any,
     actions: any
   ) => {
-    actions?.order
-      ?.authorize()
-      .then((authorization: any) => {
-        if (authorization.status !== "COMPLETED") {
-          setErrorMessage(`An error occurred, status: ${authorization.status}`)
-          return
-        }
-        onPaymentCompleted()
-      })
-      .catch(() => {
-        setErrorMessage(`An unknown error occurred, please try again.`)
-        setSubmitting(false)
-      })
+    setSubmitting(true)
+    
+    if (!session?.id) {
+      setErrorMessage("PayPal payment session not found.")
+      setSubmitting(false)
+      return
+    }
+
+    // Instead of authorizing here, just pass the session ID to backend
+    // The backend will handle the authorization using the orderId in the session
+    try {
+      await onPaymentCompleted(session.id)
+    } catch (error: any) {
+      setErrorMessage(error.message || "An error occurred during payment processing.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const [{ isPending }] = usePayPalScriptReducer()

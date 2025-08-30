@@ -32,8 +32,8 @@ interface CreatePaymentProviderDrawerProps {
 const PAYMENT_PROVIDER_PRESETS = [
   { 
     id: 'manual', 
-    name: 'Manual Payment', 
-    description: 'Manual payment provider allows you to accept payments outside the platform (cash, check, bank transfer, etc.) and mark orders as paid manually.',
+    name: 'Cash on Delivery', 
+    description: 'Cash on Delivery payment method allows customers to pay when they receive their order. Orders are placed immediately and payment is collected upon delivery.',
     icon: '👋',
     envVars: []
   },

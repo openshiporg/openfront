@@ -90,7 +90,7 @@ const STORE_TEMPLATES = {
     // Display names for UI
     displayNames: {
       regions: ['North America (USD)', 'Europe (EUR)', 'United Kingdom (GBP)'],
-      paymentProviders: ['Stripe', 'PayPal', 'Manual Payment'],
+      paymentProviders: ['Stripe', 'PayPal', 'Cash on Delivery'],
       shipping: ['Standard Shipping', 'Express Shipping', 'Return Shipping'],
       categories: ['Shirts', 'Hoodies', 'Accessories', 'Pants'],
       collections: ['Latest Picks', 'New Arrivals', 'Trending'],
@@ -122,7 +122,7 @@ const STORE_TEMPLATES = {
     // Display names for UI
     displayNames: {
       regions: ['North America (USD)'],
-      paymentProviders: ['Manual Payment'],
+      paymentProviders: ['Cash on Delivery'],
       shipping: ['Standard Shipping'],
       categories: ['Shirts'],
       collections: ['Latest Picks'],
@@ -143,7 +143,7 @@ const STORE_TEMPLATES = {
     // Display names for UI (same as minimal by default)
     displayNames: {
       regions: ['North America (USD)'],
-      paymentProviders: ['Manual Payment'],
+      paymentProviders: ['Cash on Delivery'],
       shipping: ['Standard Shipping'],
       categories: ['Shirts'],
       collections: ['Latest Picks'],
@@ -498,7 +498,7 @@ const SectionRenderer: React.FC<SectionRendererProps> = ({
                       step={step}
                     />
                     <SectionItem
-                      item="Manual Payment"
+                      item="Cash on Delivery"
                       sectionType={section.type}
                       status={
                         step === 'done'
@@ -585,10 +585,10 @@ const PaymentProviderEnvDisplay: React.FC<PaymentProviderEnvDisplayProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState(createdProviders[0] || '');
 
-  // Filter out Manual Payment as it doesn't need env vars
+  // Filter out Cash on Delivery as it doesn't need env vars
   const providersWithEnvVars = createdProviders.filter(
     (provider) =>
-      provider !== 'Manual Payment' && PAYMENT_PROVIDER_ENV_VARS[provider]
+      provider !== 'Cash on Delivery' && PAYMENT_PROVIDER_ENV_VARS[provider]
   );
 
   if (providersWithEnvVars.length === 0) {

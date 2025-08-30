@@ -1,5 +1,5 @@
 export async function handleWebhookFunction({ event, headers }) {
-  // Manual payments don't have webhooks, but we'll provide a consistent interface
+  // Cash on Delivery payments don't have webhooks, but we'll provide a consistent interface
   return {
     isValid: true,
     event,
@@ -9,7 +9,7 @@ export async function handleWebhookFunction({ event, headers }) {
 }
 
 export async function createPaymentFunction({ cart, amount, currency }) {
-  // For manual payments, we just need to return a success status
+  // For Cash on Delivery payments, we just need to return a success status
   return {
     status: 'pending',
     data: {
@@ -21,7 +21,7 @@ export async function createPaymentFunction({ cart, amount, currency }) {
 }
 
 export async function capturePaymentFunction({ paymentId, amount }) {
-  // Manual payments are considered captured immediately
+  // Cash on Delivery payments are considered captured immediately
   return {
     status: 'captured',
     amount,
@@ -34,7 +34,7 @@ export async function capturePaymentFunction({ paymentId, amount }) {
 }
 
 export async function refundPaymentFunction({ paymentId, amount }) {
-  // Manual refunds need to be tracked manually
+  // Cash on Delivery refunds need to be tracked manually
   return {
     status: 'refunded',
     amount,
@@ -47,7 +47,7 @@ export async function refundPaymentFunction({ paymentId, amount }) {
 }
 
 export async function getPaymentStatusFunction({ paymentId }) {
-  // Manual payments are always considered successful unless manually marked otherwise
+  // Cash on Delivery payments are always considered successful unless manually marked otherwise
   return {
     status: 'succeeded',
     data: {
@@ -57,7 +57,7 @@ export async function getPaymentStatusFunction({ paymentId }) {
 }
 
 export async function generatePaymentLinkFunction({ paymentId }) {
-  // Manual payments don't have external links
+  // Cash on Delivery payments don't have external links
   return null;
 }
 

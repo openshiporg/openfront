@@ -261,10 +261,59 @@ export function statelessSessions({
           }
         } catch (err) {
           console.log('🔵 OAUTH TOKEN LOOKUP ERROR:', err.message);
-          // Not an OAuth token, try as session token below
+          // Not an OAuth token, try as customer token below
         }
         
-        // If not OAuth, try as regular session token
+        // Try as customer token (for invoice/Openship integration)
+        if (accessToken.startsWith('ctok_')) {
+          console.log('🟢 CUSTOMER TOKEN DETECTED, VALIDATING...');
+          try {
+            const users = await context.sudo().query.User.findMany({
+              where: { customerToken: { equals: accessToken } },
+              take: 1,
+              query: `
+                id
+                email
+                name
+                accounts(where: { status: { equals: "active" }, accountType: { equals: "business" } }) {
+                  id
+                  status
+                  availableCredit
+                }
+              `
+            });
+            
+            const user = users[0];
+            if (!user) {
+              console.log('🟢 CUSTOMER TOKEN NOT FOUND');
+              return; // Token not found
+            }
+            
+            // Check if user has active account
+            const activeAccount = user.accounts?.[0];
+            if (!activeAccount) {
+              console.log('🟢 NO ACTIVE ACCOUNT FOUND FOR USER');
+              return; // No active account
+            }
+            
+            console.log('🟢 CUSTOMER TOKEN VALID, CREATING SESSION');
+            console.log('🟢 User:', user.email);
+            console.log('🟢 Active Account:', activeAccount.id);
+            
+            // Return user session with customer token flag
+            return { 
+              itemId: user.id, 
+              listKey,
+              customerToken: true, // Flag for permission checking
+              activeAccountId: activeAccount.id
+            };
+          } catch (err) {
+            console.log('🟢 CUSTOMER TOKEN VALIDATION ERROR:', err.message);
+            return;
+          }
+        }
+        
+        // If not OAuth or customer token, try as regular session token
         try {
           return await Iron.unseal(accessToken, secret, ironOptions);
         } catch (err) {}

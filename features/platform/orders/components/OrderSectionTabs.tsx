@@ -76,7 +76,7 @@ export const OrderSectionTabs = ({ order }: OrderSectionTabsProps) => {
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
-              className={`relative z-10 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-300 border ${
+              className={`relative z-10 rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-300 border ${
                 activeTab === tab.key 
                   ? 'bg-background border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100' 
                   : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-background/50'
@@ -100,7 +100,7 @@ export const OrderSectionTabs = ({ order }: OrderSectionTabsProps) => {
         <div className="md:hidden px-4 py-2">
           <div className="w-fit">
             <Select value={activeTab} onValueChange={(value: TabType) => setActiveTab(value)}>
-              <SelectTrigger className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-background border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 h-auto w-auto">
+              <SelectTrigger className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-background border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 h-auto w-auto">
                 <div className="flex items-center gap-1.5">
                   <SelectValue />
                   <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px]">
@@ -130,7 +130,7 @@ export const OrderSectionTabs = ({ order }: OrderSectionTabsProps) => {
               {(order.lineItems || []).map((item: any) => (
                 <div
                   key={item.id}
-                  className="border p-2 bg-background rounded-sm flex flex-col sm:flex-row gap-4 relative"
+                  className="border p-2 bg-background rounded-md flex flex-col sm:flex-row gap-4 relative"
                 >
                   <div className="flex-shrink-0">
                     <div className="size-12 bg-gray-100 rounded-md overflow-hidden">

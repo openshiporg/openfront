@@ -23,7 +23,9 @@ import {
   RefreshCw,
   Building,
   ShieldCheck,
-  Key
+  Key,
+  Receipt,
+  FileText
 } from 'lucide-react';
 
 export interface PlatformNavItem {
@@ -103,6 +105,22 @@ export const platformNavItems: PlatformNavItem[] = [
     color: 'purple',
     description: 'Manage customer accounts, profiles, and user permissions.',
     icon: Users,
+    group: 'customers'
+  },
+  {
+    title: 'Account Requests',
+    href: '/platform/business-account-requests',
+    color: 'blue',
+    description: 'Review customer requests for business account access.',
+    icon: FileText,
+    group: 'customers'
+  },
+  {
+    title: 'Business Accounts',
+    href: '/platform/invoices',
+    color: 'emerald',
+    description: 'Manage active customer business accounts and billing.',
+    icon: Building,
     group: 'customers'
   },
 

@@ -68,7 +68,7 @@ export function PaymentSelection({
   const getPlaceOrderButtonText = () => {
     if (isPlacingOrder) return "Processing...";
     if (sendEmailLink) return "Send Payment Link";
-    if (isManualProvider) return "Place Order (Manual Payment)";
+    if (isManualProvider) return "Place Order (Cash on Delivery)";
     return "Place Order";
   };
 

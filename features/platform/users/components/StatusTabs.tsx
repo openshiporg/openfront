@@ -86,7 +86,7 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
       />
 
       <div
-        className="absolute bottom-[-1px] h-[2px] bg-foreground transition-all duration-300 ease-out ml-4 md:ml-6"
+        className="absolute bottom-[-1px] h-[2px] bg-blue-500 transition-all duration-300 ease-out ml-4 md:ml-6"
         style={{
           left: `${activeTabOffsetLeft - scrollOffset}px`,
           width: `${activeTabWidth}px`,

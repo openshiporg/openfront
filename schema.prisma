@@ -11,6 +11,59 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model Account {
+  id                                           String                   @id @default(cuid())
+  user                                         User?                    @relation("Account_user", fields: [userId], references: [id])
+  userId                                       String?                  @map("user")
+  accountNumber                                String                   @unique @default("")
+  title                                        String                   @default("Business Account")
+  description                                  String                   @default("Running business account for automated orders placed through API integration")
+  totalAmount                                  Int?                     @default(0)
+  paidAmount                                   Int?                     @default(0)
+  creditLimit                                  Int                      @default(100000)
+  currency                                     Currency?                @relation("Account_currency", fields: [currencyId], references: [id])
+  currencyId                                   String?                  @map("currency")
+  status                                       String                   @default("active")
+  dueDate                                      DateTime?
+  paidAt                                       DateTime?
+  suspendedAt                                  DateTime?
+  notApprovedAt                                DateTime?
+  accountType                                  String                   @default("business")
+  metadata                                     Json?                    @default("{}")
+  orders                                       Order[]                  @relation("Order_account")
+  lineItems                                    AccountLineItem[]        @relation("AccountLineItem_account")
+  invoices                                     Invoice[]                @relation("Invoice_account")
+  createdAt                                    DateTime                 @default(now())
+  updatedAt                                    DateTime                 @default(now()) @updatedAt
+  from_BusinessAccountRequest_generatedAccount BusinessAccountRequest[] @relation("BusinessAccountRequest_generatedAccount")
+
+  @@index([userId])
+  @@index([currencyId])
+}
+
+model AccountLineItem {
+  id               String            @id @default(cuid())
+  account          Account?          @relation("AccountLineItem_account", fields: [accountId], references: [id])
+  accountId        String?           @map("account")
+  order            Order?            @relation("AccountLineItem_order", fields: [orderId], references: [id])
+  orderId          String?           @map("order")
+  region           Region?           @relation("AccountLineItem_region", fields: [regionId], references: [id])
+  regionId         String?           @map("region")
+  description      String            @default("Order line item")
+  amount           Int
+  orderDisplayId   String            @default("")
+  itemCount        Int               @default(0)
+  paymentStatus    String            @default("unpaid")
+  invoiceLineItems InvoiceLineItem[] @relation("InvoiceLineItem_accountLineItem")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @default(now()) @updatedAt
+
+  @@index([accountId])
+  @@index([orderId])
+  @@index([regionId])
+  @@index([orderDisplayId])
+}
+
 model Address {
   id                           String             @id @default(cuid())
   company                      String             @default("")
@@ -240,6 +293,8 @@ model Currency {
   payments                       Payment[]          @relation("Payment_currency")
   regions                        Region[]           @relation("Region_currency")
   stores                         Store[]            @relation("Currency_stores")
+  accounts                       Account[]          @relation("Account_currency")
+  invoices                       Invoice[]          @relation("Invoice_currency")
   createdAt                      DateTime           @default(now())
   updatedAt                      DateTime           @default(now()) @updatedAt
   from_OrderMoneyAmount_currency OrderMoneyAmount[] @relation("OrderMoneyAmount_currency")
@@ -461,6 +516,69 @@ model Invite {
   expiresAt DateTime        @default(now())
   createdAt DateTime        @default(now())
   updatedAt DateTime        @default(now()) @updatedAt
+}
+
+model Invoice {
+  id            String            @id @default(cuid())
+  user          User?             @relation("Invoice_user", fields: [userId], references: [id])
+  userId        String?           @map("user")
+  invoiceNumber String            @unique @default("")
+  title         String            @default("Payment Invoice")
+  description   String            @default("Invoice for selected orders payment")
+  totalAmount   Int               @default(0)
+  currency      Currency?         @relation("Invoice_currency", fields: [currencyId], references: [id])
+  currencyId    String?           @map("currency")
+  status        String            @default("paid")
+  dueDate       DateTime?
+  paidAt        DateTime?         @default(now())
+  metadata      Json?             @default("{}")
+  account       Account?          @relation("Invoice_account", fields: [accountId], references: [id])
+  accountId     String?           @map("account")
+  lineItems     InvoiceLineItem[] @relation("InvoiceLineItem_invoice")
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @default(now()) @updatedAt
+
+  @@index([userId])
+  @@index([currencyId])
+  @@index([accountId])
+}
+
+model InvoiceLineItem {
+  id                String           @id @default(cuid())
+  invoice           Invoice?         @relation("InvoiceLineItem_invoice", fields: [invoiceId], references: [id])
+  invoiceId         String?          @map("invoice")
+  accountLineItem   AccountLineItem? @relation("InvoiceLineItem_accountLineItem", fields: [accountLineItemId], references: [id])
+  accountLineItemId String?          @map("accountLineItem")
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @default(now()) @updatedAt
+
+  @@index([invoiceId])
+  @@index([accountLineItemId])
+}
+
+model BusinessAccountRequest {
+  id                   String    @id @default(cuid())
+  user                 User?     @relation("BusinessAccountRequest_user", fields: [userId], references: [id])
+  userId               String?   @unique @map("user")
+  businessName         String    @default("")
+  businessType         String
+  monthlyOrderVolume   String
+  requestedCreditLimit Int
+  businessDescription  String    @default("")
+  status               String    @default("pending")
+  reviewedBy           User?     @relation("BusinessAccountRequest_reviewedBy", fields: [reviewedById], references: [id])
+  reviewedById         String?   @map("reviewedBy")
+  reviewNotes          String    @default("")
+  approvedCreditLimit  Int?
+  submittedAt          DateTime  @default(now())
+  reviewedAt           DateTime?
+  generatedAccount     Account?  @relation("BusinessAccountRequest_generatedAccount", fields: [generatedAccountId], references: [id])
+  generatedAccountId   String?   @map("generatedAccount")
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @default(now()) @updatedAt
+
+  @@index([reviewedById])
+  @@index([generatedAccountId])
 }
 
 model LineItem {
@@ -692,6 +810,9 @@ model Order {
   returns              Return[]              @relation("Return_order")
   shippingMethods      ShippingMethod[]      @relation("ShippingMethod_order")
   swaps                Swap[]                @relation("Swap_order")
+  account              Account?              @relation("Order_account", fields: [accountId], references: [id])
+  accountId            String?               @map("account")
+  accountLineItems     AccountLineItem[]     @relation("AccountLineItem_order")
   secretKey            String                @default("")
   events               OrderEvent[]          @relation("OrderEvent_order")
   note                 String                @default("")
@@ -704,6 +825,7 @@ model Order {
   @@index([currencyId])
   @@index([userId])
   @@index([regionId])
+  @@index([accountId])
 }
 
 model OrderEvent {
@@ -1091,6 +1213,7 @@ model Region {
   shippingOptions              ShippingOption[]      @relation("ShippingOption_region")
   taxRates                     TaxRate[]             @relation("TaxRate_region")
   shippingProviders            ShippingProvider[]    @relation("Region_shippingProviders")
+  accountLineItems             AccountLineItem[]     @relation("AccountLineItem_region")
   createdAt                    DateTime              @default(now())
   updatedAt                    DateTime              @default(now()) @updatedAt
   from_OrderMoneyAmount_region OrderMoneyAmount[]    @relation("OrderMoneyAmount_region")
@@ -1451,36 +1574,42 @@ model Team {
 }
 
 model User {
-  id                        String          @id @default(cuid())
-  name                      String          @default("")
-  email                     String          @unique @default("")
-  password                  String
-  role                      Role?           @relation("User_role", fields: [roleId], references: [id])
-  roleId                    String?         @map("role")
-  apiKeys                   ApiKey[]        @relation("ApiKey_user")
-  phone                     String          @default("")
-  hasAccount                Boolean         @default(false)
-  addresses                 Address[]       @relation("Address_user")
-  orders                    Order[]         @relation("Order_user")
-  orderEvents               OrderEvent[]    @relation("OrderEvent_user")
-  carts                     Cart[]          @relation("Cart_user")
-  customerGroups            CustomerGroup[] @relation("CustomerGroup_users")
-  notifications             Notification[]  @relation("Notification_user")
-  payments                  Payment[]       @relation("Payment_user")
-  batchJobs                 BatchJob[]      @relation("BatchJob_createdBy")
-  team                      Team?           @relation("User_team", fields: [teamId], references: [id])
-  teamId                    String?         @map("team")
-  teamLead                  Team[]          @relation("Team_leader")
-  userField                 UserField?      @relation("User_userField", fields: [userFieldId], references: [id])
-  userFieldId               String?         @unique @map("userField")
-  onboardingStatus          String?         @default("not_started")
-  createdAt                 DateTime        @default(now())
-  updatedAt                 DateTime        @default(now()) @updatedAt
-  passwordResetToken        String?
-  passwordResetIssuedAt     DateTime?
-  passwordResetRedeemedAt   DateTime?
-  from_OAuthToken_user      OAuthToken[]    @relation("OAuthToken_user")
-  from_OrderEvent_createdBy OrderEvent[]    @relation("OrderEvent_createdBy")
+  id                                     String                   @id @default(cuid())
+  name                                   String                   @default("")
+  email                                  String                   @unique @default("")
+  password                               String
+  role                                   Role?                    @relation("User_role", fields: [roleId], references: [id])
+  roleId                                 String?                  @map("role")
+  apiKeys                                ApiKey[]                 @relation("ApiKey_user")
+  phone                                  String                   @default("")
+  hasAccount                             Boolean                  @default(false)
+  addresses                              Address[]                @relation("Address_user")
+  orders                                 Order[]                  @relation("Order_user")
+  orderEvents                            OrderEvent[]             @relation("OrderEvent_user")
+  carts                                  Cart[]                   @relation("Cart_user")
+  customerGroups                         CustomerGroup[]          @relation("CustomerGroup_users")
+  notifications                          Notification[]           @relation("Notification_user")
+  payments                               Payment[]                @relation("Payment_user")
+  batchJobs                              BatchJob[]               @relation("BatchJob_createdBy")
+  team                                   Team?                    @relation("User_team", fields: [teamId], references: [id])
+  teamId                                 String?                  @map("team")
+  teamLead                               Team[]                   @relation("Team_leader")
+  userField                              UserField?               @relation("User_userField", fields: [userFieldId], references: [id])
+  userFieldId                            String?                  @unique @map("userField")
+  onboardingStatus                       String?                  @default("not_started")
+  accounts                               Account[]                @relation("Account_user")
+  invoices                               Invoice[]                @relation("Invoice_user")
+  businessAccountRequest                 BusinessAccountRequest?  @relation("BusinessAccountRequest_user")
+  customerToken                          String?
+  tokenGeneratedAt                       DateTime?
+  createdAt                              DateTime                 @default(now())
+  updatedAt                              DateTime                 @default(now()) @updatedAt
+  passwordResetToken                     String?
+  passwordResetIssuedAt                  DateTime?
+  passwordResetRedeemedAt                DateTime?
+  from_BusinessAccountRequest_reviewedBy BusinessAccountRequest[] @relation("BusinessAccountRequest_reviewedBy")
+  from_OAuthToken_user                   OAuthToken[]             @relation("OAuthToken_user")
+  from_OrderEvent_createdBy              OrderEvent[]             @relation("OrderEvent_createdBy")
 
   @@index([roleId])
   @@index([teamId])
