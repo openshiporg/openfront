@@ -223,7 +223,7 @@ export function BusinessAccountRequestListPageClient({
         open={isCreateDrawerOpen}
         onClose={() => setIsCreateDrawerOpen(false)}
         onCreate={() => {
-          window.location.reload();
+          router.refresh();
         }}
       />
     </PageContainer>

@@ -18,6 +18,7 @@ async function getCustomerOrders(root, { limit = 10, offset = 0 }, context) {
       status
       fulfillmentStatus
       total
+      formattedTotalPaid
       createdAt
       shippingAddress {
         country {

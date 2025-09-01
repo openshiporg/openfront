@@ -5,7 +5,6 @@ import crypto from 'crypto';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 OAuth authorize endpoint hit:', request.url);
     
     const { searchParams } = new URL(request.url);
     
@@ -17,7 +16,6 @@ export async function GET(request: NextRequest) {
     const codeChallenge = searchParams.get('code_challenge');
     const codeChallengeMethod = searchParams.get('code_challenge_method');
     
-    console.log('🔍 OAuth params:', { clientId, redirectUri, responseType, scope, state });
 
     // Validate required parameters
     if (!clientId || !responseType) {
@@ -35,16 +33,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Find the OAuth app
-    console.log('🔍 Looking up OAuth app with clientId:', clientId);
     const oauthApp = await keystoneContext.sudo().query.OAuthApp.findOne({
       where: { clientId },
       query: 'id name redirectUris scopes status description'
     });
     
-    console.log('🔍 Found OAuth app:', oauthApp);
 
     if (!oauthApp) {
-      console.log('🔍 ERROR: OAuth app not found');
       return NextResponse.json(
         { error: 'invalid_client', error_description: 'Client not found' },
         { status: 401 }
@@ -52,7 +47,6 @@ export async function GET(request: NextRequest) {
     }
 
     if (oauthApp.status !== 'active') {
-      console.log('🔍 ERROR: OAuth app not active, status:', oauthApp.status);
       return NextResponse.json(
         { error: 'unauthorized_client', error_description: 'Client is not active' },
         { status: 401 }
@@ -62,10 +56,8 @@ export async function GET(request: NextRequest) {
     // Use the first redirect URI from the app if none was provided (marketplace flow)
     if (!redirectUri && oauthApp.redirectUris?.length > 0) {
       redirectUri = oauthApp.redirectUris[0];
-      console.log('🔍 Using first redirect URI from OAuth app:', redirectUri);
     }
     
-    console.log('🔍 Final redirectUri being used:', redirectUri);
 
     // Validate redirect URI
     if (!redirectUri) {

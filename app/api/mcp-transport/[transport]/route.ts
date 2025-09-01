@@ -94,8 +94,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
         result: {
           protocolVersion: '2024-11-05',
           capabilities: {
-            tools: { listChanged: true },
-            logging: {}
+            tools: { listChanged: true }
           },
           serverInfo: {
             name: 'simple-mcp-server',
@@ -271,6 +270,34 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
         }
       }, 
       // Commerce-specific tools
+      /*
+      ================================================================================================
+      IMPORTANT GUIDANCE FOR AI COMPLETION CLIENTS:
+      
+      When users ask to "place an order" or "buy products", DO NOT try to directly create Order records
+      using createData/createOrder. Instead, follow this proper e-commerce workflow:
+      
+      PROPER ORDER PLACEMENT WORKFLOW:
+      1. createCart (with customer's country)
+      2. searchProducts (to find products) 
+      3. getProduct (to get specific variants and pricing)
+      4. addToCart (add specific product variants)
+      5. setShippingAddress (with customer details)
+      6. getShippingOptions & setShippingMethod (select shipping)
+      7. placeOrder (attempt to complete the order)
+      8. getCheckoutLink (if placeOrder fails, provide checkout link)
+      
+      CUSTOMER FLOW EXAMPLES:
+      - "I want to buy a black t-shirt" → Ask for country → createCart → searchProducts "black t-shirt" → show variants → addToCart → get address → complete checkout
+      - "Place an order for shoes size 10" → Follow full workflow above
+      - "Complete my purchase" → Check if cart exists, complete checkout flow
+      
+      DO NOT use generic schema tools (searchModels, createData) for e-commerce operations.
+      USE the specialized commerce tools below instead.
+      
+      Uncomment this guidance in your completion route system prompt if needed.
+      ================================================================================================
+      */
       {
         name: 'searchProducts',
         description: 'Search for products with filtering capabilities. IMPORTANT: If countryCode is missing, you MUST first call getAvailableCountries to get the list of countries we ship to, then ask the user "Which country should I show pricing for?" or "Where would you like this shipped?" Present the available countries in a friendly way. This is required for accurate pricing.',
@@ -279,7 +306,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
           properties: {
             countryCode: {
               type: 'string',
-              description: 'Country code for regional pricing and shipping (e.g., "US", "CA", "GB"). If not provided, you must ask the user where they want items shipped with friendly language.'
+              description: 'Country code for regional pricing and shipping (e.g., "us", "ca", "gb"). If not provided, you must ask the user where they want items shipped with friendly language.'
             }
           },
           required: ['countryCode']
@@ -296,7 +323,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             },
             countryCode: {
               type: 'string',
-              description: 'Country code for pricing (e.g., "US", "CA", "GB")'
+              description: 'Country code for pricing (e.g., "us", "ca", "gb")'
             }
           },
           required: ['productId', 'countryCode']
@@ -309,7 +336,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
           properties: {
             countryCode: {
               type: 'string',
-              description: 'Country code (e.g., "US", "CA", "GB")'
+              description: 'Country code (e.g., "us", "ca", "gb")'
             }
           },
           required: ['countryCode']
@@ -439,7 +466,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             },
             countryCode: {
               type: 'string',
-              description: 'Country code (e.g., "US", "CA", "GB")'
+              description: 'Country code (e.g., "us", "ca", "gb")'
             },
             province: {
               type: 'string',
@@ -581,7 +608,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             },
             countryCode: {
               type: 'string',
-              description: 'Country code (e.g., "US", "CA", "GB")'
+              description: 'Country code (e.g., "us", "ca", "gb")'
             },
             province: {
               type: 'string',
@@ -626,7 +653,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
         }
       }, {
         name: 'getCheckoutLink',
-        description: 'Generate a secure, time-limited checkout link when programmatic order creation fails',
+        description: 'Generate a secure checkout link for cart completion. WARNING: For best customer experience, ensure cart has: 1) Products added, 2) Shipping address set, 3) Shipping method selected. The checkout link will show missing steps to customer.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -636,7 +663,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             },
             countryCode: {
               type: 'string',
-              description: 'Country code for the checkout URL (e.g., "US", "CA", "GB")'
+              description: 'Country code for the checkout URL (e.g., "us", "ca", "gb")'
             }
           },
           required: ['cartId', 'countryCode']
@@ -1508,128 +1535,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
           
           const queryString = `
             query GetCart($cartId: ID!) {
-              activeCart(cartId: $cartId) {
-                id
-                email
-                type
-                status
-                total
-                subtotal
-                taxTotal
-                discountTotal
-                giftCardTotal
-                shippingTotal
-                region {
-                  id
-                  name
-                  currencyCode
-                  countries {
-                    id
-                    iso2
-                    displayName
-                  }
-                }
-                lineItems {
-                  id
-                  quantity
-                  title
-                  unitPrice
-                  originalPrice
-                  total
-                  productVariant {
-                    id
-                    title
-                    sku
-                    product {
-                      id
-                      title
-                      handle
-                      thumbnail
-                    }
-                    prices {
-                      amount
-                      currency {
-                        code
-                        symbol
-                      }
-                      calculatedPrice {
-                        calculatedAmount
-                        originalAmount
-                        currencyCode
-                      }
-                    }
-                  }
-                }
-                shippingAddress {
-                  id
-                  firstName
-                  lastName
-                  address1
-                  address2
-                  city
-                  province
-                  postalCode
-                  phone
-                  country {
-                    id
-                    iso2
-                    displayName
-                  }
-                }
-                billingAddress {
-                  id
-                  firstName
-                  lastName
-                  address1
-                  address2
-                  city
-                  province
-                  postalCode
-                  phone
-                  country {
-                    id
-                    iso2
-                    displayName
-                  }
-                }
-                shippingMethods {
-                  id
-                  name
-                  price
-                  shippingOption {
-                    id
-                    name
-                    priceType
-                  }
-                }
-                paymentSessions {
-                  id
-                  status
-                  paymentProvider {
-                    id
-                    code
-                  }
-                }
-                discounts {
-                  id
-                  code
-                  discountRule {
-                    id
-                    type
-                    value
-                    allocation
-                  }
-                }
-                giftCards {
-                  id
-                  code
-                  balance
-                  region {
-                    id
-                    currencyCode
-                  }
-                }
-              }
+              activeCart(cartId: $cartId)
             }
           `;
           
@@ -1642,9 +1548,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
               content: [{
                 type: 'text',
                 text: JSON.stringify({
-                  cart: result.data?.activeCart,
-                  itemCount: result.data?.activeCart?.lineItems?.length || 0,
-                  isEmpty: !result.data?.activeCart?.lineItems?.length
+                  cart: result.data?.activeCart
                 }, null, 2),
               }],
             }
@@ -2187,6 +2091,47 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
         if (name === 'getCheckoutLink') {
           const { cartId, countryCode } = args;
           
+          // First, validate cart state to provide helpful warnings
+          const cartQuery = `
+            query GetCart($cartId: ID!) {
+              activeCart(cartId: $cartId)
+            }
+          `;
+          
+          const cartResult = await executeGraphQL(cartQuery, graphqlEndpoint, cookie || '', { cartId });
+          const cart = cartResult.data?.activeCart;
+          
+          if (!cart) {
+            throw new Error(`Cart not found: ${cartId}`);
+          }
+          
+          // Check cart completeness and prepare warnings
+          const warnings = [];
+          const recommendations = [];
+          
+          if (!cart.lineItems || cart.lineItems.length === 0) {
+            warnings.push("⚠️  EMPTY CART: No products added to cart");
+            recommendations.push("Use addToCart to add products before creating checkout link");
+          }
+          
+          if (!cart.shippingAddress) {
+            warnings.push("⚠️  MISSING SHIPPING: No shipping address set");
+            recommendations.push("Use setShippingAddress to add customer details");
+          }
+          
+          if (!cart.shippingMethods || cart.shippingMethods.length === 0) {
+            warnings.push("⚠️  MISSING SHIPPING METHOD: No shipping method selected");
+            recommendations.push("Use getShippingOptions and setShippingMethod");
+          }
+          
+          if (!cart.email) {
+            warnings.push("⚠️  MISSING EMAIL: No customer email provided");
+            recommendations.push("Customer email is set via setShippingAddress");
+          }
+          
+          const isComplete = warnings.length === 0;
+          const status = isComplete ? "READY" : "INCOMPLETE";
+          
           // Generate checkout link URL with country code
           const baseUrl = await getBaseUrl();
           const checkoutUrl = `${baseUrl}/${countryCode.toLowerCase()}/account/checkout-link?cartId=${cartId}`;
@@ -2200,8 +2145,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
                 text: JSON.stringify({
                   checkoutUrl,
                   cartId,
-                  message: 'Checkout link created! Sign in to complete your order securely.',
-                  instructions: 'Click the checkout URL to complete your order with payment details.'
+                  status,
+                  isComplete,
+                  message: isComplete 
+                    ? '✅ Checkout link ready! Cart is complete and ready for payment.' 
+                    : '⚠️  Checkout link created, but cart needs completion. Customer will need to fill missing information.',
+                  warnings: warnings.length > 0 ? warnings : null,
+                  recommendations: recommendations.length > 0 ? recommendations : null,
+                  instructions: isComplete
+                    ? 'Cart is ready! Customer can proceed directly to payment.'
+                    : 'Customer will be guided through missing steps during checkout.',
+                  cartSummary: {
+                    itemCount: cart.lineItems?.length || 0,
+                    hasShippingAddress: !!cart.shippingAddress,
+                    hasShippingMethod: !!(cart.shippingMethods && cart.shippingMethods.length > 0),
+                    hasEmail: !!cart.email,
+                    total: cart.total || '$0.00'
+                  }
                 }, null, 2),
               }],
             }

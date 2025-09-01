@@ -3328,6 +3328,7 @@ async function getCustomerOrders(root, { limit = 10, offset = 0 }, context) {
       status
       fulfillmentStatus
       total
+      formattedTotalPaid
       createdAt
       shippingAddress {
         country {
@@ -4423,7 +4424,11 @@ async function getCustomerAccounts(root, { limit = 10, offset = 0 }, context) {
         itemCount
         paymentStatus
         createdAt
+        order {
+          id
+        }
       }
+      unpaidLineItemsByRegion
     `
   });
   return accounts;
@@ -4839,6 +4844,9 @@ async function getUnpaidLineItemsByRegion(root, { accountId }, context) {
         orderDisplayId
         itemCount
         createdAt
+        order {
+          id
+        }
         region {
           id
           name
@@ -4875,7 +4883,8 @@ async function getUnpaidLineItemsByRegion(root, { accountId }, context) {
         orderDisplayId: item.orderDisplayId,
         itemCount: item.itemCount,
         createdAt: item.createdAt,
-        formattedAmount: formatCurrencyAmount2(item.amount, currency.code)
+        formattedAmount: formatCurrencyAmount2(item.amount, currency.code),
+        order: item.order
       });
       acc[regionId].totalAmount += item.amount || 0;
       acc[regionId].itemCount += item.itemCount || 0;
@@ -5008,10 +5017,14 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
         billingAddress: String
         password: String
         onboardingStatus: String
+        orderWebhookUrl: String
       }
 
       type WebhookResult {
         success: Boolean!
+        message: String
+        statusCode: Int
+        error: String
       }
 
 
@@ -7443,9 +7456,52 @@ async function sendOrderConfirmationEmail(order, baseUrl) {
       html: orderConfirmationEmail({ order, orderUrl })
     });
     if (process.env.SMTP_USER?.includes("ethereal.email")) {
-      console.log(`\u2709\uFE0F Order confirmation email sent! Preview it at ${(0, import_nodemailer.getTestMessageUrl)(info)}`);
+      console.log(`\u{1F4E7} Order confirmation email sent! Preview it at ${(0, import_nodemailer.getTestMessageUrl)(info)}`);
     } else {
-      console.log(`\u2709\uFE0F Order confirmation email sent to ${order.email} for order #${order.displayId}`);
+      console.log(`\u{1F4E7} Order confirmation email sent to ${order.email}`);
+    }
+    if (order.user?.orderWebhookUrl) {
+      try {
+        const webhookPayload = {
+          event: "order.created",
+          data: {
+            order: {
+              id: order.id,
+              displayId: order.displayId,
+              status: order.status,
+              total: order.total,
+              formattedTotal: order.formattedTotal || order.total,
+              createdAt: order.createdAt,
+              email: order.email,
+              customer: {
+                id: order.user.id,
+                email: order.user.email
+              },
+              shippingAddress: order.shippingAddress,
+              lineItems: order.lineItems || []
+            }
+          },
+          timestamp: (/* @__PURE__ */ new Date()).toISOString()
+        };
+        console.log(`\u{1FA9D} Calling webhook for order ${order.displayId}: ${order.user.orderWebhookUrl}`);
+        const webhookResponse = await fetch(order.user.orderWebhookUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": "OpenFront-Webhook/1.0",
+            "X-OpenFront-Event": "order.created",
+            "X-OpenFront-Order-ID": order.id
+          },
+          body: JSON.stringify(webhookPayload)
+        });
+        if (webhookResponse.ok) {
+          console.log(`\u2705 Webhook called successfully for order ${order.displayId}`);
+        } else {
+          console.error(`\u274C Webhook call failed for order ${order.displayId}: ${webhookResponse.status}`);
+        }
+      } catch (webhookError) {
+        console.error(`\u274C Webhook call error for order ${order.displayId}:`, webhookError);
+      }
     }
   } catch (error) {
     console.error("Failed to send order confirmation email:", error);
@@ -7467,9 +7523,58 @@ async function sendOrderFulfillmentEmail(order, fulfillment, baseUrl) {
       html: orderFulfillmentEmail({ order, fulfillment, orderUrl })
     });
     if (process.env.SMTP_USER?.includes("ethereal.email")) {
-      console.log(`\u2709\uFE0F Order fulfillment email sent! Preview it at ${(0, import_nodemailer.getTestMessageUrl)(info)}`);
+      console.log(`\u{1F4E7} Order fulfillment email sent! Preview it at ${(0, import_nodemailer.getTestMessageUrl)(info)}`);
     } else {
-      console.log(`\u2709\uFE0F Order fulfillment email sent to ${order.email} for order #${order.displayId}`);
+      console.log(`\u{1F4E7} Order fulfillment email sent to ${order.email}`);
+    }
+    if (order.user?.orderWebhookUrl) {
+      try {
+        const webhookPayload = {
+          event: "order.shipped",
+          data: {
+            order: {
+              id: order.id,
+              displayId: order.displayId,
+              status: order.status,
+              total: order.total,
+              formattedTotal: order.formattedTotal || order.total,
+              createdAt: order.createdAt,
+              email: order.email,
+              customer: {
+                id: order.user.id,
+                email: order.user.email
+              },
+              shippingAddress: order.shippingAddress,
+              lineItems: order.lineItems || []
+            },
+            fulfillment: {
+              id: fulfillment.id,
+              trackingNumber: fulfillment.trackingNumber,
+              trackingCompany: fulfillment.trackingCompany,
+              shippingLabels: fulfillment.shippingLabels || []
+            }
+          },
+          timestamp: (/* @__PURE__ */ new Date()).toISOString()
+        };
+        console.log(`\u{1FA9D} Calling webhook for shipped order ${order.displayId}: ${order.user.orderWebhookUrl}`);
+        const webhookResponse = await fetch(order.user.orderWebhookUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "User-Agent": "OpenFront-Webhook/1.0",
+            "X-OpenFront-Event": "order.shipped",
+            "X-OpenFront-Order-ID": order.id
+          },
+          body: JSON.stringify(webhookPayload)
+        });
+        if (webhookResponse.ok) {
+          console.log(`\u2705 Webhook called successfully for shipped order ${order.displayId}`);
+        } else {
+          console.error(`\u274C Webhook call failed for shipped order ${order.displayId}: ${webhookResponse.status}`);
+        }
+      } catch (webhookError) {
+        console.error(`\u274C Webhook call error for shipped order ${order.displayId}:`, webhookError);
+      }
     }
   } catch (error) {
     console.error("Failed to send order fulfillment email:", error);
@@ -8288,6 +8393,96 @@ var Account = (0, import_core25.list)({
               );
             }
           })
+        }),
+        unpaidLineItemsByRegion: (0, import_fields28.virtual)({
+          field: import_core25.graphql.field({
+            type: import_core25.graphql.JSON,
+            async resolve(item, args, context) {
+              const unpaidLineItems = await context.sudo().query.AccountLineItem.findMany({
+                where: {
+                  account: { id: { equals: item.id } },
+                  paymentStatus: { equals: "unpaid" }
+                },
+                query: `
+                  id
+                  amount
+                  description
+                  orderDisplayId
+                  itemCount
+                  createdAt
+                  formattedAmount
+                  region {
+                    id
+                    name
+                    currency {
+                      id
+                      code
+                      symbol
+                      noDivisionCurrency
+                    }
+                  }
+                `,
+                orderBy: { createdAt: "desc" }
+              });
+              if (unpaidLineItems.length === 0) {
+                return {
+                  success: true,
+                  regions: [],
+                  totalRegions: 0,
+                  totalUnpaidItems: 0,
+                  message: "No unpaid items found"
+                };
+              }
+              const lineItemsByRegion = unpaidLineItems.reduce((acc, item2) => {
+                const regionId = item2.region.id;
+                const regionName = item2.region.name;
+                const currency = item2.region.currency;
+                if (!acc[regionId]) {
+                  acc[regionId] = {
+                    region: {
+                      id: regionId,
+                      name: regionName,
+                      currency
+                    },
+                    lineItems: [],
+                    totalAmount: 0,
+                    itemCount: 0
+                  };
+                }
+                acc[regionId].lineItems.push({
+                  id: item2.id,
+                  amount: item2.amount,
+                  description: item2.description,
+                  orderDisplayId: item2.orderDisplayId,
+                  itemCount: item2.itemCount,
+                  createdAt: item2.createdAt,
+                  formattedAmount: item2.formattedAmount
+                });
+                acc[regionId].totalAmount += item2.amount || 0;
+                acc[regionId].itemCount += item2.itemCount || 0;
+                return acc;
+              }, {});
+              const regionsWithLineItems = Object.values(lineItemsByRegion).map((regionData) => {
+                const divisor = regionData.region.currency.noDivisionCurrency ? 1 : 100;
+                const formattedTotal = new Intl.NumberFormat("en-US", {
+                  style: "currency",
+                  currency: regionData.region.currency.code
+                }).format(regionData.totalAmount / divisor);
+                return {
+                  ...regionData,
+                  formattedTotalAmount: formattedTotal
+                };
+              });
+              regionsWithLineItems.sort((a, b) => b.totalAmount - a.totalAmount);
+              return {
+                success: true,
+                regions: regionsWithLineItems,
+                totalRegions: regionsWithLineItems.length,
+                totalUnpaidItems: unpaidLineItems.length,
+                message: `Found ${unpaidLineItems.length} unpaid orders across ${regionsWithLineItems.length} regions`
+              };
+            }
+          })
         })
       }
     }),
@@ -8855,45 +9050,35 @@ var BusinessAccountRequest = (0, import_core29.list)({
     ...trackingFields
   },
   hooks: {
-    beforeOperation: async ({ operation, item, originalItem, inputData, context }) => {
+    beforeOperation: async ({ operation, item, originalItem, inputData, resolvedData, context }) => {
       console.log("=== BusinessAccountRequest beforeOperation Hook ===");
       console.log("operation:", operation);
       console.log("inputData:", JSON.stringify(inputData, null, 2));
-      if (operation === "update" && inputData?.where?.id) {
-        console.log("\u{1F50D} Fetching current item with ID:", inputData.where.id);
-        const currentItem = await context.sudo().query.BusinessAccountRequest.findOne({
-          where: { id: inputData.where.id },
-          query: "id status"
-        });
-        console.log("\u{1F3AF} currentItem:", JSON.stringify(currentItem, null, 2));
-        console.log("\u{1F4E5} inputData.data.status:", inputData.data?.status);
-        if (inputData.data?.status === "approved" && currentItem?.status !== "approved") {
-          console.log("\u2705 Hook conditions met - calling createAccountFromApprovedRequest");
-          const accountId = await createAccountFromApprovedRequest(
-            { id: inputData.where.id, ...inputData.data },
-            context
-          );
-          if (accountId) {
-            console.log("\u{1F517} Adding generated account to input data:", accountId);
-            inputData.data.generatedAccount = { connect: { id: accountId } };
-            console.log("\u{1F4DD} Updated inputData.data:", JSON.stringify(inputData.data, null, 2));
-          }
-        } else {
-          console.log("\u274C Hook conditions not met");
-          console.log('  - inputData.data?.status === "approved":', inputData.data?.status === "approved");
-          console.log('  - currentItem?.status !== "approved":', currentItem?.status !== "approved");
+      console.log("item (current item):", JSON.stringify(item, null, 2));
+      if (operation === "update" && item?.id && inputData?.status === "approved" && item?.status !== "approved") {
+        const accountId = await createAccountFromApprovedRequest(
+          { id: item.id, ...inputData },
+          context
+        );
+        if (accountId) {
+          return {
+            ...resolvedData,
+            generatedAccount: { connect: { id: accountId } }
+          };
         }
       } else {
-        console.log("\u274C Not an update operation or missing where.id");
+        console.log('  - operation === "update":', operation === "update");
+        console.log("  - item?.id exists:", !!item?.id);
+        console.log('  - inputData?.status === "approved":', inputData?.status === "approved");
+        console.log('  - item?.status !== "approved":', item?.status !== "approved");
       }
+      return resolvedData;
     }
   }
 });
 async function createAccountFromApprovedRequest(request, context) {
-  console.log("\u{1F504} Starting createAccountFromApprovedRequest");
   console.log("request.id:", request.id);
   try {
-    console.log("\u{1F4DD} Fetching full request data...");
     const fullRequest = await context.sudo().query.BusinessAccountRequest.findOne({
       where: { id: request.id },
       query: `
@@ -8943,7 +9128,6 @@ async function createAccountFromApprovedRequest(request, context) {
         }
       }
     });
-    console.log("\u2705 Account created:", JSON.stringify(account, null, 2));
     console.log("\u{1F511} Generating customer token...");
     const customerToken = generateSecureToken();
     console.log("Generated token:", customerToken);
@@ -8955,7 +9139,6 @@ async function createAccountFromApprovedRequest(request, context) {
         tokenGeneratedAt: (/* @__PURE__ */ new Date()).toISOString()
       }
     });
-    console.log("\u2705 User updated with customer token");
     console.log(`Account created for user ${fullRequest.user.email}, token: ${customerToken}`);
     return account.id;
   } catch (error) {
@@ -13620,6 +13803,11 @@ var User = (0, import_core86.list)({
       }
     }),
     tokenGeneratedAt: (0, import_fields86.timestamp)(),
+    orderWebhookUrl: (0, import_fields86.text)({
+      ui: {
+        description: "Webhook URL to call when orders are created/updated (for Openship integration)"
+      }
+    }),
     ...(0, import_core86.group)({
       label: "Virtual Fields",
       description: "Calculated fields for user display and cart status",
@@ -14309,8 +14497,6 @@ async function deliverWebhook(webhook, eventType, payload, context) {
     });
     const secret = webhook.secret || "default-secret";
     const signature = import_crypto2.default.createHmac("sha256", secret).update(JSON.stringify(payload)).digest("hex");
-    console.log(`\u{1F3AF} WEBHOOK URL: Attempting to deliver to ${webhook.url}`);
-    console.log(`\u{1F3AF} WEBHOOK PAYLOAD:`, JSON.stringify(payload, null, 2));
     const response = await fetch(webhook.url, {
       method: "POST",
       headers: {
@@ -14347,15 +14533,11 @@ async function deliverWebhook(webhook, eventType, payload, context) {
           data: { lastTriggered: /* @__PURE__ */ new Date() }
         });
       }
-      console.log(`\u2705 Webhook delivered successfully: ${webhook.url} (${response.status})`);
     } else {
       const errorText = await response.text();
-      console.error(`\u274C Webhook failed with status ${response.status} to URL: ${webhook.url}`);
-      console.error(`\u274C Response body: ${errorText}`);
       throw new Error(`HTTP ${response.status}: ${errorText}`);
     }
   } catch (error) {
-    console.error(`\u274C Webhook delivery failed: ${webhook.url}`, error);
     try {
       await context.query.WebhookEvent.updateOne({
         where: { id: webhookEvent?.id },
@@ -14477,11 +14659,9 @@ function statelessSessions({
       if (authHeader?.startsWith("Bearer ")) {
         const accessToken = authHeader.replace("Bearer ", "");
         if (accessToken.startsWith("of_")) {
-          console.log("\u{1F511} API KEY DETECTED, VALIDATING...");
           try {
             const clientIP = context.req.headers["x-forwarded-for"] || context.req.headers["x-real-ip"] || context.req.connection?.remoteAddress || context.req.socket?.remoteAddress || context.req.connection?.socket?.remoteAddress || "127.0.0.1";
             const actualClientIP = typeof clientIP === "string" ? clientIP.split(",")[0].trim() : "127.0.0.1";
-            console.log("\u{1F511} CLIENT IP:", actualClientIP);
             const apiKeys = await context.sudo().query.ApiKey.findMany({
               where: { status: { equals: "active" } },
               query: `
@@ -14496,7 +14676,6 @@ function statelessSessions({
                 user { id }
               `
             });
-            console.log("\u{1F511} CHECKING AGAINST", apiKeys.length, "ACTIVE API KEYS");
             let matchingApiKey = null;
             for (const apiKey of apiKeys) {
               try {
@@ -14510,36 +14689,26 @@ function statelessSessions({
                 const isValid = await import_bcryptjs.default.compare(accessToken, fullApiKey.tokenSecret);
                 if (isValid) {
                   matchingApiKey = apiKey;
-                  console.log("\u{1F511} FOUND MATCHING API KEY:", apiKey.id);
                   break;
                 }
               } catch (error) {
-                console.log("\u{1F511} ERROR VERIFYING API KEY:", error);
                 continue;
               }
             }
             if (!matchingApiKey) {
-              console.log("\u{1F511} NO MATCHING API KEY FOUND");
               return;
             }
             if (matchingApiKey.restrictedToIPs && Array.isArray(matchingApiKey.restrictedToIPs) && matchingApiKey.restrictedToIPs.length > 0) {
               const allowedIPs = matchingApiKey.restrictedToIPs;
               const isAllowedIP = allowedIPs.includes(actualClientIP);
-              console.log("\u{1F511} IP RESTRICTION CHECK:");
-              console.log("\u{1F511} Client IP:", actualClientIP);
-              console.log("\u{1F511} Allowed IPs:", allowedIPs);
-              console.log("\u{1F511} Is Allowed:", isAllowedIP);
               if (!isAllowedIP) {
-                console.log("\u{1F511} API KEY BLOCKED: IP NOT ALLOWED");
                 return;
               }
             }
             if (matchingApiKey.status !== "active") {
-              console.log("\u{1F511} API KEY NOT ACTIVE:", matchingApiKey.status);
               return;
             }
             if (matchingApiKey.expiresAt && /* @__PURE__ */ new Date() > new Date(matchingApiKey.expiresAt)) {
-              console.log("\u{1F511} API KEY EXPIRED");
               await context.sudo().query.ApiKey.updateOne({
                 where: { id: matchingApiKey.id },
                 data: { status: "revoked" }
@@ -14564,11 +14733,9 @@ function statelessSessions({
                 apiKeyScopes: matchingApiKey.scopes || []
                 // Attach scopes for permission checking
               };
-              console.log("\u{1F511} RETURNING SESSION:", JSON.stringify(session, null, 2));
               return session;
             }
           } catch (err) {
-            console.log("\u{1F511} API Key validation error:", err);
             return;
           }
         }
@@ -14577,34 +14744,24 @@ function statelessSessions({
             where: { token: accessToken },
             query: `id clientId scopes expiresAt tokenType isRevoked user { id }`
           });
-          console.log("\u{1F535} OAUTH TOKEN FOUND:", !!oauthToken);
           if (oauthToken) {
-            console.log("\u{1F535} OAUTH TOKEN DETAILS:", JSON.stringify(oauthToken, null, 2));
             if (oauthToken.tokenType !== "access_token") {
               return;
             }
             if (oauthToken.isRevoked === "true") {
-              console.log("\u{1F535} TOKEN REVOKED");
               return;
             }
             if (/* @__PURE__ */ new Date() > new Date(oauthToken.expiresAt)) {
-              console.log("\u{1F535} TOKEN EXPIRED");
               return;
             }
             const oauthApp = await context.sudo().query.OAuthApp.findOne({
               where: { clientId: oauthToken.clientId },
               query: `id status`
             });
-            console.log("\u{1F535} OAUTH APP:", oauthApp);
             if (!oauthApp || oauthApp.status !== "active") {
-              console.log("\u{1F535} OAUTH APP NOT ACTIVE");
               return;
             }
             if (oauthToken.user?.id) {
-              console.log("\u{1F535} CREATING OAUTH SESSION:");
-              console.log("\u{1F535} User ID:", oauthToken.user.id);
-              console.log("\u{1F535} OAuth Scopes:", oauthToken.scopes);
-              console.log("\u{1F535} List Key:", listKey);
               return {
                 itemId: oauthToken.user.id,
                 listKey,
@@ -14614,10 +14771,8 @@ function statelessSessions({
             }
           }
         } catch (err) {
-          console.log("\u{1F535} OAUTH TOKEN LOOKUP ERROR:", err.message);
         }
         if (accessToken.startsWith("ctok_")) {
-          console.log("\u{1F7E2} CUSTOMER TOKEN DETECTED, VALIDATING...");
           try {
             const users = await context.sudo().query.User.findMany({
               where: { customerToken: { equals: accessToken } },
@@ -14635,17 +14790,12 @@ function statelessSessions({
             });
             const user = users[0];
             if (!user) {
-              console.log("\u{1F7E2} CUSTOMER TOKEN NOT FOUND");
               return;
             }
             const activeAccount = user.accounts?.[0];
             if (!activeAccount) {
-              console.log("\u{1F7E2} NO ACTIVE ACCOUNT FOUND FOR USER");
               return;
             }
-            console.log("\u{1F7E2} CUSTOMER TOKEN VALID, CREATING SESSION");
-            console.log("\u{1F7E2} User:", user.email);
-            console.log("\u{1F7E2} Active Account:", activeAccount.id);
             return {
               itemId: user.id,
               listKey,
@@ -14654,7 +14804,6 @@ function statelessSessions({
               activeAccountId: activeAccount.id
             };
           } catch (err) {
-            console.log("\u{1F7E2} CUSTOMER TOKEN VALIDATION ERROR:", err.message);
             return;
           }
         }

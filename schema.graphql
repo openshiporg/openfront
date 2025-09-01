@@ -34,6 +34,7 @@ type Account {
   availableCreditInAccountCurrency: Int
   formattedTotalOwedInAccountCurrency: String
   formattedAvailableCreditInAccountCurrency: String
+  unpaidLineItemsByRegion: JSON
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -9094,6 +9095,7 @@ type User {
   businessAccountRequest: BusinessAccountRequest
   customerToken: String
   tokenGeneratedAt: DateTime
+  orderWebhookUrl: String
   firstName: String
   lastName: String
   activeCartId: String
@@ -9140,6 +9142,7 @@ input UserWhereInput {
   businessAccountRequest: BusinessAccountRequestWhereInput
   customerToken: StringNullableFilter
   tokenGeneratedAt: DateTimeNullableFilter
+  orderWebhookUrl: StringFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
   passwordResetToken: PasswordFilter
@@ -9178,6 +9181,7 @@ input UserOrderByInput {
   onboardingStatus: OrderDirection
   customerToken: OrderDirection
   tokenGeneratedAt: OrderDirection
+  orderWebhookUrl: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
   passwordResetIssuedAt: OrderDirection
@@ -9209,6 +9213,7 @@ input UserUpdateInput {
   businessAccountRequest: BusinessAccountRequestRelateToOneForUpdateInput
   customerToken: String
   tokenGeneratedAt: DateTime
+  orderWebhookUrl: String
   createdAt: DateTime
   updatedAt: DateTime
   passwordResetToken: String
@@ -9291,6 +9296,7 @@ input UserCreateInput {
   businessAccountRequest: BusinessAccountRequestRelateToOneForCreateInput
   customerToken: String
   tokenGeneratedAt: DateTime
+  orderWebhookUrl: String
   createdAt: DateTime
   updatedAt: DateTime
   passwordResetToken: String
@@ -10659,10 +10665,14 @@ input UserUpdateProfileInput {
   billingAddress: String
   password: String
   onboardingStatus: String
+  orderWebhookUrl: String
 }
 
 type WebhookResult {
   success: Boolean!
+  message: String
+  statusCode: Int
+  error: String
 }
 
 type CustomerTokenResult {

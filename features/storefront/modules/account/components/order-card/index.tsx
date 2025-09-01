@@ -18,65 +18,50 @@ const OrderCard = ({ order }: OrderCardProps) => {
     );
   }, [order]);
 
-  const numberOfProducts = useMemo(() => {
-    return order.lineItems?.length ?? 0;
-  }, [order]);
-
   return (
-    <div className="bg-background flex flex-col" data-testid="order-card">
-      <div className="uppercase text-base leading-6 font-semibold mb-1">
-        #<span data-testid="order-display-id">{order.displayId}</span>
-      </div>
-      <div className="flex items-center divide-x divide-gray-200 text-xs leading-5 font-normal text-foreground">
-        <span className="pr-2" data-testid="order-created-at">
-          {new Date(order.createdAt || "").toDateString()}
-        </span>
-        <span className="px-2" data-testid="order-amount">
-          {order.total}
-        </span>
-        <span className="pl-2">{`${numberOfLines} ${
-          numberOfLines > 1 ? "items" : "item"
-        }`}</span>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 my-4">
-        {order.lineItems?.slice(0, 3).map((item) => {
-          return (
-            <div
-              key={item.id}
-              className="flex flex-col gap-y-2"
-              data-testid="order-item"
-            >
-              <Thumbnail thumbnail={item.thumbnail} images={[]} size="full" />
-              <div className="flex items-center text-xs leading-5 font-normal text-foreground">
-                <span
-                  className="text-foreground font-semibold"
-                  data-testid="item-title"
-                >
-                  {item.title}
-                </span>
-                <span className="ml-2">x</span>
-                <span data-testid="item-quantity">{item.quantity}</span>
-              </div>
-            </div>
-          );
-        })}
-        {numberOfProducts > 4 && (
-          <div className="w-full h-full flex flex-col items-center justify-center">
-            <span className="text-xs leading-5 font-normal text-foreground">
-              + {numberOfLines - 4}
+    <div className="space-y-4" data-testid="order-card">
+      <div className="flex items-center justify-between py-4">
+        <div className="space-y-1">
+          <h3 className="font-semibold text-foreground">
+            #<span data-testid="order-display-id">{order.displayId}</span>
+          </h3>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <span data-testid="order-created-at">
+              {new Date(order.createdAt || "").toDateString()}
             </span>
-            <span className="text-xs leading-5 font-normal text-foreground">
-              more
+            <span data-testid="order-amount">
+              {order.total}
             </span>
+            <span>{`${numberOfLines} ${numberOfLines > 1 ? "items" : "item"}`}</span>
           </div>
-        )}
-      </div>
-      <div className="flex justify-end">
+        </div>
         <LocalizedClientLink href={`/account/orders/details/${order.id}`}>
           <Button data-testid="order-details-link" variant="outline" size="sm">
             See details
           </Button>
         </LocalizedClientLink>
+      </div>
+
+      {/* Order Items */}
+      <div className="flex items-center gap-4 pl-4">
+        {order.lineItems?.slice(0, 1).map((item) => (
+          <div key={item.id} className="flex items-center gap-4" data-testid="order-item">
+            <Thumbnail 
+              thumbnail={item.thumbnail} 
+              images={[]} 
+              size="full" 
+              className="w-15 h-15 object-cover bg-muted/30"
+            />
+            <div className="flex-1">
+              <p className="font-medium text-foreground" data-testid="item-title">
+                {item.title}
+              </p>
+              <p className="text-sm text-muted-foreground" data-testid="item-quantity">
+                x{item.quantity}
+              </p>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

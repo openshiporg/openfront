@@ -148,6 +148,11 @@ export const User = list({
       },
     }),
     tokenGeneratedAt: timestamp(),
+    orderWebhookUrl: text({
+      ui: {
+        description: 'Webhook URL to call when orders are created/updated (for Openship integration)'
+      }
+    }),
     ...group({
       label: 'Virtual Fields',
       description: 'Calculated fields for user display and cart status',

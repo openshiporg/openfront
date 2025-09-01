@@ -41,6 +41,9 @@ async function getUnpaidLineItemsByRegion(root, { accountId }, context) {
         orderDisplayId
         itemCount
         createdAt
+        order {
+          id
+        }
         region {
           id
           name
@@ -81,7 +84,8 @@ async function getUnpaidLineItemsByRegion(root, { accountId }, context) {
         orderDisplayId: item.orderDisplayId,
         itemCount: item.itemCount,
         createdAt: item.createdAt,
-        formattedAmount: formatCurrencyAmount(item.amount, currency.code)
+        formattedAmount: formatCurrencyAmount(item.amount, currency.code),
+        order: item.order
       });
 
       acc[regionId].totalAmount += (item.amount || 0);

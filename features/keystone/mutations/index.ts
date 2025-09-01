@@ -133,10 +133,14 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         billingAddress: String
         password: String
         onboardingStatus: String
+        orderWebhookUrl: String
       }
 
       type WebhookResult {
         success: Boolean!
+        message: String
+        statusCode: Int
+        error: String
       }
 
 

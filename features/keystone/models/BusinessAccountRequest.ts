@@ -203,59 +203,45 @@ export const BusinessAccountRequest = list({
   },
   
   hooks: {
-    beforeOperation: async ({ operation, item, originalItem, inputData, context }) => {
+    beforeOperation: async ({ operation, item, originalItem, inputData, resolvedData, context }) => {
       console.log('=== BusinessAccountRequest beforeOperation Hook ===');
       console.log('operation:', operation);
       console.log('inputData:', JSON.stringify(inputData, null, 2));
+      console.log('item (current item):', JSON.stringify(item, null, 2));
       
-      if (operation === 'update' && inputData?.where?.id) {
-        console.log('🔍 Fetching current item with ID:', inputData.where.id);
+      // When request is being approved, create account first  
+      if (operation === 'update' && item?.id && inputData?.status === 'approved' && item?.status !== 'approved') {
         
-        // Get the current item to check status change
-        const currentItem = await context.sudo().query.BusinessAccountRequest.findOne({
-          where: { id: inputData.where.id },
-          query: 'id status'
-        });
+        const accountId = await createAccountFromApprovedRequest(
+          { id: item.id, ...inputData }, 
+          context
+        );
         
-        console.log('🎯 currentItem:', JSON.stringify(currentItem, null, 2));
-        console.log('📥 inputData.data.status:', inputData.data?.status);
-        
-        // When request is being approved, create account first
-        if (inputData.data?.status === 'approved' && 
-            currentItem?.status !== 'approved') {
-          
-          console.log('✅ Hook conditions met - calling createAccountFromApprovedRequest');
-          const accountId = await createAccountFromApprovedRequest(
-            { id: inputData.where.id, ...inputData.data }, 
-            context
-          );
-          
-          if (accountId) {
-            console.log('🔗 Adding generated account to input data:', accountId);
-            // Add the generated account to the input data
-            inputData.data.generatedAccount = { connect: { id: accountId } };
-            console.log('📝 Updated inputData.data:', JSON.stringify(inputData.data, null, 2));
-          }
-        } else {
-          console.log('❌ Hook conditions not met');
-          console.log('  - inputData.data?.status === "approved":', inputData.data?.status === 'approved');
-          console.log('  - currentItem?.status !== "approved":', currentItem?.status !== 'approved');
+        if (accountId) {
+          // Return modified resolvedData with the generated account
+          return {
+            ...resolvedData,
+            generatedAccount: { connect: { id: accountId } }
+          };
         }
       } else {
-        console.log('❌ Not an update operation or missing where.id');
+        console.log('  - operation === "update":', operation === 'update');
+        console.log('  - item?.id exists:', !!item?.id);
+        console.log('  - inputData?.status === "approved":', inputData?.status === 'approved');
+        console.log('  - item?.status !== "approved":', item?.status !== 'approved');
       }
+      
+      return resolvedData;
     }
   }
 });
 
 // Helper function to create account from approved request
 async function createAccountFromApprovedRequest(request: any, context: any): Promise<string | null> {
-  console.log('🔄 Starting createAccountFromApprovedRequest');
   console.log('request.id:', request.id);
   
   try {
     // Get the request with user data
-    console.log('📝 Fetching full request data...');
     const fullRequest = await context.sudo().query.BusinessAccountRequest.findOne({
       where: { id: request.id },
       query: `
@@ -313,7 +299,6 @@ async function createAccountFromApprovedRequest(request: any, context: any): Pro
       }
     });
 
-    console.log('✅ Account created:', JSON.stringify(account, null, 2));
 
     // Generate customer token
     console.log('🔑 Generating customer token...');
@@ -330,7 +315,6 @@ async function createAccountFromApprovedRequest(request: any, context: any): Pro
       }
     });
     
-    console.log('✅ User updated with customer token');
     
     // TODO: Send approval email to user
     console.log(`Account created for user ${fullRequest.user.email}, token: ${customerToken}`);

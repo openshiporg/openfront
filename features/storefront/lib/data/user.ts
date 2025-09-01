@@ -30,6 +30,8 @@ export async function getUser() {
               firstName
               lastName
               phone
+              customerToken
+              orderWebhookUrl
               billingAddress {
                 id
                 firstName

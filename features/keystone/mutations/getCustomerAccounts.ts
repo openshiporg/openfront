@@ -43,7 +43,11 @@ async function getCustomerAccounts(root, { limit = 10, offset = 0 }, context) {
         itemCount
         paymentStatus
         createdAt
+        order {
+          id
+        }
       }
+      unpaidLineItemsByRegion
     `
   });
 

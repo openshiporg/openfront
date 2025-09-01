@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,7 +69,7 @@ interface BusinessAccountRequest {
     id: string;
     name: string;
     email: string;
-  };
+  } | null;
 }
 
 interface BusinessAccountRequestDetailsComponentProps {
@@ -80,6 +81,7 @@ export function BusinessAccountRequestDetailsComponent({
   businessAccountRequest, 
   list 
 }: BusinessAccountRequestDetailsComponentProps) {
+  const router = useRouter();
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   const [reviewNotes, setReviewNotes] = useState(businessAccountRequest.reviewNotes || '');
@@ -141,7 +143,7 @@ export function BusinessAccountRequestDetailsComponent({
           description: `Account request has been ${action}.`,
         });
         setIsReviewDialogOpen(false);
-        window.location.reload(); // Refresh the page to show updated data
+        router.refresh(); // Refresh the page to show updated data
       } else {
         toast({
           title: "Error",
@@ -167,7 +169,12 @@ export function BusinessAccountRequestDetailsComponent({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-2">
               <Mail className="h-5 w-5 text-muted-foreground" />
-              <h3 className="text-lg font-semibold truncate">{businessAccountRequest.user.name} • {businessAccountRequest.user.email}</h3>
+              <h3 className="text-lg font-semibold truncate">
+                {businessAccountRequest.user 
+                  ? `${businessAccountRequest.user.name} • ${businessAccountRequest.user.email}`
+                  : "User Information Unavailable"
+                }
+              </h3>
             </div>
 
             <div className="text-sm text-muted-foreground mt-3">
@@ -257,8 +264,14 @@ export function BusinessAccountRequestDetailsComponent({
               <div>
                 <Label className="font-medium">Contact</Label>
                 <div className="text-sm">
-                  <p>{businessAccountRequest.user.name}</p>
-                  <p className="text-muted-foreground">{businessAccountRequest.user.email}</p>
+                  {businessAccountRequest.user ? (
+                    <>
+                      <p>{businessAccountRequest.user.name}</p>
+                      <p className="text-muted-foreground">{businessAccountRequest.user.email}</p>
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground">User information unavailable</p>
+                  )}
                 </div>
               </div>
               <div>
@@ -330,8 +343,8 @@ export function BusinessAccountRequestDetailsComponent({
         itemId={businessAccountRequest.id}
         open={isEditDrawerOpen}
         onClose={() => setIsEditDrawerOpen(false)}
-        onUpdate={() => {
-          window.location.reload();
+        onSave={() => {
+          router.refresh();
         }}
       />
     </>

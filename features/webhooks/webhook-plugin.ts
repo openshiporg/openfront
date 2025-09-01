@@ -159,8 +159,6 @@ async function deliverWebhook(webhook: any, eventType: string, payload: any, con
       .digest('hex');
 
     // Log the webhook URL before delivery
-    console.log(`🎯 WEBHOOK URL: Attempting to deliver to ${webhook.url}`);
-    console.log(`🎯 WEBHOOK PAYLOAD:`, JSON.stringify(payload, null, 2));
     
     // Deliver the webhook
     const response = await fetch(webhook.url, {
@@ -204,16 +202,12 @@ async function deliverWebhook(webhook: any, eventType: string, payload: any, con
         });
       }
 
-      console.log(`✅ Webhook delivered successfully: ${webhook.url} (${response.status})`);
     } else {
       const errorText = await response.text();
-      console.error(`❌ Webhook failed with status ${response.status} to URL: ${webhook.url}`);
-      console.error(`❌ Response body: ${errorText}`);
       throw new Error(`HTTP ${response.status}: ${errorText}`);
     }
 
   } catch (error) {
-    console.error(`❌ Webhook delivery failed: ${webhook.url}`, error);
 
     // Update WebhookEvent with failure
     try {

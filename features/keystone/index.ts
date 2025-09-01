@@ -75,7 +75,6 @@ export function statelessSessions({
         
         // Try to validate as API key first
         if (accessToken.startsWith("of_")) {
-          console.log('🔑 API KEY DETECTED, VALIDATING...');
           try {
             // Get client IP address for IP restriction validation
             const clientIP = context.req.headers['x-forwarded-for'] || 
@@ -88,7 +87,6 @@ export function statelessSessions({
             // Handle comma-separated IPs from x-forwarded-for (use first one)
             const actualClientIP = typeof clientIP === 'string' ? clientIP.split(',')[0].trim() : '127.0.0.1';
             
-            console.log('🔑 CLIENT IP:', actualClientIP);
             
             // Get all active API keys and test the token against each one
             const apiKeys = await context.sudo().query.ApiKey.findMany({
@@ -106,7 +104,6 @@ export function statelessSessions({
               `,
             });
             
-            console.log('🔑 CHECKING AGAINST', apiKeys.length, 'ACTIVE API KEYS');
             
             let matchingApiKey = null;
             
@@ -129,17 +126,14 @@ export function statelessSessions({
                 
                 if (isValid) {
                   matchingApiKey = apiKey;
-                  console.log('🔑 FOUND MATCHING API KEY:', apiKey.id);
                   break;
                 }
               } catch (error) {
-                console.log('🔑 ERROR VERIFYING API KEY:', error);
                 continue;
               }
             }
             
             if (!matchingApiKey) {
-              console.log('🔑 NO MATCHING API KEY FOUND');
               return; // API key not found or invalid
             }
             
@@ -148,24 +142,17 @@ export function statelessSessions({
               const allowedIPs = matchingApiKey.restrictedToIPs;
               const isAllowedIP = allowedIPs.includes(actualClientIP);
               
-              console.log('🔑 IP RESTRICTION CHECK:');
-              console.log('🔑 Client IP:', actualClientIP);
-              console.log('🔑 Allowed IPs:', allowedIPs);
-              console.log('🔑 Is Allowed:', isAllowedIP);
               
               if (!isAllowedIP) {
-                console.log('🔑 API KEY BLOCKED: IP NOT ALLOWED');
                 return; // IP not in allowed list
               }
             }
             
             if (matchingApiKey.status !== 'active') {
-              console.log('🔑 API KEY NOT ACTIVE:', matchingApiKey.status);
               return; // API key is inactive
             }
             
             if (matchingApiKey.expiresAt && new Date() > new Date(matchingApiKey.expiresAt)) {
-              console.log('🔑 API KEY EXPIRED');
               // Auto-revoke expired keys
               await context.sudo().query.ApiKey.updateOne({
                 where: { id: matchingApiKey.id },
@@ -195,11 +182,9 @@ export function statelessSessions({
                 listKey,
                 apiKeyScopes: matchingApiKey.scopes || [] // Attach scopes for permission checking
               };
-              console.log('🔑 RETURNING SESSION:', JSON.stringify(session, null, 2));
               return session;
             }
           } catch (err) {
-            console.log('🔑 API Key validation error:', err);
             return;
           }
         }
@@ -211,10 +196,8 @@ export function statelessSessions({
             query: `id clientId scopes expiresAt tokenType isRevoked user { id }`
           });
           
-          console.log('🔵 OAUTH TOKEN FOUND:', !!oauthToken);
           
           if (oauthToken) {
-            console.log('🔵 OAUTH TOKEN DETAILS:', JSON.stringify(oauthToken, null, 2));
             
             // Check token type and revoked status
             if (oauthToken.tokenType !== "access_token") {
@@ -222,13 +205,11 @@ export function statelessSessions({
             }
             
             if (oauthToken.isRevoked === "true") {
-              console.log('🔵 TOKEN REVOKED');
               return; // Token revoked
             }
             
             // Check if token is expired
             if (new Date() > new Date(oauthToken.expiresAt)) {
-              console.log('🔵 TOKEN EXPIRED');
               return; // Token expired
             }
             
@@ -238,19 +219,13 @@ export function statelessSessions({
               query: `id status`
             });
             
-            console.log('🔵 OAUTH APP:', oauthApp);
             
             if (!oauthApp || oauthApp.status !== 'active') {
-              console.log('🔵 OAUTH APP NOT ACTIVE');
               return; // App not active
             }
             
             // Return user session with OAuth scopes attached
             if (oauthToken.user?.id) {
-              console.log('🔵 CREATING OAUTH SESSION:');
-              console.log('🔵 User ID:', oauthToken.user.id);
-              console.log('🔵 OAuth Scopes:', oauthToken.scopes);
-              console.log('🔵 List Key:', listKey);
               
               return { 
                 itemId: oauthToken.user.id, 
@@ -260,13 +235,11 @@ export function statelessSessions({
             }
           }
         } catch (err) {
-          console.log('🔵 OAUTH TOKEN LOOKUP ERROR:', err.message);
           // Not an OAuth token, try as customer token below
         }
         
         // Try as customer token (for invoice/Openship integration)
         if (accessToken.startsWith('ctok_')) {
-          console.log('🟢 CUSTOMER TOKEN DETECTED, VALIDATING...');
           try {
             const users = await context.sudo().query.User.findMany({
               where: { customerToken: { equals: accessToken } },
@@ -285,20 +258,15 @@ export function statelessSessions({
             
             const user = users[0];
             if (!user) {
-              console.log('🟢 CUSTOMER TOKEN NOT FOUND');
               return; // Token not found
             }
             
             // Check if user has active account
             const activeAccount = user.accounts?.[0];
             if (!activeAccount) {
-              console.log('🟢 NO ACTIVE ACCOUNT FOUND FOR USER');
               return; // No active account
             }
             
-            console.log('🟢 CUSTOMER TOKEN VALID, CREATING SESSION');
-            console.log('🟢 User:', user.email);
-            console.log('🟢 Active Account:', activeAccount.id);
             
             // Return user session with customer token flag
             return { 
@@ -308,7 +276,6 @@ export function statelessSessions({
               activeAccountId: activeAccount.id
             };
           } catch (err) {
-            console.log('🟢 CUSTOMER TOKEN VALIDATION ERROR:', err.message);
             return;
           }
         }

@@ -396,6 +396,111 @@ export const Account = list({
             },
           }),
         }),
+
+        unpaidLineItemsByRegion: virtual({
+          field: graphql.field({
+            type: graphql.JSON,
+            async resolve(item, args, context) {
+              // Get all unpaid line items with region information
+              const unpaidLineItems = await context.sudo().query.AccountLineItem.findMany({
+                where: {
+                  account: { id: { equals: item.id } },
+                  paymentStatus: { equals: 'unpaid' }
+                },
+                query: `
+                  id
+                  amount
+                  description
+                  orderDisplayId
+                  itemCount
+                  createdAt
+                  formattedAmount
+                  region {
+                    id
+                    name
+                    currency {
+                      id
+                      code
+                      symbol
+                      noDivisionCurrency
+                    }
+                  }
+                `,
+                orderBy: { createdAt: 'desc' }
+              });
+
+              if (unpaidLineItems.length === 0) {
+                return {
+                  success: true,
+                  regions: [],
+                  totalRegions: 0,
+                  totalUnpaidItems: 0,
+                  message: 'No unpaid items found'
+                };
+              }
+
+              // Group line items by region
+              const lineItemsByRegion = unpaidLineItems.reduce((acc, item) => {
+                const regionId = item.region.id;
+                const regionName = item.region.name;
+                const currency = item.region.currency;
+
+                if (!acc[regionId]) {
+                  acc[regionId] = {
+                    region: {
+                      id: regionId,
+                      name: regionName,
+                      currency: currency
+                    },
+                    lineItems: [],
+                    totalAmount: 0,
+                    itemCount: 0
+                  };
+                }
+
+                acc[regionId].lineItems.push({
+                  id: item.id,
+                  amount: item.amount,
+                  description: item.description,
+                  orderDisplayId: item.orderDisplayId,
+                  itemCount: item.itemCount,
+                  createdAt: item.createdAt,
+                  formattedAmount: item.formattedAmount
+                });
+
+                acc[regionId].totalAmount += (item.amount || 0);
+                acc[regionId].itemCount += (item.itemCount || 0);
+
+                return acc;
+              }, {});
+
+              // Convert to array and add formatted totals
+              const regionsWithLineItems = Object.values(lineItemsByRegion).map(regionData => {
+                const divisor = regionData.region.currency.noDivisionCurrency ? 1 : 100;
+                const formattedTotal = new Intl.NumberFormat('en-US', {
+                  style: 'currency',
+                  currency: regionData.region.currency.code,
+                }).format(regionData.totalAmount / divisor);
+
+                return {
+                  ...regionData,
+                  formattedTotalAmount: formattedTotal
+                };
+              });
+
+              // Sort regions by total amount descending
+              regionsWithLineItems.sort((a, b) => b.totalAmount - a.totalAmount);
+
+              return {
+                success: true,
+                regions: regionsWithLineItems,
+                totalRegions: regionsWithLineItems.length,
+                totalUnpaidItems: unpaidLineItems.length,
+                message: `Found ${unpaidLineItems.length} unpaid orders across ${regionsWithLineItems.length} regions`
+              };
+            },
+          }),
+        }),
       },
     }),
 

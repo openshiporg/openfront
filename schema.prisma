@@ -1602,6 +1602,7 @@ model User {
   businessAccountRequest                 BusinessAccountRequest?  @relation("BusinessAccountRequest_user")
   customerToken                          String?
   tokenGeneratedAt                       DateTime?
+  orderWebhookUrl                        String                   @default("")
   createdAt                              DateTime                 @default(now())
   updatedAt                              DateTime                 @default(now()) @updatedAt
   passwordResetToken                     String?

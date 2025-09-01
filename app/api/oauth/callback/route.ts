@@ -93,7 +93,6 @@ export async function GET(request: NextRequest) {
     if (state) {
       try {
         stateData = JSON.parse(atob(state));
-        console.log('🔵 OPENFRONT CALLBACK: Decoded state:', stateData);
       } catch (e) {
         console.error('Failed to decode state:', e);
       }
@@ -101,7 +100,6 @@ export async function GET(request: NextRequest) {
 
     // If this is an Openship setup redirect, handle it differently
     if (stateData && stateData.redirect_type === 'openship_setup') {
-      console.log('🚀 OPENFRONT → OPENSHIP REDIRECT: Starting reverse OAuth flow');
       
       // Find the authorization code to validate it
       const authCode = await keystoneContext.sudo().query.OAuthToken.findOne({
@@ -140,8 +138,6 @@ export async function GET(request: NextRequest) {
 
       // Build Openship URL with platform auto-create parameters
       const openshipUrl = stateData.openship_url;
-      console.log('🔵 OPENFRONT CALLBACK: State data:', stateData);
-      console.log('🔵 OPENFRONT CALLBACK: Using Openship URL:', openshipUrl);
       
       // Determine the correct endpoint based on app type
       const appType = stateData.app_type || 'shop'; // default to shop for backward compatibility
@@ -157,7 +153,6 @@ export async function GET(request: NextRequest) {
       setupUrl.searchParams.set('accessToken', accessToken);
       setupUrl.searchParams.set('domain', new URL(request.url).origin); // OpenFront domain
       
-      console.log('🔄 Redirecting to Openship for auto-create:', setupUrl.toString());
       
       // Redirect to Openship for auto-platform/shop creation
       return NextResponse.redirect(setupUrl.toString());
