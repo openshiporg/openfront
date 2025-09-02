@@ -53,6 +53,13 @@ async function getBaseUrl(): Promise<string> {
 // Simple GraphQL client that creates endpoint on each request
 class OpenfrontClient {
   private async getEndpoint(): Promise<string> {
+    // Check if external GraphQL endpoint is specified (for openfront-storefront)
+    const externalEndpoint = process.env.OPENFRONT_GRAPHQL_ENDPOINT;
+    if (externalEndpoint) {
+      return externalEndpoint;
+    }
+    
+    // Default to local endpoint (for main openfront)
     const baseUrl = await getBaseUrl();
     return `${baseUrl}/api/graphql`;
   }
@@ -76,8 +83,13 @@ class OpenfrontClient {
       return response as T;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`GraphQL error: ${errorMessage}`);
-      console.error('Full error:', error);
+      
+      // Don't log authentication errors - they're expected when users aren't logged in
+      if (!errorMessage.includes('authenticatedItem') && !errorMessage.includes('authentication')) {
+        console.error(`GraphQL error: ${errorMessage}`);
+        console.error('Full error:', error);
+      }
+      
       return getEmptyResponseForQuery(document) as T;
     }
   }
