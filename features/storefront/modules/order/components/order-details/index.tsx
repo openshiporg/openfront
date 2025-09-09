@@ -60,7 +60,14 @@ const OrderDetails = ({ order, showStatus }: OrderDetailsProps) => {
                 className="text-muted-foreground "
                 data-testid="order-payment-status"
               >
-               {formatStatus(order.fulfillmentStatus?.shippingStatus)}
+               {(() => {
+                 const totalPaid = parseFloat(order.formattedTotalPaid?.replace(/[^0-9.-]+/g, "") || "0")
+                 const total = parseFloat(order.total?.replace(/[^0-9.-]+/g, "") || "0")
+                 
+                 if (totalPaid === 0) return "Unpaid"
+                 if (totalPaid >= total) return "Paid"  
+                 return "Partially paid"
+               })()}
               </span>
             </p>
           </>

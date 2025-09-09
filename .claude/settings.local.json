@@ -46,7 +46,11 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:localhost)",
       "WebFetch(domain:remixicon.com)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(tree:*)",
+      "Read(/Users/junaid/Library/Application Support/CleanShot/media/media_QcFUa8oMBl/**)",
+      "Bash(npm run dev:*)",
+      "Bash(/bashes)"
     ],
     "deny": [],
     "additionalDirectories": [

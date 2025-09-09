@@ -519,24 +519,26 @@ model Invite {
 }
 
 model Invoice {
-  id            String            @id @default(cuid())
-  user          User?             @relation("Invoice_user", fields: [userId], references: [id])
-  userId        String?           @map("user")
-  invoiceNumber String            @unique @default("")
-  title         String            @default("Payment Invoice")
-  description   String            @default("Invoice for selected orders payment")
-  totalAmount   Int               @default(0)
-  currency      Currency?         @relation("Invoice_currency", fields: [currencyId], references: [id])
-  currencyId    String?           @map("currency")
-  status        String            @default("paid")
-  dueDate       DateTime?
-  paidAt        DateTime?         @default(now())
-  metadata      Json?             @default("{}")
-  account       Account?          @relation("Invoice_account", fields: [accountId], references: [id])
-  accountId     String?           @map("account")
-  lineItems     InvoiceLineItem[] @relation("InvoiceLineItem_invoice")
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @default(now()) @updatedAt
+  id                  String             @id @default(cuid())
+  user                User?              @relation("Invoice_user", fields: [userId], references: [id])
+  userId              String?            @map("user")
+  invoiceNumber       String             @unique @default("")
+  title               String             @default("Payment Invoice")
+  description         String             @default("Invoice for selected orders payment")
+  totalAmount         Int                @default(0)
+  currency            Currency?          @relation("Invoice_currency", fields: [currencyId], references: [id])
+  currencyId          String?            @map("currency")
+  status              String             @default("paid")
+  dueDate             DateTime?
+  paidAt              DateTime?          @default(now())
+  metadata            Json?              @default("{}")
+  account             Account?           @relation("Invoice_account", fields: [accountId], references: [id])
+  accountId           String?            @map("account")
+  lineItems           InvoiceLineItem[]  @relation("InvoiceLineItem_invoice")
+  paymentCollection   PaymentCollection? @relation("Invoice_paymentCollection", fields: [paymentCollectionId], references: [id])
+  paymentCollectionId String?            @unique @map("paymentCollection")
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @default(now()) @updatedAt
 
   @@index([userId])
   @@index([currencyId])
@@ -936,6 +938,7 @@ model PaymentCollection {
   paymentSessions  PaymentSession[]                  @relation("PaymentSession_paymentCollection")
   payments         Payment[]                         @relation("Payment_paymentCollection")
   cart             Cart?                             @relation("Cart_paymentCollection")
+  invoice          Invoice?                          @relation("Invoice_paymentCollection")
   createdAt        DateTime                          @default(now())
   updatedAt        DateTime                          @default(now()) @updatedAt
 }

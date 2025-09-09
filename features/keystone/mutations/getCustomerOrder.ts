@@ -12,6 +12,7 @@ async function getCustomerOrder(root, { orderId, secretKey }, context) {
       fulfillmentDetails
       paymentDetails
       total
+      formattedTotalPaid
       subtotal
       shipping
       discount

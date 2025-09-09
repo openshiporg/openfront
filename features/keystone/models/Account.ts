@@ -156,35 +156,6 @@ export const Account = list({
           }),
         }),
 
-        formattedBalance: virtual({
-          field: graphql.field({
-            type: graphql.String,
-            async resolve(item, args, context) {
-              const account = await context.sudo().query.Account.findOne({
-                where: { id: item.id },
-                query: `
-                  totalAmount
-                  paidAmount
-                  currency {
-                    code
-                    symbol
-                    noDivisionCurrency
-                  }
-                `,
-              });
-
-              if (!account?.currency) return '$0.00';
-
-              const divisor = account.currency.noDivisionCurrency ? 1 : 100;
-              const balance = ((account.totalAmount || 0) - (account.paidAmount || 0)) / divisor;
-              
-              return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: account.currency.code,
-              }).format(balance);
-            },
-          }),
-        }),
 
         formattedCreditLimit: virtual({
           field: graphql.field({
@@ -225,37 +196,6 @@ export const Account = list({
           }),
         }),
 
-        formattedAvailableCredit: virtual({
-          field: graphql.field({
-            type: graphql.String,
-            async resolve(item, args, context) {
-              const account = await context.sudo().query.Account.findOne({
-                where: { id: item.id },
-                query: `
-                  totalAmount
-                  paidAmount
-                  creditLimit
-                  currency {
-                    code
-                    symbol
-                    noDivisionCurrency
-                  }
-                `,
-              });
-
-              if (!account?.currency) return '$0.00';
-
-              const divisor = account.currency.noDivisionCurrency ? 1 : 100;
-              const used = ((account.totalAmount || 0) - (account.paidAmount || 0)) / divisor;
-              const available = Math.max(0, ((account.creditLimit || 0) / divisor) - used);
-              
-              return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: account.currency.code,
-              }).format(available);
-            },
-          }),
-        }),
 
         // New currency-aware fields for multi-region support
         totalOwedInAccountCurrency: virtual({
@@ -397,6 +337,63 @@ export const Account = list({
           }),
         }),
 
+        // Proper current balance calculated from unpaid line items (same logic as unpaidLineItemsByRegion)
+        formattedCurrentBalance: virtual({
+          field: graphql.field({
+            type: graphql.String,
+            async resolve(item, args, context) {
+              const account = await context.sudo().query.Account.findOne({
+                where: { id: item.id },
+                query: `
+                  currency {
+                    code
+                    symbol
+                    noDivisionCurrency
+                  }
+                `,
+              });
+
+              if (!account?.currency) return '$0.00';
+
+              // Get all unpaid line items (same logic as unpaidLineItemsByRegion)
+              const unpaidLineItems = await context.sudo().query.AccountLineItem.findMany({
+                where: {
+                  account: { id: { equals: item.id } },
+                  paymentStatus: { equals: 'unpaid' }
+                },
+                query: `
+                  amount
+                  region {
+                    currency {
+                      code
+                      noDivisionCurrency
+                    }
+                  }
+                `
+              });
+
+              if (unpaidLineItems.length === 0) {
+                return '$0.00';
+              }
+
+              // Sum all unpaid amounts in the account's currency
+              let totalUnpaidAmount = 0;
+              for (const lineItem of unpaidLineItems) {
+                // For now, assume same currency. TODO: Add currency conversion if needed
+                totalUnpaidAmount += (lineItem.amount || 0);
+              }
+
+              const divisor = account.currency.noDivisionCurrency ? 1 : 100;
+              const balance = totalUnpaidAmount / divisor;
+              
+              return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: account.currency.code,
+              }).format(balance);
+            },
+          }),
+        }),
+
         unpaidLineItemsByRegion: virtual({
           field: graphql.field({
             type: graphql.JSON,
@@ -454,7 +451,7 @@ export const Account = list({
                     },
                     lineItems: [],
                     totalAmount: 0,
-                    itemCount: 0
+                    itemCount: 0 // This will count unique orders
                   };
                 }
 
@@ -469,7 +466,7 @@ export const Account = list({
                 });
 
                 acc[regionId].totalAmount += (item.amount || 0);
-                acc[regionId].itemCount += (item.itemCount || 0);
+                acc[regionId].itemCount += 1; // Count orders (AccountLineItems), not products
 
                 return acc;
               }, {});

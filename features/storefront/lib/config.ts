@@ -1,6 +1,5 @@
 import { GraphQLClient, RequestDocument, Variables } from "graphql-request";
 import { parse, DocumentNode } from "graphql";
-import { headers } from "next/headers";
 
 const getEmptyResponseForQuery = (query: RequestDocument): Record<string, any[] | null> => {
   const document = typeof query === "string" ? parse(query) : query;
@@ -28,10 +27,11 @@ async function getBaseUrl(): Promise<string> {
     return window.location.origin;
   }
   
-  // Server-side: try to get from headers
+  // Server-side: dynamically import next/headers
   if (typeof process !== 'undefined') {
     try {
-      // Import headers from next/headers (only works in app directory)
+      // Dynamic import next/headers only on server-side
+      const { headers } = await import('next/headers');
       const headersList = await headers();
       
       // Try x-forwarded-host first (common in production deployments)

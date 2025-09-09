@@ -26,14 +26,13 @@ type Account {
   invoicesCount(where: InvoiceWhereInput! = {}): Int
   balanceDue: Int
   formattedTotal: String
-  formattedBalance: String
   formattedCreditLimit: String
   availableCredit: Int
-  formattedAvailableCredit: String
   totalOwedInAccountCurrency: Int
   availableCreditInAccountCurrency: Int
   formattedTotalOwedInAccountCurrency: String
   formattedAvailableCreditInAccountCurrency: String
+  formattedCurrentBalance: String
   unpaidLineItemsByRegion: JSON
   createdAt: DateTime
   updatedAt: DateTime
@@ -325,6 +324,7 @@ type AccountLineItem {
   invoiceLineItemsCount(where: InvoiceLineItemWhereInput! = {}): Int
   formattedAmount: String
   orderDetails: JSON
+  paidAt: String
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -3487,8 +3487,10 @@ type Invoice {
   account: Account
   lineItems(where: InvoiceLineItemWhereInput! = {}, orderBy: [InvoiceLineItemOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: InvoiceLineItemWhereUniqueInput): [InvoiceLineItem!]
   lineItemsCount(where: InvoiceLineItemWhereInput! = {}): Int
+  paymentCollection: PaymentCollection
   formattedTotal: String
   itemCount: Int
+  paymentSessions: [JSON!]
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -3496,6 +3498,7 @@ type Invoice {
 input InvoiceWhereUniqueInput {
   id: ID
   invoiceNumber: String
+  paymentCollection: PaymentCollectionWhereUniqueInput
 }
 
 input InvoiceWhereInput {
@@ -3514,6 +3517,7 @@ input InvoiceWhereInput {
   paidAt: DateTimeNullableFilter
   account: AccountWhereInput
   lineItems: InvoiceLineItemManyRelationFilter
+  paymentCollection: PaymentCollectionWhereInput
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
@@ -3544,6 +3548,7 @@ input InvoiceUpdateInput {
   metadata: JSON
   account: AccountRelateToOneForUpdateInput
   lineItems: InvoiceLineItemRelateToManyForUpdateInput
+  paymentCollection: PaymentCollectionRelateToOneForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -3566,6 +3571,7 @@ input InvoiceCreateInput {
   metadata: JSON
   account: AccountRelateToOneForCreateInput
   lineItems: InvoiceLineItemRelateToManyForCreateInput
+  paymentCollection: PaymentCollectionRelateToOneForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -5501,6 +5507,7 @@ type PaymentCollection {
   payments(where: PaymentWhereInput! = {}, orderBy: [PaymentOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: PaymentWhereUniqueInput): [Payment!]
   paymentsCount(where: PaymentWhereInput! = {}): Int
   cart: Cart
+  invoice: Invoice
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -5513,6 +5520,7 @@ enum PaymentCollectionDescriptionType {
 input PaymentCollectionWhereUniqueInput {
   id: ID
   cart: CartWhereUniqueInput
+  invoice: InvoiceWhereUniqueInput
 }
 
 input PaymentCollectionWhereInput {
@@ -5527,6 +5535,7 @@ input PaymentCollectionWhereInput {
   paymentSessions: PaymentSessionManyRelationFilter
   payments: PaymentManyRelationFilter
   cart: CartWhereInput
+  invoice: InvoiceWhereInput
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
@@ -5563,6 +5572,7 @@ input PaymentCollectionUpdateInput {
   paymentSessions: PaymentSessionRelateToManyForUpdateInput
   payments: PaymentRelateToManyForUpdateInput
   cart: CartRelateToOneForUpdateInput
+  invoice: InvoiceRelateToOneForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -5588,6 +5598,7 @@ input PaymentCollectionCreateInput {
   paymentSessions: PaymentSessionRelateToManyForCreateInput
   payments: PaymentRelateToManyForCreateInput
   cart: CartRelateToOneForCreateInput
+  invoice: InvoiceRelateToOneForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -10148,6 +10159,10 @@ type Mutation {
   regenerateCustomerToken: CustomerTokenResult!
   payInvoice(invoiceId: ID!, paymentData: PaymentInput!): PaymentResult!
   createInvoiceFromLineItems(accountId: ID!, regionId: ID!, lineItemIds: [ID!]!, dueDate: String): InvoiceCreationResult!
+  createInvoicePaymentSessions(invoiceId: ID!): Invoice!
+  initiateInvoicePaymentSession(invoiceId: ID!, paymentProviderId: String!): PaymentSession
+  setInvoicePaymentSession(invoiceId: ID!, providerId: ID!): Invoice
+  completeInvoicePayment(paymentSessionId: ID!): InvoicePaymentResult!
 }
 
 union UserAuthenticationWithPasswordResult = UserAuthenticationWithPasswordSuccess | UserAuthenticationWithPasswordFailure
@@ -10447,7 +10462,10 @@ type Query {
   getCustomerAccount(accountId: ID!): JSON
   getCustomerAccounts(limit: Int, offset: Int): JSON
   getUnpaidLineItemsByRegion(accountId: ID!): UnpaidLineItemsByRegionResult!
+  getInvoicePaymentSessions(invoiceId: ID!): [PaymentSession!]!
   getAnalytics(timeframe: String): JSON
+  activeInvoice(invoiceId: ID!): JSON
+  getCustomerPaidInvoices(limit: Int, offset: Int): JSON
 }
 
 union AuthenticatedItem = User
@@ -10697,7 +10715,7 @@ type PaymentResult {
 
 type InvoiceCreationResult {
   success: Boolean!
-  invoice: Invoice
+  invoiceId: ID
   message: String
   error: String
 }
@@ -10716,4 +10734,12 @@ type UnpaidLineItemsByRegionResult {
   totalRegions: Int!
   totalUnpaidItems: Int!
   message: String
+}
+
+type InvoicePaymentResult {
+  id: ID!
+  status: String!
+  success: Boolean!
+  message: String!
+  error: String
 }

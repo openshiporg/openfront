@@ -8,6 +8,7 @@ import {
   MapPin,
   Package,
   FileText,
+  Receipt,
 } from "lucide-react"
 import { useParams, usePathname } from "next/navigation"
 
@@ -120,6 +121,19 @@ const AccountNav = ({
                   </LocalizedClientLink>
                 </li>
                 <li>
+                  <LocalizedClientLink
+                    href="/account/invoices"
+                    className="flex items-center justify-between py-4 border-b border-gray-200 px-8"
+                    data-testid="invoices-link"
+                  >
+                    <div className="flex items-center gap-x-2">
+                      <Receipt size={20} />
+                      <span>Invoices</span>
+                    </div>
+                    <ChevronDown className="transform -rotate-90" />
+                  </LocalizedClientLink>
+                </li>
+                <li>
                   <button
                     type="button"
                     className="flex items-center justify-between py-4 border-b border-gray-200 px-8 w-full"
@@ -188,6 +202,15 @@ const AccountNav = ({
                   data-testid="invoicing-link"
                 >
                   Business Account
+                </AccountNavLink>
+              </li>
+              <li>
+                <AccountNavLink
+                  href="/account/invoices"
+                  route={route!}
+                  data-testid="invoices-link"
+                >
+                  Invoices
                 </AccountNavLink>
               </li>
               <li className="text-grey-700">

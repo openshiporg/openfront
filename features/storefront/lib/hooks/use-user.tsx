@@ -2,8 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../query-keys';
+import { fetchUser } from '../data';
 import {
-  getCurrentUser,
   loginUser,
   registerUser,
   logoutUser,
@@ -17,7 +17,7 @@ import {
 export function useUser() {
   return useQuery({
     queryKey: queryKeys.user.profile(),
-    queryFn: getCurrentUser,
+    queryFn: fetchUser,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
     retry: 1, // Don't retry failed auth requests

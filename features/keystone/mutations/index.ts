@@ -34,7 +34,14 @@ import getCustomerAccount from './getCustomerAccount';
 import getCustomerAccounts from './getCustomerAccounts';
 import payInvoice from './payInvoice';
 import createInvoiceFromLineItems from './createInvoiceFromLineItems';
+import getInvoicePaymentSessions from './getInvoicePaymentSessions';
 import getUnpaidLineItemsByRegion from './getUnpaidLineItemsByRegion';
+import createInvoicePaymentSessions from './createInvoicePaymentSessions';
+import completeInvoicePayment from './completeInvoicePayment';
+import initiateInvoicePaymentSession from './initiateInvoicePaymentSession';
+import setInvoicePaymentSession from './setInvoicePaymentSession';
+import activeInvoice from './activeInvoice';
+import getCustomerPaidInvoices from './getCustomerPaidInvoices';
 
 const graphql = String.raw;
 
@@ -57,7 +64,10 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         getCustomerAccount(accountId: ID!): JSON
         getCustomerAccounts(limit: Int, offset: Int): JSON
         getUnpaidLineItemsByRegion(accountId: ID!): UnpaidLineItemsByRegionResult!
+        getInvoicePaymentSessions(invoiceId: ID!): [PaymentSession!]!
         getAnalytics(timeframe: String): JSON
+        activeInvoice(invoiceId: ID!): JSON
+        getCustomerPaidInvoices(limit: Int, offset: Int): JSON
       }
 
       type ShippingRate {
@@ -166,7 +176,7 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
 
       type InvoiceCreationResult {
         success: Boolean!
-        invoice: Invoice
+        invoiceId: ID
         message: String
         error: String
       }
@@ -185,6 +195,14 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         totalRegions: Int!
         totalUnpaidItems: Int!
         message: String
+      }
+
+      type InvoicePaymentResult {
+        id: ID!
+        status: String!
+        success: Boolean!
+        message: String!
+        error: String
       }
 
       type Mutation {
@@ -226,6 +244,10 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         regenerateCustomerToken: CustomerTokenResult!
         payInvoice(invoiceId: ID!, paymentData: PaymentInput!): PaymentResult!
         createInvoiceFromLineItems(accountId: ID!, regionId: ID!, lineItemIds: [ID!]!, dueDate: String): InvoiceCreationResult!
+        createInvoicePaymentSessions(invoiceId: ID!): Invoice!
+        initiateInvoicePaymentSession(invoiceId: ID!, paymentProviderId: String!): PaymentSession
+        setInvoicePaymentSession(invoiceId: ID!, providerId: ID!): Invoice
+        completeInvoicePayment(paymentSessionId: ID!): InvoicePaymentResult!
       }
     `,
     resolvers: {
@@ -240,7 +262,10 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         getCustomerAccount,
         getCustomerAccounts,
         getUnpaidLineItemsByRegion,
+        getInvoicePaymentSessions,
         getAnalytics,
+        activeInvoice,
+        getCustomerPaidInvoices,
       },
       Mutation: {
         updateActiveUserPassword,
@@ -268,6 +293,10 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         regenerateCustomerToken,
         payInvoice,
         createInvoiceFromLineItems,
+        createInvoicePaymentSessions,
+        initiateInvoicePaymentSession,
+        setInvoicePaymentSession,
+        completeInvoicePayment,
       }
     },
   });

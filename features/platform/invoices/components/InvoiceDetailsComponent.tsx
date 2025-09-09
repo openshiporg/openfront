@@ -1,28 +1,32 @@
 "use client";
 
 import React, { useState } from "react";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { 
-  MoreVertical, 
-  FileText, 
-  Mail, 
-  Calendar, 
-  DollarSign, 
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertTriangle
-} from "lucide-react";
+import { MoreVertical, FileText, Mail, Phone, DollarSign, Calendar, CreditCard, Users } from "lucide-react";
+import Link from "next/link";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
-import { updateInvoiceStatus } from "../actions";
-import { toast } from "@/components/ui/use-toast";
+import { ItemPagination } from "../../orders/components/ItemPagination";
+import { OrderDetailsComponent } from "../../orders/components/OrderDetailsComponent";
 
 const statusColors = {
   "active": "emerald",
@@ -30,9 +34,9 @@ const statusColors = {
   "pending": "yellow"
 } as const;
 
-interface Invoice {
+interface Account {
   id: string;
-  invoiceNumber: string;
+  accountNumber: string;
   title: string;
   description?: string;
   status: string;
@@ -67,166 +71,294 @@ interface Invoice {
   updatedAt?: string;
 }
 
-interface InvoiceDetailsComponentProps {
-  invoice: Invoice;
+interface AccountDetailsComponentProps {
+  account: Account;
   list: any;
 }
 
-export function InvoiceDetailsComponent({ 
-  invoice, 
-  list 
-}: InvoiceDetailsComponentProps) {
+type TabType = 'orders';
+
+export function InvoiceDetailsComponent({
+  invoice,
+  list,
+}: any) {
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>('orders');
+  const [currentPages, setCurrentPages] = useState<Record<TabType, number>>({
+    orders: 1
+  });
+  const [editItemId, setEditItemId] = useState<string>('');
+  const [editItemOpen, setEditItemOpen] = useState(false);
+  const [editItemType, setEditItemType] = useState<string>('');
+  const itemsPerPage = 5;
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-600" />;
-      case 'active':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'suspended':
-        return <XCircle className="h-4 w-4 text-red-600" />;
-      default:
-        return <AlertTriangle className="h-4 w-4 text-gray-600" />;
+  // Prepare data for tabs
+  const ordersData = invoice.orders || [];
+
+  const tabs = [
+    { 
+      key: 'orders' as TabType, 
+      label: `Orders`,
+      count: ordersData.length,
+      data: ordersData
     }
+  ].filter(tab => tab.count > 0);
+
+  const activeTabData = tabs.find(tab => tab.key === activeTab);
+
+  const handlePageChange = (tabKey: TabType, newPage: number) => {
+    setCurrentPages(prev => ({
+      ...prev,
+      [tabKey]: newPage
+    }));
   };
 
-  const handleStatusUpdate = async (newStatus: string) => {
-    if (isUpdatingStatus) return;
-    
-    setIsUpdatingStatus(true);
-    try {
-      const result = await updateInvoiceStatus(invoice.id, newStatus);
-
-      if (result.success) {
-        toast({
-          title: "Status Updated",
-          description: `Invoice status has been changed to ${newStatus}.`,
-        });
-        window.location.reload(); // Refresh the page to show updated data
-      } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to update invoice status.",
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error", 
-        description: error.message || "Failed to update invoice status.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUpdatingStatus(false);
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
+  const handleEditItem = (itemId: string, itemType: string) => {
+    setEditItemId(itemId);
+    setEditItemType(itemType);
+    setEditItemOpen(true);
   };
 
   return (
-    <div className="flex items-center justify-between p-4 border-l-4 border-l-transparent hover:border-l-blue-500 hover:bg-muted/50 transition-all">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-3 mb-2">
-          <FileText className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-lg font-semibold truncate">{invoice.invoiceNumber}</h3>
-          <div className="flex items-center gap-2">
-            {getStatusIcon(invoice.status)}
-            <Badge 
-              variant={statusColors[invoice.status as keyof typeof statusColors] as any || "secondary"}
-            >
-              {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
-            </Badge>
-          </div>
-        </div>
+    <>
+      <Accordion type="single" collapsible className="w-full">
+        <AccordionItem value={invoice.id} className="border-0">
+          <div className="px-4 md:px-6 py-3 md:py-4 flex justify-between w-full border-b relative min-h-[120px]">
+            <div className="flex items-start gap-4">
+              {/* Invoice Info */}
+              <div className="flex flex-col items-start text-left gap-2 sm:gap-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    href={`/dashboard/platform/accounts/${invoice.id}`}
+                    className="font-medium text-base hover:text-blue-600 dark:hover:text-blue-400"
+                  >
+                    {invoice.invoiceNumber || invoice.accountNumber}
+                  </Link>
+                  <span>‧</span>
+                  <span className="text-sm font-medium">
+                    <span className="text-muted-foreground/75">
+                      {new Date(invoice.createdAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </span>
+                  </span>
+                </div>
+                
+                {/* Enhanced Invoice Details */}
+                <div className="flex flex-wrap items-center gap-1.5 text-sm">
+                  {invoice.user.email && (
+                    <>
+                      <div className="flex items-center gap-1">
+                        <Mail className="w-3 h-3 text-muted-foreground" />
+                        <span className="text-muted-foreground">{invoice.user.name} ({invoice.user.email})</span>
+                      </div>
+                      <span className="text-muted-foreground">‧</span>
+                    </>
+                  )}
+                  <div className="flex items-center gap-1">
+                    <DollarSign className="w-3 h-3 text-muted-foreground" />
+                    <span className="text-muted-foreground">{invoice.formattedBalance || invoice.formattedTotal}</span>
+                  </div>
+                  <span className="text-muted-foreground">‧</span>
+                  <span className="text-muted-foreground">
+                    {ordersData.length} {ordersData.length === 1 ? 'order' : 'orders'}
+                  </span>
+                  {invoice.dueDate && (
+                    <>
+                      <span className="text-muted-foreground">‧</span>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-muted-foreground" />
+                        <span className="text-muted-foreground">Due {new Date(invoice.dueDate).toLocaleDateString()}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
 
-        <div className="grid md:grid-cols-2 gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4" />
-            <span>{invoice.formattedBalance}</span>
+            <div className="flex flex-col justify-between h-full">
+              <div className="flex items-center gap-2">
+                <Badge
+                  color={
+                    statusColors[invoice.status as keyof typeof statusColors] || "zinc"
+                  }
+                  className="text-[.6rem] sm:text-[.7rem] py-0 px-2 sm:px-3 tracking-wide font-medium rounded-md border h-6"
+                >
+                  {invoice.status.toUpperCase()}
+                </Badge>
+                
+                {/* Action buttons */}
+                <div className="absolute bottom-3 right-5 sm:static flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="border [&_svg]:size-3 h-6 w-6"
+                      >
+                        <MoreVertical className="stroke-muted-foreground" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setIsEditDrawerOpen(true)}>
+                        Edit Account
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className="border [&_svg]:size-3 h-6 w-6"
+                    asChild
+                  >
+                    <AccordionTrigger className="py-0" />
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            <span>Due {invoice.dueDate ? formatDate(invoice.dueDate) : 'No due date'}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Mail className="h-4 w-4" />
-            <span>{invoice.user.name} ({invoice.user.email})</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4" />
-            <span>Total: {invoice.formattedTotal}</span>
-          </div>
-        </div>
+          <AccordionContent className="pb-0">
+            {/* Responsive Tabs Navigation */}
+            <div className="bg-muted/80 border-b">
+              {/* Desktop: Horizontal Tab Buttons */}
+              <div className="hidden md:flex items-center gap-3 px-4 py-2">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`relative z-10 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-300 border ${
+                      activeTab === tab.key 
+                        ? 'bg-background border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100' 
+                        : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-background/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>
+                        {tab.key === 'orders' && 'Orders'}
+                      </span>
+                      <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px]">
+                        {tab.count}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
 
-        <div className="mt-3">
-          {invoice.orders && invoice.orders.length > 0 && (
-            <p className="text-sm text-muted-foreground">
-              <strong>Orders:</strong> {invoice.orders.map(order => `#${order.displayId}`).join(', ')}
-            </p>
-          )}
-          {invoice.paidAt && (
-            <p className="text-sm text-muted-foreground mt-1">
-              <strong>Paid:</strong> {formatDateTime(invoice.paidAt)}
-            </p>
-          )}
-          {invoice.description && (
-            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-              <strong>Description:</strong> {invoice.description}
-            </p>
-          )}
-        </div>
-      </div>
+              {/* Mobile: Select Dropdown */}
+              <div className="md:hidden px-4 py-2">
+                <div className="w-fit">
+                  <Select value={activeTab} onValueChange={(value: TabType) => setActiveTab(value)}>
+                    <SelectTrigger className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-background border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 h-auto w-auto">
+                      <div className="flex items-center gap-1.5">
+                        <SelectValue />
+                        <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px]">
+                          ({activeTabData?.count || 0})
+                        </span>
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tabs.map((tab) => (
+                        <SelectItem key={tab.key} value={tab.key} className="text-xs">
+                          {tab.key === 'orders' && 'Orders'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+            
+            {/* Tab Content Area */}
+            <div className="bg-muted/40">
+              {activeTabData && (
+                <>
+                  {/* Pagination for active tab */}
+                  {activeTabData.count > itemsPerPage && (
+                    <div className="flex justify-between items-center p-4 pb-2">
+                      <div />
+                      <ItemPagination
+                        currentPage={currentPages[activeTab]}
+                        totalItems={activeTabData.count}
+                        itemsPerPage={itemsPerPage}
+                        onPageChange={(newPage) => handlePageChange(activeTab, newPage)}
+                      />
+                    </div>
+                  )}
 
-      <div className="flex items-center gap-2 ml-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" disabled={isUpdatingStatus}>
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setIsEditDrawerOpen(true)}>
-              Edit Invoice
-            </DropdownMenuItem>
-            {invoice.status !== 'active' && (
-              <DropdownMenuItem onClick={() => handleStatusUpdate('active')}>
-                Set Active
-              </DropdownMenuItem>
-            )}
-            {invoice.status !== 'suspended' && (
-              <DropdownMenuItem onClick={() => handleStatusUpdate('suspended')}>
-                Suspend Invoice
-              </DropdownMenuItem>
-            )}
-            {invoice.status !== 'pending' && (
-              <DropdownMenuItem onClick={() => handleStatusUpdate('pending')}>
-                Set Pending
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem className="text-red-600">
-              Delete Invoice
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                  <div className="px-4 py-2">
+                    {/* Orders Tab */}
+                    {activeTab === 'orders' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {ordersData.slice(
+                          (currentPages.orders - 1) * itemsPerPage,
+                          currentPages.orders * itemsPerPage
+                        ).map((order, index) => (
+                          <div key={order.id} className="rounded-md border bg-background p-3 shadow-sm">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-sm font-medium truncate">
+                                    Order #{order.displayId}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {order.total}
+                                  </div>
+                                </div>
+                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 shrink-0"
+                                  >
+                                    <MoreVertical className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleEditItem(order.id, 'orders')}>
+                                    Edit Order
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
+                  </div>
+                </>
+              )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+
+      <EditItemDrawerClientWrapper
+        listKey="accounts"
+        itemId={invoice.id}
+        open={isEditDrawerOpen}
+        onClose={() => setIsEditDrawerOpen(false)}
+      />
+
+      {/* Edit Item Drawer */}
+      {editItemId && (
         <EditItemDrawerClientWrapper
-          listKey="invoices"
-          itemId={invoice.id}
-          open={isEditDrawerOpen}
-          onClose={() => setIsEditDrawerOpen(false)}
-          onUpdate={() => {
-            window.location.reload();
+          listKey={editItemType}
+          itemId={editItemId}
+          open={editItemOpen}
+          onClose={() => {
+            setEditItemOpen(false);
+            setEditItemId('');
+            setEditItemType('');
           }}
         />
-      </div>
-    </div>
+      )}
+    </>
   );
 }

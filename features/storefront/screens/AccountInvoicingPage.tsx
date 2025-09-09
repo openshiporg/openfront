@@ -5,7 +5,7 @@ import InvoicingTemplate from "@/features/storefront/modules/account/templates/i
 import { StorefrontAccountCustomer } from "@/features/storefront/types"
 import { getUser } from "@/features/storefront/lib/data/user"
 import { getCustomerBusinessAccount, getBusinessAccountRequest, getCustomerOrdersForAccount } from "@/features/storefront/lib/data/business-accounts"
-import { getUnpaidLineItemsByRegion } from "@/features/storefront/modules/account/components/invoicing-tab/actions"
+import { getUnpaidLineItemsByRegion } from "@/features/storefront/modules/account/components/invoicing-tab/invoice-actions"
 
 export const metadata: Metadata = {
   title: "Invoicing",

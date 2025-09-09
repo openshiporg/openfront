@@ -90,6 +90,10 @@ export const Invoice = list({
       many: true,
     }),
 
+    paymentCollection: relationship({
+      ref: 'PaymentCollection.invoice',
+    }),
+
     // Virtual computed fields
     ...group({
       label: 'Computed Fields',
@@ -99,27 +103,44 @@ export const Invoice = list({
           field: graphql.field({
             type: graphql.String,
             async resolve(item, args, context) {
-              const invoice = await context.sudo().query.Invoice.findOne({
-                where: { id: item.id },
-                query: `
-                  totalAmount
-                  currency {
-                    code
-                    symbol
-                    noDivisionCurrency
-                  }
-                `,
-              });
+              try {
+                // Always fetch the currency if not already populated
+                let currency = item.currency;
+                if (!currency && item.currencyId) {
+                  const invoice = await context.sudo().query.Invoice.findOne({
+                    where: { id: item.id },
+                    query: `
+                      currency {
+                        id
+                        code
+                        symbol
+                        noDivisionCurrency
+                      }
+                    `,
+                  });
+                  currency = invoice?.currency;
+                }
 
-              if (!invoice?.currency) return '$0.00';
+                if (!currency || !item.totalAmount) {
+                  console.log('🔥 VIRTUAL FIELD formattedTotal - Missing data:', { 
+                    currency, 
+                    totalAmount: item.totalAmount,
+                    itemId: item.id
+                  });
+                  return '$0.00';
+                }
 
-              const divisor = invoice.currency.noDivisionCurrency ? 1 : 100;
-              const amount = (invoice.totalAmount || 0) / divisor;
-              
-              return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: invoice.currency.code,
-              }).format(amount);
+                const divisor = currency.noDivisionCurrency ? 1 : 100;
+                const amount = (item.totalAmount || 0) / divisor;
+                
+                return new Intl.NumberFormat('en-US', {
+                  style: 'currency',
+                  currency: currency.code,
+                }).format(amount);
+              } catch (error) {
+                console.error('🔥 VIRTUAL FIELD formattedTotal - ERROR:', error);
+                return '$0.00';
+              }
             },
           }),
         }),
@@ -128,16 +149,63 @@ export const Invoice = list({
           field: graphql.field({
             type: graphql.Int,
             async resolve(item, args, context) {
-              const invoice = await context.sudo().query.Invoice.findOne({
-                where: { id: item.id },
-                query: `
-                  lineItems {
-                    id
-                  }
-                `,
-              });
+              try {
+                if (item.lineItems && Array.isArray(item.lineItems)) {
+                  return item.lineItems.length;
+                }
+                
+                const invoice = await context.sudo().query.Invoice.findOne({
+                  where: { id: item.id },
+                  query: `
+                    lineItems {
+                      id
+                    }
+                  `,
+                });
 
-              return invoice?.lineItems?.length || 0;
+                return invoice?.lineItems?.length || 0;
+              } catch (error) {
+                console.error('🔥 VIRTUAL FIELD itemCount - ERROR:', error);
+                return 0;
+              }
+            },
+          }),
+        }),
+
+        paymentSessions: virtual({
+          field: graphql.field({
+            type: graphql.list(graphql.nonNull(graphql.JSON)),
+            async resolve(item, args, context) {
+              try {
+                if (item.paymentCollection?.paymentSessions && Array.isArray(item.paymentCollection.paymentSessions)) {
+                  return item.paymentCollection.paymentSessions;
+                }
+
+                const invoice = await context.sudo().query.Invoice.findOne({
+                  where: { id: item.id },
+                  query: `
+                    paymentCollection {
+                      id
+                      paymentSessions {
+                        id
+                        paymentProvider {
+                          id
+                          code
+                        }
+                        data
+                        isSelected
+                        isInitiated
+                        amount
+                      }
+                    }
+                  `,
+                });
+
+                return invoice?.paymentCollection?.paymentSessions || [];
+              } catch (error) {
+                console.error('🔥 VIRTUAL FIELD paymentSessions - ERROR:', error);
+                return [];
+              }
             },
           }),
         }),

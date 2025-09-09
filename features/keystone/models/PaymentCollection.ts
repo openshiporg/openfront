@@ -51,6 +51,9 @@ export const PaymentCollection = list({
     cart: relationship({
       ref: "Cart.paymentCollection",
     }),
+    invoice: relationship({
+      ref: "Invoice.paymentCollection",
+    }),
     ...trackingFields,
   },
 }); 

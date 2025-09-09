@@ -1,24 +1,25 @@
-import { retrieveCart } from "@/features/storefront/lib/data/cart"
-import { getUser } from "@/features/storefront/lib/data/user"
 import Footer from "@/features/storefront/modules/layout/templates/footer"
 import Nav from "@/features/storefront/modules/layout/templates/nav"
 import OpenfrontCTA from "@/features/storefront/modules/layout/components/openfront-cta"
 import { Metadata } from "next"
 import InteractiveLink from "@/features/storefront/modules/common/components/interactive-link"
+import StorefrontServer from "./StorefrontServer"
 
 export async function MainLayout({ children }: { children: React.ReactNode }) {
-  await getUser()
-  await retrieveCart()
-
   const hideBranding = process.env.HIDE_OPENFRONT_BRANDING === 'true'
 
   return (
-    <>
+    <StorefrontServer 
+      prefetchUser={true} 
+      prefetchCart={true}
+      prefetchCollections={true}
+      prefetchCategories={true}
+    >
       <Nav />
       {children}
       <Footer />
       {!hideBranding && <OpenfrontCTA />}
-    </>
+    </StorefrontServer>
   )
 }
 

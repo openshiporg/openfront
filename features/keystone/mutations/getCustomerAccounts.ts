@@ -21,10 +21,12 @@ async function getCustomerAccounts(root, { limit = 10, offset = 0 }, context) {
       paidAmount
       creditLimit
       formattedTotal
-      formattedBalance
       formattedCreditLimit
       availableCredit
-      formattedAvailableCredit
+      totalOwedInAccountCurrency
+      formattedTotalOwedInAccountCurrency
+      availableCreditInAccountCurrency
+      formattedAvailableCreditInAccountCurrency
       balanceDue
       dueDate
       createdAt

@@ -38,6 +38,12 @@ const CUSTOMER_ORDERS_QUERY = gql`
   }
 `;
 
+const CUSTOMER_PAID_INVOICES_QUERY = gql`
+  query GetCustomerPaidInvoices($limit: Int, $offset: Int) {
+    getCustomerPaidInvoices(limit: $limit, offset: $offset)
+  }
+`;
+
 const CREATE_BUSINESS_ACCOUNT_REQUEST_MUTATION = gql`
   mutation CreateBusinessAccountRequest(
     $customerId: ID!
@@ -241,3 +247,19 @@ export async function regenerateCustomerToken(prevState: any, formData: FormData
     };
   }
 }
+
+export const getCustomerPaidInvoices = cache(async function (limit: number = 10, offset: number = 0) {
+  const headers = await getAuthHeaders();
+  
+  try {
+    const { getCustomerPaidInvoices } = await openfrontClient.request(
+      CUSTOMER_PAID_INVOICES_QUERY,
+      { limit, offset },
+      headers
+    );
+    return getCustomerPaidInvoices || [];
+  } catch (error) {
+    console.error('Error fetching customer paid invoices:', error);
+    throw error;
+  }
+});

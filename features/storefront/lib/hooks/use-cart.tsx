@@ -2,8 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../query-keys';
+import { fetchCart } from '../data';
 import {
-  retrieveCart,
   createCart,
   addToCart,
   updateLineItem,
@@ -36,14 +36,12 @@ const removeCartId = () => {
 
 // Cart query hooks
 export function useCart() {
-  const cartId = getCartId();
-  
   return useQuery({
     queryKey: queryKeys.cart.active(),
-    queryFn: () => cartId ? retrieveCart(cartId) : null,
+    queryFn: () => fetchCart(),
     staleTime: 30 * 1000, // 30 seconds
     gcTime: 5 * 60 * 1000, // 5 minutes
-    enabled: !!cartId,
+    refetchOnWindowFocus: true, // Refetch cart when window gains focus
   });
 }
 

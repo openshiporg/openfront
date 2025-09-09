@@ -1015,16 +1015,41 @@ export const Order = list({
                     amount
                     status
                   }
+                  accountLineItems {
+                    id
+                    paymentStatus
+                    amount
+                  }
                 `
               });
     
-              // Sum up amounts from captured payments only
-              return order.payments?.reduce((total, payment) => {
+              // Check direct order payments first (normal checkout)
+              let totalPaid = order.payments?.reduce((total, payment) => {
                 if (payment.status === 'captured') {
                   return total + payment.amount;
                 }
                 return total;
               }, 0) || 0;
+
+              // If no direct payments, check if this order was paid through an invoice
+              if (totalPaid === 0 && order.accountLineItems?.length > 0) {
+                // Check if any account line items for this order are marked as paid
+                const hasPaidLineItems = order.accountLineItems.some(lineItem => 
+                  lineItem.paymentStatus === 'paid'
+                );
+                
+                if (hasPaidLineItems) {
+                  // If paid through invoice, sum the account line item amounts
+                  totalPaid = order.accountLineItems.reduce((total, lineItem) => {
+                    if (lineItem.paymentStatus === 'paid') {
+                      return total + (lineItem.amount || 0);
+                    }
+                    return total;
+                  }, 0);
+                }
+              }
+
+              return totalPaid;
             }
           })
         }),
@@ -1040,6 +1065,11 @@ export const Order = list({
                     amount
                     status
                   }
+                  accountLineItems {
+                    id
+                    paymentStatus
+                    amount
+                  }
                   currency {
                     code
                     symbol
@@ -1047,12 +1077,31 @@ export const Order = list({
                 `
               });
     
-              const totalPaid = order.payments?.reduce((total, payment) => {
+              // Check direct order payments first (normal checkout)
+              let totalPaid = order.payments?.reduce((total, payment) => {
                 if (payment.status === 'captured') {
                   return total + payment.amount;
                 }
                 return total;
               }, 0) || 0;
+
+              // If no direct payments, check if this order was paid through an invoice
+              if (totalPaid === 0 && order.accountLineItems?.length > 0) {
+                // Check if any account line items for this order are marked as paid
+                const hasPaidLineItems = order.accountLineItems.some(lineItem => 
+                  lineItem.paymentStatus === 'paid'
+                );
+                
+                if (hasPaidLineItems) {
+                  // If paid through invoice, sum the account line item amounts
+                  totalPaid = order.accountLineItems.reduce((total, lineItem) => {
+                    if (lineItem.paymentStatus === 'paid') {
+                      return total + (lineItem.amount || 0);
+                    }
+                    return total;
+                  }, 0);
+                }
+              }
     
               if (!order.currency) return `${(totalPaid / 100).toFixed(2)}`;
     

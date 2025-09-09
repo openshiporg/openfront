@@ -89,7 +89,7 @@ async function getUnpaidLineItemsByRegion(root, { accountId }, context) {
       });
 
       acc[regionId].totalAmount += (item.amount || 0);
-      acc[regionId].itemCount += (item.itemCount || 0);
+      acc[regionId].itemCount += 1; // Count orders, not products
 
       return acc;
     }, {});

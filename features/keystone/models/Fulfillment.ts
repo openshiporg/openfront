@@ -11,6 +11,61 @@ import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
 import { sendOrderFulfillmentEmail } from "../lib/mail";
 
+// Helper function to call user's order webhook URL
+async function callOrderWebhook(context: any, order: any, eventType: string, additionalData: any = {}) {
+  try {
+    // Get the user's webhook URL from the order
+    const orderWithUser = await context.sudo().query.Order.findOne({
+      where: { id: order.id },
+      query: `
+        user {
+          id
+          orderWebhookUrl
+        }
+      `
+    });
+
+    const webhookUrl = orderWithUser?.user?.orderWebhookUrl;
+    if (!webhookUrl) {
+      return; // No webhook URL configured
+    }
+
+    // Prepare webhook payload
+    const payload = {
+      event: eventType,
+      timestamp: new Date().toISOString(),
+      order: {
+        id: order.id,
+        displayId: order.displayId,
+        email: order.email,
+        secretKey: order.secretKey,
+        status: order.status,
+        total: order.total,
+        shippingAddress: order.shippingAddress
+      },
+      ...additionalData
+    };
+
+    // Make the webhook call
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Openfront-Webhooks/1.0'
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      console.warn(`Order webhook call failed: ${response.status} ${response.statusText} for URL: ${webhookUrl}`);
+    } else {
+      console.log(`Order webhook successfully called: ${webhookUrl} for order ${order.displayId}`);
+    }
+  } catch (error) {
+    console.error('Error calling order webhook:', error);
+  }
+}
+
 export const Fulfillment = list({
   access: {
     operation: {
@@ -102,6 +157,12 @@ export const Fulfillment = list({
             };
 
             await sendOrderFulfillmentEmail(fulfillment.order, fulfillmentData);
+
+            // Call user's order webhook URL if they have one
+            await callOrderWebhook(context, fulfillment.order, 'order.fulfilled', {
+              fulfillment: fulfillmentData,
+              operation: 'fulfilled'
+            });
           }
         } catch (error) {
           console.error('Error sending order fulfillment email:', error);

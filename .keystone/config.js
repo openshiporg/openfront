@@ -3173,6 +3173,7 @@ async function getCustomerOrder(root, { orderId, secretKey }, context) {
       fulfillmentDetails
       paymentDetails
       total
+      formattedTotalPaid
       subtotal
       shipping
       discount
@@ -4402,10 +4403,12 @@ async function getCustomerAccounts(root, { limit = 10, offset = 0 }, context) {
       paidAmount
       creditLimit
       formattedTotal
-      formattedBalance
       formattedCreditLimit
       availableCredit
-      formattedAvailableCredit
+      totalOwedInAccountCurrency
+      formattedTotalOwedInAccountCurrency
+      availableCreditInAccountCurrency
+      formattedAvailableCreditInAccountCurrency
       balanceDue
       dueDate
       createdAt
@@ -4675,9 +4678,6 @@ async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemI
   if (!account) {
     throw new Error("Account not found");
   }
-  if (account.user.id !== context.session.itemId) {
-    throw new Error("Unauthorized access to account");
-  }
   const region2 = await sudoContext.query.Region.findOne({
     where: { id: regionId },
     query: `
@@ -4728,7 +4728,10 @@ async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemI
     throw new Error("Invoice total must be greater than zero");
   }
   try {
+    console.log("\u{1F525} CREATING INVOICE - Starting transaction");
+    console.log("\u{1F525} Line items to process:", lineItems.map((item) => ({ id: item.id, orderDisplayId: item.orderDisplayId })));
     const result = await sudoContext.prisma.$transaction(async (tx) => {
+      console.log("\u{1F525} Inside transaction - Creating invoice");
       const invoice = await sudoContext.query.Invoice.createOne({
         data: {
           user: { connect: { id: account.user.id } },
@@ -4750,14 +4753,18 @@ async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemI
           }
         }
       });
+      console.log("\u{1F525} Invoice created with ID:", invoice.id);
       const invoiceLineItems = [];
+      console.log("\u{1F525} Creating", lineItems.length, "invoice line items");
       for (const lineItem of lineItems) {
+        console.log("\u{1F525} Creating InvoiceLineItem for accountLineItem:", lineItem.id);
         const invoiceLineItem = await sudoContext.query.InvoiceLineItem.createOne({
           data: {
             invoice: { connect: { id: invoice.id } },
             accountLineItem: { connect: { id: lineItem.id } }
           }
         });
+        console.log("\u{1F525} Created InvoiceLineItem:", invoiceLineItem.id);
         invoiceLineItems.push(invoiceLineItem);
       }
       return {
@@ -4767,40 +4774,10 @@ async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemI
         }
       };
     });
-    const completeInvoice = await sudoContext.query.Invoice.findOne({
-      where: { id: result.invoice.id },
-      query: `
-        id
-        invoiceNumber
-        title
-        description
-        totalAmount
-        formattedTotal
-        status
-        dueDate
-        createdAt
-        currency {
-          code
-          symbol
-        }
-        lineItems {
-          id
-          orderDisplayId
-          formattedAmount
-          accountLineItem {
-            id
-            description
-            orderDisplayId
-            itemCount
-          }
-        }
-        itemCount
-      `
-    });
     return {
       success: true,
-      invoice: completeInvoice,
-      message: `Invoice created with ${lineItems.length} orders totaling ${completeInvoice.formattedTotal}`
+      invoiceId: result.invoice.id,
+      message: `Invoice created with ${lineItems.length} orders`
     };
   } catch (error) {
     console.error("Invoice creation error:", error);
@@ -4808,6 +4785,38 @@ async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemI
   }
 }
 var createInvoiceFromLineItems_default = createInvoiceFromLineItems;
+
+// features/keystone/mutations/getInvoicePaymentSessions.ts
+async function getInvoicePaymentSessions(root, { invoiceId }, context) {
+  const sudoContext = context.sudo();
+  try {
+    const paymentCollection = await sudoContext.query.PaymentCollection.findOne({
+      where: { invoice: { id: { equals: invoiceId } } },
+      query: `
+        id
+        paymentSessions {
+          id
+          amount
+          data
+          isSelected
+          isInitiated
+          paymentProvider {
+            id
+            code
+          }
+        }
+      `
+    });
+    if (!paymentCollection) {
+      return [];
+    }
+    return paymentCollection.paymentSessions || [];
+  } catch (error) {
+    console.error("Error getting invoice payment sessions:", error);
+    return [];
+  }
+}
+var getInvoicePaymentSessions_default = getInvoicePaymentSessions;
 
 // features/keystone/mutations/getUnpaidLineItemsByRegion.ts
 async function getUnpaidLineItemsByRegion(root, { accountId }, context) {
@@ -4887,7 +4896,7 @@ async function getUnpaidLineItemsByRegion(root, { accountId }, context) {
         order: item.order
       });
       acc[regionId].totalAmount += item.amount || 0;
-      acc[regionId].itemCount += item.itemCount || 0;
+      acc[regionId].itemCount += 1;
       return acc;
     }, {});
     const regionsWithLineItems = Object.values(lineItemsByRegion).map((regionData) => ({
@@ -4921,6 +4930,769 @@ function formatCurrencyAmount2(amount, currencyCode) {
 }
 var getUnpaidLineItemsByRegion_default = getUnpaidLineItemsByRegion;
 
+// features/keystone/mutations/createInvoicePaymentSessions.ts
+async function createInvoicePaymentSessions(root, { invoiceId }, context) {
+  const sudoContext = context.sudo();
+  console.log("\u{1F525} CREATING PAYMENT SESSIONS - Starting with invoice ID:", invoiceId);
+  const invoice = await sudoContext.query.Invoice.findOne({
+    where: { id: invoiceId },
+    query: `
+      id
+      totalAmount
+      currency {
+        id
+        code
+      }
+      account {
+        id
+        user {
+          id
+        }
+      }
+      paymentCollection {
+        id
+        paymentSessions {
+          id
+          paymentProvider {
+            id
+          }
+        }
+      }
+    `
+  });
+  console.log("\u{1F525} Found invoice:", invoice?.id, "totalAmount:", invoice?.totalAmount);
+  if (!invoice) {
+    throw new Error("Invoice not found");
+  }
+  const invoiceLineItems = await sudoContext.query.InvoiceLineItem.findMany({
+    where: { invoice: { id: { equals: invoiceId } } },
+    query: `
+      accountLineItem {
+        region {
+          id
+          paymentProviders {
+            id
+            code
+            isInstalled
+          }
+        }
+      }
+    `
+  });
+  console.log("\u{1F525} Found invoice line items:", invoiceLineItems.length);
+  const invoiceLineItem = invoiceLineItems[0];
+  console.log("\u{1F525} First invoice line item region:", invoiceLineItem?.accountLineItem?.region?.id);
+  const availableProviders = invoiceLineItem?.accountLineItem?.region?.paymentProviders?.filter((p) => p.isInstalled) || [];
+  console.log("\u{1F525} Available payment providers:", availableProviders.map((p) => ({ id: p.id, code: p.code })));
+  if (availableProviders.length === 0) {
+    throw new Error("No payment providers are available for this region");
+  }
+  let paymentCollection = invoice.paymentCollection;
+  console.log("\u{1F525} Existing payment collection:", paymentCollection?.id);
+  if (!paymentCollection) {
+    console.log("\u{1F525} Creating payment collection for invoice:", invoiceId, "amount:", invoice.totalAmount);
+    paymentCollection = await sudoContext.db.PaymentCollection.createOne({
+      data: {
+        invoice: { connect: { id: invoiceId } },
+        description: "default",
+        amount: invoice.totalAmount || 0
+      },
+      query: "id"
+    });
+    console.log("\u{1F525} Created payment collection:", paymentCollection.id);
+  }
+  console.log("\u{1F525} Creating payment sessions for", availableProviders.length, "providers");
+  for (let i = 0; i < availableProviders.length; i++) {
+    const provider = availableProviders[i];
+    const existingSession = invoice.paymentCollection?.paymentSessions?.find(
+      (s) => s.paymentProvider.id === provider.id
+    );
+    console.log("\u{1F525} Processing provider:", provider.code, "existing session:", !!existingSession);
+    if (!existingSession) {
+      console.log("\u{1F525} Creating payment session for provider:", provider.code);
+      const newSession = await sudoContext.db.PaymentSession.createOne({
+        data: {
+          paymentCollection: { connect: { id: paymentCollection.id } },
+          paymentProvider: { connect: { id: provider.id } },
+          amount: invoice.totalAmount || 0,
+          data: {},
+          // Initialize with empty data object
+          isSelected: i === 0,
+          // Only select the first provider by default
+          isInitiated: false
+        },
+        query: "id"
+      });
+      console.log("\u{1F525} Created payment session:", newSession.id, "isSelected:", i === 0);
+    }
+  }
+  const invoiceWithPaymentCollection = await sudoContext.query.Invoice.findOne({
+    where: { id: invoiceId },
+    query: `
+      id
+      paymentCollection {
+        id
+        paymentSessions {
+          id
+          isSelected
+          paymentProvider {
+            id
+            code
+          }
+          data
+        }
+      }
+    `
+  });
+  return invoiceWithPaymentCollection;
+}
+var createInvoicePaymentSessions_default = createInvoicePaymentSessions;
+
+// features/keystone/mutations/completeInvoicePayment.ts
+async function completeInvoicePayment(root, { paymentSessionId }, context) {
+  console.log("\u{1F680} BACKEND: completeInvoicePayment started with paymentSessionId:", paymentSessionId);
+  const sudoContext = context.sudo();
+  const user = context.session?.itemId;
+  console.log("\u{1F680} BACKEND: User ID:", user);
+  console.log("\u{1F680} BACKEND: Fetching payment session...");
+  const paymentSession = await sudoContext.query.PaymentSession.findOne({
+    where: { id: paymentSessionId },
+    query: `
+      id
+      amount
+      data
+      paymentProvider {
+        id
+        code
+      }
+      paymentCollection {
+        id
+        invoice {
+          id
+          invoiceNumber
+          totalAmount
+          status
+          currency {
+            code
+          }
+          account {
+            id
+            user {
+              id
+            }
+          }
+        }
+      }
+    `
+  });
+  if (!paymentSession) {
+    console.log("\u274C BACKEND: Payment session not found");
+    throw new Error("Payment session not found");
+  }
+  console.log("\u{1F680} BACKEND: Payment session found:", {
+    id: paymentSession.id,
+    provider: paymentSession.paymentProvider?.code,
+    amount: paymentSession.amount,
+    hasData: !!paymentSession.data
+  });
+  const invoice = paymentSession.paymentCollection.invoice;
+  if (!invoice) {
+    console.log("\u274C BACKEND: Invoice not found");
+    throw new Error("Invoice not found");
+  }
+  console.log("\u{1F680} BACKEND: Invoice found:", {
+    id: invoice.id,
+    invoiceNumber: invoice.invoiceNumber,
+    status: invoice.status,
+    totalAmount: invoice.totalAmount,
+    accountUserId: invoice.account.user.id
+  });
+  if (!user || invoice.account.user.id !== user) {
+    console.log("\u274C BACKEND: Unauthorized access - User:", user, "Invoice user:", invoice.account.user.id);
+    throw new Error("Unauthorized access to invoice");
+  }
+  console.log("\u2705 BACKEND: User authorized for invoice");
+  console.log("\u{1F4B3} BACKEND: Processing payment with provider:", paymentSession.paymentProvider.code);
+  let paymentResult;
+  switch (paymentSession.paymentProvider.code) {
+    case "pp_stripe_stripe":
+      console.log("\u{1F4B3} BACKEND: Calling captureStripePayment...");
+      paymentResult = await captureStripePayment2(paymentSession);
+      break;
+    case "pp_paypal_paypal":
+      console.log("\u{1F4B3} BACKEND: Calling capturePayPalPayment...");
+      paymentResult = await capturePayPalPayment2(paymentSession);
+      break;
+    case "pp_system_default":
+      console.log("\u{1F4B3} BACKEND: Manual payment - marking as pending");
+      paymentResult = { status: "manual_pending", paymentIntentId: null };
+      break;
+    default:
+      console.log("\u274C BACKEND: Unsupported payment provider:", paymentSession.paymentProvider.code);
+      throw new Error(`Unsupported payment provider: ${paymentSession.paymentProvider.code}`);
+  }
+  console.log("\u{1F4B3} BACKEND: Payment result:", paymentResult);
+  if (paymentResult.status !== "succeeded" && paymentResult.status !== "manual_pending") {
+    console.log("\u274C BACKEND: Payment failed with result:", paymentResult);
+    throw new Error(`Payment failed: ${paymentResult.error}`);
+  }
+  console.log("\u{1F4DD} BACKEND: Updating invoice status to paid...");
+  const updatedInvoice = await sudoContext.query.Invoice.updateOne({
+    where: { id: invoice.id },
+    data: {
+      status: "paid",
+      paidAt: (/* @__PURE__ */ new Date()).toISOString()
+    }
+  });
+  console.log("\u{1F4DD} BACKEND: Invoice updated:", {
+    id: updatedInvoice.id,
+    status: "paid"
+  });
+  console.log("\u{1F4DD} BACKEND: Creating payment record...");
+  await createInvoicePaymentRecord(paymentResult, invoice, paymentSession, sudoContext);
+  console.log("\u{1F4DD} BACKEND: Marking individual orders as paid...");
+  await markOrdersAsPaid(invoice, sudoContext);
+  console.log("\u2705 BACKEND: Invoice payment completed successfully");
+  return {
+    id: updatedInvoice.id,
+    status: "succeeded",
+    success: true,
+    message: `Invoice ${invoice.invoiceNumber} paid successfully`,
+    error: null
+  };
+}
+async function captureStripePayment2(session) {
+  const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+  if (!stripe) {
+    throw new Error("Stripe not configured");
+  }
+  try {
+    const paymentIntentId = session.data.clientSecret?.split("_secret_")[0];
+    console.log("=== captureStripePayment for Invoice ===");
+    console.log("session.data:", session.data);
+    console.log("paymentIntentId:", paymentIntentId);
+    if (!paymentIntentId) {
+      throw new Error("Invalid Stripe payment intent");
+    }
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    console.log("PaymentIntent status:", paymentIntent.status);
+    console.log("PaymentIntent amount:", paymentIntent.amount);
+    if (paymentIntent.status === "succeeded") {
+      return {
+        status: "succeeded",
+        paymentIntentId: paymentIntent.id,
+        error: null
+      };
+    } else if (paymentIntent.status === "requires_capture") {
+      const captured = await stripe.paymentIntents.capture(paymentIntentId);
+      return {
+        status: captured.status === "succeeded" ? "succeeded" : "failed",
+        paymentIntentId: captured.id,
+        error: captured.status !== "succeeded" ? "Payment capture failed" : null
+      };
+    } else {
+      return {
+        status: "failed",
+        paymentIntentId: paymentIntent.id,
+        error: `Payment status: ${paymentIntent.status}`
+      };
+    }
+  } catch (error) {
+    return {
+      status: "failed",
+      paymentIntentId: null,
+      error: error.message
+    };
+  }
+}
+async function capturePayPalPayment2(session) {
+  if (!session.data.orderId) {
+    return {
+      status: "failed",
+      paymentIntentId: null,
+      error: "PayPal order ID not found"
+    };
+  }
+  try {
+    const authResponse = await fetch(`${process.env.PAYPAL_API_URL || "https://api.paypal.com"}/v1/oauth2/token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Authorization": `Basic ${Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString("base64")}`
+      },
+      body: "grant_type=client_credentials"
+    });
+    if (!authResponse.ok) {
+      throw new Error("PayPal authentication failed");
+    }
+    const authData = await authResponse.json();
+    const accessToken = authData.access_token;
+    const orderResponse = await fetch(`${process.env.PAYPAL_API_URL || "https://api.paypal.com"}/v2/checkout/orders/${session.data.orderId}`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      }
+    });
+    if (!orderResponse.ok) {
+      throw new Error(`PayPal order verification failed: ${orderResponse.status}`);
+    }
+    const orderData = await orderResponse.json();
+    console.log("=== capturePayPalPayment for Invoice ===");
+    console.log("PayPal Order ID:", session.data.orderId);
+    console.log("PayPal Order Status:", orderData.status);
+    if (orderData.status === "COMPLETED" || orderData.status === "APPROVED") {
+      return {
+        status: "succeeded",
+        paymentIntentId: session.data.orderId,
+        error: null
+      };
+    } else {
+      return {
+        status: "failed",
+        paymentIntentId: session.data.orderId,
+        error: `PayPal order status: ${orderData.status}`
+      };
+    }
+  } catch (error) {
+    console.error("PayPal verification error:", error);
+    return {
+      status: "failed",
+      paymentIntentId: session.data.orderId,
+      error: error.message
+    };
+  }
+}
+async function createInvoicePaymentRecord(paymentResult, invoice, paymentSession, sudoContext) {
+  await sudoContext.query.Payment.createOne({
+    data: {
+      status: paymentResult.status === "succeeded" ? "captured" : "pending",
+      amount: invoice.totalAmount,
+      currencyCode: invoice.currency.code,
+      data: {
+        ...paymentSession.data,
+        paymentIntentId: paymentResult.paymentIntentId,
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber
+      },
+      capturedAt: paymentResult.status === "succeeded" ? (/* @__PURE__ */ new Date()).toISOString() : null,
+      paymentCollection: { connect: { id: paymentSession.paymentCollection.id } },
+      user: invoice.account.user?.id ? { connect: { id: invoice.account.user.id } } : void 0
+    }
+  });
+}
+async function markOrdersAsPaid(invoice, sudoContext) {
+  try {
+    const invoiceLineItems = await sudoContext.query.InvoiceLineItem.findMany({
+      where: { invoice: { id: { equals: invoice.id } } },
+      query: `
+        id
+        accountLineItem {
+          id
+          paymentStatus
+          amount
+          orderDisplayId
+          order {
+            id
+            displayId
+            total
+          }
+        }
+      `
+    });
+    console.log("\u{1F4DD} BACKEND: Found invoice line items:", invoiceLineItems.length);
+    for (const lineItem of invoiceLineItems) {
+      if (lineItem.accountLineItem) {
+        const accountLineItem = lineItem.accountLineItem;
+        console.log("\u{1F4DD} BACKEND: Updating AccountLineItem payment status:", {
+          accountLineItemId: accountLineItem.id,
+          orderDisplayId: accountLineItem.orderDisplayId,
+          currentStatus: accountLineItem.paymentStatus,
+          amount: accountLineItem.amount
+        });
+        await sudoContext.query.AccountLineItem.updateOne({
+          where: { id: accountLineItem.id },
+          data: {
+            paymentStatus: "paid"
+          }
+        });
+        console.log("\u2705 BACKEND: AccountLineItem for Order #" + accountLineItem.orderDisplayId + " marked as PAID");
+      }
+    }
+  } catch (error) {
+    console.error("\u274C BACKEND: Error marking account line items as paid:", error);
+    throw error;
+  }
+}
+var completeInvoicePayment_default = completeInvoicePayment;
+
+// features/keystone/mutations/initiateInvoicePaymentSession.ts
+async function initiateInvoicePaymentSession(root, { invoiceId, paymentProviderId }, context) {
+  console.log("\u{1F680} INITIATE INVOICE PAYMENT SESSION - START");
+  console.log("\u{1F680} Invoice ID:", invoiceId);
+  console.log("\u{1F680} Payment Provider ID:", paymentProviderId);
+  const sudoContext = context.sudo();
+  const invoice = await sudoContext.query.Invoice.findOne({
+    where: { id: invoiceId },
+    query: `
+      id
+      totalAmount
+      currency {
+        code
+        noDivisionCurrency
+      }
+      account {
+        id
+        user {
+          id
+        }
+      }
+      paymentCollection {
+        id
+        amount
+        paymentSessions {
+          id
+          isSelected
+          isInitiated
+          paymentProvider {
+            id
+            code
+          }
+          data
+        }
+      }
+    `
+  });
+  if (!invoice) {
+    console.log("\u{1F680} ERROR: Invoice not found for ID:", invoiceId);
+    throw new Error("Invoice not found");
+  }
+  console.log("\u{1F680} Found invoice:", invoice.id, "totalAmount:", invoice.totalAmount);
+  console.log("\u{1F680} Invoice payment collection ID:", invoice.paymentCollection?.id);
+  console.log("\u{1F680} Number of existing payment sessions:", invoice.paymentCollection?.paymentSessions?.length || 0);
+  const provider = await sudoContext.query.PaymentProvider.findOne({
+    where: { code: paymentProviderId },
+    query: `
+      id 
+      code 
+      isInstalled
+      createPaymentFunction
+      capturePaymentFunction
+      refundPaymentFunction
+      getPaymentStatusFunction
+      generatePaymentLinkFunction
+      credentials
+    `
+  });
+  if (!provider || !provider.isInstalled) {
+    console.log("\u{1F680} ERROR: Payment provider not found or not installed for code:", paymentProviderId);
+    throw new Error("Payment provider not found or not installed");
+  }
+  console.log("\u{1F680} Found payment provider:", provider.code, "ID:", provider.id);
+  console.log("\u{1F680} Provider is installed:", provider.isInstalled);
+  if (!invoice.paymentCollection) {
+    invoice.paymentCollection = await sudoContext.query.PaymentCollection.createOne({
+      data: {
+        invoice: { connect: { id: invoice.id } },
+        amount: invoice.totalAmount,
+        description: "default"
+      },
+      query: "id"
+    });
+  }
+  const existingSession = invoice.paymentCollection?.paymentSessions?.find(
+    (s) => s.paymentProvider.code === paymentProviderId && !s.isInitiated
+  );
+  console.log("\u{1F680} Looking for existing session for provider:", paymentProviderId);
+  console.log("\u{1F680} Found existing session:", !!existingSession, existingSession?.id);
+  if (existingSession) {
+    console.log("\u{1F680} Using existing session:", existingSession.id);
+    console.log("\u{1F680} Existing session data:", JSON.stringify(existingSession.data, null, 2));
+    const needsInitialization = !existingSession.data || Object.keys(existingSession.data).length === 0;
+    console.log("\u{1F680} Session needs initialization:", needsInitialization);
+    let sessionData = existingSession.data;
+    if (needsInitialization) {
+      console.log("\u{1F680} Initializing session with payment adapter");
+      try {
+        sessionData = await createPayment({
+          provider,
+          cart: invoice,
+          amount: invoice.totalAmount,
+          currency: invoice.currency.code
+        });
+        console.log("\u{1F680} Payment adapter returned session data:", JSON.stringify(sessionData, null, 2));
+        await sudoContext.query.PaymentSession.updateOne({
+          where: { id: existingSession.id },
+          data: {
+            data: sessionData,
+            isInitiated: true
+          }
+        });
+        console.log("\u{1F680} Updated existing session with new data");
+      } catch (error) {
+        console.error("\u{1F680} Failed to initialize session:", error);
+        throw error;
+      }
+    }
+    const otherSessions = invoice.paymentCollection.paymentSessions.filter(
+      (s) => s.id !== existingSession.id && s.isSelected
+    );
+    console.log("\u{1F680} Unselecting", otherSessions.length, "other sessions");
+    for (const session of otherSessions) {
+      console.log("\u{1F680} Unselecting session:", session.id, "provider:", session.paymentProvider?.code);
+      await sudoContext.query.PaymentSession.updateOne({
+        where: { id: session.id },
+        data: { isSelected: false }
+      });
+    }
+    console.log("\u{1F680} Selecting existing session:", existingSession.id);
+    await sudoContext.query.PaymentSession.updateOne({
+      where: { id: existingSession.id },
+      data: { isSelected: true }
+    });
+    console.log("\u{1F680} EXISTING SESSION SELECTED AND INITIALIZED - DONE");
+    return {
+      ...existingSession,
+      data: sessionData
+    };
+  }
+  console.log("\u{1F680} No existing session found, creating new payment session");
+  try {
+    console.log("\u{1F680} Calling createPayment adapter with:");
+    console.log("\u{1F680} - Provider code:", provider.code);
+    console.log("\u{1F680} - Amount:", invoice.totalAmount);
+    console.log("\u{1F680} - Currency:", invoice.currency.code);
+    const sessionData = await createPayment({
+      provider,
+      cart: invoice,
+      // Pass invoice as cart parameter
+      amount: invoice.totalAmount,
+      currency: invoice.currency.code
+    });
+    console.log("\u{1F680} Payment adapter returned session data:", JSON.stringify(sessionData, null, 2));
+    const existingSelectedSessions = invoice.paymentCollection.paymentSessions?.filter(
+      (s) => s.isSelected
+    ) || [];
+    console.log("\u{1F680} Unselecting", existingSelectedSessions.length, "existing selected sessions");
+    for (const session of existingSelectedSessions) {
+      console.log("\u{1F680} Unselecting existing session:", session.id, "provider:", session.paymentProvider?.code);
+      await sudoContext.query.PaymentSession.updateOne({
+        where: { id: session.id },
+        data: { isSelected: false }
+      });
+    }
+    console.log("\u{1F680} Creating new payment session with data:", JSON.stringify(sessionData, null, 2));
+    const newSession = await sudoContext.query.PaymentSession.createOne({
+      data: {
+        paymentCollection: { connect: { id: invoice.paymentCollection.id } },
+        paymentProvider: { connect: { id: provider.id } },
+        amount: invoice.totalAmount,
+        isSelected: true,
+        isInitiated: false,
+        data: sessionData
+      },
+      query: `
+        id
+        data
+        amount
+        isInitiated
+      `
+    });
+    console.log("\u{1F680} Created new payment session:", newSession.id);
+    console.log("\u{1F680} NEW SESSION CREATED - DONE");
+    return newSession;
+  } catch (error) {
+    console.error("Invoice payment session creation failed:", error);
+    throw error;
+  }
+}
+var initiateInvoicePaymentSession_default = initiateInvoicePaymentSession;
+
+// features/keystone/mutations/setInvoicePaymentSession.ts
+async function setInvoicePaymentSession(root, { invoiceId, providerId }, context) {
+  const sudoContext = context.sudo();
+  const invoice = await sudoContext.query.Invoice.findOne({
+    where: { id: invoiceId },
+    query: `
+      id
+      paymentCollection {
+        id
+        paymentSessions {
+          id
+          paymentProvider {
+            id
+          }
+        }
+      }
+    `
+  });
+  if (!invoice) {
+    throw new Error("Invoice not found");
+  }
+  if (!invoice.paymentCollection) {
+    throw new Error("Invoice has no payment collection");
+  }
+  for (const session of invoice.paymentCollection.paymentSessions || []) {
+    await sudoContext.db.PaymentSession.updateOne({
+      where: { id: session.id },
+      data: { isSelected: false }
+    });
+  }
+  const selectedSession = invoice.paymentCollection.paymentSessions?.find(
+    (s) => s.paymentProvider.id === providerId
+  );
+  if (!selectedSession) {
+    throw new Error("Payment session not found");
+  }
+  await sudoContext.db.PaymentSession.updateOne({
+    where: { id: selectedSession.id },
+    data: { isSelected: true }
+  });
+  return await sudoContext.db.Invoice.findOne({
+    where: { id: invoiceId }
+  });
+}
+var setInvoicePaymentSession_default = setInvoicePaymentSession;
+
+// features/keystone/mutations/activeInvoice.ts
+async function activeInvoice(root, { invoiceId }, context) {
+  if (!invoiceId) {
+    throw new Error("Invoice ID is required");
+  }
+  const sudoContext = context.sudo();
+  const invoice = await sudoContext.query.Invoice.findOne({
+    where: { id: invoiceId },
+    query: `
+      id
+      invoiceNumber
+      status
+      totalAmount
+      currency {
+        code
+        noDivisionCurrency
+      }
+      account {
+        id
+        user {
+          id
+        }
+      }
+      lineItems {
+        id
+        accountLineItem {
+          id
+          description
+          orderDisplayId
+          itemCount
+          formattedAmount
+          createdAt
+          order {
+            id
+            displayId
+            createdAt
+            total
+          }
+          region {
+            id
+            name
+            countries {
+              id
+              name
+              iso2
+              region {
+                id
+              }
+            }
+            currency {
+              code
+              noDivisionCurrency
+            }
+            taxRate
+          }
+        }
+      }
+      paymentCollection {
+        id
+        paymentSessions {
+          id
+          data
+          isSelected
+          paymentProvider {
+            id
+            code
+            isInstalled
+          }
+        }
+      }
+    `
+  });
+  if (!invoice) {
+    return null;
+  }
+  return invoice;
+}
+var activeInvoice_default = activeInvoice;
+
+// features/keystone/mutations/getCustomerPaidInvoices.ts
+async function getCustomerPaidInvoices(root, { limit = 10, offset = 0 }, context) {
+  if (!context.session?.itemId) {
+    throw new Error("Not authenticated");
+  }
+  const sudoContext = context.sudo();
+  const invoices = await sudoContext.query.Invoice.findMany({
+    where: {
+      account: {
+        user: { id: { equals: context.session.itemId } }
+      },
+      status: { equals: "paid" }
+    },
+    orderBy: { paidAt: "desc" },
+    take: limit,
+    skip: offset,
+    query: `
+      id
+      invoiceNumber
+      totalAmount
+      status
+      paidAt
+      dueDate
+      createdAt
+      currency {
+        id
+        code
+        symbol
+        noDivisionCurrency
+      }
+      account {
+        id
+        accountNumber
+        title
+      }
+      formattedTotal
+      lineItems {
+        id
+        orderDisplayId
+        formattedAmount
+        orderDetails
+        accountLineItem {
+          id
+          orderDisplayId
+          itemCount
+          paymentStatus
+          description
+          amount
+          order {
+            id
+            displayId
+          }
+        }
+      }
+    `
+  });
+  return invoices;
+}
+var getCustomerPaidInvoices_default = getCustomerPaidInvoices;
+
 // features/keystone/mutations/index.ts
 var graphql = String.raw;
 var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
@@ -4941,7 +5713,10 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
         getCustomerAccount(accountId: ID!): JSON
         getCustomerAccounts(limit: Int, offset: Int): JSON
         getUnpaidLineItemsByRegion(accountId: ID!): UnpaidLineItemsByRegionResult!
+        getInvoicePaymentSessions(invoiceId: ID!): [PaymentSession!]!
         getAnalytics(timeframe: String): JSON
+        activeInvoice(invoiceId: ID!): JSON
+        getCustomerPaidInvoices(limit: Int, offset: Int): JSON
       }
 
       type ShippingRate {
@@ -5050,7 +5825,7 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
 
       type InvoiceCreationResult {
         success: Boolean!
-        invoice: Invoice
+        invoiceId: ID
         message: String
         error: String
       }
@@ -5069,6 +5844,14 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
         totalRegions: Int!
         totalUnpaidItems: Int!
         message: String
+      }
+
+      type InvoicePaymentResult {
+        id: ID!
+        status: String!
+        success: Boolean!
+        message: String!
+        error: String
       }
 
       type Mutation {
@@ -5110,6 +5893,10 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
         regenerateCustomerToken: CustomerTokenResult!
         payInvoice(invoiceId: ID!, paymentData: PaymentInput!): PaymentResult!
         createInvoiceFromLineItems(accountId: ID!, regionId: ID!, lineItemIds: [ID!]!, dueDate: String): InvoiceCreationResult!
+        createInvoicePaymentSessions(invoiceId: ID!): Invoice!
+        initiateInvoicePaymentSession(invoiceId: ID!, paymentProviderId: String!): PaymentSession
+        setInvoicePaymentSession(invoiceId: ID!, providerId: ID!): Invoice
+        completeInvoicePayment(paymentSessionId: ID!): InvoicePaymentResult!
       }
     `,
   resolvers: {
@@ -5124,7 +5911,10 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
       getCustomerAccount: getCustomerAccount_default,
       getCustomerAccounts: getCustomerAccounts_default,
       getUnpaidLineItemsByRegion: getUnpaidLineItemsByRegion_default,
-      getAnalytics: getAnalytics_default
+      getInvoicePaymentSessions: getInvoicePaymentSessions_default,
+      getAnalytics: getAnalytics_default,
+      activeInvoice: activeInvoice_default,
+      getCustomerPaidInvoices: getCustomerPaidInvoices_default
     },
     Mutation: {
       updateActiveUserPassword: updateActiveUserPassword_default,
@@ -5151,7 +5941,11 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
       createProviderShippingLabel: createProviderShippingLabel_default,
       regenerateCustomerToken: regenerateCustomerToken_default,
       payInvoice: payInvoice_default,
-      createInvoiceFromLineItems: createInvoiceFromLineItems_default
+      createInvoiceFromLineItems: createInvoiceFromLineItems_default,
+      createInvoicePaymentSessions: createInvoicePaymentSessions_default,
+      initiateInvoicePaymentSession: initiateInvoicePaymentSession_default,
+      setInvoicePaymentSession: setInvoicePaymentSession_default,
+      completeInvoicePayment: completeInvoicePayment_default
     }
   }
 });
@@ -7582,6 +8376,52 @@ async function sendOrderFulfillmentEmail(order, fulfillment, baseUrl) {
 }
 
 // features/keystone/models/Fulfillment.ts
+async function callOrderWebhook(context, order, eventType, additionalData = {}) {
+  try {
+    const orderWithUser = await context.sudo().query.Order.findOne({
+      where: { id: order.id },
+      query: `
+        user {
+          id
+          orderWebhookUrl
+        }
+      `
+    });
+    const webhookUrl = orderWithUser?.user?.orderWebhookUrl;
+    if (!webhookUrl) {
+      return;
+    }
+    const payload = {
+      event: eventType,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+      order: {
+        id: order.id,
+        displayId: order.displayId,
+        email: order.email,
+        secretKey: order.secretKey,
+        status: order.status,
+        total: order.total,
+        shippingAddress: order.shippingAddress
+      },
+      ...additionalData
+    };
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "Openfront-Webhooks/1.0"
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      console.warn(`Order webhook call failed: ${response.status} ${response.statusText} for URL: ${webhookUrl}`);
+    } else {
+      console.log(`Order webhook successfully called: ${webhookUrl} for order ${order.displayId}`);
+    }
+  } catch (error) {
+    console.error("Error calling order webhook:", error);
+  }
+}
 var Fulfillment = (0, import_core18.list)({
   access: {
     operation: {
@@ -7664,6 +8504,10 @@ var Fulfillment = (0, import_core18.list)({
               })) || []
             };
             await sendOrderFulfillmentEmail(fulfillment.order, fulfillmentData);
+            await callOrderWebhook(context, fulfillment.order, "order.fulfilled", {
+              fulfillment: fulfillmentData,
+              operation: "fulfilled"
+            });
           }
         } catch (error) {
           console.error("Error sending order fulfillment email:", error);
@@ -8185,32 +9029,6 @@ var Account = (0, import_core25.list)({
             }
           })
         }),
-        formattedBalance: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.String,
-            async resolve(item, args, context) {
-              const account = await context.sudo().query.Account.findOne({
-                where: { id: item.id },
-                query: `
-                  totalAmount
-                  paidAmount
-                  currency {
-                    code
-                    symbol
-                    noDivisionCurrency
-                  }
-                `
-              });
-              if (!account?.currency) return "$0.00";
-              const divisor = account.currency.noDivisionCurrency ? 1 : 100;
-              const balance = ((account.totalAmount || 0) - (account.paidAmount || 0)) / divisor;
-              return new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: account.currency.code
-              }).format(balance);
-            }
-          })
-        }),
         formattedCreditLimit: (0, import_fields28.virtual)({
           field: import_core25.graphql.field({
             type: import_core25.graphql.String,
@@ -8242,34 +9060,6 @@ var Account = (0, import_core25.list)({
             resolve(item) {
               const used = (item.totalAmount || 0) - (item.paidAmount || 0);
               return Math.max(0, (item.creditLimit || 0) - used);
-            }
-          })
-        }),
-        formattedAvailableCredit: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.String,
-            async resolve(item, args, context) {
-              const account = await context.sudo().query.Account.findOne({
-                where: { id: item.id },
-                query: `
-                  totalAmount
-                  paidAmount
-                  creditLimit
-                  currency {
-                    code
-                    symbol
-                    noDivisionCurrency
-                  }
-                `
-              });
-              if (!account?.currency) return "$0.00";
-              const divisor = account.currency.noDivisionCurrency ? 1 : 100;
-              const used = ((account.totalAmount || 0) - (account.paidAmount || 0)) / divisor;
-              const available = Math.max(0, (account.creditLimit || 0) / divisor - used);
-              return new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: account.currency.code
-              }).format(available);
             }
           })
         }),
@@ -8394,6 +9184,53 @@ var Account = (0, import_core25.list)({
             }
           })
         }),
+        // Proper current balance calculated from unpaid line items (same logic as unpaidLineItemsByRegion)
+        formattedCurrentBalance: (0, import_fields28.virtual)({
+          field: import_core25.graphql.field({
+            type: import_core25.graphql.String,
+            async resolve(item, args, context) {
+              const account = await context.sudo().query.Account.findOne({
+                where: { id: item.id },
+                query: `
+                  currency {
+                    code
+                    symbol
+                    noDivisionCurrency
+                  }
+                `
+              });
+              if (!account?.currency) return "$0.00";
+              const unpaidLineItems = await context.sudo().query.AccountLineItem.findMany({
+                where: {
+                  account: { id: { equals: item.id } },
+                  paymentStatus: { equals: "unpaid" }
+                },
+                query: `
+                  amount
+                  region {
+                    currency {
+                      code
+                      noDivisionCurrency
+                    }
+                  }
+                `
+              });
+              if (unpaidLineItems.length === 0) {
+                return "$0.00";
+              }
+              let totalUnpaidAmount = 0;
+              for (const lineItem of unpaidLineItems) {
+                totalUnpaidAmount += lineItem.amount || 0;
+              }
+              const divisor = account.currency.noDivisionCurrency ? 1 : 100;
+              const balance = totalUnpaidAmount / divisor;
+              return new Intl.NumberFormat("en-US", {
+                style: "currency",
+                currency: account.currency.code
+              }).format(balance);
+            }
+          })
+        }),
         unpaidLineItemsByRegion: (0, import_fields28.virtual)({
           field: import_core25.graphql.field({
             type: import_core25.graphql.JSON,
@@ -8447,6 +9284,7 @@ var Account = (0, import_core25.list)({
                     lineItems: [],
                     totalAmount: 0,
                     itemCount: 0
+                    // This will count unique orders
                   };
                 }
                 acc[regionId].lineItems.push({
@@ -8459,7 +9297,7 @@ var Account = (0, import_core25.list)({
                   formattedAmount: item2.formattedAmount
                 });
                 acc[regionId].totalAmount += item2.amount || 0;
-                acc[regionId].itemCount += item2.itemCount || 0;
+                acc[regionId].itemCount += 1;
                 return acc;
               }, {});
               const regionsWithLineItems = Object.values(lineItemsByRegion).map((regionData) => {
@@ -8622,6 +9460,39 @@ var AccountLineItem = (0, import_core26.list)({
               return lineItem?.order || null;
             }
           })
+        }),
+        paidAt: (0, import_fields29.virtual)({
+          field: import_core26.graphql.field({
+            type: import_core26.graphql.String,
+            async resolve(item, args, context) {
+              try {
+                const lineItem = await context.sudo().query.AccountLineItem.findOne({
+                  where: { id: item.id },
+                  query: `
+                    paymentStatus
+                    invoiceLineItems {
+                      invoice {
+                        paidAt
+                        status
+                      }
+                    }
+                  `
+                });
+                if (lineItem?.paymentStatus !== "paid") {
+                  return null;
+                }
+                const paidInvoices = lineItem?.invoiceLineItems?.map((ili) => ili.invoice)?.filter((invoice) => invoice?.status === "paid" && invoice?.paidAt);
+                if (paidInvoices && paidInvoices.length > 0) {
+                  const mostRecentPaidAt = paidInvoices.map((inv) => new Date(inv.paidAt)).sort((a, b) => b.getTime() - a.getTime())[0];
+                  return mostRecentPaidAt.toISOString();
+                }
+                return null;
+              } catch (error) {
+                console.error("Error resolving AccountLineItem paidAt:", error);
+                return null;
+              }
+            }
+          })
         })
       }
     }),
@@ -8730,6 +9601,9 @@ var Invoice = (0, import_core27.list)({
       ref: "InvoiceLineItem.invoice",
       many: true
     }),
+    paymentCollection: (0, import_fields30.relationship)({
+      ref: "PaymentCollection.invoice"
+    }),
     // Virtual computed fields
     ...(0, import_core27.group)({
       label: "Computed Fields",
@@ -8739,24 +9613,40 @@ var Invoice = (0, import_core27.list)({
           field: import_core27.graphql.field({
             type: import_core27.graphql.String,
             async resolve(item, args, context) {
-              const invoice = await context.sudo().query.Invoice.findOne({
-                where: { id: item.id },
-                query: `
-                  totalAmount
-                  currency {
-                    code
-                    symbol
-                    noDivisionCurrency
-                  }
-                `
-              });
-              if (!invoice?.currency) return "$0.00";
-              const divisor = invoice.currency.noDivisionCurrency ? 1 : 100;
-              const amount = (invoice.totalAmount || 0) / divisor;
-              return new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: invoice.currency.code
-              }).format(amount);
+              try {
+                let currency = item.currency;
+                if (!currency && item.currencyId) {
+                  const invoice = await context.sudo().query.Invoice.findOne({
+                    where: { id: item.id },
+                    query: `
+                      currency {
+                        id
+                        code
+                        symbol
+                        noDivisionCurrency
+                      }
+                    `
+                  });
+                  currency = invoice?.currency;
+                }
+                if (!currency || !item.totalAmount) {
+                  console.log("\u{1F525} VIRTUAL FIELD formattedTotal - Missing data:", {
+                    currency,
+                    totalAmount: item.totalAmount,
+                    itemId: item.id
+                  });
+                  return "$0.00";
+                }
+                const divisor = currency.noDivisionCurrency ? 1 : 100;
+                const amount = (item.totalAmount || 0) / divisor;
+                return new Intl.NumberFormat("en-US", {
+                  style: "currency",
+                  currency: currency.code
+                }).format(amount);
+              } catch (error) {
+                console.error("\u{1F525} VIRTUAL FIELD formattedTotal - ERROR:", error);
+                return "$0.00";
+              }
             }
           })
         }),
@@ -8764,15 +9654,58 @@ var Invoice = (0, import_core27.list)({
           field: import_core27.graphql.field({
             type: import_core27.graphql.Int,
             async resolve(item, args, context) {
-              const invoice = await context.sudo().query.Invoice.findOne({
-                where: { id: item.id },
-                query: `
-                  lineItems {
-                    id
-                  }
-                `
-              });
-              return invoice?.lineItems?.length || 0;
+              try {
+                if (item.lineItems && Array.isArray(item.lineItems)) {
+                  return item.lineItems.length;
+                }
+                const invoice = await context.sudo().query.Invoice.findOne({
+                  where: { id: item.id },
+                  query: `
+                    lineItems {
+                      id
+                    }
+                  `
+                });
+                return invoice?.lineItems?.length || 0;
+              } catch (error) {
+                console.error("\u{1F525} VIRTUAL FIELD itemCount - ERROR:", error);
+                return 0;
+              }
+            }
+          })
+        }),
+        paymentSessions: (0, import_fields30.virtual)({
+          field: import_core27.graphql.field({
+            type: import_core27.graphql.list(import_core27.graphql.nonNull(import_core27.graphql.JSON)),
+            async resolve(item, args, context) {
+              try {
+                if (item.paymentCollection?.paymentSessions && Array.isArray(item.paymentCollection.paymentSessions)) {
+                  return item.paymentCollection.paymentSessions;
+                }
+                const invoice = await context.sudo().query.Invoice.findOne({
+                  where: { id: item.id },
+                  query: `
+                    paymentCollection {
+                      id
+                      paymentSessions {
+                        id
+                        paymentProvider {
+                          id
+                          code
+                        }
+                        data
+                        isSelected
+                        isInitiated
+                        amount
+                      }
+                    }
+                  `
+                });
+                return invoice?.paymentCollection?.paymentSessions || [];
+              } catch (error) {
+                console.error("\u{1F525} VIRTUAL FIELD paymentSessions - ERROR:", error);
+                return [];
+              }
             }
           })
         })
@@ -11087,14 +12020,33 @@ var Order = (0, import_core41.list)({
                     amount
                     status
                   }
+                  accountLineItems {
+                    id
+                    paymentStatus
+                    amount
+                  }
                 `
               });
-              return order.payments?.reduce((total, payment) => {
+              let totalPaid = order.payments?.reduce((total, payment) => {
                 if (payment.status === "captured") {
                   return total + payment.amount;
                 }
                 return total;
               }, 0) || 0;
+              if (totalPaid === 0 && order.accountLineItems?.length > 0) {
+                const hasPaidLineItems = order.accountLineItems.some(
+                  (lineItem) => lineItem.paymentStatus === "paid"
+                );
+                if (hasPaidLineItems) {
+                  totalPaid = order.accountLineItems.reduce((total, lineItem) => {
+                    if (lineItem.paymentStatus === "paid") {
+                      return total + (lineItem.amount || 0);
+                    }
+                    return total;
+                  }, 0);
+                }
+              }
+              return totalPaid;
             }
           })
         }),
@@ -11109,18 +12061,36 @@ var Order = (0, import_core41.list)({
                     amount
                     status
                   }
+                  accountLineItems {
+                    id
+                    paymentStatus
+                    amount
+                  }
                   currency {
                     code
                     symbol
                   }
                 `
               });
-              const totalPaid = order.payments?.reduce((total, payment) => {
+              let totalPaid = order.payments?.reduce((total, payment) => {
                 if (payment.status === "captured") {
                   return total + payment.amount;
                 }
                 return total;
               }, 0) || 0;
+              if (totalPaid === 0 && order.accountLineItems?.length > 0) {
+                const hasPaidLineItems = order.accountLineItems.some(
+                  (lineItem) => lineItem.paymentStatus === "paid"
+                );
+                if (hasPaidLineItems) {
+                  totalPaid = order.accountLineItems.reduce((total, lineItem) => {
+                    if (lineItem.paymentStatus === "paid") {
+                      return total + (lineItem.amount || 0);
+                    }
+                    return total;
+                  }, 0);
+                }
+              }
               if (!order.currency) return `${(totalPaid / 100).toFixed(2)}`;
               return `${order.currency.symbol}${(totalPaid / 100).toFixed(2)}`;
             }
@@ -11573,6 +12543,9 @@ var PaymentCollection = (0, import_core48.list)({
     }),
     cart: (0, import_fields49.relationship)({
       ref: "Cart.paymentCollection"
+    }),
+    invoice: (0, import_fields49.relationship)({
+      ref: "Invoice.paymentCollection"
     }),
     ...trackingFields
   }

@@ -144,6 +144,54 @@ export const AccountLineItem = list({
             },
           }),
         }),
+
+        paidAt: virtual({
+          field: graphql.field({
+            type: graphql.String,
+            async resolve(item, args, context) {
+              // Get paidAt from invoice through relationships:
+              // AccountLineItem -> InvoiceLineItem -> Invoice -> paidAt
+              try {
+                const lineItem = await context.sudo().query.AccountLineItem.findOne({
+                  where: { id: item.id },
+                  query: `
+                    paymentStatus
+                    invoiceLineItems {
+                      invoice {
+                        paidAt
+                        status
+                      }
+                    }
+                  `,
+                });
+
+                // Only return paidAt if the account line item is actually paid
+                if (lineItem?.paymentStatus !== 'paid') {
+                  return null;
+                }
+
+                // Get the most recent paidAt from associated invoices
+                const paidInvoices = lineItem?.invoiceLineItems
+                  ?.map(ili => ili.invoice)
+                  ?.filter(invoice => invoice?.status === 'paid' && invoice?.paidAt);
+
+                if (paidInvoices && paidInvoices.length > 0) {
+                  // Return the most recent paidAt date
+                  const mostRecentPaidAt = paidInvoices
+                    .map(inv => new Date(inv.paidAt))
+                    .sort((a, b) => b.getTime() - a.getTime())[0];
+                  
+                  return mostRecentPaidAt.toISOString();
+                }
+
+                return null;
+              } catch (error) {
+                console.error('Error resolving AccountLineItem paidAt:', error);
+                return null;
+              }
+            },
+          }),
+        }),
       },
     }),
 
