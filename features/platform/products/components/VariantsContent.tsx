@@ -87,7 +87,7 @@ export const VariantsContent = ({
   return (
     <>
       {/* Responsive Tabs Navigation */}
-      <div className="bg-muted/80 border-b">
+      <div className="bg-muted/40">
         {/* Desktop: Horizontal Tab Buttons */}
         <div className="hidden md:flex items-center justify-between px-4 py-2">
           <div className="flex items-center gap-3">
@@ -104,7 +104,7 @@ export const VariantsContent = ({
               >
                 <div className="flex items-center gap-1.5">
                   <span>{tab.label}</span>
-                  <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px]">
+                  <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
                     {tab.count}
                   </span>
                 </div>
@@ -134,7 +134,7 @@ export const VariantsContent = ({
                     <SelectItem key={tab.key} value={tab.key} className="text-xs">
                       <div className="flex items-center justify-between w-full">
                         <span>{tab.label}</span>
-                        <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px]">
+                        <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
                           {tab.count}
                         </span>
                       </div>

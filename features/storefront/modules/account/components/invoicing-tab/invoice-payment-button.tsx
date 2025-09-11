@@ -94,20 +94,15 @@ const StripeInvoicePaymentButton: React.FC<StripeInvoicePaymentButtonProps> = ({
 
   const onPaymentCompleted = async (paymentSessionId: string) => {
     try {
-      console.log('🔄 FRONTEND: Starting payment completion for session:', paymentSessionId);
       const result = await completeInvoicePayment(paymentSessionId)
-      console.log('🔄 FRONTEND: Payment completion result:', result);
       
       if (result && typeof result === 'object' && 'success' in result && result.success) {
-        console.log('✅ FRONTEND: Payment successful, navigating to invoices page');
         onPaymentSuccess?.() // Close dialog
         router.push(`/account/invoices?invoice=${result.id}`) // Navigate to invoice
       } else {
-        console.error('❌ FRONTEND: Payment completion failed:', result);
         setErrorMessage(result?.message || result?.error || 'Payment completion failed');
       }
     } catch (err: any) {
-      console.error('💥 FRONTEND: Invoice payment error:', err);
       setErrorMessage(err.message)
     } finally {
       setSubmitting(false)
@@ -135,8 +130,6 @@ const StripeInvoicePaymentButton: React.FC<StripeInvoicePaymentButtonProps> = ({
 
     // Confirm the payment intent with the card details, then pass session ID to backend
     try {
-      console.log('Confirming invoice payment with Stripe...');
-      
       const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
         session.data.clientSecret,
         {
@@ -151,19 +144,16 @@ const StripeInvoicePaymentButton: React.FC<StripeInvoicePaymentButtonProps> = ({
       );
 
       if (confirmError) {
-        console.error('Stripe confirmation error:', confirmError);
         setErrorMessage(confirmError.message || "Payment confirmation failed.");
         return;
       }
 
       if (paymentIntent?.status === 'succeeded' || paymentIntent?.status === 'requires_capture') {
-        console.log('Payment confirmed, sending to backend...');
         await onPaymentCompleted(session.id);
       } else {
         setErrorMessage("Payment was not successful. Please try again.");
       }
     } catch (error: any) {
-      console.error('Payment error:', error);
       setErrorMessage(error.message || "An error occurred during payment processing.")
     } finally {
       setSubmitting(false)
@@ -208,7 +198,6 @@ const ManualInvoicePaymentButton = ({ invoice, onPaymentSuccess, "data-testid": 
     try {
       const result = await completeInvoicePayment(paymentSessionId!)
       if (result && typeof result === 'object' && 'success' in result && result.success) {
-        console.log('✅ FRONTEND: Manual payment successful, navigating to invoices page');
         onPaymentSuccess?.() // Close dialog
         router.push(`/account/invoices?invoice=${result.id}`) // Navigate to invoice
       }
@@ -280,12 +269,10 @@ const PayPalInvoicePaymentButton: React.FC<PayPalInvoicePaymentButtonProps> = ({
     try {
       const result = await completeInvoicePayment(paymentSessionId)
       if (result && typeof result === 'object' && 'success' in result && result.success) {
-        console.log('✅ FRONTEND: PayPal payment successful, navigating to invoices page');
         onPaymentSuccess?.() // Close dialog
         router.push(`/account/invoices?invoice=${result.id}`) // Navigate to invoice
       }
     } catch (err: any) {
-      console.error('Payment error:', err);
       setErrorMessage(err.message)
     } finally {
       setSubmitting(false)

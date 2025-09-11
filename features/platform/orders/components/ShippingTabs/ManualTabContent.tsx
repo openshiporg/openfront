@@ -46,12 +46,12 @@ export function ManualTabContent({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-3">
-        <div className="w-[120px]">
+        <div className="flex-1 min-w-[200px]">
           <h3 className="font-medium uppercase text-xs tracking-wider text-muted-foreground mb-1.5">
             Carrier
           </h3>
           <Select value={carrier} onValueChange={setCarrier}>
-            <SelectTrigger className="h-8 rounded-lg text-sm">
+            <SelectTrigger className="h-8 rounded-lg text-sm bg-background shadow-sm">
               <SelectValue placeholder="Select" />
             </SelectTrigger>
             <SelectContent>
@@ -69,7 +69,7 @@ export function ManualTabContent({
           <Input
             value={trackingNumber}
             onChange={(e) => setTrackingNumber(e.target.value)}
-            className="h-8 rounded-lg text-sm"
+            className="h-8 rounded-lg text-sm bg-background shadow-sm"
             placeholder="Enter tracking number"
           />
         </div>

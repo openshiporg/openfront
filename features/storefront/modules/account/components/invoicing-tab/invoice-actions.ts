@@ -37,7 +37,6 @@ export async function completeInvoicePayment(paymentSessionId: string) {
 
     return completeInvoicePayment;
   } catch (error: any) {
-    console.error("Error completing invoice payment:", error);
     throw error;
   }
 }
@@ -64,7 +63,6 @@ export async function initiateInvoicePaymentSession(invoiceId: string, paymentPr
     
     return initiateInvoicePaymentSession;
   } catch (error: any) {
-    console.error("Error initiating invoice payment session:", error);
     throw error;
   }
 }
@@ -102,7 +100,6 @@ export async function createInvoicePaymentSessions(invoiceId: string) {
     
     return createInvoicePaymentSessions;
   } catch (error: any) {
-    console.error("Error creating invoice payment sessions:", error);
     throw error;
   }
 }
@@ -139,7 +136,6 @@ export async function createInvoiceFromLineItems({
     
     return createInvoiceFromLineItems;
   } catch (error: any) {
-    console.error("Error creating invoice from line items:", error);
     throw error;
   }
 }
@@ -177,7 +173,6 @@ export async function setInvoicePaymentSession(invoiceId: string, providerId: st
     
     return setInvoicePaymentSession;
   } catch (error: any) {
-    console.error("Error setting invoice payment session:", error);
     throw error;
   }
 }
@@ -208,7 +203,6 @@ export async function getInvoicePaymentSessions(invoiceId: string) {
     
     return getInvoicePaymentSessions;
   } catch (error: any) {
-    console.error("Error fetching invoice payment sessions:", error);
     return [];
   }
 }
@@ -242,7 +236,6 @@ export async function getUnpaidLineItemsByRegion(accountId: string) {
     
     return getUnpaidLineItemsByRegion;
   } catch (error: any) {
-    console.error("Error fetching unpaid line items:", error);
     return {
       success: false,
       error: error.message || 'Failed to fetch unpaid line items'

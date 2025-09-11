@@ -122,11 +122,6 @@ export const Invoice = list({
                 }
 
                 if (!currency || !item.totalAmount) {
-                  console.log('🔥 VIRTUAL FIELD formattedTotal - Missing data:', { 
-                    currency, 
-                    totalAmount: item.totalAmount,
-                    itemId: item.id
-                  });
                   return '$0.00';
                 }
 
@@ -138,7 +133,6 @@ export const Invoice = list({
                   currency: currency.code,
                 }).format(amount);
               } catch (error) {
-                console.error('🔥 VIRTUAL FIELD formattedTotal - ERROR:', error);
                 return '$0.00';
               }
             },
@@ -165,7 +159,6 @@ export const Invoice = list({
 
                 return invoice?.lineItems?.length || 0;
               } catch (error) {
-                console.error('🔥 VIRTUAL FIELD itemCount - ERROR:', error);
                 return 0;
               }
             },
@@ -203,7 +196,6 @@ export const Invoice = list({
 
                 return invoice?.paymentCollection?.paymentSessions || [];
               } catch (error) {
-                console.error('🔥 VIRTUAL FIELD paymentSessions - ERROR:', error);
                 return [];
               }
             },

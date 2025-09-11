@@ -24,6 +24,7 @@ import { ClaimsSection } from "./ClaimsSection";
 import { CreateClaimModal } from "./modals/CreateClaimModal";
 import { CreateReturnModal } from "./modals/CreateReturnModal";
 import { OrderSectionTabs } from "./OrderSectionTabs";
+import { StatusBadge } from "./StatusBadge";
 
 const statusColors = {
   pending: "blue",
@@ -125,12 +126,7 @@ export const OrderDetailsComponent = ({
 
             <div className="flex flex-col justify-between h-full">
               <div className="flex items-center gap-2">
-                <Badge
-                  color={statusColors[order.status as keyof typeof statusColors] || "zinc"}
-                  className="text-[.6rem] sm:text-[.7rem] py-0 px-2 sm:px-3 tracking-wide font-medium rounded-md border h-6"
-                >
-                  {order.status.toUpperCase().replace("_", " ")}
-                </Badge>
+                <StatusBadge status={order.status} />
                 {order.returns?.length > 0 && (
                   <Badge
                     color="blue"

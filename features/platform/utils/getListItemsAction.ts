@@ -77,23 +77,17 @@ export async function getListItemsAction(
   cacheOptions?: CacheOptions,
   customGraphQLSelection?: string
 ): Promise<{ success: true; data: ListItemsResponse } | { success: false; error: string }> {
-  console.log(`🔍 Fetching list items for ${listKey}:`, { variables, selectedFields })
-  
   try {
     // Get list metadata
     const list = await getListByPath(listKey)
     if (!list) {
-      console.error(`❌ List not found: ${listKey}`)
       return { success: false, error: `List not found: ${listKey}` }
     }
-    
-    console.log(`✅ Found list ${listKey}:`, { graphqlNames: list.graphql.names })
     
     // Use custom GraphQL selection if provided, otherwise build from selectedFields
     let selectedGqlFields: string
     
     if (customGraphQLSelection) {
-      console.log(`📝 Using custom GraphQL selection:`, customGraphQLSelection)
       selectedGqlFields = customGraphQLSelection
     } else {
       // Build GraphQL selection for list fields - using the same pattern as getItemAction
@@ -103,18 +97,13 @@ export async function getListItemsAction(
           
           const field = list.fields[fieldPath]
           if (!field) {
-            console.warn(`⚠️ Field not found: ${fieldPath}`)
             return fieldPath // fallback
           }
           
-          const fieldType = typeof field.viewsIndex === 'number' ? getFieldTypeFromViewsIndex(field.viewsIndex) : 'unknown'
           const selection = getFieldGraphQLSelection(field)
-          console.log(`Field ${field.path} (viewsIndex: ${field.viewsIndex}, type: ${fieldType}): graphqlSelection = "${selection}"`)
           return selection
         })
         .join('\n')
-      
-      console.log(`📝 GraphQL fields selection:`, selectedGqlFields)
     }
     
     // Build the GraphQL query following Keystone's exact pattern
@@ -138,22 +127,12 @@ export async function getListItemsAction(
       }
     `
     
-    console.log(`🚀 Executing GraphQL query:`)
-    console.log(query)
-    console.log(`📊 Query variables:`, variables)
-    
     // Execute the query
     const response = await keystoneClient(query, variables, cacheOptions)
     
     if (!response.success) {
-      console.error(`❌ GraphQL query failed:`, response.error)
       return { success: false, error: response.error }
     }
-    
-    console.log(`✅ GraphQL query successful:`, { 
-      itemCount: response.data.items?.length || 0, 
-      totalCount: response.data.count 
-    })
     
     return {
       success: true,
@@ -164,7 +143,6 @@ export async function getListItemsAction(
     }
     
   } catch (error) {
-    console.error(`💥 Error fetching list items for ${listKey}:`, error)
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error occurred'

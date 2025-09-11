@@ -3,6 +3,7 @@ export { OrderDetailsComponent } from './OrderDetailsComponent';
 export { OrderListItem } from './OrderListItem';
 export { Pagination } from './Pagination';
 export { StatusTabs } from './StatusTabs';
+export { StatusBadge } from './StatusBadge';
 export { FulfillmentHistory } from './FulfillmentHistory';
 export { UnfulfilledItems } from './UnfulfilledItems';
 export { CartDialog } from './CartDialog';

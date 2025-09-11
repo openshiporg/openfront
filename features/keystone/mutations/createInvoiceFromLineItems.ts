@@ -96,12 +96,8 @@ async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemI
   }
 
   try {
-    console.log('🔥 CREATING INVOICE - Starting transaction');
-    console.log('🔥 Line items to process:', lineItems.map(item => ({ id: item.id, orderDisplayId: item.orderDisplayId })));
-    
     // Create invoice and line items in transaction
     const result = await sudoContext.prisma.$transaction(async (tx) => {
-      console.log('🔥 Inside transaction - Creating invoice');
       // Create the invoice
       const invoice = await sudoContext.query.Invoice.createOne({
         data: {
@@ -122,20 +118,16 @@ async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemI
           }
         }
       });
-      console.log('🔥 Invoice created with ID:', invoice.id);
 
       // Create invoice line items (junction records)
       const invoiceLineItems = [];
-      console.log('🔥 Creating', lineItems.length, 'invoice line items');
       for (const lineItem of lineItems) {
-        console.log('🔥 Creating InvoiceLineItem for accountLineItem:', lineItem.id);
         const invoiceLineItem = await sudoContext.query.InvoiceLineItem.createOne({
           data: {
             invoice: { connect: { id: invoice.id } },
             accountLineItem: { connect: { id: lineItem.id } }
           }
         });
-        console.log('🔥 Created InvoiceLineItem:', invoiceLineItem.id);
         invoiceLineItems.push(invoiceLineItem);
       }
 
@@ -154,7 +146,6 @@ async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemI
     };
 
   } catch (error) {
-    console.error('Invoice creation error:', error);
     throw new Error(`Failed to create invoice: ${error.message}`);
   }
 }

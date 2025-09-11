@@ -241,9 +241,9 @@ export function ProductCategoryDetailsComponent({
           </div>
           <AccordionContent className="pb-0">
             {/* Responsive Tabs Navigation */}
-            <div className="bg-muted/80 border-b">
+            <div className="bg-muted/40">
               {/* Desktop: Horizontal Tab Buttons */}
-              <div className="hidden md:flex items-center gap-3 px-4 py-2">
+              <div className="hidden md:flex items-center gap-3 px-4 pt-2">
                 {tabs.map((tab) => (
                   <button
                     key={tab.key}
@@ -257,7 +257,7 @@ export function ProductCategoryDetailsComponent({
                   >
                     <div className="flex items-center gap-1.5">
                       <span>Products</span>
-                      <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px]">
+                      <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
                         {tab.count}
                       </span>
                     </div>
@@ -272,7 +272,7 @@ export function ProductCategoryDetailsComponent({
                     <SelectTrigger className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-background border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 h-auto w-auto">
                       <div className="flex items-center gap-1.5">
                         <SelectValue />
-                        <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px]">
+                        <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
                           ({activeTabData?.count || 0})
                         </span>
                       </div>

@@ -260,7 +260,6 @@ async function createAccountFromApprovedRequest(request: any, context: any): Pro
     console.log('fullRequest:', JSON.stringify(fullRequest, null, 2));
 
     if (!fullRequest) {
-      console.error('❌ Full request not found!');
       return null;
     }
 
@@ -274,12 +273,10 @@ async function createAccountFromApprovedRequest(request: any, context: any): Pro
     console.log('defaultCurrency:', defaultCurrency);
 
     if (!defaultCurrency) {
-      console.error('❌ Default USD currency not found');
       return null;
     }
 
     // Create account
-    console.log('🏦 Creating business account...');
     const account = await context.sudo().query.Account.createOne({
       data: {
         user: { connect: { id: fullRequest.user.id } },

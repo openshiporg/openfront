@@ -388,12 +388,12 @@ export async function sendOrderConfirmationEmail(order: any, baseUrl?: string): 
         });
 
         if (webhookResponse.ok) {
-          console.log(`✅ Webhook called successfully for order ${order.displayId}`);
+          // Webhook called successfully
         } else {
-          console.error(`❌ Webhook call failed for order ${order.displayId}: ${webhookResponse.status}`);
+          // Webhook call failed
         }
       } catch (webhookError) {
-        console.error(`❌ Webhook call error for order ${order.displayId}:`, webhookError);
+        // Webhook call error
       }
     }
   } catch (error) {
@@ -474,12 +474,12 @@ export async function sendOrderFulfillmentEmail(order: any, fulfillment: any, ba
         });
 
         if (webhookResponse.ok) {
-          console.log(`✅ Webhook called successfully for shipped order ${order.displayId}`);
+          // Webhook called successfully for shipped order
         } else {
-          console.error(`❌ Webhook call failed for shipped order ${order.displayId}: ${webhookResponse.status}`);
+          // Webhook call failed for shipped order
         }
       } catch (webhookError) {
-        console.error(`❌ Webhook call error for shipped order ${order.displayId}:`, webhookError);
+        // Webhook call error for shipped order
       }
     }
   } catch (error) {

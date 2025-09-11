@@ -3,38 +3,28 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { RotateCcw, Check, Archive, X, AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const statusConfig = {
   pending: {
     label: "Pending",
-    icon: RotateCcw,
-    iconColor: "text-blue-500",
-    color: "blue"
+    dotClass: "bg-blue-500 dark:bg-blue-400 outline-3 -outline-offset-1 outline-blue-100 dark:outline-blue-900/50"
   },
   completed: {
     label: "Completed",
-    icon: Check,
-    iconColor: "text-emerald-500",
-    color: "emerald"
+    dotClass: "bg-green-500 dark:bg-green-400 outline-3 -outline-offset-1 outline-green-100 dark:outline-green-900/50"
   },
   archived: {
     label: "Archived",
-    icon: Archive,
-    iconColor: "text-zinc-500",
-    color: "zinc"
+    dotClass: "bg-zinc-500 dark:bg-zinc-400 outline-3 -outline-offset-1 outline-zinc-100 dark:outline-zinc-900/50"
   },
   canceled: {
     label: "Canceled",
-    icon: X,
-    iconColor: "text-red-500",
-    color: "rose"
+    dotClass: "bg-red-500 dark:bg-red-400 outline-3 -outline-offset-1 outline-red-100 dark:outline-red-900/50"
   },
   requires_action: {
     label: "Requires Action",
-    icon: AlertTriangle,
-    iconColor: "text-orange-500",
-    color: "orange"
+    dotClass: "bg-orange-500 dark:bg-orange-400 outline-3 -outline-offset-1 outline-orange-100 dark:outline-orange-900/50"
   },
 } as const;
 
@@ -159,8 +149,7 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
             </div>
           </div>
           {statuses.map((status, index) => {
-            const StatusIcon = statusConfig[status.value as keyof typeof statusConfig].icon;
-            const iconColor = statusConfig[status.value as keyof typeof statusConfig].iconColor;
+            const dotClass = statusConfig[status.value as keyof typeof statusConfig].dotClass;
             return (
               <div
                 key={status.value}
@@ -175,7 +164,10 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
                 onClick={() => handleStatusChange(status.value)}
               >
                 <div className="text-sm font-medium leading-5 whitespace-nowrap flex items-center justify-center h-full gap-2">
-                  <StatusIcon className={`h-4 w-4 ${iconColor}`} />
+                  <span className={cn(
+                    "inline-block size-2 shrink-0 rounded-full outline",
+                    dotClass
+                  )} />
                   {status.label}
                   <span className="rounded-sm bg-background border shadow-xs px-1.5 py-0 text-[10px] leading-[14px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 inline-flex items-center h-[18px]">
                     {status.count}

@@ -115,7 +115,6 @@ async function getUnpaidLineItemsByRegion(root, { accountId }, context) {
     };
 
   } catch (error) {
-    console.error('Error getting unpaid line items by region:', error);
     throw new Error(`Failed to get unpaid line items: ${error.message}`);
   }
 }

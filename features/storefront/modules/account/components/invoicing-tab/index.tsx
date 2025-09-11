@@ -112,8 +112,6 @@ const InvoicingTab = ({ customer, businessAccount, businessAccountRequest, order
   }
 
   const handleWebhookUpdate = async () => {
-    console.log('handleWebhookUpdate called with URL:', webhookUrl.trim())
-    
     // Allow empty webhook URL to clear it
     // if (!webhookUrl.trim()) {
     //   toast({
@@ -130,9 +128,7 @@ const InvoicingTab = ({ customer, businessAccount, businessAccountRequest, order
       const formData = new FormData()
       formData.append('webhookUrl', webhookUrl.trim())
       
-      console.log('Calling updateWebhookUrl server action')
       const result = await updateWebhookUrl({ success: false, error: '' }, formData)
-      console.log('Server action result:', result)
       
       setWebhookLoading(false)
       

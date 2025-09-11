@@ -4728,10 +4728,7 @@ async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemI
     throw new Error("Invoice total must be greater than zero");
   }
   try {
-    console.log("\u{1F525} CREATING INVOICE - Starting transaction");
-    console.log("\u{1F525} Line items to process:", lineItems.map((item) => ({ id: item.id, orderDisplayId: item.orderDisplayId })));
     const result = await sudoContext.prisma.$transaction(async (tx) => {
-      console.log("\u{1F525} Inside transaction - Creating invoice");
       const invoice = await sudoContext.query.Invoice.createOne({
         data: {
           user: { connect: { id: account.user.id } },
@@ -4753,18 +4750,14 @@ async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemI
           }
         }
       });
-      console.log("\u{1F525} Invoice created with ID:", invoice.id);
       const invoiceLineItems = [];
-      console.log("\u{1F525} Creating", lineItems.length, "invoice line items");
       for (const lineItem of lineItems) {
-        console.log("\u{1F525} Creating InvoiceLineItem for accountLineItem:", lineItem.id);
         const invoiceLineItem = await sudoContext.query.InvoiceLineItem.createOne({
           data: {
             invoice: { connect: { id: invoice.id } },
             accountLineItem: { connect: { id: lineItem.id } }
           }
         });
-        console.log("\u{1F525} Created InvoiceLineItem:", invoiceLineItem.id);
         invoiceLineItems.push(invoiceLineItem);
       }
       return {
@@ -4780,7 +4773,6 @@ async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemI
       message: `Invoice created with ${lineItems.length} orders`
     };
   } catch (error) {
-    console.error("Invoice creation error:", error);
     throw new Error(`Failed to create invoice: ${error.message}`);
   }
 }
@@ -4915,7 +4907,6 @@ async function getUnpaidLineItemsByRegion(root, { accountId }, context) {
       message: `Found ${unpaidLineItems.length} unpaid orders across ${regionsWithLineItems.length} regions`
     };
   } catch (error) {
-    console.error("Error getting unpaid line items by region:", error);
     throw new Error(`Failed to get unpaid line items: ${error.message}`);
   }
 }
@@ -4933,7 +4924,6 @@ var getUnpaidLineItemsByRegion_default = getUnpaidLineItemsByRegion;
 // features/keystone/mutations/createInvoicePaymentSessions.ts
 async function createInvoicePaymentSessions(root, { invoiceId }, context) {
   const sudoContext = context.sudo();
-  console.log("\u{1F525} CREATING PAYMENT SESSIONS - Starting with invoice ID:", invoiceId);
   const invoice = await sudoContext.query.Invoice.findOne({
     where: { id: invoiceId },
     query: `
@@ -4960,7 +4950,6 @@ async function createInvoicePaymentSessions(root, { invoiceId }, context) {
       }
     `
   });
-  console.log("\u{1F525} Found invoice:", invoice?.id, "totalAmount:", invoice?.totalAmount);
   if (!invoice) {
     throw new Error("Invoice not found");
   }
@@ -4979,18 +4968,13 @@ async function createInvoicePaymentSessions(root, { invoiceId }, context) {
       }
     `
   });
-  console.log("\u{1F525} Found invoice line items:", invoiceLineItems.length);
   const invoiceLineItem = invoiceLineItems[0];
-  console.log("\u{1F525} First invoice line item region:", invoiceLineItem?.accountLineItem?.region?.id);
   const availableProviders = invoiceLineItem?.accountLineItem?.region?.paymentProviders?.filter((p) => p.isInstalled) || [];
-  console.log("\u{1F525} Available payment providers:", availableProviders.map((p) => ({ id: p.id, code: p.code })));
   if (availableProviders.length === 0) {
     throw new Error("No payment providers are available for this region");
   }
   let paymentCollection = invoice.paymentCollection;
-  console.log("\u{1F525} Existing payment collection:", paymentCollection?.id);
   if (!paymentCollection) {
-    console.log("\u{1F525} Creating payment collection for invoice:", invoiceId, "amount:", invoice.totalAmount);
     paymentCollection = await sudoContext.db.PaymentCollection.createOne({
       data: {
         invoice: { connect: { id: invoiceId } },
@@ -4999,17 +4983,13 @@ async function createInvoicePaymentSessions(root, { invoiceId }, context) {
       },
       query: "id"
     });
-    console.log("\u{1F525} Created payment collection:", paymentCollection.id);
   }
-  console.log("\u{1F525} Creating payment sessions for", availableProviders.length, "providers");
   for (let i = 0; i < availableProviders.length; i++) {
     const provider = availableProviders[i];
     const existingSession = invoice.paymentCollection?.paymentSessions?.find(
       (s) => s.paymentProvider.id === provider.id
     );
-    console.log("\u{1F525} Processing provider:", provider.code, "existing session:", !!existingSession);
     if (!existingSession) {
-      console.log("\u{1F525} Creating payment session for provider:", provider.code);
       const newSession = await sudoContext.db.PaymentSession.createOne({
         data: {
           paymentCollection: { connect: { id: paymentCollection.id } },
@@ -5023,7 +5003,6 @@ async function createInvoicePaymentSessions(root, { invoiceId }, context) {
         },
         query: "id"
       });
-      console.log("\u{1F525} Created payment session:", newSession.id, "isSelected:", i === 0);
     }
   }
   const invoiceWithPaymentCollection = await sudoContext.query.Invoice.findOne({
@@ -5050,11 +5029,8 @@ var createInvoicePaymentSessions_default = createInvoicePaymentSessions;
 
 // features/keystone/mutations/completeInvoicePayment.ts
 async function completeInvoicePayment(root, { paymentSessionId }, context) {
-  console.log("\u{1F680} BACKEND: completeInvoicePayment started with paymentSessionId:", paymentSessionId);
   const sudoContext = context.sudo();
   const user = context.session?.itemId;
-  console.log("\u{1F680} BACKEND: User ID:", user);
-  console.log("\u{1F680} BACKEND: Fetching payment session...");
   const paymentSession = await sudoContext.query.PaymentSession.findOne({
     where: { id: paymentSessionId },
     query: `
@@ -5086,57 +5062,32 @@ async function completeInvoicePayment(root, { paymentSessionId }, context) {
     `
   });
   if (!paymentSession) {
-    console.log("\u274C BACKEND: Payment session not found");
     throw new Error("Payment session not found");
   }
-  console.log("\u{1F680} BACKEND: Payment session found:", {
-    id: paymentSession.id,
-    provider: paymentSession.paymentProvider?.code,
-    amount: paymentSession.amount,
-    hasData: !!paymentSession.data
-  });
   const invoice = paymentSession.paymentCollection.invoice;
   if (!invoice) {
-    console.log("\u274C BACKEND: Invoice not found");
     throw new Error("Invoice not found");
   }
-  console.log("\u{1F680} BACKEND: Invoice found:", {
-    id: invoice.id,
-    invoiceNumber: invoice.invoiceNumber,
-    status: invoice.status,
-    totalAmount: invoice.totalAmount,
-    accountUserId: invoice.account.user.id
-  });
   if (!user || invoice.account.user.id !== user) {
-    console.log("\u274C BACKEND: Unauthorized access - User:", user, "Invoice user:", invoice.account.user.id);
     throw new Error("Unauthorized access to invoice");
   }
-  console.log("\u2705 BACKEND: User authorized for invoice");
-  console.log("\u{1F4B3} BACKEND: Processing payment with provider:", paymentSession.paymentProvider.code);
   let paymentResult;
   switch (paymentSession.paymentProvider.code) {
     case "pp_stripe_stripe":
-      console.log("\u{1F4B3} BACKEND: Calling captureStripePayment...");
       paymentResult = await captureStripePayment2(paymentSession);
       break;
     case "pp_paypal_paypal":
-      console.log("\u{1F4B3} BACKEND: Calling capturePayPalPayment...");
       paymentResult = await capturePayPalPayment2(paymentSession);
       break;
     case "pp_system_default":
-      console.log("\u{1F4B3} BACKEND: Manual payment - marking as pending");
       paymentResult = { status: "manual_pending", paymentIntentId: null };
       break;
     default:
-      console.log("\u274C BACKEND: Unsupported payment provider:", paymentSession.paymentProvider.code);
       throw new Error(`Unsupported payment provider: ${paymentSession.paymentProvider.code}`);
   }
-  console.log("\u{1F4B3} BACKEND: Payment result:", paymentResult);
   if (paymentResult.status !== "succeeded" && paymentResult.status !== "manual_pending") {
-    console.log("\u274C BACKEND: Payment failed with result:", paymentResult);
     throw new Error(`Payment failed: ${paymentResult.error}`);
   }
-  console.log("\u{1F4DD} BACKEND: Updating invoice status to paid...");
   const updatedInvoice = await sudoContext.query.Invoice.updateOne({
     where: { id: invoice.id },
     data: {
@@ -5144,15 +5095,8 @@ async function completeInvoicePayment(root, { paymentSessionId }, context) {
       paidAt: (/* @__PURE__ */ new Date()).toISOString()
     }
   });
-  console.log("\u{1F4DD} BACKEND: Invoice updated:", {
-    id: updatedInvoice.id,
-    status: "paid"
-  });
-  console.log("\u{1F4DD} BACKEND: Creating payment record...");
   await createInvoicePaymentRecord(paymentResult, invoice, paymentSession, sudoContext);
-  console.log("\u{1F4DD} BACKEND: Marking individual orders as paid...");
   await markOrdersAsPaid(invoice, sudoContext);
-  console.log("\u2705 BACKEND: Invoice payment completed successfully");
   return {
     id: updatedInvoice.id,
     status: "succeeded",
@@ -5168,15 +5112,10 @@ async function captureStripePayment2(session) {
   }
   try {
     const paymentIntentId = session.data.clientSecret?.split("_secret_")[0];
-    console.log("=== captureStripePayment for Invoice ===");
-    console.log("session.data:", session.data);
-    console.log("paymentIntentId:", paymentIntentId);
     if (!paymentIntentId) {
       throw new Error("Invalid Stripe payment intent");
     }
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-    console.log("PaymentIntent status:", paymentIntent.status);
-    console.log("PaymentIntent amount:", paymentIntent.amount);
     if (paymentIntent.status === "succeeded") {
       return {
         status: "succeeded",
@@ -5238,9 +5177,6 @@ async function capturePayPalPayment2(session) {
       throw new Error(`PayPal order verification failed: ${orderResponse.status}`);
     }
     const orderData = await orderResponse.json();
-    console.log("=== capturePayPalPayment for Invoice ===");
-    console.log("PayPal Order ID:", session.data.orderId);
-    console.log("PayPal Order Status:", orderData.status);
     if (orderData.status === "COMPLETED" || orderData.status === "APPROVED") {
       return {
         status: "succeeded",
@@ -5255,7 +5191,6 @@ async function capturePayPalPayment2(session) {
       };
     }
   } catch (error) {
-    console.error("PayPal verification error:", error);
     return {
       status: "failed",
       paymentIntentId: session.data.orderId,
@@ -5300,27 +5235,18 @@ async function markOrdersAsPaid(invoice, sudoContext) {
         }
       `
     });
-    console.log("\u{1F4DD} BACKEND: Found invoice line items:", invoiceLineItems.length);
     for (const lineItem of invoiceLineItems) {
       if (lineItem.accountLineItem) {
         const accountLineItem = lineItem.accountLineItem;
-        console.log("\u{1F4DD} BACKEND: Updating AccountLineItem payment status:", {
-          accountLineItemId: accountLineItem.id,
-          orderDisplayId: accountLineItem.orderDisplayId,
-          currentStatus: accountLineItem.paymentStatus,
-          amount: accountLineItem.amount
-        });
         await sudoContext.query.AccountLineItem.updateOne({
           where: { id: accountLineItem.id },
           data: {
             paymentStatus: "paid"
           }
         });
-        console.log("\u2705 BACKEND: AccountLineItem for Order #" + accountLineItem.orderDisplayId + " marked as PAID");
       }
     }
   } catch (error) {
-    console.error("\u274C BACKEND: Error marking account line items as paid:", error);
     throw error;
   }
 }
@@ -5328,9 +5254,6 @@ var completeInvoicePayment_default = completeInvoicePayment;
 
 // features/keystone/mutations/initiateInvoicePaymentSession.ts
 async function initiateInvoicePaymentSession(root, { invoiceId, paymentProviderId }, context) {
-  console.log("\u{1F680} INITIATE INVOICE PAYMENT SESSION - START");
-  console.log("\u{1F680} Invoice ID:", invoiceId);
-  console.log("\u{1F680} Payment Provider ID:", paymentProviderId);
   const sudoContext = context.sudo();
   const invoice = await sudoContext.query.Invoice.findOne({
     where: { id: invoiceId },
@@ -5364,12 +5287,8 @@ async function initiateInvoicePaymentSession(root, { invoiceId, paymentProviderI
     `
   });
   if (!invoice) {
-    console.log("\u{1F680} ERROR: Invoice not found for ID:", invoiceId);
     throw new Error("Invoice not found");
   }
-  console.log("\u{1F680} Found invoice:", invoice.id, "totalAmount:", invoice.totalAmount);
-  console.log("\u{1F680} Invoice payment collection ID:", invoice.paymentCollection?.id);
-  console.log("\u{1F680} Number of existing payment sessions:", invoice.paymentCollection?.paymentSessions?.length || 0);
   const provider = await sudoContext.query.PaymentProvider.findOne({
     where: { code: paymentProviderId },
     query: `
@@ -5385,11 +5304,8 @@ async function initiateInvoicePaymentSession(root, { invoiceId, paymentProviderI
     `
   });
   if (!provider || !provider.isInstalled) {
-    console.log("\u{1F680} ERROR: Payment provider not found or not installed for code:", paymentProviderId);
     throw new Error("Payment provider not found or not installed");
   }
-  console.log("\u{1F680} Found payment provider:", provider.code, "ID:", provider.id);
-  console.log("\u{1F680} Provider is installed:", provider.isInstalled);
   if (!invoice.paymentCollection) {
     invoice.paymentCollection = await sudoContext.query.PaymentCollection.createOne({
       data: {
@@ -5403,16 +5319,10 @@ async function initiateInvoicePaymentSession(root, { invoiceId, paymentProviderI
   const existingSession = invoice.paymentCollection?.paymentSessions?.find(
     (s) => s.paymentProvider.code === paymentProviderId && !s.isInitiated
   );
-  console.log("\u{1F680} Looking for existing session for provider:", paymentProviderId);
-  console.log("\u{1F680} Found existing session:", !!existingSession, existingSession?.id);
   if (existingSession) {
-    console.log("\u{1F680} Using existing session:", existingSession.id);
-    console.log("\u{1F680} Existing session data:", JSON.stringify(existingSession.data, null, 2));
     const needsInitialization = !existingSession.data || Object.keys(existingSession.data).length === 0;
-    console.log("\u{1F680} Session needs initialization:", needsInitialization);
     let sessionData = existingSession.data;
     if (needsInitialization) {
-      console.log("\u{1F680} Initializing session with payment adapter");
       try {
         sessionData = await createPayment({
           provider,
@@ -5420,7 +5330,6 @@ async function initiateInvoicePaymentSession(root, { invoiceId, paymentProviderI
           amount: invoice.totalAmount,
           currency: invoice.currency.code
         });
-        console.log("\u{1F680} Payment adapter returned session data:", JSON.stringify(sessionData, null, 2));
         await sudoContext.query.PaymentSession.updateOne({
           where: { id: existingSession.id },
           data: {
@@ -5428,40 +5337,29 @@ async function initiateInvoicePaymentSession(root, { invoiceId, paymentProviderI
             isInitiated: true
           }
         });
-        console.log("\u{1F680} Updated existing session with new data");
       } catch (error) {
-        console.error("\u{1F680} Failed to initialize session:", error);
         throw error;
       }
     }
     const otherSessions = invoice.paymentCollection.paymentSessions.filter(
       (s) => s.id !== existingSession.id && s.isSelected
     );
-    console.log("\u{1F680} Unselecting", otherSessions.length, "other sessions");
     for (const session of otherSessions) {
-      console.log("\u{1F680} Unselecting session:", session.id, "provider:", session.paymentProvider?.code);
       await sudoContext.query.PaymentSession.updateOne({
         where: { id: session.id },
         data: { isSelected: false }
       });
     }
-    console.log("\u{1F680} Selecting existing session:", existingSession.id);
     await sudoContext.query.PaymentSession.updateOne({
       where: { id: existingSession.id },
       data: { isSelected: true }
     });
-    console.log("\u{1F680} EXISTING SESSION SELECTED AND INITIALIZED - DONE");
     return {
       ...existingSession,
       data: sessionData
     };
   }
-  console.log("\u{1F680} No existing session found, creating new payment session");
   try {
-    console.log("\u{1F680} Calling createPayment adapter with:");
-    console.log("\u{1F680} - Provider code:", provider.code);
-    console.log("\u{1F680} - Amount:", invoice.totalAmount);
-    console.log("\u{1F680} - Currency:", invoice.currency.code);
     const sessionData = await createPayment({
       provider,
       cart: invoice,
@@ -5469,19 +5367,15 @@ async function initiateInvoicePaymentSession(root, { invoiceId, paymentProviderI
       amount: invoice.totalAmount,
       currency: invoice.currency.code
     });
-    console.log("\u{1F680} Payment adapter returned session data:", JSON.stringify(sessionData, null, 2));
     const existingSelectedSessions = invoice.paymentCollection.paymentSessions?.filter(
       (s) => s.isSelected
     ) || [];
-    console.log("\u{1F680} Unselecting", existingSelectedSessions.length, "existing selected sessions");
     for (const session of existingSelectedSessions) {
-      console.log("\u{1F680} Unselecting existing session:", session.id, "provider:", session.paymentProvider?.code);
       await sudoContext.query.PaymentSession.updateOne({
         where: { id: session.id },
         data: { isSelected: false }
       });
     }
-    console.log("\u{1F680} Creating new payment session with data:", JSON.stringify(sessionData, null, 2));
     const newSession = await sudoContext.query.PaymentSession.createOne({
       data: {
         paymentCollection: { connect: { id: invoice.paymentCollection.id } },
@@ -5498,11 +5392,8 @@ async function initiateInvoicePaymentSession(root, { invoiceId, paymentProviderI
         isInitiated
       `
     });
-    console.log("\u{1F680} Created new payment session:", newSession.id);
-    console.log("\u{1F680} NEW SESSION CREATED - DONE");
     return newSession;
   } catch (error) {
-    console.error("Invoice payment session creation failed:", error);
     throw error;
   }
 }
@@ -8289,12 +8180,9 @@ async function sendOrderConfirmationEmail(order, baseUrl) {
           body: JSON.stringify(webhookPayload)
         });
         if (webhookResponse.ok) {
-          console.log(`\u2705 Webhook called successfully for order ${order.displayId}`);
         } else {
-          console.error(`\u274C Webhook call failed for order ${order.displayId}: ${webhookResponse.status}`);
         }
       } catch (webhookError) {
-        console.error(`\u274C Webhook call error for order ${order.displayId}:`, webhookError);
       }
     }
   } catch (error) {
@@ -8362,12 +8250,9 @@ async function sendOrderFulfillmentEmail(order, fulfillment, baseUrl) {
           body: JSON.stringify(webhookPayload)
         });
         if (webhookResponse.ok) {
-          console.log(`\u2705 Webhook called successfully for shipped order ${order.displayId}`);
         } else {
-          console.error(`\u274C Webhook call failed for shipped order ${order.displayId}: ${webhookResponse.status}`);
         }
       } catch (webhookError) {
-        console.error(`\u274C Webhook call error for shipped order ${order.displayId}:`, webhookError);
       }
     }
   } catch (error) {
@@ -9630,11 +9515,6 @@ var Invoice = (0, import_core27.list)({
                   currency = invoice?.currency;
                 }
                 if (!currency || !item.totalAmount) {
-                  console.log("\u{1F525} VIRTUAL FIELD formattedTotal - Missing data:", {
-                    currency,
-                    totalAmount: item.totalAmount,
-                    itemId: item.id
-                  });
                   return "$0.00";
                 }
                 const divisor = currency.noDivisionCurrency ? 1 : 100;
@@ -9644,7 +9524,6 @@ var Invoice = (0, import_core27.list)({
                   currency: currency.code
                 }).format(amount);
               } catch (error) {
-                console.error("\u{1F525} VIRTUAL FIELD formattedTotal - ERROR:", error);
                 return "$0.00";
               }
             }
@@ -9668,7 +9547,6 @@ var Invoice = (0, import_core27.list)({
                 });
                 return invoice?.lineItems?.length || 0;
               } catch (error) {
-                console.error("\u{1F525} VIRTUAL FIELD itemCount - ERROR:", error);
                 return 0;
               }
             }
@@ -9703,7 +9581,6 @@ var Invoice = (0, import_core27.list)({
                 });
                 return invoice?.paymentCollection?.paymentSessions || [];
               } catch (error) {
-                console.error("\u{1F525} VIRTUAL FIELD paymentSessions - ERROR:", error);
                 return [];
               }
             }
@@ -10028,7 +9905,6 @@ async function createAccountFromApprovedRequest(request, context) {
     });
     console.log("fullRequest:", JSON.stringify(fullRequest, null, 2));
     if (!fullRequest) {
-      console.error("\u274C Full request not found!");
       return null;
     }
     console.log("\u{1F4B0} Looking for USD currency...");
@@ -10038,10 +9914,8 @@ async function createAccountFromApprovedRequest(request, context) {
     });
     console.log("defaultCurrency:", defaultCurrency);
     if (!defaultCurrency) {
-      console.error("\u274C Default USD currency not found");
       return null;
     }
-    console.log("\u{1F3E6} Creating business account...");
     const account = await context.sudo().query.Account.createOne({
       data: {
         user: { connect: { id: fullRequest.user.id } },

@@ -55,7 +55,6 @@ export default function InvoicePaymentDialog({
       setAvailablePaymentMethods(paymentMethods || [])
       
     } catch (error) {
-      console.error('Error loading payment methods:', error)
       setAvailablePaymentMethods([])
     }
   }
@@ -125,7 +124,6 @@ export default function InvoicePaymentDialog({
         }
       }
     } catch (error) {
-      console.error('Error creating invoice with payment sessions:', error)
       toast({
         variant: "destructive",
         title: "Error",
@@ -146,7 +144,6 @@ export default function InvoicePaymentDialog({
       // Find the payment provider ID for this payment method
       const paymentProvider = availablePaymentMethods.find(method => method.code === newPaymentMethod)
       if (!paymentProvider) {
-        console.error('Payment provider not found for method:', newPaymentMethod)
         return
       }
 
@@ -190,7 +187,6 @@ export default function InvoicePaymentDialog({
         })
       }
     } catch (error) {
-      console.error('Error changing payment method:', error)
       toast({
         variant: "destructive",
         title: "Error",
@@ -257,7 +253,6 @@ export default function InvoicePaymentDialog({
         setStep('review')
       }
     } catch (error) {
-      console.error('Error setting up payment method:', error)
       setCardError(error instanceof Error ? error.message : 'Payment setup failed')
     } finally {
       setPaymentLoading(false)
