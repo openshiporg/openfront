@@ -47,6 +47,7 @@ import { RiLoader4Line } from '@remixicon/react';
 import { Badge } from '@/components/ui/badge-button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FullJsonEditor } from './FullJsonEditor';
+import { CustomSetupSteps } from './CustomSetupSteps';
 
 const GRAPHQL_ENDPOINT = '/api/graphql';
 
@@ -89,6 +90,7 @@ const STORE_TEMPLATES = {
     ],
     // Display names for UI
     displayNames: {
+      store: ['Impossible Tees'],
       regions: ['North America (USD)', 'Europe (EUR)', 'United Kingdom (GBP)'],
       paymentProviders: ['Stripe', 'PayPal', 'Cash on Delivery'],
       shipping: ['Standard Shipping', 'Express Shipping', 'Return Shipping'],
@@ -121,6 +123,7 @@ const STORE_TEMPLATES = {
     products: ['penrose-triangle-tshirt'],
     // Display names for UI
     displayNames: {
+      store: ['Impossible Tees'],
       regions: ['North America (USD)'],
       paymentProviders: ['Cash on Delivery'],
       shipping: ['Standard Shipping'],
@@ -142,6 +145,7 @@ const STORE_TEMPLATES = {
     products: ['penrose-triangle-tshirt'],
     // Display names for UI (same as minimal by default)
     displayNames: {
+      store: ['Impossible Tees'],
       regions: ['North America (USD)'],
       paymentProviders: ['Cash on Delivery'],
       shipping: ['Standard Shipping'],
@@ -156,6 +160,14 @@ const STORE_TEMPLATES = {
 const SECTION_DEFINITIONS = [
   {
     id: 1,
+    type: 'store',
+    label: 'Store Information',
+    getItemsFn: (template: 'full' | 'minimal' | 'custom') =>
+      ['Impossible Tees'],
+    jsonKey: 'store' as const,
+  },
+  {
+    id: 2,
     type: 'regions',
     label: 'Regions & Countries',
     getItemsFn: (template: 'full' | 'minimal' | 'custom') =>
@@ -163,7 +175,7 @@ const SECTION_DEFINITIONS = [
     jsonKey: 'regions' as const,
   },
   {
-    id: 2,
+    id: 3,
     type: 'paymentProviders',
     label: 'Payment Providers',
     getItemsFn: (template: 'full' | 'minimal' | 'custom') =>
@@ -171,7 +183,7 @@ const SECTION_DEFINITIONS = [
     jsonKey: 'paymentProviders' as const,
   },
   {
-    id: 3,
+    id: 4,
     type: 'shipping',
     label: 'Shipping Options',
     getItemsFn: (template: 'full' | 'minimal' | 'custom') =>
@@ -179,7 +191,7 @@ const SECTION_DEFINITIONS = [
     jsonKey: 'shipping_options' as const,
   },
   {
-    id: 4,
+    id: 5,
     type: 'categories',
     label: 'Product Categories',
     getItemsFn: (template: 'full' | 'minimal' | 'custom') =>
@@ -187,7 +199,7 @@ const SECTION_DEFINITIONS = [
     jsonKey: 'categories' as const,
   },
   {
-    id: 5,
+    id: 6,
     type: 'collections',
     label: 'Collections',
     getItemsFn: (template: 'full' | 'minimal' | 'custom') =>
@@ -195,7 +207,7 @@ const SECTION_DEFINITIONS = [
     jsonKey: 'collections' as const,
   },
   {
-    id: 6,
+    id: 7,
     type: 'products',
     label: 'Products',
     getItemsFn: (template: 'full' | 'minimal' | 'custom') =>
@@ -207,10 +219,12 @@ const SECTION_DEFINITIONS = [
 // Helper function to extract display items from JSON data
 function getItemsFromJsonData(jsonData: any, sectionType: string): string[] {
   if (!jsonData) return [];
-  
+
   switch (sectionType) {
+    case 'store':
+      return jsonData.store ? [jsonData.store.name || 'Unknown Store'] : ['Impossible Tees'];
     case 'regions':
-      return (jsonData.regions || []).map((r: any) => 
+      return (jsonData.regions || []).map((r: any) =>
         `${r.name || 'Unknown'} (${(r.currencyCode || 'USD').toUpperCase()})`
       );
     case 'paymentProviders':
@@ -722,6 +736,7 @@ const OnboardingDialog: React.FC<OnboardingDialogProps> = ({
   }, [selectedTemplate]);
   const [progressMessage, setProgressMessage] = useState<string>('');
   const [loadingItems, setLoadingItems] = useState<Record<string, string[]>>({
+    store: [],
     regions: [],
     paymentProviders: [],
     shipping: [],
@@ -732,6 +747,7 @@ const OnboardingDialog: React.FC<OnboardingDialogProps> = ({
   const [completedItems, setCompletedItems] = useState<
     Record<string, string[]>
   >({
+    store: [],
     regions: [],
     paymentProviders: [],
     shipping: [],
@@ -748,6 +764,7 @@ const OnboardingDialog: React.FC<OnboardingDialogProps> = ({
   // Helper function to get display names from current data
   const getDisplayNamesFromData = (data: any) => {
     return {
+      store: getItemsFromJsonData(data, 'store'),
       regions: getItemsFromJsonData(data, 'regions'),
       paymentProviders: getItemsFromJsonData(data, 'paymentProviders'),
       shipping: getItemsFromJsonData(data, 'shipping'),
@@ -852,6 +869,7 @@ const OnboardingDialog: React.FC<OnboardingDialogProps> = ({
       }));
 
       setCompletedItems({
+        store: [...displayNames.store],
         regions: [...displayNames.regions],
         paymentProviders: [...displayNames.paymentProviders],
         shipping: [...displayNames.shipping],
@@ -932,6 +950,7 @@ const OnboardingDialog: React.FC<OnboardingDialogProps> = ({
 
     // Reset state
     setLoadingItems({
+      store: [],
       regions: [],
       paymentProviders: [],
       shipping: [],
@@ -941,6 +960,7 @@ const OnboardingDialog: React.FC<OnboardingDialogProps> = ({
     });
 
     setCompletedItems({
+      store: [],
       regions: [],
       paymentProviders: [],
       shipping: [],
@@ -967,6 +987,18 @@ const OnboardingDialog: React.FC<OnboardingDialogProps> = ({
 
       // 0. Create the store first
       setProgress('Creating store...');
+
+      // Use store data from JSON if available, fallback to defaults
+      const storeData = data.store || {
+        name: 'Impossible Tees',
+        defaultCurrencyCode: 'usd',
+        homepageTitle: 'Modern Apparel Store',
+        homepageDescription: 'Quality clothing and unique designs.',
+      };
+
+      // Set the store as loading
+      setItemLoading('store', storeData.name);
+
       let createdStoreId = '';
       try {
         const storeMutation = gql`
@@ -977,15 +1009,14 @@ const OnboardingDialog: React.FC<OnboardingDialogProps> = ({
             }
           }
         `;
+
         const storeResult = (await client.request(storeMutation, {
-          data: {
-            name: 'Impossible Tees',
-            defaultCurrencyCode: 'usd',
-            homepageTitle: 'Modern Apparel Store',
-            homepageDescription: 'Quality clothing and unique designs.',
-          },
+          data: storeData,
         })) as { createStore: { id: string } };
         createdStoreId = storeResult.createStore.id;
+
+        // Mark store as completed
+        setItemCompleted('store', storeData.name);
       } catch (error: any) {
         console.error('Error creating store:', error);
         // Continue with onboarding even if store creation fails
@@ -1820,14 +1851,14 @@ const OnboardingDialog: React.FC<OnboardingDialogProps> = ({
 
           <div className="flex-1 max-h-[60vh] lg:max-h-[70vh] overflow-y-auto p-4 sm:p-6 order-2 lg:order-none">
             {selectedTemplate === 'custom' && step === 'template' && !customJsonApplied ? (
-              /* Custom JSON Editor */
-              <FullJsonEditor
+              /* Custom Setup Steps */
+              <CustomSetupSteps
                 currentJson={currentJsonData}
                 onJsonUpdate={(newJsonData) => {
                   setCurrentJsonData(newJsonData);
                   setCustomJsonApplied(true);
                 }}
-                templateName="Custom"
+                onBack={() => setCustomJsonApplied(false)}
               />
             ) : (
               /* Unified Section Renderer Component */
