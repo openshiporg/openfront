@@ -40,7 +40,6 @@ import { Home, Database, ChevronRight, Package } from 'lucide-react'
 import { Logo, LogoIcon } from '@/features/dashboard/components/Logo'
 import { UserProfileClient } from './UserProfileClient'
 import { OnboardingCards } from '@/features/platform/onboarding/components/OnboardingCards'
-import OnboardingDialog from '@/features/platform/onboarding/components/OnboardingDialog'
 import { dismissOnboarding } from '@/features/platform/onboarding/actions/onboarding'
 import { platformNavGroups, platformStandaloneItems, getPlatformNavItemsWithBasePath } from '@/features/platform/lib/navigation'
 import { useDashboard } from '../context/DashboardProvider'
@@ -58,12 +57,12 @@ interface User {
 interface SidebarProps {
   adminMeta: AdminMeta | null
   user?: User | null
+  onOpenDialog?: () => void
 }
 
-export function Sidebar({ adminMeta, user }: SidebarProps) {
+export function Sidebar({ adminMeta, user, onOpenDialog }: SidebarProps) {
   const { isMobile, setOpenMobile } = useSidebar()
   const pathname = usePathname()
-  const [isOnboardingDialogOpen, setIsOnboardingDialogOpen] = React.useState(false)
   const { basePath } = useDashboard()
 
   const lists = adminMeta?.lists || {}
@@ -374,7 +373,7 @@ export function Sidebar({ adminMeta, user }: SidebarProps) {
                 console.error('Error dismissing onboarding:', error);
               }
             }}
-            onOpenDialog={() => setIsOnboardingDialogOpen(true)}
+            onOpenDialog={onOpenDialog}
           />
         </div>
         
@@ -383,12 +382,6 @@ export function Sidebar({ adminMeta, user }: SidebarProps) {
       </SidebarFooter>
       
       <SidebarRail />
-      
-      {/* Onboarding Dialog */}
-      <OnboardingDialog
-        isOpen={isOnboardingDialogOpen}
-        onClose={() => setIsOnboardingDialogOpen(false)}
-      />
     </SidebarComponent>
   )
 }

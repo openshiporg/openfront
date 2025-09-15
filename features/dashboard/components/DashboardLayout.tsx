@@ -17,6 +17,7 @@ import { ChevronRight, Sparkles, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { AiConfigProvider, useChatMode as useAiChatMode } from '../hooks/use-ai-config'
+import OnboardingDialog from '@/features/platform/onboarding/components/OnboardingDialog'
 
 // Chat mode context
 type ChatMode = 'sidebar' | 'chatbox';
@@ -102,16 +103,21 @@ function FloatingChatButton() {
 
 function DashboardLayoutContent({ children, adminMeta, authenticatedItem }: DashboardLayoutProps) {
   const { chatMode, setChatMode, isFloatingChatVisible, setIsFloatingChatVisible } = useChatMode()
-  
+  const [isOnboardingDialogOpen, setIsOnboardingDialogOpen] = React.useState(false)
+
   return (
     <>
-      <Sidebar adminMeta={adminMeta} user={authenticatedItem} />
+      <Sidebar
+        adminMeta={adminMeta}
+        user={authenticatedItem}
+        onOpenDialog={() => setIsOnboardingDialogOpen(true)}
+      />
       <SidebarInset className="min-w-0">
         {children}
       </SidebarInset>
       {chatMode === 'sidebar' && <RightSidebar side="right" />}
       <FloatingChatButton />
-      
+
       {/* Floating Chat Box */}
       {chatMode === 'chatbox' && (
         <FloatingChatBox
@@ -120,6 +126,12 @@ function DashboardLayoutContent({ children, adminMeta, authenticatedItem }: Dash
           onModeChange={() => setChatMode('sidebar')}
         />
       )}
+
+      {/* Onboarding Dialog - Now at layout level, not hidden by sidebar */}
+      <OnboardingDialog
+        isOpen={isOnboardingDialogOpen}
+        onClose={() => setIsOnboardingDialogOpen(false)}
+      />
     </>
   )
 }

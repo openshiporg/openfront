@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { Copy, Check, Clipboard, ArrowLeft } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import seedData from '@/features/platform/onboarding/lib/seed.json';
+import React, { useState } from "react";
+import { Copy, Check, Clipboard, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { DataCard } from "./DataCard";
+import seedData from "@/features/platform/onboarding/lib/seed.json";
 
 interface CustomSetupStepsProps {
   currentJson?: any;
@@ -11,7 +12,10 @@ interface CustomSetupStepsProps {
   onBack?: () => void;
 }
 
-function useCopyToClipboard(): [string | null, (text: string) => Promise<boolean>] {
+function useCopyToClipboard(): [
+  string | null,
+  (text: string) => Promise<boolean>
+] {
   const [copiedText, setCopiedText] = useState<string | null>(null);
 
   const copy = React.useCallback(async (text: string) => {
@@ -36,22 +40,30 @@ function useCopyToClipboard(): [string | null, (text: string) => Promise<boolean
 
 // Get complete setup configuration from seed data
 function getCompleteSetupJson() {
-  const completeRegionCodes = ['na', 'eu', 'uk'];
-  const completePaymentProviders = ['pp_stripe_stripe', 'pp_paypal_paypal', 'pp_system_default'];
-  const completeShipping = ['Standard Shipping', 'Express Shipping', 'Return Shipping'];
-  const completeCategories = ['shirts', 'hoodies', 'accessories', 'pants'];
-  const completeCollections = ['latest-picks', 'new-arrivals', 'trending'];
+  const completeRegionCodes = ["na", "eu", "uk"];
+  const completePaymentProviders = [
+    "pp_stripe_stripe",
+    "pp_paypal_paypal",
+    "pp_system_default",
+  ];
+  const completeShipping = [
+    "Standard Shipping",
+    "Express Shipping",
+    "Return Shipping",
+  ];
+  const completeCategories = ["shirts", "hoodies", "accessories", "pants"];
+  const completeCollections = ["latest-picks", "new-arrivals", "trending"];
   const completeProducts = [
-    'penrose-triangle-tshirt',
-    'eschers-staircase-hoodie',
-    'mobius-strip-scarf',
-    'fibonacci-spiral-crop-top',
-    'quantum-entanglement-socks',
-    'schrodingers-cat-tank-top',
-    'klein-bottle-beanie',
-    'paradox-puzzle-sweater',
-    'heisenberg-uncertainty-joggers',
-    'mandelbrot-set-infinity-shawl',
+    "penrose-triangle-tshirt",
+    "eschers-staircase-hoodie",
+    "mobius-strip-scarf",
+    "fibonacci-spiral-crop-top",
+    "quantum-entanglement-socks",
+    "schrodingers-cat-tank-top",
+    "klein-bottle-beanie",
+    "paradox-puzzle-sweater",
+    "heisenberg-uncertainty-joggers",
+    "mandelbrot-set-infinity-shawl",
   ];
 
   // Filter products and clean up variant prices to only include relevant regions
@@ -63,16 +75,16 @@ function getCompleteSetupJson() {
         ...variant,
         prices: variant.prices.filter((price: any) =>
           completeRegionCodes.includes(price.regionCode)
-        )
-      }))
+        ),
+      })),
     }));
 
   return {
     store: {
-      name: 'Impossible Tees',
-      defaultCurrencyCode: 'usd',
-      homepageTitle: 'Modern Apparel Store',
-      homepageDescription: 'Quality clothing and unique designs.',
+      name: "Impossible Tees",
+      defaultCurrencyCode: "usd",
+      homepageTitle: "Modern Apparel Store",
+      homepageDescription: "Quality clothing and unique designs.",
     },
     regions: (seedData.regions as any[]).filter((r: any) =>
       completeRegionCodes.includes(r.code)
@@ -96,12 +108,12 @@ function getCompleteSetupJson() {
 export function CustomSetupSteps({
   currentJson,
   onJsonUpdate = () => {},
-  onBack
+  onBack,
 }: CustomSetupStepsProps) {
   const [, copy] = useCopyToClipboard();
   const [copiedItems, setCopiedItems] = useState<Record<string, boolean>>({});
-  const [customJson, setCustomJson] = useState('');
-  const [jsonError, setJsonError] = useState('');
+  const [customJson, setCustomJson] = useState("");
+  const [jsonError, setJsonError] = useState("");
 
   // Use complete setup JSON as the base
   const completeJson = getCompleteSetupJson();
@@ -110,21 +122,19 @@ export function CustomSetupSteps({
     try {
       const success = await copy(text);
       if (success) {
-        setCopiedItems(prev => ({ ...prev, [itemKey]: true }));
+        setCopiedItems((prev) => ({ ...prev, [itemKey]: true }));
         setTimeout(() => {
-          setCopiedItems(prev => ({ ...prev, [itemKey]: false }));
+          setCopiedItems((prev) => ({ ...prev, [itemKey]: false }));
         }, 2000);
       }
     } catch (err) {
-      console.error('Failed to copy:', err);
+      console.error("Failed to copy:", err);
     }
   };
 
   // Generate the AI prompt focused on user questions rather than editing existing JSON
   const generateAIPrompt = () => {
-    return `I need help customizing my e-commerce store configuration. Here's my current complete setup:
-
-${JSON.stringify(completeJson, null, 2)}
+    return `I need help customizing my e-commerce store configuration. I've pasted my current set up.
 
 **Your first response should be:**
 
@@ -169,7 +179,8 @@ Start by telling me what this JSON configuration currently contains:
 - Heisenberg's Uncertainty Principle Joggers
 - Mandelbrot Set Infinity Shawl
 
-Then ask: "This is what your store configuration currently has. What would you like to change?"
+Then ask: "This is what your store configuration currently has. What would you like to change? 
+As the user provides more chnages to the JSON, keep aksing what changes and once the user is finishedand indicates they are done, return the JSON and tell them to paste it into Openfront."
 
 After I tell you what to change, modify the JSON and provide the complete updated configuration for me to paste into Openfront.`;
   };
@@ -180,24 +191,31 @@ After I tell you what to change, modify the JSON and provide the complete update
     try {
       const parsed = JSON.parse(customJson);
 
-      const requiredKeys = ['store', 'regions', 'paymentProviders', 'shipping_options', 'categories', 'products'];
-      const missingKeys = requiredKeys.filter(key => {
-        if (key === 'store') {
-          return !parsed[key] || typeof parsed[key] !== 'object';
+      const requiredKeys = [
+        "store",
+        "regions",
+        "paymentProviders",
+        "shipping_options",
+        "categories",
+        "products",
+      ];
+      const missingKeys = requiredKeys.filter((key) => {
+        if (key === "store") {
+          return !parsed[key] || typeof parsed[key] !== "object";
         }
         return !parsed[key] || !Array.isArray(parsed[key]);
       });
 
       if (missingKeys.length > 0) {
-        setJsonError(`Missing required keys: ${missingKeys.join(', ')}`);
+        setJsonError(`Missing required keys: ${missingKeys.join(", ")}`);
         return;
       }
 
       onJsonUpdate(parsed);
       setJsonApplied(true);
-      setJsonError('');
+      setJsonError("");
     } catch (err) {
-      setJsonError('Invalid JSON format. Please check your syntax.');
+      setJsonError("Invalid JSON format. Please check your syntax.");
     }
   };
 
@@ -207,63 +225,35 @@ After I tell you what to change, modify the JSON and provide the complete update
       title: "Copy Base Configuration",
       description: "Start with our complete template JSON configuration",
       content: (
-        <div className="bg-background rounded-lg border">
-          <div className="flex items-center justify-between p-3 bg-muted border-b">
-            <span className="text-sm font-medium text-muted-foreground">Onboarding Data</span>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => copyToClipboard(JSON.stringify(completeJson, null, 2), 'json')}
-              className="h-4 w-4 p-0 hover:bg-background/80"
-            >
-              {copiedItems.json ? (
-                <Check className="h-3 w-3 text-green-500" />
-              ) : (
-                <Copy className="h-3 w-3 text-muted-foreground" />
-              )}
-            </Button>
-          </div>
-          <div className="p-3">
-            <pre className="text-xs overflow-auto h-[200px] whitespace-pre-wrap break-words text-foreground">
-              <code>{JSON.stringify(completeJson, null, 2)}</code>
-            </pre>
-          </div>
-        </div>
-      )
+        <DataCard
+          title="Onboarding Data"
+          content={JSON.stringify(completeJson, null, 2)}
+          onCopy={copyToClipboard}
+          copied={copiedItems.json || false}
+          copyKey="json"
+        />
+      ),
     },
     {
       number: 2,
       title: "Copy AI Customization Prompt",
-      description: "Use this prompt with any AI assistant to get your custom configuration",
+      description:
+        "Use this prompt with any AI assistant to get your custom configuration",
       content: (
-        <div className="bg-background rounded-lg border">
-          <div className="flex items-center justify-between p-3 bg-muted border-b">
-            <span className="text-sm font-medium text-muted-foreground">AI Prompt</span>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => copyToClipboard(generateAIPrompt(), 'prompt')}
-              className="h-4 w-4 p-0 hover:bg-background/80"
-            >
-              {copiedItems.prompt ? (
-                <Check className="h-3 w-3 text-green-500" />
-              ) : (
-                <Copy className="h-3 w-3 text-muted-foreground" />
-              )}
-            </Button>
-          </div>
-          <div className="p-3">
-            <div className="text-xs overflow-auto h-[200px] whitespace-pre-wrap break-words text-foreground">
-              {generateAIPrompt()}
-            </div>
-          </div>
-        </div>
-      )
+        <DataCard
+          title="AI Prompt"
+          content={generateAIPrompt()}
+          onCopy={copyToClipboard}
+          copied={copiedItems.prompt || false}
+          copyKey="prompt"
+        />
+      ),
     },
     {
       number: 3,
       title: "Chat with AI",
-      description: "The AI will ask you questions about your business and products, what regions you want to sell in, and help you customize your setup",
+      description:
+        "The AI will ask you questions about your business and products, what regions you want to sell in, and help you customize your setup",
       content: (
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">
@@ -279,16 +269,18 @@ After I tell you what to change, modify the JSON and provide the complete update
             Answer the AI's questions to get your custom JSON configuration.
           </p>
         </div>
-      )
+      ),
     },
     {
       number: 4,
       title: "Paste Your Custom JSON",
       description: "Paste the AI-generated configuration here",
       content: (
-        <div className="bg-background rounded-lg border">
-          <div className="flex items-center justify-between p-3 bg-muted border-b">
-            <span className="text-sm font-medium text-muted-foreground">Custom Onboarding Data</span>
+        <div className="rounded-lg border overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2 bg-muted border-b">
+            <span className="text-sm font-medium text-muted-foreground">
+              Custom Onboarding Data
+            </span>
             <Button
               size="sm"
               variant="ghost"
@@ -296,35 +288,35 @@ After I tell you what to change, modify the JSON and provide the complete update
                 try {
                   const text = await navigator.clipboard.readText();
                   setCustomJson(text);
-                  setJsonError('');
+                  setJsonError("");
                 } catch (err) {
-                  console.error('Failed to paste:', err);
+                  console.error("Failed to paste:", err);
                 }
               }}
-              className="h-4 w-4 p-0 hover:bg-background/80"
+              className="h-6 w-6 p-0 hover:bg-background/80"
             >
               <Clipboard className="h-3 w-3 text-muted-foreground" />
             </Button>
           </div>
-          <div className="p-3">
+          <div className="bg-background">
             <Textarea
               placeholder="Paste your customized JSON configuration here..."
               value={customJson}
               onChange={(e) => {
                 setCustomJson(e.target.value);
-                setJsonError('');
+                setJsonError("");
               }}
-              className="min-h-[200px] font-mono text-xs resize-none border-0 p-0 bg-transparent focus:outline-none"
+              className="min-h-[200px] font-mono text-xs resize-none border-0 bg-transparent focus:outline-none p-4 rounded-none"
             />
           </div>
           {jsonError && (
-            <div className="px-3 pb-3">
+            <div className="px-4 pb-4">
               <div className="bg-destructive/10 border border-destructive/20 rounded-md p-2">
                 <p className="text-xs text-destructive">{jsonError}</p>
               </div>
             </div>
           )}
-          <div className="flex items-center justify-end p-3 bg-muted border-t">
+          <div className="flex items-center justify-end px-4 py-2 bg-muted border-t">
             <Button
               size="sm"
               onClick={validateAndApplyJson}
@@ -334,8 +326,8 @@ After I tell you what to change, modify the JSON and provide the complete update
             </Button>
           </div>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   return (
@@ -358,9 +350,12 @@ After I tell you what to change, modify the JSON and provide the complete update
       )}
 
       <div className="space-y-2">
-        <Label className="text-sm font-medium">Custom Setup Configuration</Label>
+        <Label className="text-sm font-medium">
+          Custom Setup Configuration
+        </Label>
         <p className="text-xs text-muted-foreground">
-          Follow these steps to create a personalized store setup using AI assistance.
+          Follow these steps to create a personalized store setup using AI
+          assistance.
         </p>
       </div>
 
@@ -385,7 +380,9 @@ After I tell you what to change, modify the JSON and provide the complete update
             {/* Section items */}
             <div className="pl-9">
               <div className="pb-6">
-                <p className="text-xs text-muted-foreground mb-3">{step.description}</p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  {step.description}
+                </p>
                 {step.content}
               </div>
             </div>
