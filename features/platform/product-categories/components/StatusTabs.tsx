@@ -3,6 +3,18 @@
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
+const statusConfig = {
+  active: {
+    label: "Active",
+    dotClass: "bg-green-500 dark:bg-green-400 outline-3 -outline-offset-1 outline-green-100 dark:outline-green-900/50"
+  },
+  inactive: {
+    label: "Inactive",
+    dotClass: "bg-zinc-500 dark:bg-zinc-400 outline-3 -outline-offset-1 outline-zinc-100 dark:outline-zinc-900/50"
+  },
+} as const;
 
 interface StatusTabsProps {
   statusCounts: {
@@ -10,21 +22,9 @@ interface StatusTabsProps {
     active: number;
     inactive: number;
   };
-  statusConfig?: {
-    active: { label: string; color: string };
-    inactive: { label: string; color: string };
-  };
-  entityName?: string;
 }
 
-export function StatusTabs({ 
-  statusCounts, 
-  statusConfig = {
-    active: { label: "Active", color: "emerald" },
-    inactive: { label: "Inactive", color: "zinc" }
-  },
-  entityName = "Categories"
-}: StatusTabsProps) {
+export function StatusTabs({ statusCounts }: StatusTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams()!;
   const pathname = usePathname();
@@ -114,13 +114,14 @@ export function StatusTabs({
             onClick={() => handleStatusChange("all")}
           >
             <div className="text-sm font-medium leading-5 whitespace-nowrap flex items-center justify-center h-full gap-2">
-              All {entityName}
+              All Product Categories
               <span className="rounded-sm bg-background border shadow-xs px-1.5 py-0 text-[10px] leading-[14px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 inline-flex items-center h-[18px]">
                 {statusCounts.all}
               </span>
             </div>
           </div>
           {statuses.map((status, index) => {
+            const dotClass = statusConfig[status.value as keyof typeof statusConfig].dotClass;
             return (
               <div
                 key={status.value}
@@ -135,10 +136,14 @@ export function StatusTabs({
                 onClick={() => handleStatusChange(status.value)}
               >
                 <div className="text-sm font-medium leading-5 whitespace-nowrap flex items-center justify-center h-full gap-2">
+                  <span className={cn(
+                    "inline-block size-2 shrink-0 rounded-full outline",
+                    dotClass
+                  )} />
                   {status.label}
-                  <Badge color={statusConfig[status.value as keyof typeof statusConfig].color} className="px-1.5 py-0 text-[10px] leading-[14px] rounded-sm shadow-xs inline-flex items-center h-[18px]">
+                  <span className="rounded-sm bg-background border shadow-xs px-1.5 py-0 text-[10px] leading-[14px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 inline-flex items-center h-[18px]">
                     {status.count}
-                  </Badge>
+                  </span>
                 </div>
               </div>
             );

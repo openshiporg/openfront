@@ -21,6 +21,13 @@ import { VariantForm } from "./VariantsTab";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
+import * as SelectPrimitive from "@radix-ui/react-select";
+import {
   Accordion,
   AccordionContent,
   AccordionItem,
@@ -191,12 +198,12 @@ const PriceForm = ({ region, initialPrice, onSave, onCancel }) => {
           </Button>
         </PopoverClose>
         <PopoverClose asChild>
-          <BadgeButton
+          <Button
             onClick={handleSave}
-            className="font-medium border rounded-lg text-xs items-center"
+            size="sm"
           >
             {initialPrice ? "Update Price" : "Add Price"}
-          </BadgeButton>
+          </Button>
         </PopoverClose>
       </div>
     </div>
@@ -213,6 +220,7 @@ export function VariantCard({
   onAddPrice,
   selectedFilters = [],
   onOptionFilter,
+  productImages = [],
   renderOptionValue = (ov) => (
     <Badge
       color="zinc"
@@ -245,6 +253,18 @@ export function VariantCard({
     setOpenPriceId(null);
   };
 
+  const handleImageSelect = (imageId) => {
+    const updatedVariant = {
+      ...currentVariant,
+      primaryImage: imageId === "none" ? null : { id: imageId }
+    };
+    setCurrentVariant(updatedVariant);
+    onUpdate?.({
+      ...currentVariant,
+      primaryImage: imageId === "none" ? null : { id: imageId }
+    });
+  };
+
   return (
     <Accordion
       type="single"
@@ -255,9 +275,79 @@ export function VariantCard({
         <div className="p-4">
           <div className="flex justify-between">
             <div className="flex gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border bg-background">
-                <Package className="h-6 w-6 text-foreground/60" />
-              </div>
+              <Select value={variant.primaryImage?.id || "none"} onValueChange={handleImageSelect}>
+                <SelectPrimitive.Trigger className={cn(
+                  "flex h-12 w-12 shrink-0 rounded-lg border border-input bg-background focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 p-0 overflow-hidden"
+                )}>
+                  <SelectValue>
+                    {variant.primaryImage?.image?.url ? (
+                      <img
+                        src={variant.primaryImage.image.url}
+                        alt={variant.primaryImage.altText || "Variant image"}
+                        className="h-full w-full rounded-lg object-cover"
+                      />
+                    ) : variant.primaryImage?.imagePath ? (
+                      <img
+                        src={variant.primaryImage.imagePath}
+                        alt={variant.primaryImage.altText || "Variant image"}
+                        className="h-full w-full rounded-lg object-cover"
+                      />
+                    ) : (
+                      <Package className="h-6 w-6 text-foreground/60" />
+                    )}
+                  </SelectValue>
+                </SelectPrimitive.Trigger>
+                <SelectContent className="border-border dark:border-blue-700">
+                  <SelectItem value="none">
+                    <span className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg border border-border bg-muted">
+                        <Package className="h-4 w-4 text-foreground" />
+                      </div>
+                      <span>
+                        <span className="block font-medium text-gray-900 dark:text-gray-100">
+                          No Image
+                        </span>
+                        <span className="text-muted-foreground mt-0.5 block text-xs">
+                          Use product default
+                        </span>
+                      </span>
+                    </span>
+                  </SelectItem>
+                  {productImages.map((image) => (
+                    <SelectItem key={image.id} value={image.id}>
+                      <span className="flex items-center gap-3">
+                        <div className="h-8 w-8 rounded object-cover overflow-hidden">
+                          {image.image?.url ? (
+                            <img
+                              src={image.image.url}
+                              alt={image.altText || "Product image"}
+                              className="h-8 w-8 rounded object-cover"
+                            />
+                          ) : image.imagePath ? (
+                            <img
+                              src={image.imagePath}
+                              alt={image.altText || "Product image"}
+                              className="h-8 w-8 rounded object-cover"
+                            />
+                          ) : (
+                            <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
+                              <Package className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        <span>
+                          <span className="block font-medium text-gray-900 dark:text-gray-100">
+                            {image.altText || 'Untitled Image'}
+                          </span>
+                          <span className="text-muted-foreground mt-0.5 block text-xs">
+                            {image.imagePath || 'Product image'}
+                          </span>
+                        </span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <div className="space-y-2">
                 <div>
                   <div className="text-sm font-medium">{variant.title}</div>
@@ -389,11 +479,14 @@ export function VariantCard({
                   </PopoverContent>
                 </Popover>
               )}
-              <AccordionTrigger className="py-0">
-                <div className="inline-flex items-center justify-center h-6 w-6 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md [&_svg]:size-3">
-                  <ChevronDown className="accordion-icon" />
-                </div>
-              </AccordionTrigger>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-6 w-6 [&_svg]:size-3"
+                asChild
+              >
+                <AccordionTrigger className="py-0" />
+              </Button>
             </div>
           </div>
         </div>

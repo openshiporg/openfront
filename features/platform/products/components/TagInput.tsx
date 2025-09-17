@@ -50,7 +50,7 @@ export function TagInput({
         {value.map((item, index) => (
           <div
             key={item.id || index}
-            className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-sm"
+            className="inline-flex items-center gap-1 rounded-md bg-background border border-border px-2 py-1 text-sm"
           >
             <span>{item.label || item.value}</span>
             {!readOnly && (

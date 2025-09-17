@@ -183,6 +183,14 @@ export async function getProduct(id: string) {
           midCode
           material
           metadata
+          primaryImage {
+            id
+            image {
+              url
+            }
+            imagePath
+            altText
+          }
           productOptionValues {
             id
             value

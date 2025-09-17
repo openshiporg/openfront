@@ -13089,6 +13089,7 @@ var ProductImage = (0, import_core58.list)({
     imagePath: (0, import_fields58.text)(),
     altText: (0, import_fields58.text)(),
     products: (0, import_fields58.relationship)({ ref: "Product.productImages", many: true }),
+    productVariants: (0, import_fields58.relationship)({ ref: "ProductVariant.primaryImage", many: true }),
     metadata: (0, import_fields58.json)(),
     ...trackingFields
   },
@@ -13311,6 +13312,10 @@ var ProductVariant = (0, import_core63.list)({
     measurements: (0, import_fields63.relationship)({
       ref: "Measurement.productVariant",
       many: true
+    }),
+    primaryImage: (0, import_fields63.relationship)({
+      ref: "ProductImage.productVariants",
+      many: false
     }),
     ...trackingFields
   },

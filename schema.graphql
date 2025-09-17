@@ -6476,6 +6476,8 @@ type ProductImage {
   altText: String
   products(where: ProductWhereInput! = {}, orderBy: [ProductOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ProductWhereUniqueInput): [Product!]
   productsCount(where: ProductWhereInput! = {}): Int
+  productVariants(where: ProductVariantWhereInput! = {}, orderBy: [ProductVariantOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ProductVariantWhereUniqueInput): [ProductVariant!]
+  productVariantsCount(where: ProductVariantWhereInput! = {}): Int
   metadata: JSON
   createdAt: DateTime
   updatedAt: DateTime
@@ -6493,6 +6495,7 @@ input ProductImageWhereInput {
   imagePath: StringFilter
   altText: StringFilter
   products: ProductManyRelationFilter
+  productVariants: ProductVariantManyRelationFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
@@ -6510,6 +6513,7 @@ input ProductImageUpdateInput {
   imagePath: String
   altText: String
   products: ProductRelateToManyForUpdateInput
+  productVariants: ProductVariantRelateToManyForUpdateInput
   metadata: JSON
   createdAt: DateTime
   updatedAt: DateTime
@@ -6525,6 +6529,7 @@ input ProductImageCreateInput {
   imagePath: String
   altText: String
   products: ProductRelateToManyForCreateInput
+  productVariants: ProductVariantRelateToManyForCreateInput
   metadata: JSON
   createdAt: DateTime
   updatedAt: DateTime
@@ -6836,6 +6841,7 @@ type ProductVariant {
   stockMovementsCount(where: StockMovementWhereInput! = {}): Int
   measurements(where: MeasurementWhereInput! = {}, orderBy: [MeasurementOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: MeasurementWhereUniqueInput): [Measurement!]
   measurementsCount(where: MeasurementWhereInput! = {}): Int
+  primaryImage: ProductImage
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -6870,6 +6876,7 @@ input ProductVariantWhereInput {
   location: LocationWhereInput
   stockMovements: StockMovementManyRelationFilter
   measurements: MeasurementManyRelationFilter
+  primaryImage: ProductImageWhereInput
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
 }
@@ -6928,6 +6935,7 @@ input ProductVariantUpdateInput {
   location: LocationRelateToOneForUpdateInput
   stockMovements: StockMovementRelateToManyForUpdateInput
   measurements: MeasurementRelateToManyForUpdateInput
+  primaryImage: ProductImageRelateToOneForUpdateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -6950,6 +6958,12 @@ input MeasurementRelateToManyForUpdateInput {
   set: [MeasurementWhereUniqueInput!]
   create: [MeasurementCreateInput!]
   connect: [MeasurementWhereUniqueInput!]
+}
+
+input ProductImageRelateToOneForUpdateInput {
+  create: ProductImageCreateInput
+  connect: ProductImageWhereUniqueInput
+  disconnect: Boolean
 }
 
 input ProductVariantUpdateArgs {
@@ -6980,6 +6994,7 @@ input ProductVariantCreateInput {
   location: LocationRelateToOneForCreateInput
   stockMovements: StockMovementRelateToManyForCreateInput
   measurements: MeasurementRelateToManyForCreateInput
+  primaryImage: ProductImageRelateToOneForCreateInput
   createdAt: DateTime
   updatedAt: DateTime
 }
@@ -6997,6 +7012,11 @@ input StockMovementRelateToManyForCreateInput {
 input MeasurementRelateToManyForCreateInput {
   create: [MeasurementCreateInput!]
   connect: [MeasurementWhereUniqueInput!]
+}
+
+input ProductImageRelateToOneForCreateInput {
+  create: ProductImageCreateInput
+  connect: ProductImageWhereUniqueInput
 }
 
 type Refund {

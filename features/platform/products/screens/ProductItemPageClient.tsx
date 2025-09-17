@@ -627,9 +627,9 @@ export function ProductItemPageClient({ list, item, itemId }: ProductItemPageCli
                       <SelectItem key={tab.id} value={tab.id}>
                         <span className="flex items-center gap-3">
                           <div className={`p-2 rounded-lg border ${
-                            hasError 
-                              ? 'border-red-300 bg-red-50 dark:bg-red-950/30' 
-                              : 'border-blue-300 bg-blue-50 dark:bg-blue-950/30'
+                            hasError
+                              ? 'border-red-300 bg-red-50 dark:bg-red-950/30'
+                              : 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/30'
                           }`}>
                             <Icon className={`h-4 w-4 ${
                               hasError ? 'text-red-600' : 'text-blue-600'

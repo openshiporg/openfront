@@ -64,6 +64,7 @@ import {
   deleteProductOptionValue,
   createProductVariant,
   deleteProductVariant,
+  updateProductVariant,
   updateVariantPrice,
   updateMoneyAmount,
   saveVariantDriftChanges,
@@ -476,7 +477,38 @@ export function VariantsTab({ product: initialProduct }: VariantsTab2Props) {
     }
   };
 
-  // Handle option filter
+  // Handle updating variant
+  const handleVariantUpdate = async (variant: any) => {
+    try {
+      const response = await updateProductVariant(variant.id, {
+        primaryImageId: variant.primaryImage?.id || null,
+        title: variant.title,
+        sku: variant.sku,
+        barcode: variant.barcode,
+        ean: variant.ean,
+        upc: variant.upc,
+        material: variant.material,
+        inventoryQuantity: variant.inventoryQuantity,
+        manageInventory: variant.manageInventory,
+        allowBackorder: variant.allowBackorder,
+        hsCode: variant.hsCode,
+        originCountry: variant.originCountry,
+        midCode: variant.midCode,
+      });
+
+      if (response.success) {
+        toast.success("Variant updated successfully");
+        refetch(); // Refetch product data
+      } else {
+        toast.error(response.error || "Failed to update variant");
+      }
+    } catch (error) {
+      console.error("Error updating variant:", error);
+      toast.error("Failed to update variant");
+    }
+  };
+
+// Handle option filter
   const handleOptionFilter = (option: string, value: string) => {
     const filterKey = `${option}:${value}`;
     setSelectedFilters((prev) =>
@@ -672,11 +704,13 @@ export function VariantsTab({ product: initialProduct }: VariantsTab2Props) {
                     <VariantCard
                       key={variant.id}
                       variant={variant}
+                      onUpdate={handleVariantUpdate}
                       showActions={true}
                       regions={regionsWithLocale}
                       onAddPrice={handleAddPrice}
                       selectedFilters={selectedFilters}
                       onOptionFilter={handleOptionFilter}
+                      productImages={currentProduct?.productImages || []}
                     />
                   )
                 )}

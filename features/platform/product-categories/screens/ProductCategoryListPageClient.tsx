@@ -124,16 +124,16 @@ export function ProductCategoryListPageClient({
   const breadcrumbs = [
     { type: 'link' as const, label: 'Dashboard', href: basePath },
     { type: 'page' as const, label: 'Platform' },
-    { type: 'page' as const, label: 'ProductCategories' }
+    { type: 'page' as const, label: 'Product Categories' }
   ]
 
   const header = (
     <div>
       <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-50">
-        ProductCategories
+        Product Categories
       </h1>
       <p className="text-muted-foreground">
-        Create and manage productcategories
+        Create and manage product categories
       </p>
     </div>
   )
@@ -144,7 +144,7 @@ export function ProductCategoryListPageClient({
   const isEmpty = data?.count === 0 && !isFiltered
 
   return (
-    <PageContainer title="ProductCategories" header={header} breadcrumbs={breadcrumbs}>
+    <PageContainer title="Product Categories" header={header} breadcrumbs={breadcrumbs}>
       {/* Filter Bar - includes search, filters, sorting, and create button */}
       <div className="px-4 md:px-6">
         <PlatformFilterBar 
@@ -165,20 +165,7 @@ export function ProductCategoryListPageClient({
       {/* Status Tabs */}
       {statusCounts && (
         <div className="border-b">
-          <StatusTabs 
-            statusCounts={statusCounts}
-            statusConfig={{
-                      "active": {
-                                "label": "Active",
-                                "color": "emerald"
-                      },
-                      "inactive": {
-                                "label": "Inactive",
-                                "color": "zinc"
-                      }
-            }}
-            entityName="ProductCategories"
-          />
+          <StatusTabs statusCounts={statusCounts} />
         </div>
       )}
 

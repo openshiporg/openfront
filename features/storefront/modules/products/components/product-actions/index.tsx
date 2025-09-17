@@ -64,9 +64,10 @@ type ProductActionsProps = {
   product: any; // Override strict types to prioritize JS logic
   region: any;
   disabled?: boolean;
+  onVariantChange?: (variant: any) => void;
 };
 
-export default function ProductActions({ product, region, disabled }: ProductActionsProps) {
+export default function ProductActions({ product, region, disabled, onVariantChange }: ProductActionsProps) {
   const [options, setOptions] = useState<any>({});
   const [isAdding, setIsAdding] = useState(false);
 
@@ -114,6 +115,12 @@ export default function ProductActions({ product, region, disabled }: ProductAct
     }
     return variants?.find((v: any) => v.id === variantId);
   }, [options, variantRecord, variants, hasOnlyOneVariant]);
+
+  useEffect(() => {
+    onVariantChange?.(variant);
+    // Emit custom event for other components to listen to
+    window.dispatchEvent(new CustomEvent('variantChange', { detail: variant }));
+  }, [variant, onVariantChange]);
 
   useEffect(() => {
     if (variants?.length === 1 && variants[0].id) {

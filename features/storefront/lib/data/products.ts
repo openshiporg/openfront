@@ -234,6 +234,14 @@ export const retrievePricedProductByHandle = cache(async function ({
           inventoryQuantity
           allowBackorder
           metadata
+          primaryImage {
+            id
+            image {
+              url
+            }
+            imagePath
+            altText
+          }
           productOptionValues {
             id
             value

@@ -22,6 +22,7 @@ export const ProductImage = list({
     imagePath: text(),
     altText: text(),
     products: relationship({ ref: "Product.productImages", many: true }),
+    productVariants: relationship({ ref: "ProductVariant.primaryImage", many: true }),
     metadata: json(),
     ...trackingFields,
   },

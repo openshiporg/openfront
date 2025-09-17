@@ -35,7 +35,7 @@ export function OptionCard({ option, readOnly = false, onUpdate }) {
   };
 
   return (
-    <div className="mt-2 border p-4 rounded-lg bg-muted/40 space-y-3">
+    <div className="mt-2 border p-4 rounded-lg bg-background space-y-3">
       <div className="flex flex-wrap justify-between items-center gap-2">
         {isEditing && !readOnly ? (
           <Input

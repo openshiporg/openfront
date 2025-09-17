@@ -14,13 +14,7 @@ import Link from "next/link";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 import { ProductImage } from "../../components/ProductImage";
 import { ProductSectionTabs } from "./ProductSectionTabs";
-
-const statusColors = {
-  draft: "zinc",
-  proposed: "blue",
-  published: "emerald",
-  rejected: "rose",
-} as const;
+import { StatusBadge } from "./StatusBadge";
 
 interface ProductVariant {
   id: string;
@@ -169,15 +163,7 @@ export function ProductDetailsComponent({
 
             <div className="flex flex-col justify-between h-full">
               <div className="flex items-center gap-2">
-                <Badge
-                  color={
-                    statusColors[product.status as keyof typeof statusColors] ||
-                    "zinc"
-                  }
-                  className="text-[.6rem] sm:text-[.7rem] py-0 px-2 sm:px-3 tracking-wide font-medium rounded-md border h-6"
-                >
-                  {product.status.toUpperCase()}
-                </Badge>
+                <StatusBadge status={product.status as any} />
                 {product.isGiftcard && (
                   <Badge variant="outline" className="text-xs">
                     Gift Card

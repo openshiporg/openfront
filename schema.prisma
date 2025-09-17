@@ -1082,18 +1082,19 @@ model ProductCollection {
 }
 
 model ProductImage {
-  id              String    @id @default(cuid())
+  id              String           @id @default(cuid())
   image_id        String?
   image_filesize  Int?
   image_width     Int?
   image_height    Int?
   image_extension String?
-  imagePath       String    @default("")
-  altText         String    @default("")
-  products        Product[] @relation("Product_productImages")
+  imagePath       String           @default("")
+  altText         String           @default("")
+  products        Product[]        @relation("Product_productImages")
+  productVariants ProductVariant[] @relation("ProductVariant_primaryImage")
   metadata        Json?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @default(now()) @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @default(now()) @updatedAt
 }
 
 model ProductOption {
@@ -1169,12 +1170,15 @@ model ProductVariant {
   locationId                        String?              @map("location")
   stockMovements                    StockMovement[]      @relation("StockMovement_variant")
   measurements                      Measurement[]        @relation("Measurement_productVariant")
+  primaryImage                      ProductImage?        @relation("ProductVariant_primaryImage", fields: [primaryImageId], references: [id])
+  primaryImageId                    String?              @map("primaryImage")
   createdAt                         DateTime             @default(now())
   updatedAt                         DateTime             @default(now()) @updatedAt
   from_OrderLineItem_productVariant OrderLineItem[]      @relation("OrderLineItem_productVariant")
 
   @@index([productId])
   @@index([locationId])
+  @@index([primaryImageId])
 }
 
 model Refund {

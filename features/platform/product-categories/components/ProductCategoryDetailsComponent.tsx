@@ -27,6 +27,7 @@ import Link from "next/link";
 import { ItemPagination } from "../../orders/components/ItemPagination";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 import { ProductImage } from "../../components/ProductImage";
+import { StatusBadge } from "./StatusBadge";
 
 const statusColors = {
   active: "emerald",
@@ -200,12 +201,7 @@ export function ProductCategoryDetailsComponent({
             <div className="flex flex-col justify-between h-full">
               <div className="flex items-center gap-2">
                 {productcategory.isActive !== undefined && (
-                  <Badge
-                    color={productcategory.isActive ? "emerald" : "zinc"}
-                    className="text-[.6rem] sm:text-[.7rem] py-0 px-2 sm:px-3 tracking-wide font-medium rounded-md border h-6"
-                  >
-                    {productcategory.isActive ? "ACTIVE" : "INACTIVE"}
-                  </Badge>
+                  <StatusBadge isActive={productcategory.isActive} />
                 )}
                 
                 {productcategory.isInternal && (

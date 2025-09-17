@@ -90,6 +90,10 @@ export const ProductVariant = list({
       ref: "Measurement.productVariant",
       many: true,
     }),
+    primaryImage: relationship({
+      ref: "ProductImage.productVariants",
+      many: false,
+    }),
     ...trackingFields,
   },
   ui: {

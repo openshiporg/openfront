@@ -152,16 +152,7 @@ export function ProductListPageClient({
       {/* Status Tabs */}
       {statusCounts && (
         <div className="border-b">
-          <StatusTabs 
-            statusCounts={statusCounts}
-            statusConfig={{
-              draft: { label: "Draft", color: "zinc" },
-              proposed: { label: "Proposed", color: "blue" },
-              published: { label: "Published", color: "emerald" },
-              rejected: { label: "Rejected", color: "rose" },
-            }}
-            entityName="Products"
-          />
+          <StatusTabs statusCounts={statusCounts} />
         </div>
       )}
 

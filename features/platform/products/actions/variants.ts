@@ -225,6 +225,103 @@ export async function updateVariantPrice(variantId: string, priceData: {
 }
 
 /**
+ * Update product variant basic info
+ */
+export async function updateProductVariant(variantId: string, data: {
+  title?: string;
+  sku?: string;
+  barcode?: string;
+  ean?: string;
+  upc?: string;
+  material?: string;
+  inventoryQuantity?: number;
+  manageInventory?: boolean;
+  allowBackorder?: boolean;
+  hsCode?: string;
+  originCountry?: string;
+  midCode?: string;
+  primaryImageId?: string;
+}) {
+  const query = `
+    mutation UpdateProductVariant($id: ID!, $input: ProductVariantUpdateInput!) {
+      updateProductVariant(where: { id: $id }, data: $input) {
+        id
+        title
+        sku
+        barcode
+        ean
+        upc
+        material
+        inventoryQuantity
+        manageInventory
+        allowBackorder
+        hsCode
+        originCountry
+        midCode
+        primaryImage {
+          id
+          image {
+            url
+          }
+          imagePath
+          altText
+        }
+      }
+    }
+  `;
+
+  const input: any = {};
+
+  // Only include fields that are provided
+  if (data.title !== undefined) input.title = data.title;
+  if (data.sku !== undefined) input.sku = data.sku;
+  if (data.barcode !== undefined) input.barcode = data.barcode;
+  if (data.ean !== undefined) input.ean = data.ean;
+  if (data.upc !== undefined) input.upc = data.upc;
+  if (data.material !== undefined) input.material = data.material;
+  if (data.inventoryQuantity !== undefined) input.inventoryQuantity = data.inventoryQuantity;
+  if (data.manageInventory !== undefined) input.manageInventory = data.manageInventory;
+  if (data.allowBackorder !== undefined) input.allowBackorder = data.allowBackorder;
+  if (data.hsCode !== undefined) input.hsCode = data.hsCode;
+  if (data.originCountry !== undefined) input.originCountry = data.originCountry;
+  if (data.midCode !== undefined) input.midCode = data.midCode;
+
+  // Handle primaryImage connection
+  if (data.primaryImageId !== undefined) {
+    if (data.primaryImageId === null || data.primaryImageId === '') {
+      input.primaryImage = { disconnect: true };
+    } else {
+      input.primaryImage = { connect: { id: data.primaryImageId } };
+    }
+  }
+
+  const response = await keystoneClient(query, {
+    id: variantId,
+    input,
+  });
+
+  if (response.success) {
+    // Get product ID for revalidation
+    const productQuery = `
+      query GetProductFromVariant($id: ID!) {
+        productVariant(where: { id: $id }) {
+          product {
+            id
+          }
+        }
+      }
+    `;
+
+    const productResponse = await keystoneClient(productQuery, { id: variantId });
+    if (productResponse.success && productResponse.data.productVariant?.product?.id) {
+      revalidatePath(`/dashboard/platform/products/${productResponse.data.productVariant.product.id}`);
+    }
+  }
+
+  return response;
+}
+
+/**
  * Update money amount (update existing price)
  */
 export async function updateMoneyAmount(id: string, data: {
