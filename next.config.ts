@@ -5,6 +5,11 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
+  },
   // Workaround since we diverged from Keystone reltionship and document views
   typescript: {
     ignoreBuildErrors: true,
