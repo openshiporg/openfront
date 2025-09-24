@@ -128,7 +128,7 @@ export function Sidebar({ adminMeta, user, onOpenDialog }: SidebarProps) {
         </SidebarMenuButton>
       </SidebarHeader>
 
-      <SidebarContent className="no-scrollbar">
+      <SidebarContent className="no-scrollbar gap-0.5">
         {/* Dashboard Home Link */}
         <SidebarGroup>
           <SidebarMenu>
@@ -146,26 +146,23 @@ export function Sidebar({ adminMeta, user, onOpenDialog }: SidebarProps) {
         {/* Platform Routes */}
         <SidebarGroup>
           <SidebarGroupLabel>Platform</SidebarGroupLabel>
-          <SidebarMenu className="gap-0">
+          <SidebarMenu className="group-has-[[data-collapsible=icon]]/sidebar-wrapper:hidden gap-0">
             {/* Standalone Items in Expanded Mode */}
-            <div className="group-has-[[data-collapsible=icon]]/sidebar-wrapper:hidden">
-              {standaloneItemsWithBasePath.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={isLinkActive(item.href)}>
-                    <Link href={item.href} onClick={() => setOpenMobile(false)}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </div>
-          </SidebarMenu>
-          
-          {/* Platform Groups */}
-          {platformItems.map((platformItem) => (
-            <div key={platformItem.title} className="max-h-full overflow-y-auto group-has-[[data-collapsible=icon]]/sidebar-wrapper:hidden">
+            {standaloneItemsWithBasePath.map((item) => (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton asChild isActive={isLinkActive(item.href)}>
+                  <Link href={item.href} onClick={() => setOpenMobile(false)}>
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+
+            {/* Platform Groups */}
+            {platformItems.map((platformItem) => (
               <Collapsible
+                key={platformItem.title}
                 asChild
                 defaultOpen={platformItem.isActive}
                 className="group/collapsible"
@@ -202,8 +199,8 @@ export function Sidebar({ adminMeta, user, onOpenDialog }: SidebarProps) {
                   </CollapsibleContent>
                 </SidebarMenuItem>
               </Collapsible>
-            </div>
-          ))}
+            ))}
+          </SidebarMenu>
 
           {/* Platform Items - Icon Mode */}
           <SidebarMenu className="hidden group-has-[[data-collapsible=icon]]/sidebar-wrapper:block">
@@ -268,7 +265,7 @@ export function Sidebar({ adminMeta, user, onOpenDialog }: SidebarProps) {
         {/* Models */}
         <SidebarGroup>
           <SidebarGroupLabel>Models</SidebarGroupLabel>
-          <div className="max-h-full overflow-y-auto group-has-[[data-collapsible=icon]]/sidebar-wrapper:hidden">
+          <SidebarMenu className="group-has-[[data-collapsible=icon]]/sidebar-wrapper:hidden">
             <Collapsible
               asChild
               defaultOpen={modelLinks.some(link => isLinkActive(link.href))}
@@ -306,7 +303,7 @@ export function Sidebar({ adminMeta, user, onOpenDialog }: SidebarProps) {
                 </CollapsibleContent>
               </SidebarMenuItem>
             </Collapsible>
-          </div>
+          </SidebarMenu>
 
           {/* Models Dropdown - Icon Mode */}
           <SidebarMenu className="hidden group-has-[[data-collapsible=icon]]/sidebar-wrapper:block">

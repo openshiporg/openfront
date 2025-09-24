@@ -223,7 +223,12 @@ export async function getProduct(id: string) {
         productImages {
           id
           image {
+            id
             url
+            extension
+            filesize
+            width
+            height
           }
           imagePath
           altText

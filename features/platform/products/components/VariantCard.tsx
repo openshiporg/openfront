@@ -277,7 +277,7 @@ export function VariantCard({
             <div className="flex gap-3">
               <Select value={variant.primaryImage?.id || "none"} onValueChange={handleImageSelect}>
                 <SelectPrimitive.Trigger className={cn(
-                  "flex h-12 w-12 shrink-0 rounded-lg border border-input bg-background focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 p-0 overflow-hidden"
+                  "flex h-12 w-12 shrink-0 rounded-lg border border-input bg-background focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 p-0 overflow-hidden items-center justify-center"
                 )}>
                   <SelectValue>
                     {variant.primaryImage?.image?.url ? (

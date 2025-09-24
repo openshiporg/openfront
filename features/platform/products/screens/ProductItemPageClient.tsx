@@ -50,6 +50,7 @@ import {
 import { toast } from 'sonner'
 import { updateItemAction, deleteItemAction } from '../../../dashboard/actions/item-actions'
 import { VariantsTab } from '../components/VariantsTab'
+import { MediaTab } from '../components/MediaTab'
 
 interface ProductItemPageClientProps {
   list: any
@@ -675,6 +676,7 @@ export function ProductItemPageClient({ list, item, itemId }: ProductItemPageCli
               </div>
             )}
 
+            {/* Commented out existing media tab - replaced with custom MediaTab component
             {activeTab === 'media' && Object.keys(fieldsSplit.mediaFields).length > 0 && (
               <div className="space-y-6">
                 <Fields
@@ -686,6 +688,13 @@ export function ProductItemPageClient({ list, item, itemId }: ProductItemPageCli
                   invalidFields={invalidFields}
                   isRequireds={isRequireds}
                 />
+              </div>
+            )}
+            */}
+
+            {activeTab === 'media' && (
+              <div className="space-y-6">
+                <MediaTab product={item} />
               </div>
             )}
 
