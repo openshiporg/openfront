@@ -6474,6 +6474,7 @@ type ProductImage {
   image: ImageFieldOutput
   imagePath: String
   altText: String
+  order: Int
   products(where: ProductWhereInput! = {}, orderBy: [ProductOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ProductWhereUniqueInput): [Product!]
   productsCount(where: ProductWhereInput! = {}): Int
   productVariants(where: ProductVariantWhereInput! = {}, orderBy: [ProductVariantOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: ProductVariantWhereUniqueInput): [ProductVariant!]
@@ -6494,6 +6495,7 @@ input ProductImageWhereInput {
   id: IDFilter
   imagePath: StringFilter
   altText: StringFilter
+  order: IntNullableFilter
   products: ProductManyRelationFilter
   productVariants: ProductVariantManyRelationFilter
   createdAt: DateTimeFilter
@@ -6504,6 +6506,7 @@ input ProductImageOrderByInput {
   id: OrderDirection
   imagePath: OrderDirection
   altText: OrderDirection
+  order: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
 }
@@ -6512,6 +6515,7 @@ input ProductImageUpdateInput {
   image: ImageFieldInput
   imagePath: String
   altText: String
+  order: Int
   products: ProductRelateToManyForUpdateInput
   productVariants: ProductVariantRelateToManyForUpdateInput
   metadata: JSON
@@ -6528,6 +6532,7 @@ input ProductImageCreateInput {
   image: ImageFieldInput
   imagePath: String
   altText: String
+  order: Int
   products: ProductRelateToManyForCreateInput
   productVariants: ProductVariantRelateToManyForCreateInput
   metadata: JSON

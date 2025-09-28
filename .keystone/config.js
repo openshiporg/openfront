@@ -13088,6 +13088,9 @@ var ProductImage = (0, import_core58.list)({
     image: (0, import_fields58.image)({ storage: "my_images" }),
     imagePath: (0, import_fields58.text)(),
     altText: (0, import_fields58.text)(),
+    order: (0, import_fields58.integer)({
+      defaultValue: 0
+    }),
     products: (0, import_fields58.relationship)({ ref: "Product.productImages", many: true }),
     productVariants: (0, import_fields58.relationship)({ ref: "ProductVariant.primaryImage", many: true }),
     metadata: (0, import_fields58.json)(),

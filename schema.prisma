@@ -1090,6 +1090,7 @@ model ProductImage {
   image_extension String?
   imagePath       String           @default("")
   altText         String           @default("")
+  order           Int?             @default(0)
   products        Product[]        @relation("Product_productImages")
   productVariants ProductVariant[] @relation("ProductVariant_primaryImage")
   metadata        Json?

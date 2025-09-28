@@ -32,10 +32,13 @@ const ImageGallery = ({ images, handle, region }: ImageGalleryProps) => {
     return () => window.removeEventListener('variantChange', handleVariantChange)
   }, [])
 
-  // Determine which images to show
+  // Sort images by order field first, then apply variant logic
+  const sortedImages = [...images].sort((a, b) => (a.order || 0) - (b.order || 0))
+
+  // Determine which images to show - prioritize variant primary image if selected
   const displayImages = selectedVariant?.primaryImage
-    ? [selectedVariant.primaryImage, ...images.filter(img => img.id !== selectedVariant.primaryImage.id)]
-    : images
+    ? [selectedVariant.primaryImage, ...sortedImages.filter(img => img.id !== selectedVariant.primaryImage.id)]
+    : sortedImages
 
   return (
     <div className="flex items-start relative">

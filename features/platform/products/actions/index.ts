@@ -38,13 +38,14 @@ export async function getProducts(
       inventoryQuantity
       manageInventory
     }
-    productImages {
+    productImages(orderBy: { order: asc }) {
       id
       image {
         url
       }
       imagePath
       altText
+      order
     }
     productCategories {
       id
@@ -220,7 +221,7 @@ export async function getProduct(id: string) {
             }
           }
         }
-        productImages {
+        productImages(orderBy: { order: asc }) {
           id
           image {
             id
@@ -232,6 +233,7 @@ export async function getProduct(id: string) {
           }
           imagePath
           altText
+          order
         }
         productCategories {
           id

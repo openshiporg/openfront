@@ -26,6 +26,7 @@ export async function createProductImage(data: {
         }
         imagePath
         altText
+        order
         products {
           id
         }
@@ -81,6 +82,7 @@ export async function updateProductImage(id: string, data: {
         }
         imagePath
         altText
+        order
       }
     }
   `;
@@ -137,36 +139,19 @@ export async function deleteProductImage(id: string, productId: string) {
 /**
  * Update product images order
  */
-export async function updateProductImagesOrder(productId: string, imageIds: string[]) {
+export async function updateProductImagesOrder(productId: string, imageOrderUpdates: Array<{id: string, order: number}>) {
+  // Build a mutation to update multiple ProductImages with their new order values
+  const updateQueries = imageOrderUpdates.map((update, index) => ({
+    query: `update${index}: updateProductImage(where: { id: "${update.id}" }, data: { order: ${update.order} }) { id order }`,
+  }));
+
   const mutation = `
-    mutation UpdateProductImagesOrder($id: ID!, $data: ProductUpdateInput!) {
-      updateProduct(where: { id: $id }, data: $data) {
-        id
-        productImages {
-          id
-          image {
-            id
-            url
-            extension
-            filesize
-            width
-            height
-          }
-          imagePath
-          altText
-        }
-      }
+    mutation UpdateProductImagesOrder {
+      ${updateQueries.map(q => q.query).join('\n      ')}
     }
   `;
 
-  const response = await keystoneClient(mutation, {
-    id: productId,
-    data: {
-      productImages: {
-        set: imageIds.map(id => ({ id }))
-      }
-    }
-  });
+  const response = await keystoneClient(mutation);
 
   if (response.success) {
     // Revalidate the product page to show the new order
@@ -174,7 +159,7 @@ export async function updateProductImagesOrder(productId: string, imageIds: stri
 
     return {
       success: true,
-      data: response.data.updateProduct,
+      data: response.data,
     };
   } else {
     console.error('Error updating product images order:', response.error);
@@ -194,7 +179,7 @@ export async function getProductImages(productId: string) {
     query GetProductImages($productId: ID!) {
       product(where: { id: $productId }) {
         id
-        productImages {
+        productImages(orderBy: { order: asc }) {
           id
           image {
             id
