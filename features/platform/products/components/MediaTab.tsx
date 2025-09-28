@@ -38,17 +38,6 @@ export function MediaTab({ product: initialProduct }: MediaTabProps) {
   const maxSize = maxSizeMB * 1024 * 1024 // 5MB default
   const maxFiles = 6
 
-  // Initialize with existing product images - handle both image.url AND imagePath
-  const initialFiles = productImages
-    .filter(img => (img.image && img.image.url) || img.imagePath) // Include images with EITHER image.url OR imagePath
-    .map(img => ({
-      name: img.image?.id ? `${img.image.id}.${img.image.extension}` : (img.altText || 'image'),
-      size: img.image?.filesize || 0,
-      type: img.image?.extension ? `image/${img.image.extension}` : 'image/jpeg',
-      url: img.image?.url || img.imagePath || '',
-      id: img.id,
-    }))
-
   const [
     { files, isDragging, errors },
     {
@@ -66,7 +55,6 @@ export function MediaTab({ product: initialProduct }: MediaTabProps) {
     maxSize,
     multiple: true,
     maxFiles,
-    initialFiles,
     onFilesAdded: async (addedFiles: FileWithPreview[]) => {
       if (!currentProduct?.id) {
         toast.error('Product ID not found')
@@ -94,10 +82,8 @@ export function MediaTab({ product: initialProduct }: MediaTabProps) {
           }
         }
 
-        // Remove successfully uploaded files from local state
-        successfulUploads.forEach(fileId => {
-          removeFile(fileId)
-        })
+        // Clear all files from local state after successful uploads
+        clearFiles()
 
         // Refresh the product data to get updated images
         refetch()
@@ -348,12 +334,12 @@ export function MediaTab({ product: initialProduct }: MediaTabProps) {
       )}
 
       {/* Local files being uploaded */}
-      {files.length > 0 && (
+      {files.length > 0 && files.some(file => file.file instanceof File) && (
         <div className="space-y-2">
           <h3 className="text-sm font-medium">Uploading...</h3>
 
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-            {files.map((file) => (
+            {files.filter(file => file.file instanceof File).map((file) => (
               <div
                 key={file.id}
                 className="bg-background relative flex flex-col rounded-md border opacity-75"
@@ -406,14 +392,6 @@ export function MediaTab({ product: initialProduct }: MediaTabProps) {
           </Button>
         </div>
       )}
-
-      <p
-        aria-live="polite"
-        role="region"
-        className="text-muted-foreground mt-2 text-center text-xs"
-      >
-        Multiple image uploader for product gallery
-      </p>
     </div>
   )
 }

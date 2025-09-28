@@ -284,13 +284,13 @@ export function VariantCard({
                       <img
                         src={variant.primaryImage.image.url}
                         alt={variant.primaryImage.altText || "Variant image"}
-                        className="h-full w-full rounded-lg object-cover"
+                        className="h-full w-full object-cover"
                       />
                     ) : variant.primaryImage?.imagePath ? (
                       <img
                         src={variant.primaryImage.imagePath}
                         alt={variant.primaryImage.altText || "Variant image"}
-                        className="h-full w-full rounded-lg object-cover"
+                        className="h-full w-full object-cover"
                       />
                     ) : (
                       <Package className="h-6 w-6 text-foreground/60" />
@@ -300,7 +300,7 @@ export function VariantCard({
                 <SelectContent className="border-border dark:border-blue-700">
                   <SelectItem value="none">
                     <span className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg border border-border bg-muted">
+                      <div className="h-8 w-8 rounded border border-border bg-muted flex items-center justify-center">
                         <Package className="h-4 w-4 text-foreground" />
                       </div>
                       <span>

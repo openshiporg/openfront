@@ -31,7 +31,7 @@ export async function getProducts(
     thumbnail
     createdAt
     updatedAt
-    productVariants {
+    productVariants(orderBy: { createdAt: asc }) {
       id
       title
       sku
@@ -169,7 +169,7 @@ export async function getProduct(id: string) {
         thumbnail
         createdAt
         updatedAt
-        productVariants {
+        productVariants(orderBy: { createdAt: asc }) {
           id
           title
           sku
