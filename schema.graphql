@@ -8666,6 +8666,8 @@ type Store {
   defaultCurrencyCode: String
   homepageTitle: String
   homepageDescription: String
+  logoIcon: String
+  logoColor: String
   metadata: JSON
   swapLinkTemplate: String
   paymentLinkTemplate: String
@@ -8689,6 +8691,8 @@ input StoreWhereInput {
   defaultCurrencyCode: StringFilter
   homepageTitle: StringFilter
   homepageDescription: StringFilter
+  logoIcon: StringFilter
+  logoColor: StringFilter
   swapLinkTemplate: StringFilter
   paymentLinkTemplate: StringFilter
   inviteLinkTemplate: StringFilter
@@ -8709,6 +8713,8 @@ input StoreOrderByInput {
   defaultCurrencyCode: OrderDirection
   homepageTitle: OrderDirection
   homepageDescription: OrderDirection
+  logoIcon: OrderDirection
+  logoColor: OrderDirection
   swapLinkTemplate: OrderDirection
   paymentLinkTemplate: OrderDirection
   inviteLinkTemplate: OrderDirection
@@ -8721,6 +8727,8 @@ input StoreUpdateInput {
   defaultCurrencyCode: String
   homepageTitle: String
   homepageDescription: String
+  logoIcon: String
+  logoColor: String
   metadata: JSON
   swapLinkTemplate: String
   paymentLinkTemplate: String
@@ -8747,6 +8755,8 @@ input StoreCreateInput {
   defaultCurrencyCode: String
   homepageTitle: String
   homepageDescription: String
+  logoIcon: String
+  logoColor: String
   metadata: JSON
   swapLinkTemplate: String
   paymentLinkTemplate: String

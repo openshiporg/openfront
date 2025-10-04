@@ -50,7 +50,9 @@
       "Bash(tree:*)",
       "Read(/Users/junaid/Library/Application Support/CleanShot/media/media_QcFUa8oMBl/**)",
       "Bash(npm run dev:*)",
-      "Bash(/bashes)"
+      "Bash(/bashes)",
+      "Read(//Users/junaid/code/180+ FREE logos library — Untitled UI/Default style/**)",
+      "WebFetch(domain:www.shadcn.io)"
     ],
     "deny": [],
     "additionalDirectories": [

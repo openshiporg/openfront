@@ -9,6 +9,8 @@ interface Store {
   defaultCurrencyCode: string;
   homepageTitle?: string;
   homepageDescription?: string;
+  logoIcon?: string;
+  logoColor?: string;
   metadata?: any;
 }
 
@@ -24,6 +26,8 @@ export async function getStore(): Promise<Store | null> {
         defaultCurrencyCode
         homepageTitle
         homepageDescription
+        logoIcon
+        logoColor
         metadata
       }
     }

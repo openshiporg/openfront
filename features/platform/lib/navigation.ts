@@ -71,6 +71,14 @@ export const platformNavItems: PlatformNavItem[] = [
     icon: Globe,
     group: 'standalone'
   },
+  {
+    title: 'Store',
+    href: '/platform/store',
+    color: 'slate',
+    description: 'Configure store settings, logo, and branding.',
+    icon: Store,
+    group: 'standalone'
+  },
 
   // Products & Catalog
   {
