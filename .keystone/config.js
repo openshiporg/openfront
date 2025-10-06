@@ -1344,7 +1344,7 @@ module.exports = __toCommonJS(keystone_exports);
 
 // features/keystone/index.ts
 var import_auth = require("@keystone-6/auth");
-var import_core90 = require("@keystone-6/core");
+var import_core91 = require("@keystone-6/core");
 
 // features/keystone/models/fields.ts
 var import_fields = require("@keystone-6/core/fields");
@@ -2194,6 +2194,12 @@ async function completeActiveCart(root, { cartId, paymentSessionId }, context) {
           id
           sku
           title
+          primaryImage {
+            image {
+              url
+            }
+            imagePath
+          }
           product {
             id
             title
@@ -2571,6 +2577,7 @@ async function createOrderFromCartData(cart, sudoContext) {
         metadata: lineItem.metadata
       }
     });
+    const thumbnail = lineItem.productVariant.primaryImage ? lineItem.productVariant.primaryImage.image?.url || lineItem.productVariant.primaryImage.imagePath : lineItem.productVariant.product.thumbnail;
     const orderLineItem = await sudoContext.query.OrderLineItem.createOne({
       data: {
         quantity: lineItem.quantity,
@@ -2580,7 +2587,7 @@ async function createOrderFromCartData(cart, sudoContext) {
         productData: {
           id: lineItem.productVariant.product.id,
           title: lineItem.productVariant.product.title,
-          thumbnail: lineItem.productVariant.product.thumbnail,
+          thumbnail,
           description: lineItem.productVariant.product.description,
           metadata: lineItem.productVariant.product.metadata
         },
@@ -10068,12 +10075,24 @@ var LineItem = (0, import_core30.list)({
               const sudoContext = context.sudo();
               const lineItem = await sudoContext.query.LineItem.findOne({
                 where: { id: item.id },
-                query: "productVariant { product { thumbnail } }"
+                query: `
+                  productVariant {
+                    primaryImage {
+                      image { url }
+                      imagePath
+                    }
+                    product { thumbnail }
+                  }
+                `
               });
-              if (!lineItem?.productVariant?.product) {
+              if (!lineItem?.productVariant) {
                 return null;
               }
-              return lineItem.productVariant.product.thumbnail;
+              const primaryImage = lineItem.productVariant.primaryImage;
+              if (primaryImage) {
+                return primaryImage.image?.url || primaryImage.imagePath || null;
+              }
+              return lineItem.productVariant.product?.thumbnail || null;
             }
           })
         }),
@@ -12145,12 +12164,20 @@ var OrderLineItem = (0, import_core43.list)({
             query: `
               productVariant {
                 id
+                primaryImage {
+                  image { url }
+                  imagePath
+                }
                 product {
                   thumbnail
                 }
               }
             `
           });
+          const primaryImage = orderLineItem?.productVariant?.primaryImage;
+          if (primaryImage) {
+            return primaryImage.image?.url || primaryImage.imagePath || null;
+          }
           return orderLineItem?.productVariant?.product?.thumbnail || null;
         }
       })
@@ -14217,6 +14244,7 @@ var StockMovement = (0, import_core80.list)({
 // features/keystone/models/Store.ts
 var import_core81 = require("@keystone-6/core");
 var import_fields81 = require("@keystone-6/core/fields");
+var import_core82 = require("@keystone-6/core");
 var Store = (0, import_core81.list)({
   access: {
     operation: {
@@ -14263,14 +14291,46 @@ var Store = (0, import_core81.list)({
       ref: "Currency.stores",
       many: true
     }),
+    paymentProviders: (0, import_fields81.virtual)({
+      field: import_core82.graphql.field({
+        type: import_core82.graphql.list(
+          import_core82.graphql.object()({
+            name: "PaymentProviderConfig",
+            fields: {
+              provider: import_core82.graphql.field({ type: import_core82.graphql.String }),
+              publishableKey: import_core82.graphql.field({ type: import_core82.graphql.String })
+            }
+          })
+        ),
+        resolve: async (item, args, context) => {
+          const providers = [];
+          const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+          if (stripePublishableKey) {
+            providers.push({
+              provider: "stripe",
+              publishableKey: stripePublishableKey
+            });
+          }
+          const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+          if (paypalClientId) {
+            providers.push({
+              provider: "paypal",
+              publishableKey: paypalClientId
+            });
+          }
+          return providers;
+        }
+      }),
+      ui: { query: "{ provider publishableKey }" }
+    }),
     ...trackingFields
   }
 });
 
 // features/keystone/models/Swap.ts
-var import_core82 = require("@keystone-6/core");
+var import_core83 = require("@keystone-6/core");
 var import_fields82 = require("@keystone-6/core/fields");
-var Swap = (0, import_core82.list)({
+var Swap = (0, import_core83.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -14395,9 +14455,9 @@ var Swap = (0, import_core82.list)({
 });
 
 // features/keystone/models/TaxProvider.ts
-var import_core83 = require("@keystone-6/core");
+var import_core84 = require("@keystone-6/core");
 var import_fields83 = require("@keystone-6/core/fields");
-var TaxProvider = (0, import_core83.list)({
+var TaxProvider = (0, import_core84.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadUsers({ session }) || permissions.canManageUsers({ session }),
@@ -14418,9 +14478,9 @@ var TaxProvider = (0, import_core83.list)({
 });
 
 // features/keystone/models/TaxRate.ts
-var import_core84 = require("@keystone-6/core");
+var import_core85 = require("@keystone-6/core");
 var import_fields84 = require("@keystone-6/core/fields");
-var TaxRate = (0, import_core84.list)({
+var TaxRate = (0, import_core85.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadUsers({ session }) || permissions.canManageUsers({ session }),
@@ -14458,7 +14518,7 @@ var TaxRate = (0, import_core84.list)({
 });
 
 // features/keystone/models/Team.ts
-var import_core85 = require("@keystone-6/core");
+var import_core86 = require("@keystone-6/core");
 var import_fields85 = require("@keystone-6/core/fields");
 var canManageTeams = ({ session }) => {
   if (!isSignedIn({ session })) {
@@ -14469,7 +14529,7 @@ var canManageTeams = ({ session }) => {
   }
   return { id: { equals: session?.itemId } };
 };
-var Team = (0, import_core85.list)({
+var Team = (0, import_core86.list)({
   access: {
     operation: {
       create: isSignedIn,
@@ -14532,7 +14592,7 @@ var Team = (0, import_core85.list)({
 });
 
 // features/keystone/models/User.ts
-var import_core86 = require("@keystone-6/core");
+var import_core87 = require("@keystone-6/core");
 var import_fields86 = require("@keystone-6/core/fields");
 var canManageUsers = ({ session }) => {
   if (!isSignedIn({ session })) {
@@ -14543,7 +14603,7 @@ var canManageUsers = ({ session }) => {
   }
   return { id: { equals: session?.itemId } };
 };
-var User = (0, import_core86.list)({
+var User = (0, import_core87.list)({
   access: {
     operation: {
       create: () => true,
@@ -14669,13 +14729,13 @@ var User = (0, import_core86.list)({
         description: "Webhook URL to call when orders are created/updated (for Openship integration)"
       }
     }),
-    ...(0, import_core86.group)({
+    ...(0, import_core87.group)({
       label: "Virtual Fields",
       description: "Calculated fields for user display and cart status",
       fields: {
         firstName: (0, import_fields86.virtual)({
-          field: import_core86.graphql.field({
-            type: import_core86.graphql.String,
+          field: import_core87.graphql.field({
+            type: import_core87.graphql.String,
             resolve(item) {
               if (!item.name) return "";
               const parts = item.name.trim().split(/\s+/);
@@ -14684,8 +14744,8 @@ var User = (0, import_core86.list)({
           })
         }),
         lastName: (0, import_fields86.virtual)({
-          field: import_core86.graphql.field({
-            type: import_core86.graphql.String,
+          field: import_core87.graphql.field({
+            type: import_core87.graphql.String,
             resolve(item) {
               if (!item.name) return "";
               const parts = item.name.trim().split(/\s+/);
@@ -14698,8 +14758,8 @@ var User = (0, import_core86.list)({
           })
         }),
         activeCartId: (0, import_fields86.virtual)({
-          field: import_core86.graphql.field({
-            type: import_core86.graphql.String,
+          field: import_core87.graphql.field({
+            type: import_core87.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const activeCarts = await sudoContext.query.Cart.findMany({
@@ -14726,7 +14786,7 @@ var User = (0, import_core86.list)({
           })
         }),
         billingAddress: (0, import_fields86.virtual)({
-          field: (lists) => import_core86.graphql.field({
+          field: (lists) => import_core87.graphql.field({
             type: lists.Address.types.output,
             async resolve(item, args, context) {
               const address = await context.db.Address.findMany({
@@ -14765,9 +14825,9 @@ var User = (0, import_core86.list)({
 });
 
 // features/keystone/models/UserField.ts
-var import_core87 = require("@keystone-6/core");
+var import_core88 = require("@keystone-6/core");
 var import_fields87 = require("@keystone-6/core/fields");
-var UserField = (0, import_core87.list)({
+var UserField = (0, import_core88.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadUsers({ session }) || permissions.canManageUsers({ session }),
@@ -14824,10 +14884,10 @@ var UserField = (0, import_core87.list)({
 });
 
 // features/keystone/models/WebhookEndpoint.ts
-var import_core88 = require("@keystone-6/core");
+var import_core89 = require("@keystone-6/core");
 var import_fields88 = require("@keystone-6/core/fields");
 var import_crypto = __toESM(require("crypto"));
-var WebhookEndpoint = (0, import_core88.list)({
+var WebhookEndpoint = (0, import_core89.list)({
   access: {
     operation: {
       query: permissions.canReadWebhooks,
@@ -14906,9 +14966,9 @@ var WebhookEndpoint = (0, import_core88.list)({
 });
 
 // features/keystone/models/WebhookEvent.ts
-var import_core89 = require("@keystone-6/core");
+var import_core90 = require("@keystone-6/core");
 var import_fields89 = require("@keystone-6/core/fields");
-var WebhookEvent = (0, import_core89.list)({
+var WebhookEvent = (0, import_core90.list)({
   access: {
     operation: {
       query: permissions.canReadWebhooks,
@@ -15777,7 +15837,7 @@ var { withAuth } = (0, import_auth.createAuth)({
 });
 var keystone_default = withAuth(
   withWebhooks(
-    (0, import_core90.config)({
+    (0, import_core91.config)({
       db: {
         provider: "postgresql",
         url: databaseURL

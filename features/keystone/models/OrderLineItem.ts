@@ -103,12 +103,22 @@ export const OrderLineItem = list({
             query: `
               productVariant {
                 id
+                primaryImage {
+                  image { url }
+                  imagePath
+                }
                 product {
                   thumbnail
                 }
               }
             `,
           });
+
+          // Prioritize variant's primaryImage, fall back to product thumbnail
+          const primaryImage = orderLineItem?.productVariant?.primaryImage;
+          if (primaryImage) {
+            return primaryImage.image?.url || primaryImage.imagePath || null;
+          }
 
           return orderLineItem?.productVariant?.product?.thumbnail || null;
         }

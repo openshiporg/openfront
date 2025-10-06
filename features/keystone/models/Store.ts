@@ -1,9 +1,10 @@
 
 import { list } from "@keystone-6/core";
 import { denyAll } from "@keystone-6/core/access";
-import { json, text, relationship } from "@keystone-6/core/fields";
+import { json, text, relationship, virtual } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
+import { graphql } from "@keystone-6/core";
 
 export const Store = list({
   access: {
@@ -50,6 +51,47 @@ export const Store = list({
     currencies: relationship({
       ref: "Currency.stores",
       many: true,
+    }),
+    paymentProviders: virtual({
+      field: graphql.field({
+        type: graphql.list(
+          graphql.object<{
+            provider: string;
+            publishableKey: string;
+          }>()({
+            name: 'PaymentProviderConfig',
+            fields: {
+              provider: graphql.field({ type: graphql.String }),
+              publishableKey: graphql.field({ type: graphql.String }),
+            },
+          })
+        ),
+        resolve: async (item, args, context) => {
+          // Return payment provider configurations from environment variables
+          const providers = [];
+
+          // Stripe configuration
+          const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+          if (stripePublishableKey) {
+            providers.push({
+              provider: 'stripe',
+              publishableKey: stripePublishableKey,
+            });
+          }
+
+          // PayPal configuration
+          const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+          if (paypalClientId) {
+            providers.push({
+              provider: 'paypal',
+              publishableKey: paypalClientId,
+            });
+          }
+
+          return providers;
+        },
+      }),
+      ui: { query: '{ provider publishableKey }' },
     }),
     ...trackingFields,
   },

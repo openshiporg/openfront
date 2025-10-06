@@ -50,6 +50,12 @@ async function completeActiveCart(root, { cartId, paymentSessionId }, context) {
           id
           sku
           title
+          primaryImage {
+            image {
+              url
+            }
+            imagePath
+          }
           product {
             id
             title
@@ -526,6 +532,11 @@ async function createOrderFromCartData(cart, sudoContext) {
       },
     });
 
+    // Determine the thumbnail - prioritize variant primaryImage over product thumbnail
+    const thumbnail = lineItem.productVariant.primaryImage
+      ? (lineItem.productVariant.primaryImage.image?.url || lineItem.productVariant.primaryImage.imagePath)
+      : lineItem.productVariant.product.thumbnail;
+
     // Create OrderLineItem with snapshot data
     const orderLineItem = await sudoContext.query.OrderLineItem.createOne({
       data: {
@@ -536,7 +547,7 @@ async function createOrderFromCartData(cart, sudoContext) {
         productData: {
           id: lineItem.productVariant.product.id,
           title: lineItem.productVariant.product.title,
-          thumbnail: lineItem.productVariant.product.thumbnail,
+          thumbnail: thumbnail,
           description: lineItem.productVariant.product.description,
           metadata: lineItem.productVariant.product.metadata,
         },

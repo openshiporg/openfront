@@ -8674,8 +8674,14 @@ type Store {
   inviteLinkTemplate: String
   currencies(where: CurrencyWhereInput! = {}, orderBy: [CurrencyOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: CurrencyWhereUniqueInput): [Currency!]
   currenciesCount(where: CurrencyWhereInput! = {}): Int
+  paymentProviders: [PaymentProviderConfig]
   createdAt: DateTime
   updatedAt: DateTime
+}
+
+type PaymentProviderConfig {
+  provider: String
+  publishableKey: String
 }
 
 input StoreWhereUniqueInput {

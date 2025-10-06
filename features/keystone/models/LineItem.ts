@@ -131,14 +131,28 @@ export const LineItem = list({
               const sudoContext = context.sudo();
               const lineItem = await sudoContext.query.LineItem.findOne({
                 where: { id: item.id },
-                query: "productVariant { product { thumbnail } }",
+                query: `
+                  productVariant {
+                    primaryImage {
+                      image { url }
+                      imagePath
+                    }
+                    product { thumbnail }
+                  }
+                `,
               });
 
-              if (!lineItem?.productVariant?.product) {
+              if (!lineItem?.productVariant) {
                 return null;
               }
 
-              return lineItem.productVariant.product.thumbnail;
+              // Prioritize variant's primaryImage, fall back to product thumbnail
+              const primaryImage = lineItem.productVariant.primaryImage;
+              if (primaryImage) {
+                return primaryImage.image?.url || primaryImage.imagePath || null;
+              }
+
+              return lineItem.productVariant.product?.thumbnail || null;
             },
           }),
         }),
