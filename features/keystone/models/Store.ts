@@ -71,7 +71,7 @@ export const Store = list({
           const providers = [];
 
           // Stripe configuration
-          const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+          const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_KEY;
           if (stripePublishableKey) {
             providers.push({
               provider: 'stripe',

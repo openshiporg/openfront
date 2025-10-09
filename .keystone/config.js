@@ -14304,7 +14304,7 @@ var Store = (0, import_core81.list)({
         ),
         resolve: async (item, args, context) => {
           const providers = [];
-          const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+          const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_KEY;
           if (stripePublishableKey) {
             providers.push({
               provider: "stripe",

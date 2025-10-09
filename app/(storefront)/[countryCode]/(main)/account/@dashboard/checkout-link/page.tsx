@@ -187,7 +187,6 @@ async function CheckoutLinkContent({ cartId, countryCode }: { cartId: string, co
             </div>
           </div>
         </div>
-        <Divider className="my-16" />
       </div>
     </div>
   );
