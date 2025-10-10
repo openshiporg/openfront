@@ -67,25 +67,36 @@ export const Store = list({
           })
         ),
         resolve: async (item, args, context) => {
-          // Return payment provider configurations from environment variables
+          // Query actual payment providers from database
+          const paymentProviders = await context.query.PaymentProvider.findMany({
+            where: { isInstalled: { equals: true } },
+            query: 'code',
+          });
+
           const providers = [];
 
-          // Stripe configuration
-          const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_KEY;
-          if (stripePublishableKey) {
-            providers.push({
-              provider: 'stripe',
-              publishableKey: stripePublishableKey,
-            });
+          // Check if Stripe is installed (code starts with pp_stripe_)
+          const hasStripe = paymentProviders.some((p: any) => p.code?.startsWith('pp_stripe_'));
+          if (hasStripe) {
+            const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_KEY;
+            if (stripePublishableKey) {
+              providers.push({
+                provider: 'stripe',
+                publishableKey: stripePublishableKey,
+              });
+            }
           }
 
-          // PayPal configuration
-          const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
-          if (paypalClientId) {
-            providers.push({
-              provider: 'paypal',
-              publishableKey: paypalClientId,
-            });
+          // Check if PayPal is installed (code starts with pp_paypal)
+          const hasPaypal = paymentProviders.some((p: any) => p.code?.startsWith('pp_paypal'));
+          if (hasPaypal) {
+            const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+            if (paypalClientId) {
+              providers.push({
+                provider: 'paypal',
+                publishableKey: paypalClientId,
+              });
+            }
           }
 
           return providers;
