@@ -68,7 +68,7 @@ export const Store = list({
         ),
         resolve: async (item, args, context) => {
           // Query actual payment providers from database
-          const paymentProviders = await context.query.PaymentProvider.findMany({
+          const paymentProviders = await context.sudo().query.PaymentProvider.findMany({
             where: { isInstalled: { equals: true } },
             query: 'code',
           });

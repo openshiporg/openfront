@@ -3169,6 +3169,7 @@ var handlePaymentProviderWebhook_default = handlePaymentProviderWebhook;
 // features/keystone/mutations/getCustomerOrder.ts
 async function getCustomerOrder(root, { orderId, secretKey }, context) {
   const sudoContext = context.sudo();
+  console.log({ orderId, secretKey, userId: context.session?.itemId });
   const order = await sudoContext.query.Order.findOne({
     where: { id: orderId },
     query: `
@@ -14303,20 +14304,31 @@ var Store = (0, import_core81.list)({
           })
         ),
         resolve: async (item, args, context) => {
+          const paymentProviders = await context.sudo().query.PaymentProvider.findMany({
+            where: { isInstalled: { equals: true } },
+            query: "code"
+          });
+          console.log({ paymentProviders });
           const providers = [];
-          const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_KEY;
-          if (stripePublishableKey) {
-            providers.push({
-              provider: "stripe",
-              publishableKey: stripePublishableKey
-            });
+          const hasStripe = paymentProviders.some((p) => p.code?.startsWith("pp_stripe_"));
+          if (hasStripe) {
+            const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_KEY;
+            if (stripePublishableKey) {
+              providers.push({
+                provider: "stripe",
+                publishableKey: stripePublishableKey
+              });
+            }
           }
-          const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
-          if (paypalClientId) {
-            providers.push({
-              provider: "paypal",
-              publishableKey: paypalClientId
-            });
+          const hasPaypal = paymentProviders.some((p) => p.code?.startsWith("pp_paypal"));
+          if (hasPaypal) {
+            const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+            if (paypalClientId) {
+              providers.push({
+                provider: "paypal",
+                publishableKey: paypalClientId
+              });
+            }
           }
           return providers;
         }

@@ -22,7 +22,7 @@ export async function OrderConfirmedPage({ params: paramsPromise, searchParams: 
   const searchParams = await searchParamsPromise
 
   // Extract secretKey (assuming it's passed as 'key')
-  const secretKey = typeof searchParams?.key === 'string' ? searchParams.key : null
+  const secretKey = typeof searchParams?.secretKey === 'string' ? searchParams.secretKey : null
 
   // Call retrieveOrder with id and secretKey
   const order: StoreOrder | null = await retrieveOrder(params.id, secretKey).catch(() => null)
