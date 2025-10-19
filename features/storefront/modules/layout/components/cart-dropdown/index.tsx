@@ -124,7 +124,7 @@ const CartDropdown = ({
                         <div className="flex flex-col">
                           <div className="flex flex-col flex-1">
                             <div className="flex items-start justify-between">
-                              <div className="flex flex-col overflow-ellipsis whitespace-nowrap mr-4 w-[180px]">
+                              <div className="flex flex-col overflow-ellipsis whitespace-nowrap mr-4">
                                 <h3 className="text-sm overflow-hidden text-ellipsis">
                                   <LocalizedClientLink href={`/products/${item.productVariant.product.handle}`}>
                                     {item.title}
