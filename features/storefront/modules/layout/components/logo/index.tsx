@@ -31,7 +31,7 @@ export default async function Logo() {
       <div
         dangerouslySetInnerHTML={{ __html: logoSvg }}
         style={{ filter: `hue-rotate(${logoColor}deg)` }}
-        className="[&>svg]:w-[14px] [&>svg]:h-[14px]"
+        className="size-5"
       />
       <h1 className="flex items-center tracking-wide text-lg">
         <span className="font-medium">{first.toLowerCase()}</span>

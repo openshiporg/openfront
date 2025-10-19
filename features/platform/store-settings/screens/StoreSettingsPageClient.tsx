@@ -4,6 +4,12 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -15,6 +21,7 @@ import { LOGO_ICONS, HUE_PRESETS } from '../lib/icon-registry';
 import { updateStoreSettings } from '../actions';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { Code } from 'lucide-react';
 
 interface StoreSettingsPageClientProps {
   initialData: {
@@ -78,7 +85,8 @@ export function StoreSettingsPageClient({
     );
   }
 
-  const selectedIcon = LOGO_ICONS.find((icon) => icon.lightSvg === logoIcon) || LOGO_ICONS[0];
+  // Find matching preset icon, but don't default to first icon if not found
+  const selectedIcon = LOGO_ICONS.find((icon) => icon.lightSvg === logoIcon);
 
   return (
     <div className="p-6 max-w-2xl">
@@ -99,9 +107,9 @@ export function StoreSettingsPageClient({
         {/* Logo Icon Selector */}
         <div>
           <Label>Logo Icon</Label>
-          <div className="mt-2">
+          <div className="mt-2 flex items-center gap-2">
             <Select
-              value={selectedIcon.id}
+              value={selectedIcon?.id || ''}
               onValueChange={(id) => {
                 const icon = LOGO_ICONS.find((i) => i.id === id);
                 if (icon) setLogoIcon(icon.lightSvg);
@@ -112,13 +120,11 @@ export function StoreSettingsPageClient({
                   'flex h-12 w-12 shrink-0 rounded-lg border border-input bg-background focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 p-0 overflow-hidden items-center justify-center'
                 )}
               >
-                <SelectValue>
-                  <div
-                    dangerouslySetInnerHTML={{ __html: selectedIcon.lightSvg }}
-                    style={{ filter: `hue-rotate(${logoColor}deg)` }}
-                    className="[&>svg]:w-6 [&>svg]:h-6"
-                  />
-                </SelectValue>
+                <div
+                  dangerouslySetInnerHTML={{ __html: logoIcon }}
+                  style={{ filter: `hue-rotate(${logoColor}deg)` }}
+                  className="[&>svg]:w-6 [&>svg]:h-6"
+                />
               </SelectPrimitive.Trigger>
               <SelectContent className="border-border dark:border-blue-700">
                 {LOGO_ICONS.map((icon) => (
@@ -139,6 +145,44 @@ export function StoreSettingsPageClient({
                 ))}
               </SelectContent>
             </Select>
+
+            {/* SVG Code Editor Popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-12 w-12 shrink-0"
+                  type="button"
+                >
+                  <Code className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[500px]" align="start">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium mb-2">Edit SVG Code</h4>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Edit the SVG code directly. Changes will be reflected in the icon preview.
+                    </p>
+                  </div>
+                  <Textarea
+                    value={logoIcon}
+                    onChange={(e) => setLogoIcon(e.target.value)}
+                    className="font-mono text-xs min-h-[300px]"
+                    placeholder="<svg>...</svg>"
+                  />
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm text-muted-foreground">Preview:</div>
+                    <div
+                      dangerouslySetInnerHTML={{ __html: logoIcon }}
+                      style={{ filter: `hue-rotate(${logoColor}deg)` }}
+                      className="[&>svg]:w-8 [&>svg]:h-8 flex items-center justify-center p-2 border rounded"
+                    />
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 

@@ -90,9 +90,14 @@ const CartDropdown = ({
       <Popover open={cartDropdownOpen} onOpenChange={setCartDropdownOpen}>
         <div className="relative h-full">
           <PopoverTrigger asChild>
-            <button className="h-full px-3">
-              <LocalizedClientLink className="hover:text-foreground" href="/cart">
-                {`Cart (${totalItems})`}
+            <button className="h-full">
+              <LocalizedClientLink className="flex items-center hover:text-foreground" href="/cart">
+                {`Cart`}
+                {totalItems > 0 && (
+                  <span className="ml-2 inline-flex items-center justify-center rounded-full bg-muted text-foreground/60 border text-[.5rem] font-bold h-4 w-4">
+                    {totalItems}
+                  </span>
+                )}
               </LocalizedClientLink>
             </button>
           </PopoverTrigger>

@@ -32,6 +32,7 @@ async function activeCart(root, { cartId }, context) {
       }
       subtotal
       total
+      rawTotal
       discount
       giftCardTotal
       tax
