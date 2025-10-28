@@ -9,17 +9,14 @@ interface HeroProps {
 
 const Hero = ({ title, description }: HeroProps) => {
   return (
-    <div className="h-[75vh] w-full border-b border-border relative">
-      {/* 1. Original Dots Shader */}
+    <div className="h-[75vh] w-full border-b border-border relative bg-slate-900">
       <DotsShader
-        totalSize={4}
-        dotSize={2}
-        colors={[
-          [59, 130, 246], // Blue-500
-          [99, 102, 241], // Indigo-500
-          [147, 197, 253], // Blue-300
-        ]}
-        opacities={[0.3, 0.3, 0.4, 0.4, 0.4, 0.5, 0.5, 0.6, 0.6, 0.7]}
+        className="absolute inset-0"
+        squareSize={3}
+        gridGap={3}
+        color="rgb(59, 130, 246)"
+        maxOpacity={0.5}
+        flickerChance={0.3}
       />
 
       <div className="absolute inset-0 z-10 flex flex-col justify-center items-center text-center sm:p-32 gap-6">

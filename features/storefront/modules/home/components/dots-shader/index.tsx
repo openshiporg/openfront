@@ -1,301 +1,216 @@
 'use client';
-
-import { useEffect, useMemo, useRef } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { cn } from "@/lib/utils";
 
 export interface DotsShaderProps {
-  opacities?: number[];
-  colors?: number[][];
-  totalSize?: number;
-  dotSize?: number;
-  maxFps?: any;
+  squareSize?: number;
+  gridGap?: number;
+  flickerChance?: number;
+  color?: string;
+  width?: number;
+  height?: number;
+  className?: string;
+  maxOpacity?: number;
 }
 
-function createShader(
-  gl: WebGL2RenderingContext,
-  type: number,
-  source: string
-) {
-  let shader = gl.createShader(type);
-  if (!shader) {
-    return console.error('Failed to create shader');
-  }
-
-  gl.shaderSource(shader, source);
-  gl.compileShader(shader);
-
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    console.error('Failed to create shader: ' + gl.getShaderInfoLog(shader));
-    gl.deleteShader(shader);
-    return null;
-  }
-
-  return shader;
-}
-
-function createBuffer(gl: WebGL2RenderingContext, arr: any) {
-  let buffer = gl.createBuffer();
-  let bufferType =
-    arr instanceof Uint16Array || arr instanceof Uint32Array
-      ? gl.ELEMENT_ARRAY_BUFFER
-      : gl.ARRAY_BUFFER;
-
-  gl.bindBuffer(bufferType, buffer);
-  gl.bufferData(bufferType, arr, gl.STATIC_DRAW);
-
-  return buffer;
-}
-
-const DEFAULT_SHADER_SOURCE = `
-float intro_offset = distance(u_resolution / 2.0 / u_total_size, st2) * 0.01 + (random(st2) * 0.15);
-opacity *= step(intro_offset, u_time);
-opacity *= clamp((1.0 - step(intro_offset + 0.1, u_time)) * 1.25, 1.0, 1.25);
-`;
-
-export const DotsShader = (props: DotsShaderProps) => {
-  const {
-    colors = [[93, 227, 255]],
-    opacities = [0.4, 0.4, 0.6, 0.6, 0.6, 0.8, 0.8, 0.8, 0.8, 1],
-    totalSize = 3,
-    dotSize = 1,
-    maxFps = 30,
-  } = props;
-  const source = DEFAULT_SHADER_SOURCE;
+export const DotsShader: React.FC<DotsShaderProps> = ({
+  squareSize = 4,
+  gridGap = 6,
+  flickerChance = 0.3,
+  color = "rgb(0, 0, 0)",
+  width,
+  height,
+  className,
+  maxOpacity = 0.3,
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const center = ['x', 'y'];
-  const fragmentSource = `#version 300 es
-    precision mediump float;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isInView, setIsInView] = useState(false);
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
-    in vec2 fragCoord;
-
-    uniform float u_time;
-    uniform float u_opacities[10];
-    uniform vec3 u_colors[6];
-    uniform float u_total_size;
-    uniform float u_dot_size;
-    uniform vec2 u_resolution;
-
-    out vec4 fragColor;
-    float PHI = 1.61803398874989484820459;
-    float random(vec2 xy) {
-      return fract(tan(distance(xy * PHI, xy) * 0.5) * xy.x);
-    }
-
-    float map(float value, float min1, float max1, float min2, float max2) {
-      return min2 + (value - min1) * (max2 - min2) / (max1 - min1);
-    }
-
-    void main() {
-      vec2 st = fragCoord.xy;
-      \n
-    `
-    .concat(
-      center.includes('x')
-        ? 'st.x -= abs(floor((mod(u_resolution.x, u_total_size) - u_dot_size) * 0.5));'
-        : '',
-      '\n  '
-    )
-    .concat(
-      center.includes('y')
-        ? 'st.y -= abs(floor((mod(u_resolution.y, u_total_size) - u_dot_size) * 0.5));'
-        : '',
-      '\n\n  float opacity = step(0.0, st.x);\n  opacity *= step(0.0, st.y);\n\n  vec2 st2 = vec2(int(st.x / u_total_size), int(st.y / u_total_size));\n\n  float frequency = 5.0;\n  float show_offset = random(st2);\n  // Without the +1.0 the first column is all the same opacity\n  float rand = random(st2 * floor((u_time / frequency) + show_offset + frequency) + 1.0);\n  opacity *= u_opacities[int(rand * 10.0)];\n  opacity *= 1.0 - step(u_dot_size / u_total_size, fract(st.x / u_total_size));\n  opacity *= 1.0 - step(u_dot_size / u_total_size, fract(st.y / u_total_size));\n\n  vec3 color = u_colors[int(show_offset * 6.0)];\n\n  '
-    )
-    .concat(
-      source,
-      '\n\n  vec3 backgroundColor = vec3(30.0/255.0, 41.0/255.0, 59.0/255.0);\n  fragColor = vec4(mix(backgroundColor, color, opacity), 1.0);\n}\n'
-    );
-
-  const uniforms = useMemo(() => {
-    let e =
-      colors.length === 2
-        ? [colors[0], colors[0], colors[0], colors[1], colors[1], colors[1]]
-        : colors.length === 3
-        ? [colors[0], colors[0], colors[1], colors[1], colors[2], colors[2]]
-        : [colors[0], colors[0], colors[0], colors[0], colors[0], colors[0]];
-
-    return {
-      u_colors: {
-        value: e.map((e) => [e[0] / 255, e[1] / 255, e[2] / 255]),
-        type: 'uniform3fv',
-      },
-      u_opacities: {
-        value: opacities,
-        type: 'uniform1fv',
-      },
-      u_total_size: {
-        value: totalSize,
-        type: 'uniform1f',
-      },
-      u_dot_size: {
-        value: dotSize,
-        type: 'uniform1f',
-      },
+  const memoizedColor = useMemo(() => {
+    const toRGBA = (color: string) => {
+      if (typeof window === "undefined") {
+        return `rgba(0, 0, 0,`;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 1;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return "rgba(255, 0, 0,";
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, 1, 1);
+      const [r, g, b] = Array.from(ctx.getImageData(0, 0, 1, 1).data);
+      return `rgba(${r}, ${g}, ${b},`;
     };
-  }, [colors, opacities, totalSize, dotSize]);
+    return toRGBA(color);
+  }, [color]);
+
+  const setupCanvas = useCallback(
+    (canvas: HTMLCanvasElement, width: number, height: number) => {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+
+      const cols = Math.floor(width / (squareSize + gridGap));
+      const rows = Math.floor(height / (squareSize + gridGap));
+
+      const squares = new Float32Array(cols * rows);
+      for (let i = 0; i < squares.length; i++) {
+        squares[i] = Math.random() * maxOpacity;
+      }
+
+      return { cols, rows, squares, dpr };
+    },
+    [squareSize, gridGap, maxOpacity],
+  );
+
+  const updateSquares = useCallback(
+    (squares: Float32Array, deltaTime: number) => {
+      for (let i = 0; i < squares.length; i++) {
+        if (Math.random() < flickerChance * deltaTime) {
+          squares[i] = Math.random() * maxOpacity;
+        }
+      }
+    },
+    [flickerChance, maxOpacity],
+  );
+
+  const drawGrid = useCallback(
+    (
+      ctx: CanvasRenderingContext2D,
+      width: number,
+      height: number,
+      cols: number,
+      rows: number,
+      squares: Float32Array,
+      dpr: number,
+    ) => {
+      // Clear with a single operation
+      ctx.clearRect(0, 0, width, height);
+
+      // Batch drawing by opacity to reduce fillStyle changes
+      const drawBatches: Map<string, Array<{x: number, y: number}>> = new Map();
+
+      for (let i = 0; i < cols; i++) {
+        for (let j = 0; j < rows; j++) {
+          const opacity = squares[i * rows + j];
+
+          if (opacity > 0) {
+            const fillStyle = `${memoizedColor}${opacity.toFixed(3)})`;
+            if (!drawBatches.has(fillStyle)) {
+              drawBatches.set(fillStyle, []);
+            }
+            drawBatches.get(fillStyle)!.push({
+              x: Math.round(i * (squareSize + gridGap) * dpr),
+              y: Math.round(j * (squareSize + gridGap) * dpr),
+            });
+          }
+        }
+      }
+
+      // Draw all squares with the same opacity together
+      const rectWidth = Math.round(squareSize * dpr);
+      const rectHeight = Math.round(squareSize * dpr);
+
+      drawBatches.forEach((positions, fillStyle) => {
+        ctx.fillStyle = fillStyle;
+        positions.forEach(({x, y}) => {
+          ctx.fillRect(x, y, rectWidth, rectHeight);
+        });
+      });
+    },
+    [memoizedColor, squareSize, gridGap],
+  );
 
   useEffect(() => {
-    const windowDpr = window.devicePixelRatio;
-    const canvas = canvasRef.current!;
-    const glCanvas = document.createElement('canvas');
-    const dpr = Math.max(1, Math.min(windowDpr ?? 1, 2));
-    let raf: any;
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
 
-    canvas.width = canvas.offsetWidth * dpr;
-    canvas.height = canvas.offsetHeight * dpr;
-    glCanvas.width = canvas.offsetWidth * dpr;
-    glCanvas.height = canvas.offsetHeight * dpr;
-
-    const gl = glCanvas.getContext('webgl2');
-    const ctx2d = canvas.getContext('2d');
-
-    if (!gl || !ctx2d) {
-      return;
-    }
-
-    const vertexShader = createShader(
-      gl,
-      gl.VERTEX_SHADER,
-      `#version 300 es
-
-      precision mediump float;
-      
-      in vec2 coordinates;
-      
-      uniform vec2 u_resolution;
-      
-      out vec2 fragCoord;
-      
-      void main(void) { 
-        gl_Position = vec4(coordinates, 0.0, 1.0);
-        fragCoord = (coordinates + 1.0) * 0.5 * u_resolution;
-        fragCoord.y = u_resolution.y - fragCoord.y;
-      }
-      `
-    );
-    const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentSource);
-
-    if (!vertexShader || !fragmentShader) {
-      return;
-    }
-
-    const glProgram = gl.createProgram()!;
-    gl.attachShader(glProgram, vertexShader);
-    gl.attachShader(glProgram, fragmentShader);
-
-    gl.linkProgram(glProgram);
-
-    if (!gl.getProgramParameter(glProgram, gl.LINK_STATUS)) {
-      throw `Failed to compile WebGL program: \n\n${gl.getProgramInfoLog(
-        glProgram
-      )}`;
-    }
-    gl.useProgram(glProgram);
-
-    const positions = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
-    const positionsBuffer = createBuffer(gl, positions);
-
-    let coordinatesAttrLocation = gl.getAttribLocation(
-      glProgram,
-      'coordinates'
-    );
-    gl.enableVertexAttribArray(coordinatesAttrLocation);
-    gl.vertexAttribPointer(coordinatesAttrLocation, 2, gl.FLOAT, false, 0, 0);
-
-    const resolutionAttrLocation = gl.getUniformLocation(glProgram,'u_resolution');
-    const timeAttrLocation = gl.getUniformLocation(glProgram, 'u_time');
-    const scrollAttrLocation = gl.getUniformLocation(glProgram, 'u_scroll');
-
-    for (let key in uniforms) {
-      const uniformLocation = gl.getUniformLocation(glProgram, key);
-      const uniform = uniforms[key];
-
-      switch (uniform.type) {
-        case 'uniform1f':
-          gl.uniform1f(uniformLocation, uniform.value);
-          break;
-        case 'uniform3f':
-          gl.uniform3f(uniformLocation, ...uniform.value);
-          break;
-        case 'uniform1fv':
-          gl.uniform1fv(uniformLocation, uniform.value);
-          break;
-        case 'uniform3fv':
-          gl.uniform3fv(uniformLocation, uniform.value.flat());
-          break;
-        default:
-          return uniform;
-      }
-    }
-
-    gl.uniform2f(
-      resolutionAttrLocation,
-      canvas.width / dpr,
-      canvas.height / dpr
-    );
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-    gl.disable(gl.DEPTH_TEST);
-
-    let lastSecondPassed: number | null = null;
-    let timePassed = 0;
-
-    function run(e: number) {
-      if (!gl) {
-        return;
-      }
-
-      let secondsPassed = e / 1e3;
-
-      if (lastSecondPassed === null) {
-        lastSecondPassed = secondsPassed;
-      }
-
-      if (maxFps !== Infinity) {
-        if (e - timePassed < 1000 / maxFps) {
-          raf = window.requestAnimationFrame(run);
-          return;
-        }
-        timePassed = e;
-      }
-
-      const time = secondsPassed - lastSecondPassed;
-      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-      gl.uniform1f(timeAttrLocation, time);
-      gl.uniform1f(scrollAttrLocation, window.scrollY);
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      ctx2d!.clearRect(0, 0, canvas.width, canvas.height);
-      ctx2d!.drawImage(glCanvas, 0, 0);
-      raf = window.requestAnimationFrame(run);
-    }
-
-    raf = window.requestAnimationFrame(run);
-
-    const resizeObserver = new window.ResizeObserver(() => {
-      canvas.width = canvas.offsetWidth * dpr;
-      canvas.height = canvas.offsetHeight * dpr;
-      glCanvas.width = canvas.offsetWidth * dpr;
-      glCanvas.height = canvas.offsetHeight * dpr;
-      gl.uniform2f(
-        resolutionAttrLocation,
-        canvas.width / dpr,
-        canvas.height / dpr
-      );
+    const ctx = canvas.getContext("2d", {
+      alpha: true,
+      desynchronized: true, // Hint for better performance
     });
+    if (!ctx) return;
 
-    return (
-      resizeObserver.observe(canvas),
-      () => {
-        window.cancelAnimationFrame(raf),
-          resizeObserver.disconnect(),
-          gl &&
-            (gl.deleteShader(vertexShader),
-            gl.deleteShader(fragmentShader),
-            gl.deleteProgram(glProgram),
-            gl.deleteBuffer(positionsBuffer));
-      }
+    // Disable image smoothing for crisp pixels
+    ctx.imageSmoothingEnabled = false;
+
+    let animationFrameId: number;
+    let gridParams: ReturnType<typeof setupCanvas>;
+
+    const updateCanvasSize = () => {
+      const newWidth = width || container.clientWidth;
+      const newHeight = height || container.clientHeight;
+      setCanvasSize({ width: newWidth, height: newHeight });
+      gridParams = setupCanvas(canvas, newWidth, newHeight);
+    };
+
+    updateCanvasSize();
+
+    let lastTime = 0;
+    const animate = (time: number) => {
+      if (!isInView) return;
+
+      const deltaTime = (time - lastTime) / 1000;
+      lastTime = time;
+
+      updateSquares(gridParams.squares, deltaTime);
+      drawGrid(
+        ctx,
+        canvas.width,
+        canvas.height,
+        gridParams.cols,
+        gridParams.rows,
+        gridParams.squares,
+        gridParams.dpr,
+      );
+
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateCanvasSize();
+    });
+    resizeObserver.observe(container);
+
+    const intersectionObserver = new IntersectionObserver(
+      ([entry]) => {
+        setIsInView(entry.isIntersecting);
+      },
+      { threshold: 0 },
     );
-  }, [fragmentSource, uniforms, maxFps]);
+    intersectionObserver.observe(canvas);
 
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />;
+    if (isInView) {
+      animationFrameId = requestAnimationFrame(animate);
+    }
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      resizeObserver.disconnect();
+      intersectionObserver.disconnect();
+    };
+  }, [setupCanvas, updateSquares, drawGrid, width, height, isInView]);
+
+  return (
+    <div ref={containerRef} className={cn("w-full h-full", className)}>
+      <canvas
+        ref={canvasRef}
+        className="pointer-events-none"
+        style={{
+          width: canvasSize.width,
+          height: canvasSize.height,
+        }}
+      />
+    </div>
+  );
 };
