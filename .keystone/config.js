@@ -1524,6 +1524,7 @@ async function activeCart(root, { cartId }, context) {
       }
       subtotal
       total
+      rawTotal
       discount
       giftCardTotal
       tax
@@ -3169,7 +3170,6 @@ var handlePaymentProviderWebhook_default = handlePaymentProviderWebhook;
 // features/keystone/mutations/getCustomerOrder.ts
 async function getCustomerOrder(root, { orderId, secretKey }, context) {
   const sudoContext = context.sudo();
-  console.log({ orderId, secretKey, userId: context.session?.itemId });
   const order = await sudoContext.query.Order.findOne({
     where: { id: orderId },
     query: `
@@ -14308,7 +14308,6 @@ var Store = (0, import_core81.list)({
             where: { isInstalled: { equals: true } },
             query: "code"
           });
-          console.log({ paymentProviders });
           const providers = [];
           const hasStripe = paymentProviders.some((p) => p.code?.startsWith("pp_stripe_"));
           if (hasStripe) {

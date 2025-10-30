@@ -39,9 +39,10 @@ export async function HomePage(props: {
 
   return (
     <>
-      <Hero 
-        title={store?.homepageTitle} 
-        description={store?.homepageDescription} 
+      <Hero
+        title={store?.homepageTitle}
+        description={store?.homepageDescription}
+        logoColor={store?.logoColor}
       />
       <div className="py-12">
         <ul className="flex flex-col gap-x-6">

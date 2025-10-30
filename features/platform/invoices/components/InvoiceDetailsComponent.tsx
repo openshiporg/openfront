@@ -45,10 +45,9 @@ interface Account {
   creditLimit: number;
   balanceDue: number;
   formattedTotal: string;
-  formattedBalance: string;
+  formattedCurrentBalance: string;
   formattedCreditLimit: string;
   availableCredit: number;
-  formattedAvailableCredit: string;
   currency: {
     id: string;
     code: string;
@@ -159,7 +158,7 @@ export function InvoiceDetailsComponent({
                   )}
                   <div className="flex items-center gap-1">
                     <DollarSign className="w-3 h-3 text-muted-foreground" />
-                    <span className="text-muted-foreground">{invoice.formattedBalance || invoice.formattedTotal}</span>
+                    <span className="text-muted-foreground">{invoice.formattedCurrentBalance || invoice.formattedTotal}</span>
                   </div>
                   <span className="text-muted-foreground">‧</span>
                   <span className="text-muted-foreground">

@@ -15,10 +15,9 @@ export interface Account {
   creditLimit: number;
   balanceDue: number;
   formattedTotal: string;
-  formattedBalance: string;
+  formattedCurrentBalance: string;
   formattedCreditLimit: string;
   availableCredit: number;
-  formattedAvailableCredit: string;
   currency: {
     id: string;
     code: string;
@@ -61,10 +60,9 @@ export async function getInvoices(
     creditLimit
     balanceDue
     formattedTotal
-    formattedBalance
+    formattedCurrentBalance
     formattedCreditLimit
     availableCredit
-    formattedAvailableCredit
     currency {
       id
       code
@@ -194,10 +192,9 @@ export async function getInvoice(id: string) {
         creditLimit
         balanceDue
         formattedTotal
-        formattedBalance
+        formattedCurrentBalance
         formattedCreditLimit
         availableCredit
-        formattedAvailableCredit
         currency {
           id
           code

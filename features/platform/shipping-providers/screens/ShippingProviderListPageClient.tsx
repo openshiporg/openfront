@@ -5,8 +5,8 @@
 
 'use client'
 
-import React, { useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import React, { useState, useCallback, useMemo } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { 
   SearchX,
   Plus,
@@ -28,6 +28,9 @@ import { CreateShippingProviderDrawer } from '../components/drawers/CreateShippi
 import { useDashboard } from '../../../dashboard/context/DashboardProvider'
 import { useSelectedFields } from '../../../dashboard/hooks/useSelectedFields'
 import { useSort } from '../../../dashboard/hooks/useSort'
+import { useListItemsQuery } from '../../../dashboard/hooks/useListItems.query'
+import { buildOrderByClause } from '../../../dashboard/lib/buildOrderByClause'
+import { buildWhereClause } from '../../../dashboard/lib/buildWhereClause'
 
 interface ShippingProviderListPageClientProps {
   list: any
@@ -72,27 +75,102 @@ function EmptyStateSearch({ onResetFilters }: { onResetFilters: () => void }) {
   )
 }
 
-export function ShippingProviderListPageClient({ 
-  list, 
-  initialData, 
-  initialError, 
+export function ShippingProviderListPageClient({
+  list,
+  initialData,
+  initialError,
   initialSearchParams,
   regionCounts
 }: ShippingProviderListPageClientProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { basePath } = useDashboard()
   const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false)
-  
+
   // Hooks for sorting and field selection
   const selectedFields = useSelectedFields(list)
   const sort = useSort(list)
 
-  // Extract data from props
-  const data = initialData
-  const error = initialError
-  const currentPage = initialSearchParams.page
-  const pageSize = initialSearchParams.pageSize
-  const searchString = initialSearchParams.search
+  // Extract current search params (reactive to URL changes)
+  const currentSearchParams = useMemo(() => {
+    const params: Record<string, string> = {}
+    searchParams.forEach((value, key) => {
+      params[key] = value
+    })
+    return params
+  }, [searchParams])
+
+  const currentPage = parseInt(currentSearchParams.page || '1', 10) || 1
+  const pageSize = parseInt(currentSearchParams.pageSize || list.pageSize?.toString() || '50', 10)
+  const searchString = currentSearchParams.search || ''
+
+  // Build query variables from current search params
+  const variables = useMemo(() => {
+    const orderBy = buildOrderByClause(list, currentSearchParams)
+    const filterWhere = buildWhereClause(list, currentSearchParams)
+    const searchParameters = searchString ? { search: searchString } : {}
+    const searchWhere = buildWhereClause(list, searchParameters)
+
+    // Combine search and filters
+    const whereConditions = []
+    if (Object.keys(searchWhere).length > 0) {
+      whereConditions.push(searchWhere)
+    }
+    if (Object.keys(filterWhere).length > 0) {
+      whereConditions.push(filterWhere)
+    }
+
+    const where = whereConditions.length > 0 ? { AND: whereConditions } : {}
+
+    return {
+      where,
+      take: pageSize,
+      skip: (currentPage - 1) * pageSize,
+      orderBy
+    }
+  }, [list, currentSearchParams, currentPage, pageSize, searchString])
+
+  // For shipping-providers, use raw GraphQL string to include relationship fields (from working repomix)
+  const querySelectedFields = `
+    id
+    name
+    isActive
+    accessToken
+    metadata
+    regions {
+      id
+      name
+      code
+      currency {
+        code
+        symbol
+      }
+      countries {
+        id
+        name
+        iso2
+      }
+    }
+    createdAt
+    updatedAt
+  `
+
+  // Use React Query hook with server-side initial data
+  // Use React Query hook with server-side initial data
+  const { data: queryData, error: queryError, isLoading, isFetching } = useListItemsQuery(
+    {
+      listKey: list.key,
+      variables,
+      selectedFields: querySelectedFields
+    },
+    {
+      initialData: initialError ? undefined : initialData,
+    }
+  )
+
+  // Use query data, fallback to initial data
+  const data = queryData || initialData
+  const error = queryError ? queryError.message : initialError
 
   // Handle page change - simplified since FilterBar handles search/filters
   const handlePageChange = useCallback((newPage: number) => {

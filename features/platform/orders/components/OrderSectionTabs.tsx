@@ -224,7 +224,7 @@ export const OrderSectionTabs = ({ order }: OrderSectionTabsProps) => {
       {/* Edit Line Item Drawer */}
       {editLineItemId && (
         <EditItemDrawerClientWrapper
-          listKey="line-items"
+          listKey="order-line-items"
           itemId={editLineItemId}
           open={editLineItemOpen}
           onClose={() => {

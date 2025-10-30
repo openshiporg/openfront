@@ -1,14 +1,20 @@
 "use client";
 
+import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { PageContainer } from "../../../dashboard/components/PageContainer";
 import { Pagination } from "../../../dashboard/components/Pagination";
 import { PlatformFilterBar } from "../../components/PlatformFilterBar";
 import { StatusTabs } from "../components/StatusTabs";
 import { ShippingOptionDetailsComponent } from "../components/ShippingOptionDetailsComponent";
 import { CreateItemDrawerClientWrapper } from "../../components/CreateItemDrawerClientWrapper";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { useListItemsQuery } from "../../../dashboard/hooks/useListItems.query";
+import { buildOrderByClause } from "../../../dashboard/lib/buildOrderByClause";
+import { buildWhereClause } from "../../../dashboard/lib/buildWhereClause";
+import { useSelectedFields } from "../../../dashboard/hooks/useSelectedFields";
+import { useSort } from "../../../dashboard/hooks/useSort";
 
 interface ShippingOption {
   id: string;
@@ -71,8 +77,101 @@ export function ShippingOptionListPageClient({
   regionCounts,
 }: ShippingOptionListPageClientProps) {
   const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
+  const searchParams = useSearchParams();
 
-  if (initialError) {
+  // Hooks for sorting and field selection
+  const selectedFields = useSelectedFields(list);
+  const sort = useSort(list);
+
+  // Extract current search params (reactive to URL changes)
+  const currentSearchParams = useMemo(() => {
+    const params: Record<string, string> = {};
+    searchParams.forEach((value, key) => {
+      params[key] = value;
+    });
+    return params;
+  }, [searchParams]);
+
+  const currentPage = parseInt(currentSearchParams.page || '1', 10) || 1;
+  const pageSize = parseInt(currentSearchParams.pageSize || list.pageSize?.toString() || '50', 10);
+  const searchString = currentSearchParams.search || '';
+
+  // Build query variables from current search params
+  const variables = useMemo(() => {
+    const orderBy = buildOrderByClause(list, currentSearchParams);
+    const filterWhere = buildWhereClause(list, currentSearchParams);
+    const searchParameters = searchString ? { search: searchString } : {};
+    const searchWhere = buildWhereClause(list, searchParameters);
+
+    // Combine search and filters
+    const whereConditions = [];
+    if (Object.keys(searchWhere).length > 0) {
+      whereConditions.push(searchWhere);
+    }
+    if (Object.keys(filterWhere).length > 0) {
+      whereConditions.push(filterWhere);
+    }
+
+    const where = whereConditions.length > 0 ? { AND: whereConditions } : {};
+
+    return {
+      where,
+      take: pageSize,
+      skip: (currentPage - 1) * pageSize,
+      orderBy
+    };
+  }, [list, currentSearchParams, currentPage, pageSize, searchString]);
+
+  // For shipping-options, use raw GraphQL string to include relationship fields (from working repomix)
+  const querySelectedFields = `
+    id
+    name
+    uniqueKey
+    priceType
+    amount
+    isReturn
+    adminOnly
+    region {
+      id
+      name
+      code
+      currency {
+        code
+        symbol
+      }
+    }
+    fulfillmentProvider {
+      id
+      name
+      code
+    }
+    shippingProfile {
+      id
+      name
+    }
+    calculatedAmount
+    createdAt
+    updatedAt
+  `;
+
+  // Use React Query hook with server-side initial data
+  // Use React Query hook with server-side initial data
+  const { data: queryData, error: queryError, isLoading, isFetching } = useListItemsQuery(
+    {
+      listKey: list.key,
+      variables,
+      selectedFields: querySelectedFields
+    },
+    {
+      initialData: initialError ? undefined : initialData,
+    }
+  );
+
+  // Use query data, fallback to initial data
+  const data = queryData || initialData;
+  const error = queryError ? queryError.message : initialError;
+
+  if (error) {
     return (
       <PageContainer
         header={
@@ -84,7 +183,7 @@ export function ShippingOptionListPageClient({
           </>
         }
       >
-        <div className="text-red-600">Error loading shipping options: {initialError}</div>
+        <div className="text-red-600">Error loading shipping options: {error}</div>
       </PageContainer>
     );
   }
