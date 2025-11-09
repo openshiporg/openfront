@@ -6,6 +6,12 @@
 
 Openfront is a comprehensive e-commerce platform that provides everything you need to build and manage online stores. It includes a powerful admin dashboard, customer storefront, payment processing, inventory management, and advanced e-commerce features.
 
+## Demo Video
+
+[![Watch Openfront Demo](https://img.youtube.com/vi/jz0ZZmtBHgo/maxresdefault.jpg)](https://youtu.be/jz0ZZmtBHgo)
+
+*Watch a complete demo of Openfront's checkout and admin features*
+
 Built on top of [next-keystone-starter](https://github.com/junaid33/next-keystone-starter), which provides the foundational architecture for modern full-stack applications with KeystoneJS and Next.js.
 
 ## Core Features
