@@ -423,37 +423,6 @@ export const LineItem = list({
             },
           }),
         }),
-
-        fulfillmentStatus: virtual({
-          field: graphql.field({
-            type: graphql.String,
-            async resolve(item, args, context) {
-              const sudoContext = context.sudo();
-              const lineItem = await sudoContext.query.LineItem.findOne({
-                where: { id: item.id },
-                query: `
-                  quantity
-                  fulfillmentItems {
-                    quantity
-                    fulfillment {
-                      canceledAt
-                    }
-                  }
-                `
-              });
-
-              if (!lineItem?.quantity) return "Unfulfilled";
-
-              const fulfilledQuantity = lineItem.fulfillmentItems
-                ?.filter(fi => !fi.fulfillment?.canceledAt)
-                ?.reduce((sum, fi) => sum + (fi.quantity || 0), 0) || 0;
-
-              if (fulfilledQuantity === 0) return "Unfulfilled";
-              if (fulfilledQuantity === lineItem.quantity) return "Fulfilled";
-              return `${fulfilledQuantity}/${lineItem.quantity} Partially Fulfilled`;
-            },
-          }),
-        }),
       },
     }),
     ...trackingFields,
