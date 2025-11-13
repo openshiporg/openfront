@@ -10318,31 +10318,6 @@ var LineItem = (0, import_core30.list)({
               return Math.round(diff / originalAmount * 100);
             }
           })
-        }),
-        fulfillmentStatus: (0, import_fields33.virtual)({
-          field: import_core30.graphql.field({
-            type: import_core30.graphql.String,
-            async resolve(item, args, context) {
-              const sudoContext = context.sudo();
-              const lineItem = await sudoContext.query.LineItem.findOne({
-                where: { id: item.id },
-                query: `
-                  quantity
-                  fulfillmentItems {
-                    quantity
-                    fulfillment {
-                      canceledAt
-                    }
-                  }
-                `
-              });
-              if (!lineItem?.quantity) return "Unfulfilled";
-              const fulfilledQuantity = lineItem.fulfillmentItems?.filter((fi) => !fi.fulfillment?.canceledAt)?.reduce((sum, fi) => sum + (fi.quantity || 0), 0) || 0;
-              if (fulfilledQuantity === 0) return "Unfulfilled";
-              if (fulfilledQuantity === lineItem.quantity) return "Fulfilled";
-              return `${fulfilledQuantity}/${lineItem.quantity} Partially Fulfilled`;
-            }
-          })
         })
       }
     }),
