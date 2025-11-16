@@ -21,7 +21,7 @@ export default function ProductPrice({
   })
 
   const selectedPrice = variant ? variantPrice : cheapestPrice
-  
+
   // Check if product has only one variant
   const hasOnlyOneVariant = useMemo(() => {
     return (product.productVariants?.length || 0) === 1

@@ -53,8 +53,7 @@ export const getCategoryByHandle = cache(async function (categoryHandle: string)
         id
         title
         handle
-        isInternal
-        isActive
+        description
         parentCategory {
           id
           title
@@ -69,10 +68,7 @@ export const getCategoryByHandle = cache(async function (categoryHandle: string)
     }
   `;
 
-  const data = await openfrontClient.request(GET_CATEGORY_BY_HANDLE_QUERY, {
+  return openfrontClient.request(GET_CATEGORY_BY_HANDLE_QUERY, {
     handle: categoryHandle,
   });
-  return {
-    product_categories: [data.productCategory],
-  };
-}); 
+});

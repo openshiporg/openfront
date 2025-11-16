@@ -30,7 +30,7 @@ const PaymentContainer: React.FC<PaymentContainerProps> = ({
 
   return (
     <div
-      className={cn( 
+      className={cn(
         "flex flex-col gap-y-2 text-xs font-normal cursor-pointer py-4 border rounded-md px-8 mb-2", // Use Tailwind class, rounded-md, remove hover shadow
         {
           "border-primary": // Use Tailwind color
@@ -54,7 +54,7 @@ const PaymentContainer: React.FC<PaymentContainerProps> = ({
             <PaymentTest className="hidden sm:block" />
           )}
         </div>
-        <span className="justify-self-end text-foreground"> 
+        <span className="justify-self-end text-foreground">
           {paymentInfoMap[paymentProviderId]?.icon}
         </span>
       </div>

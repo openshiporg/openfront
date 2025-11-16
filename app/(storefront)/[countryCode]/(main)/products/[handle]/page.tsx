@@ -1,3 +1,5 @@
-import { ProductPage } from "@/features/storefront/screens/ProductPage";
+import { ProductPage, generateMetadata } from "@/features/storefront/screens/ProductPage"
 
-export default ProductPage;
+export { generateMetadata }
+
+export default ProductPage

@@ -46,4 +46,4 @@ export const getRegion = cache(async function (countryCode: string) {
     code: countryCode
   });
   return data.regions[0];
-}); 
+});

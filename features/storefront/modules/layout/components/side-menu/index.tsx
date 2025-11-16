@@ -1,5 +1,6 @@
 "use client"
 
+import dynamic from 'next/dynamic'
 import { useState } from "react";
 
 import {
@@ -26,13 +27,17 @@ const SideMenu = ({ regions }: { regions: StoreRegion[] | null }) => {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="h-full">
+    // TODO: Remove suppressHydrationWarning when React 19.2.0 useId bug is fixed upstream
+    // Known issue: https://github.com/radix-ui/primitives/issues/3700
+    // Radix UI generates different IDs on server vs client in React 19.2.0 (Next.js 16+)
+    <div className="h-full" suppressHydrationWarning>
       <div className="flex items-center h-full">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <button
               data-testid="nav-menu-button"
               className="relative h-full flex items-center transition-all ease-out duration-200 focus:outline-none hover:text-foreground"
+              suppressHydrationWarning
             >
               Menu
             </button>
@@ -73,7 +78,7 @@ const SideMenu = ({ regions }: { regions: StoreRegion[] | null }) => {
                     <CountrySelect regions={regions} />
                   </div>
                 )}
-                <p className="flex justify-between text-[0.8125rem] leading-5 font-normal text-muted-foreground">
+                <p className="flex justify-between text-[0.8125rem] leading-5 font-normal text-muted-foreground" suppressHydrationWarning>
                   © {new Date().getFullYear()} Openfront. All rights reserved.
                 </p>
               </div>

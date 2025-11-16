@@ -31,7 +31,7 @@ export async function CheckoutPage() {
   const customer = await getUser();
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-[1fr_416px] max-w-[1440px] w-full mx-auto px-6 gap-x-40 py-12">
+    <div className="grid grid-cols-1 sm:grid-cols-[1fr_416px] max-w-[1440px] w-full mx-auto px-6 gap-y-8 sm:gap-x-12 xl:gap-x-40 py-12">
       <Wrapper cart={cart}>
         <CheckoutForm cart={cart} customer={customer} />
       </Wrapper>

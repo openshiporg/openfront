@@ -24,7 +24,7 @@ interface PageProps {
 
 async function CheckoutLinkContent({ cartId, countryCode }: { cartId: string, countryCode: string }) {
   const user = await getUser();
-  
+
   if (!user) {
     // This should not happen as the route is protected, but just in case
     redirect(`/${countryCode}/account/login`);
@@ -69,7 +69,7 @@ async function CheckoutLinkContent({ cartId, countryCode }: { cartId: string, co
   // Server action to connect cart to user and redirect to checkout
   async function continueToCheckout() {
     'use server';
-    
+
     // Connect the cart to the logged-in user
     const CONNECT_CART_MUTATION = gql`
       mutation UpdateActiveCart($cartId: ID!, $data: CartUpdateInput!) {
@@ -82,7 +82,7 @@ async function CheckoutLinkContent({ cartId, countryCode }: { cartId: string, co
         }
       }
     `;
-    
+
     try {
       await openfrontClient.request(CONNECT_CART_MUTATION, {
         cartId,
@@ -93,7 +93,7 @@ async function CheckoutLinkContent({ cartId, countryCode }: { cartId: string, co
           email: user.email
         }
       });
-      
+
       await setCartId(cartId);
       revalidateTag('cart');
       redirect(`/${countryCode}/checkout?step=payment`);
@@ -120,7 +120,7 @@ async function CheckoutLinkContent({ cartId, countryCode }: { cartId: string, co
           Review your cart and continue to secure checkout to complete your order.
         </p>
       </div>
-      
+
       <div>
         <div className="flex flex-col gap-y-8 w-full">
           <div className="border-b pb-6">
@@ -142,7 +142,7 @@ async function CheckoutLinkContent({ cartId, countryCode }: { cartId: string, co
                   numberOfLines > 1 ? "items" : "item"
                 }`}</span>
               </div>
-              
+
               {cart.lineItems && cart.lineItems.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 my-4">
                   {cart.lineItems.slice(0, 3).map((item: any) => (
@@ -176,7 +176,7 @@ async function CheckoutLinkContent({ cartId, countryCode }: { cartId: string, co
                   )}
                 </div>
               )}
-              
+
               <div className="flex justify-end">
                 <form action={continueToCheckout}>
                   <Button type="submit" data-testid="complete-checkout-button" variant="default" size="sm">

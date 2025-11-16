@@ -13,7 +13,8 @@ export const getAuthHeaders = async (): Promise<Record<string, string>> => {
 }
 
 export const removeAuthToken = async () => {
-  (await cookies()).set("keystonejs-session", "", {
+  const cookieStore = await cookies();
+  cookieStore.set("keystonejs-session", "", {
     maxAge: -1,
   })
 }

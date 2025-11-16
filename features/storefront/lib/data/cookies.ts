@@ -48,4 +48,4 @@ export const setCartId = async (cartId: string, options: CookieOptions = {}) => 
 
 export const removeCartId = async () => {
   (await cookies()).set("_openfront_cart_id", "", { maxAge: -1 })
-} 
+}

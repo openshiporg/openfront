@@ -1,3 +1,5 @@
-import { CollectionPage } from "@/features/storefront/screens/CollectionPage";
+import { CollectionPage, generateMetadata } from "@/features/storefront/screens/CollectionPage"
 
-export default CollectionPage;
+export { generateMetadata }
+
+export default CollectionPage

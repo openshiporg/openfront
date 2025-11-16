@@ -49,9 +49,9 @@ const ShippingDetails = ({ order }: ShippingDetailsProps) => {
   return (
     <div>
       <h2 className="flex flex-row text-3xl font-medium my-6">Delivery</h2>
-      <div className="flex items-start gap-x-8">
+      <div className="flex flex-col sm:flex-row items-start gap-6 sm:gap-x-8">
         <div
-          className="flex flex-col w-1/3"
+          className="flex flex-col w-full sm:w-1/3"
           data-testid="shipping-address-summary"
         >
           <p className="text-sm font-medium text-foreground mb-1">
@@ -79,7 +79,7 @@ const ShippingDetails = ({ order }: ShippingDetailsProps) => {
         </div>
 
         <div
-          className="flex flex-col w-1/3 "
+          className="flex flex-col w-full sm:w-1/3"
           data-testid="shipping-contact-summary"
         >
           <p className="text-sm font-medium text-foreground mb-1">Contact</p>
@@ -92,7 +92,7 @@ const ShippingDetails = ({ order }: ShippingDetailsProps) => {
         </div>
 
         <div
-          className="flex flex-col w-1/3"
+          className="flex flex-col w-full sm:w-1/3"
           data-testid="shipping-method-summary"
         >
           <p className="text-sm font-medium text-foreground mb-1">Method</p>

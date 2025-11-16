@@ -22,7 +22,7 @@ const Review = ({ cart }: { cart: any }) => {
     <div className="bg-background">
       <div className="flex flex-row items-center justify-between mb-6">
         <h2 // Use h2
-          className={cn( 
+          className={cn(
             "flex flex-row text-3xl font-medium gap-x-2 items-baseline", // Use Tailwind class
             {
               // Disable if not open OR previous steps not completed
@@ -37,7 +37,7 @@ const Review = ({ cart }: { cart: any }) => {
         <>
           <div className="flex items-start gap-x-1 w-full mb-6">
             <div className="w-full">
-              <p className="text-sm text-foreground mb-1"> 
+              <p className="text-sm text-foreground mb-1">
                 By clicking the Place Order button, you confirm that you have
                 read, understand and accept our Terms of Use, Terms of Sale and
                 Returns Policy and acknowledge that you have read Openfront

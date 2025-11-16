@@ -67,15 +67,15 @@ const OptionSelect: React.FC<OptionSelectProps> = ({
               className={`
                 inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
                 whitespace-nowrap overflow-hidden ring-1 ring-inset
-                ${isSelected 
-                  ? "text-primary-foreground ring-primary" 
+                ${isSelected
+                  ? "text-primary-foreground ring-primary"
                   : "text-muted-foreground ring-border"}
               `}
               data-testid="option-button"
             >
-              <motion.div 
+              <motion.div
                 className="relative flex items-center"
-                animate={{ 
+                animate={{
                   width: isSelected ? "auto" : "100%",
                   paddingRight: isSelected ? "1.5rem" : "0",
                 }}
@@ -91,11 +91,11 @@ const OptionSelect: React.FC<OptionSelectProps> = ({
                       initial={{ scale: 0, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       exit={{ scale: 0, opacity: 0 }}
-                      transition={{ 
-                        type: "spring", 
-                        stiffness: 500, 
-                        damping: 30, 
-                        mass: 0.5 
+                      transition={{
+                        type: "spring",
+                        stiffness: 500,
+                        damping: 30,
+                        mass: 0.5
                       }}
                       className="absolute right-0"
                     >

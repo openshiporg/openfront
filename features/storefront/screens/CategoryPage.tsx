@@ -3,8 +3,8 @@ import type { Metadata } from 'next';
 import type { SortOptions } from '@/features/storefront/modules/store/components/refinement-list/sort-products'; // Corrected path with @ alias
 import { notFound } from "next/navigation"
 
-import { getCategoryByHandle } from "@/features/storefront/lib/data/categories" 
-import CategoryTemplate from "@/features/storefront/modules/categories/templates" 
+import { getCategoryByHandle } from "@/features/storefront/lib/data/categories"
+import CategoryTemplate from "@/features/storefront/modules/categories/templates"
 
 // Type alias for props
 type Props = {

@@ -21,7 +21,7 @@ interface PageProps {
 }
 
 async function GuestCheckoutLinkContent({ cartId, countryCode }: { cartId: string, countryCode: string }) {
-  
+
   // Check if cart exists
   const CART_QUERY = gql`
     query GetCart($cartId: ID!) {
@@ -72,7 +72,7 @@ async function GuestCheckoutLinkContent({ cartId, countryCode }: { cartId: strin
           Sign in to your account to complete this order securely, or create a new account.
         </p>
       </div>
-      
+
       <div>
         <div className="flex flex-col gap-y-8 w-full">
           <div className="border-b pb-6">
@@ -94,7 +94,7 @@ async function GuestCheckoutLinkContent({ cartId, countryCode }: { cartId: strin
                   numberOfLines > 1 ? "items" : "item"
                 }`}</span>
               </div>
-              
+
               {cart.lineItems && cart.lineItems.length > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 my-4">
                   {cart.lineItems.slice(0, 3).map((item: any) => (
@@ -128,7 +128,7 @@ async function GuestCheckoutLinkContent({ cartId, countryCode }: { cartId: strin
                   )}
                 </div>
               )}
-              
+
               <div className="flex flex-col sm:flex-row gap-3 justify-end">
                 <Button asChild variant="outline" size="sm">
                   <Link href={`/${countryCode}/account?view=register&returnUrl=${encodeURIComponent(`/${countryCode}/account/checkout-link?cartId=${cartId}`)}`}>

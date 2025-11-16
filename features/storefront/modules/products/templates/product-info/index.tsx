@@ -56,7 +56,7 @@ const renderers = {
         5: "text-base",
         6: "text-sm"
       }
-      
+
       const HeadingTag = `h${level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
       return (
         <HeadingTag

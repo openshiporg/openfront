@@ -18,7 +18,7 @@ const CartTemplate = ({ cart, user }: CartTemplateProps) => {
     <div className="py-12">
       <div className="max-w-[1440px] w-full mx-auto px-6" data-testid="cart-container">
         {cart?.lineItems?.length ? (
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_360px] gap-x-40">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-y-8 lg:gap-x-12 xl:gap-x-40">
             <div className="flex flex-col bg-background py-6 gap-y-6">
               {!user && (
                 <>

@@ -9,8 +9,8 @@ export async function MainLayout({ children }: { children: React.ReactNode }) {
   const hideBranding = process.env.HIDE_OPENFRONT_BRANDING === 'true'
 
   return (
-    <StorefrontServer 
-      prefetchUser={true} 
+    <StorefrontServer
+      prefetchUser={true}
       prefetchCart={true}
       prefetchCollections={true}
       prefetchCategories={true}

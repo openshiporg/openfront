@@ -2,7 +2,6 @@ import { cn } from "@/lib/utils";
 import { getCategoriesList } from "@/features/storefront/lib/data/categories"
 import { getCollectionsList } from "@/features/storefront/lib/data/collections"
 import LocalizedClientLink from "@/features/storefront/modules/common/components/localized-client-link"
-import OpenfrontCTA from "@/features/storefront/modules/layout/components/openfront-cta"
 import Logo from "@/features/storefront/modules/layout/components/logo"
 import { getStore } from "@/features/storefront/lib/data/store"
 
@@ -16,7 +15,7 @@ export default async function Footer() {
     <footer className="border-t border-border w-full">
       <div className="max-w-[1440px] mx-auto px-6 flex flex-col">
         <div className="flex flex-col gap-y-6 sm:flex-row items-start justify-between py-40">
-          <div className="scale-75 -ml-3">
+          <div>
             <Logo />
           </div>
           <div className="text-xs leading-5 font-normal gap-10 md:gap-x-16 grid grid-cols-2 sm:grid-cols-3">
@@ -26,13 +25,13 @@ export default async function Footer() {
                   Categories
                 </span>
                 <ul className="grid grid-cols-1 gap-2">
-                  {productCategories?.slice(0, 6).map((c: any) => { // Use correct type
+                  {productCategories?.slice(0, 6).map((c: any) => {
                     if (c.parentCategory) {
                       return
                     }
 
                     const children =
-                      c.category_children?.map((child: any) => ({ // Use correct type and property name
+                      c.categoryChildren?.map((child: any) => ({
                         title: child.title,
                         handle: child.handle,
                         id: child.id,
@@ -48,7 +47,7 @@ export default async function Footer() {
                         {children && (
                           <ul className="grid grid-cols-1 ml-3 gap-2">
                             {children &&
-                              children.map((child: any) => ( // Use correct type
+                              children.map((child: any) => (
                                 <li key={child.id}>
                                   <LocalizedClientLink className="hover:text-foreground" href={`/categories/${child.handle}`}>
                                     {child.title}
@@ -72,7 +71,7 @@ export default async function Footer() {
                   className={cn("grid grid-cols-1 gap-2 text-muted-foreground text-[0.8125rem] leading-[1.375rem] font-normal", {
                     "grid-cols-2": (collections?.length || 0) > 3,
                   })}>
-                  {collections?.slice(0, 6).map((c: any) => ( // Use correct type
+                  {collections?.slice(0, 6).map((c: any) => (
                     <li key={c.id}>
                       <LocalizedClientLink className="hover:text-foreground" href={`/collections/${c.handle}`}>
                         {c.title}
@@ -117,7 +116,6 @@ export default async function Footer() {
           </div>
         </div>
         <div className="flex w-full mb-16 justify-center text-muted-foreground">
-          {/* Replace Text with p */}
           <p className="text-[0.8125rem] leading-5 font-normal">
             <span suppressHydrationWarning>
               © {new Date().getFullYear()} {storeName}. All rights reserved.

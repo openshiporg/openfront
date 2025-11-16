@@ -45,9 +45,9 @@ const Addresses = ({
     event.preventDefault();
     setIsLoading(true);
     setError(null);
-    
+
     const formData = new FormData(event.currentTarget);
-    
+
     // Check for required fields before calling setAddresses
     if (!formData.get("shippingAddress.countryCode")) {
       setError("Please select a country.");
@@ -121,7 +121,7 @@ const Addresses = ({
       <div className="flex flex-row items-center justify-between mb-6">
         <h2 className="flex flex-row text-3xl font-medium gap-x-2 items-baseline">
           Shipping Address
-          {!isOpen && <CircleCheck className="h-5 w-5" />}
+          {!isOpen && <CircleCheck className="hidden sm:block h-5 w-5" />}
         </h2>
         {!isOpen && cart?.shippingAddress && (
           <p>
@@ -156,9 +156,9 @@ const Addresses = ({
                 <BillingAddress cart={cart} />
               </div>
             )}
-            <Button 
-              size="lg" 
-              className="mt-6" 
+            <Button
+              size="lg"
+              className="mt-6"
               data-testid="submit-address-button"
               type="submit"
               disabled={isLoading}
@@ -173,79 +173,77 @@ const Addresses = ({
         <div>
           <div className="text-xs font-normal">
             {cart && cart.shippingAddress ? (
-              <div className="flex items-start gap-x-8">
-                <div className="flex items-start gap-x-1 w-full">
-                  <div
-                    className="flex flex-col w-1/3"
-                    data-testid="shipping-address-summary"
-                  >
-                    <p className="text-sm font-medium text-foreground mb-1">
-                      Shipping Address
-                    </p>
-                    <p className="text-sm font-normal text-muted-foreground">
-                      {cart.shippingAddress.firstName}{" "}
-                      {cart.shippingAddress.lastName}
-                    </p>
-                    <p className="text-sm font-normal text-muted-foreground">
-                      {cart.shippingAddress.address1}{" "}
-                      {cart.shippingAddress.address2}
-                    </p>
-                    <p className="text-sm font-normal text-muted-foreground">
-                      {cart.shippingAddress.city}
-                      {cart.shippingAddress.province && `, ${cart.shippingAddress.province}`}
-                    </p>
-                    <p className="text-sm font-normal text-muted-foreground">
-                      {cart.shippingAddress.postalCode} {cart.shippingAddress.countryCode?.toUpperCase()}
-                    </p>
-                  </div>
+              <div className="flex flex-col sm:flex-row items-start gap-6 sm:gap-x-8">
+                <div
+                  className="flex flex-col w-full sm:w-1/3"
+                  data-testid="shipping-address-summary"
+                >
+                  <p className="text-sm font-medium text-foreground mb-1">
+                    Shipping Address
+                  </p>
+                  <p className="text-sm font-normal text-muted-foreground">
+                    {cart.shippingAddress.firstName}{" "}
+                    {cart.shippingAddress.lastName}
+                  </p>
+                  <p className="text-sm font-normal text-muted-foreground">
+                    {cart.shippingAddress.address1}{" "}
+                    {cart.shippingAddress.address2}
+                  </p>
+                  <p className="text-sm font-normal text-muted-foreground">
+                    {cart.shippingAddress.city}
+                    {cart.shippingAddress.province && `, ${cart.shippingAddress.province}`}
+                  </p>
+                  <p className="text-sm font-normal text-muted-foreground">
+                    {cart.shippingAddress.postalCode} {cart.shippingAddress.countryCode?.toUpperCase()}
+                  </p>
+                </div>
 
-                  <div
-                    className="flex flex-col w-1/3 "
-                    data-testid="shipping-contact-summary"
-                  >
-                    <p className="text-sm font-medium text-foreground mb-1">
-                      Contact
-                    </p>
-                    <p className="text-sm font-normal text-muted-foreground">
-                      {cart.shippingAddress.phone}
-                    </p>
-                    <p className="text-sm font-normal text-muted-foreground">
-                      {cart.email}
-                    </p>
-                  </div>
+                <div
+                  className="flex flex-col w-full sm:w-1/3"
+                  data-testid="shipping-contact-summary"
+                >
+                  <p className="text-sm font-medium text-foreground mb-1">
+                    Contact
+                  </p>
+                  <p className="text-sm font-normal text-muted-foreground">
+                    {cart.shippingAddress.phone}
+                  </p>
+                  <p className="text-sm font-normal text-muted-foreground">
+                    {cart.email}
+                  </p>
+                </div>
 
-                  <div
-                    className="flex flex-col w-1/3"
-                    data-testid="billing-address-summary"
-                  >
-                    <p className="text-sm font-medium text-foreground mb-1">
-                      Billing Address
-                    </p>
+                <div
+                  className="flex flex-col w-full sm:w-1/3"
+                  data-testid="billing-address-summary"
+                >
+                  <p className="text-sm font-medium text-foreground mb-1">
+                    Billing Address
+                  </p>
 
-                    {sameAsBilling ? (
+                  {sameAsBilling ? (
+                    <p className="text-sm font-normal text-muted-foreground">
+                      Billing and delivery address are the same.
+                    </p>
+                  ) : (
+                    <>
                       <p className="text-sm font-normal text-muted-foreground">
-                        Billing and delivery address are the same.
+                        {cart.billingAddress?.firstName}{" "}
+                        {cart.billingAddress?.lastName}
                       </p>
-                    ) : (
-                      <>
-                        <p className="text-sm font-normal text-muted-foreground">
-                          {cart.billingAddress?.firstName}{" "}
-                          {cart.billingAddress?.lastName}
-                        </p>
-                        <p className="text-sm font-normal text-muted-foreground">
-                          {cart.billingAddress?.address1}{" "}
-                          {cart.billingAddress?.address2}
-                        </p>
-                        <p className="text-sm font-normal text-muted-foreground">
-                          {cart.billingAddress?.city}
-                          {cart.billingAddress?.province && `, ${cart.billingAddress.province}`}
-                        </p>
-                        <p className="text-sm font-normal text-muted-foreground">
-                          {cart.billingAddress?.postalCode} {cart.billingAddress?.countryCode?.toUpperCase()}
-                        </p>
-                      </>
-                    )}
-                  </div>
+                      <p className="text-sm font-normal text-muted-foreground">
+                        {cart.billingAddress?.address1}{" "}
+                        {cart.billingAddress?.address2}
+                      </p>
+                      <p className="text-sm font-normal text-muted-foreground">
+                        {cart.billingAddress?.city}
+                        {cart.billingAddress?.province && `, ${cart.billingAddress.province}`}
+                      </p>
+                      <p className="text-sm font-normal text-muted-foreground">
+                        {cart.billingAddress?.postalCode} {cart.billingAddress?.countryCode?.toUpperCase()}
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             ) : (

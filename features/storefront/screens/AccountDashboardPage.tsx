@@ -1,5 +1,5 @@
 import { Metadata } from "next"
-import Overview from "@/features/storefront/modules/account/components/overview" 
+import Overview from "@/features/storefront/modules/account/components/overview"
 import { notFound } from "next/navigation"
 import { getUserWithOrders, getUser } from "@/features/storefront/lib/data/user";
 import Spinner from "@/features/storefront/modules/common/icons/spinner"

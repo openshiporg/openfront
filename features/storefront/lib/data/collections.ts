@@ -135,4 +135,4 @@ export const getCollectionsListByRegion = cache(async function (
     collections: data.productCollections,
     count: data.productCollectionsCount,
   };
-}); 
+});

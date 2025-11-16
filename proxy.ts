@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 const dashboardPath = "/dashboard";
 
 // Main middleware function that handles all routes
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Get authenticated user once
   const { user, redirectToInit } = await getAuthenticatedUser(request);
 

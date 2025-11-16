@@ -19,7 +19,7 @@ import { cache } from "react";
 
 export async function getUser() {
   try {
-    const headers = await getAuthHeaders(); // Added await
+    const headers = await getAuthHeaders();
     const { authenticatedItem } = await openfrontClient.request(
       gql`
         query GetAuthenticatedItem {
@@ -72,7 +72,7 @@ export async function getUser() {
         }
       `,
       {},
-      headers // This await was already added implicitly by awaiting getAuthHeaders
+      headers
     );
     return authenticatedItem;
   } catch (error) {
@@ -80,8 +80,8 @@ export async function getUser() {
   }
 }
 
-export async function authenticate({ email, password }: { email: string, password: string }) { // Added types
-  const headers = await getAuthHeaders(); // Added await
+export async function authenticate({ email, password }: { email: string, password: string }) {
+  const headers = await getAuthHeaders();
   const { authenticateUserWithPassword } = await openfrontClient.request(
     gql`
       mutation Authenticate($email: String!, $password: String!) {
@@ -98,7 +98,7 @@ export async function authenticate({ email, password }: { email: string, passwor
       }
     `,
     { email, password },
-    headers // This await was already added implicitly by awaiting getAuthHeaders
+    headers
   );
 
   if (
@@ -112,7 +112,7 @@ export async function authenticate({ email, password }: { email: string, passwor
 }
 
 export const getUserWithOrders = cache(async function () {
-  const headers = await getAuthHeaders(); // Added await
+  const headers = await getAuthHeaders();
   const { authenticatedItem, orders } = await openfrontClient.request(
     gql`
       query GetUserAndOrders {
@@ -160,14 +160,14 @@ export const getUserWithOrders = cache(async function () {
       }
     `,
     {},
-    headers // This await was already added implicitly by awaiting getAuthHeaders
+    headers
   );
 
   return { ...authenticatedItem, orders };
 });
 
 export async function createCustomer(data: CreateCustomerData) {
-  const headers = await getAuthHeaders(); // Added await
+  const headers = await getAuthHeaders();
   const { createUser } = await openfrontClient.request(
     gql`
       mutation CreateUser($data: UserCreateInput!) {
@@ -185,14 +185,14 @@ export async function createCustomer(data: CreateCustomerData) {
         phone: data.phone,
       },
     },
-    headers // This await was already added implicitly by awaiting getAuthHeaders
+    headers
   );
 
   return createUser;
 }
 
 export async function updateCustomer(data: UpdateCustomerData) {
-  const headers = await getAuthHeaders(); // Added await
+  const headers = await getAuthHeaders();
   const { updateUser } = await openfrontClient.request(
     gql`
       mutation UpdateUser($data: UserUpdateInput!) {
@@ -210,14 +210,14 @@ export async function updateCustomer(data: UpdateCustomerData) {
         phone: data.phone,
       },
     },
-    headers // This await was already added implicitly by awaiting getAuthHeaders
+    headers
   );
 
   return updateUser;
 }
 
 export async function addShippingAddress(data: AddShippingAddressData) {
-  const headers = await getAuthHeaders(); // Added await
+  const headers = await getAuthHeaders();
   const { addShippingAddress } = await openfrontClient.request(
     gql`
       mutation AddShippingAddress($data: ShippingAddressCreateInput!) {
@@ -240,14 +240,14 @@ export async function addShippingAddress(data: AddShippingAddressData) {
         phone: data.phone,
       },
     },
-    headers // This await was already added implicitly by awaiting getAuthHeaders
+    headers
   );
 
   return addShippingAddress;
 }
 
 export async function updateShippingAddress(addressId: string, data: UpdateShippingAddressData) {
-  const headers = await getAuthHeaders(); // Added await
+  const headers = await getAuthHeaders();
   const { updateShippingAddress } = await openfrontClient.request(
     gql`
       mutation UpdateShippingAddress(
@@ -274,14 +274,14 @@ export async function updateShippingAddress(addressId: string, data: UpdateShipp
         phone: data.phone,
       },
     },
-    headers // This await was already added implicitly by awaiting getAuthHeaders
+    headers
   );
 
   return updateShippingAddress;
 }
 
-export async function deleteShippingAddress(addressId: string) { // Added type
-  const headers = await getAuthHeaders(); // Added await
+export async function deleteShippingAddress(addressId: string) {
+  const headers = await getAuthHeaders();
   const { deleteShippingAddress } = await openfrontClient.request(
     gql`
       mutation DeleteShippingAddress($addressId: ID!) {
@@ -293,14 +293,14 @@ export async function deleteShippingAddress(addressId: string) { // Added type
     {
       addressId,
     },
-    headers // This await was already added implicitly by awaiting getAuthHeaders
+    headers
   );
 
   return deleteShippingAddress;
 }
 
 export const getUserAddresses = cache(async function () {
-  const headers = await getAuthHeaders(); // Added await
+  const headers = await getAuthHeaders();
   const { authenticatedItem } = await openfrontClient.request(
     gql`
       query GetUserAddresses {
@@ -347,13 +347,13 @@ export const getUserAddresses = cache(async function () {
       }
     `,
     {},
-    headers // This await was already added implicitly by awaiting getAuthHeaders
+    headers
   );
 
   return authenticatedItem;
 });
 
-export async function signUp(_currentState: any, formData: FormData) { // Added types
+export async function signUp(_currentState: any, formData: FormData) {
   const customer = {
     email: formData.get("email"),
     password: formData.get("password"),
@@ -418,7 +418,7 @@ export async function signUp(_currentState: any, formData: FormData) { // Added 
 
     // Only set auth token if authentication was successful
     if (authenticateUserWithPassword.sessionToken) {
-      await setAuthToken(authenticateUserWithPassword.sessionToken, { // Added await
+      await setAuthToken(authenticateUserWithPassword.sessionToken, {
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
@@ -434,19 +434,19 @@ export async function signUp(_currentState: any, formData: FormData) { // Added 
   } catch (error) {
     console.error("Sign up error:", error);
     // Handle specific error cases
-    if (error instanceof Error && error.message.includes("Unique constraint failed on the fields: (`email`)")) { // Handle unknown error
+    if (error instanceof Error && error.message.includes("Unique constraint failed on the fields: (`email`)")) {
       return "An account with this email already exists";
     }
-    return error instanceof Error ? error.message : String(error); // Handle unknown error
+    return error instanceof Error ? error.message : String(error);
   }
 }
 
-export async function login(_currentState: any, formData: FormData) { // Added types
+export async function login(_currentState: any, formData: FormData) {
   const email = formData.get("email");
   const password = formData.get("password");
 
   try {
-    const headers = await getAuthHeaders(); // Added await
+    const headers = await getAuthHeaders();
     const { authenticateUserWithPassword } = await openfrontClient.request(
       gql`
         mutation AuthenticateUser($email: String!, $password: String!) {
@@ -467,7 +467,7 @@ export async function login(_currentState: any, formData: FormData) { // Added t
         }
       `,
       { email, password },
-      headers // This await was already added implicitly by awaiting getAuthHeaders
+      headers
     );
 
     // Check for authentication failure
@@ -478,7 +478,7 @@ export async function login(_currentState: any, formData: FormData) { // Added t
     // Only set auth token and cart if authentication was successful
     if (authenticateUserWithPassword.sessionToken) {
       // Set the auth token
-      await setAuthToken(authenticateUserWithPassword.sessionToken, { // Added await
+      await setAuthToken(authenticateUserWithPassword.sessionToken, {
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
@@ -489,7 +489,7 @@ export async function login(_currentState: any, formData: FormData) { // Added t
       // Set the cart ID if it exists
       const activeCartId = authenticateUserWithPassword.item?.activeCartId;
       if (activeCartId) {
-        await setCartId(activeCartId, { // Added await
+        await setCartId(activeCartId, {
           secure: process.env.NODE_ENV === "production",
           sameSite: "lax",
           path: "/",
@@ -504,11 +504,11 @@ export async function login(_currentState: any, formData: FormData) { // Added t
     return "An unexpected error occurred";
   } catch (error) {
     console.error("Login error:", error);
-    return error instanceof Error ? error.message : String(error); // Handle unknown error
+    return error instanceof Error ? error.message : String(error);
   }
 }
 
-export async function signOut(countryCode: string) { // Added type
+export async function signOut(countryCode: string) {
   try {
     const headers = await getAuthHeaders();
 
@@ -523,7 +523,7 @@ export async function signOut(countryCode: string) { // Added type
     );
 
     // Remove the auth token cookie
-    await removeAuthToken(); // Added await
+    await removeAuthToken();
     revalidateTag("auth");
     revalidateTag("customer");
     redirect(`/${countryCode}/account`);
@@ -532,9 +532,9 @@ export async function signOut(countryCode: string) { // Added type
   }
 }
 
-export async function updateCustomerEmail(prevState: any, formData: FormData) { // Added types
+export async function updateCustomerEmail(prevState: any, formData: FormData) {
   try {
-    const headers = await getAuthHeaders(); // Added await
+    const headers = await getAuthHeaders();
 
     await openfrontClient.request(
       gql`
@@ -559,9 +559,9 @@ export async function updateCustomerEmail(prevState: any, formData: FormData) { 
   }
 }
 
-export async function updateCustomerName(prevState: any, formData: FormData) { // Added types
+export async function updateCustomerName(prevState: any, formData: FormData) {
   try {
-    const headers = await getAuthHeaders(); // Added await
+    const headers = await getAuthHeaders();
 
     await openfrontClient.request(
       gql`
@@ -586,9 +586,9 @@ export async function updateCustomerName(prevState: any, formData: FormData) { /
   }
 }
 
-export async function updateCustomerPassword(prevState: any, formData: FormData) { // Added types
+export async function updateCustomerPassword(prevState: any, formData: FormData) {
   try {
-    const headers = await getAuthHeaders(); // Added await
+    const headers = await getAuthHeaders();
 
     await openfrontClient.request(
       gql`
@@ -625,9 +625,9 @@ export async function updateCustomerPassword(prevState: any, formData: FormData)
   }
 }
 
-export async function updateCustomerPhone(prevState: any, formData: FormData) { // Added types
+export async function updateCustomerPhone(prevState: any, formData: FormData) {
   try {
-    const headers = await getAuthHeaders(); // Added await
+    const headers = await getAuthHeaders();
 
     await openfrontClient.request(
       gql`
@@ -652,9 +652,9 @@ export async function updateCustomerPhone(prevState: any, formData: FormData) { 
   }
 }
 
-export async function createCustomerAddress(prevState: any, formData: FormData) { // Added types
+export async function createCustomerAddress(prevState: any, formData: FormData) {
   try {
-    const headers = await getAuthHeaders(); // Added await
+    const headers = await getAuthHeaders();
     const addressData = {
       firstName: formData.get("first_name"),
       lastName: formData.get("last_name"),
@@ -697,9 +697,9 @@ export async function createCustomerAddress(prevState: any, formData: FormData) 
   }
 }
 
-export async function updateCustomerAddress(prevState: any, formData: FormData) { // Added types
+export async function updateCustomerAddress(prevState: any, formData: FormData) {
   try {
-    const headers = await getAuthHeaders(); // Added await
+    const headers = await getAuthHeaders();
     const addressData = {
       firstName: formData.get("first_name"),
       lastName: formData.get("last_name"),
@@ -739,9 +739,9 @@ export async function updateCustomerAddress(prevState: any, formData: FormData) 
   }
 }
 
-export async function deleteCustomerShippingAddress(addressId: string) { // Added type
+export async function deleteCustomerShippingAddress(addressId: string) {
   try {
-    const headers = await getAuthHeaders(); // Added await
+    const headers = await getAuthHeaders();
 
     await openfrontClient.request(
       gql`

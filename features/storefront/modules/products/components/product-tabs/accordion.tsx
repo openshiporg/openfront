@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils" 
+import { cn } from "@/lib/utils"
 // Removed Text import
 import * as AccordionPrimitive from "@radix-ui/react-accordion"
 import { ChevronDownIcon, PlusIcon } from "lucide-react"
@@ -46,13 +46,17 @@ const Item: React.FC<AccordionItemProps> = ({
   ...props
 }) => {
   return (
+    // TODO: Remove suppressHydrationWarning when React 19.2.0 useId bug is fixed upstream
+    // Known issue: https://github.com/radix-ui/primitives/issues/3700
+    // Radix UI generates different IDs on server vs client in React 19.2.0 (Next.js 16+)
     <AccordionPrimitive.Item
       {...props}
-      className={cn( 
+      className={cn(
         "border-grey-20 group border-t last:mb-0 last:border-b",
         "py-3",
         className
       )}
+      suppressHydrationWarning
     >
       <AccordionPrimitive.Header className="px-1">
         <div className="flex flex-col">
@@ -60,7 +64,7 @@ const Item: React.FC<AccordionItemProps> = ({
             <div className="flex items-center gap-4">
               <span className="text-muted-foreground text-sm">{title}</span>
             </div>
-            <AccordionPrimitive.Trigger>
+            <AccordionPrimitive.Trigger suppressHydrationWarning>
               {/* {customTrigger || <MorphingTrigger />} */}
               <PlusIcon className="size-4 group-data-[state=open]:rotate-45" />
             </AccordionPrimitive.Trigger>
@@ -74,7 +78,7 @@ const Item: React.FC<AccordionItemProps> = ({
       </AccordionPrimitive.Header>
       <AccordionPrimitive.Content
         forceMount={forceMountContent}
-        className={cn( 
+        className={cn(
           "radix-state-closed:animate-accordion-close radix-state-open:animate-accordion-open radix-state-closed:pointer-events-none px-1"
         )}
       >

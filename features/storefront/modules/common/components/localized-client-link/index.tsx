@@ -1,6 +1,5 @@
 "use client"
 
-import { RiLoader2Fill } from "@remixicon/react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import React from "react"

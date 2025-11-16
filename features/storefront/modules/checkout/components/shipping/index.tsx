@@ -1,7 +1,7 @@
 "use client"
 
-import { setShippingMethod } from "@/features/storefront/lib/data/cart" 
-import { CircleCheck } from "lucide-react" 
+import { setShippingMethod } from "@/features/storefront/lib/data/cart"
+import { CircleCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
@@ -87,18 +87,18 @@ const Shipping: React.FC<ShippingProps> = ({
             "flex flex-row text-3xl font-medium gap-x-2 items-baseline",
             {
               "opacity-50 pointer-events-none select-none":
-                !isOpen && cart?.shippingMethods?.length === 0, 
+                !isOpen && cart?.shippingMethods?.length === 0,
             }
           )}
         >
           Delivery
-          {!isOpen && (cart?.shippingMethods?.length ?? 0) > 0 && ( 
-            <CircleCheck className="h-5 w-5" /> 
+          {!isOpen && (cart?.shippingMethods?.length ?? 0) > 0 && (
+            <CircleCheck className="hidden sm:block h-5 w-5" />
           )}
         </h2>
         {!isOpen &&
-          cart?.shippingAddress && 
-          cart?.billingAddress && 
+          cart?.shippingAddress &&
+          cart?.billingAddress &&
           cart?.email && (
             <p>
               <Button
@@ -145,7 +145,7 @@ const Shipping: React.FC<ShippingProps> = ({
                           disabled={isDisabled}
                           className="sr-only"
                         />
-                        <Label 
+                        <Label
                           htmlFor={option.id}
                           className={cn(
                             "flex items-center justify-between text-xs font-normal cursor-pointer py-4 border rounded-md px-8 transition-colors",
@@ -196,20 +196,20 @@ const Shipping: React.FC<ShippingProps> = ({
               disabled={!selectedOption || isLoading}
               data-testid="submit-delivery-option-button"
             >
-              {isLoading && <RiLoader2Fill className="mr-2 h-4 w-4 animate-spin" />} 
+              {isLoading && <RiLoader2Fill className="mr-2 h-4 w-4 animate-spin" />}
               Continue to payment
             </Button>
           </div>
         </>
       ) : (
         <div>
-          <div className="text-xs font-normal"> 
+          <div className="text-xs font-normal">
             {cart && (cart?.shippingMethods?.length ?? 0) > 0 && (
               <div className="flex flex-col w-1/3">
-                <p className="text-sm font-medium text-foreground mb-1"> 
+                <p className="text-sm font-medium text-foreground mb-1">
                   Method
                 </p>
-                <p className="text-sm font-normal text-muted-foreground"> 
+                <p className="text-sm font-normal text-muted-foreground">
                 {cart.shippingMethods[0].shippingOption.name} ({cart.shipping})
                 </p>
               </div>

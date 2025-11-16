@@ -7,13 +7,12 @@ const spaceGrotesk = Space_Grotesk({
   adjustFontFallback: false,
 });
 
-// Renamed from MedusaCTA to OpenfrontCTA
 const OpenfrontCTA = () => {
   return (
     <div className="fixed bottom-4 right-4 z-50">
-      <a 
-        href="https://www.openship.org" 
-        target="_blank" 
+      <a
+        href="https://www.openship.org"
+        target="_blank"
         rel="noreferrer"
         className="flex gap-x-2 items-center bg-white backdrop-blur-sm border border-transparent ring-1 ring-foreground/5 rounded-md px-2.5 py-0.5 shadow hover:bg-white/90 transition-colors"
       >

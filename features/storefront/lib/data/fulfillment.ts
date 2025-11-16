@@ -36,7 +36,7 @@ export const listCartShippingMethods = cache(async function (cartId: string) {
   const { cart } = await openfrontClient.request(LIST_CART_SHIPPING_METHODS, { cartId });
 
   // Filter shipping options
-  const shippingOptions = cart.region.shippingOptions.filter((option: any) => { // Added any type for option
+  const shippingOptions = cart.region.shippingOptions.filter((option: any) => {
     // Skip admin-only and return shipping options
     if (option.adminOnly || option.isReturn) return false;
 

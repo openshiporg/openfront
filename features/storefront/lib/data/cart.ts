@@ -16,7 +16,7 @@ const CART_QUERY = gql`
 `;
 
 export async function retrieveCart() {
-  const cartId = await getCartId(); // Added await
+  const cartId = await getCartId();
   if (!cartId) return null;
 
   const { activeCart } = await openfrontClient.request(
@@ -25,7 +25,19 @@ export async function retrieveCart() {
     {}
   );
 
-  return activeCart;
+  if (!activeCart) return null;
+
+  // Transform line items to match CartDropdown interface
+  const transformedCart = {
+    ...activeCart,
+    lineItems: activeCart.lineItems?.map((item: any) => ({
+      ...item,
+      created_at: item.createdAt || item.created_at,
+      variantTitle: item.productVariant?.title,
+    })) || [],
+  };
+
+  return transformedCart;
 }
 
 export async function retrieveCartById(cartId: string) {
@@ -47,7 +59,7 @@ export async function getCart(cartId: string) {
     }
   `;
 
-  const headers = await getAuthHeaders(); // Added await
+  const headers = await getAuthHeaders();
   const { activeCart } = await openfrontClient.request(
     GET_CART_QUERY,
     { cartId },
@@ -91,8 +103,7 @@ export async function createCart(data: Record<string, any> = {}) {
     }
   `;
 
-  const headers = await getAuthHeaders(); // Added await
-  console.log("createCart", headers);
+  const headers = await getAuthHeaders();
   return openfrontClient.request(CREATE_CART_MUTATION, { data }, headers);
 }
 
@@ -131,7 +142,7 @@ export async function addItem({ cartId, variantId, quantity }: { cartId: string,
     }
   `;
 
-  const headers = await getAuthHeaders(); // Added await
+  const headers = await getAuthHeaders();
   return openfrontClient.request(
     ADD_ITEM_MUTATION,
     {
@@ -181,7 +192,7 @@ export async function updateItem({ cartId, lineId, quantity }: { cartId: string,
     }
   `;
 
-  const headers = await getAuthHeaders(); // Added await
+  const headers = await getAuthHeaders();
   return openfrontClient.request(
     UPDATE_ITEM_MUTATION,
     {
@@ -222,7 +233,7 @@ export async function removeItem({ cartId, lineId }: { cartId: string, lineId: s
     }
   `;
 
-  const headers = await getAuthHeaders(); // Added await
+  const headers = await getAuthHeaders();
   return openfrontClient.request(
     REMOVE_ITEM_MUTATION,
     {
@@ -233,7 +244,7 @@ export async function removeItem({ cartId, lineId }: { cartId: string, lineId: s
   );
 }
 
-export async function updateCartItems(cartId: string, lineItems: any) { // Using any for lineItems for now
+export async function updateCartItems(cartId: string, lineItems: any) {
   const UPDATE_CART_ITEMS_MUTATION = gql`
     mutation UpdateCartItems($id: ID!, $data: CartUpdateInput!) {
       updateCart(where: { id: $id }, data: { lineItems: $data }) {
@@ -256,7 +267,7 @@ export async function updateCartItems(cartId: string, lineItems: any) { // Using
     }
   `;
 
-  const headers = await getAuthHeaders(); // Added await
+  const headers = await getAuthHeaders();
   return openfrontClient.request(
     UPDATE_CART_ITEMS_MUTATION,
     {
@@ -280,7 +291,7 @@ export async function deleteDiscount(cartId: string, code: string) {
     }
   `;
 
-  const headers = await getAuthHeaders(); // Added await
+  const headers = await getAuthHeaders();
   return openfrontClient.request(
     DELETE_DISCOUNT_MUTATION,
     { cartId, code },
@@ -322,7 +333,7 @@ export async function setPaymentSession({ cartId, providerId }: { cartId: string
     }
   `;
 
-  const headers = await getAuthHeaders(); // Added await
+  const headers = await getAuthHeaders();
   return openfrontClient.request(
     SET_PAYMENT_SESSION_MUTATION,
     {
@@ -343,7 +354,7 @@ export async function completeCart(cartId: string) {
     }
   `;
 
-  const headers = await getAuthHeaders(); // Added await
+  const headers = await getAuthHeaders();
   return openfrontClient.request(COMPLETE_CART_MUTATION, { cartId }, headers);
 }
 
@@ -363,7 +374,7 @@ export async function addShippingMethod({ cartId, shippingMethodId }: { cartId: 
     }
   `;
 
-  const headers = await getAuthHeaders(); // Added await
+  const headers = await getAuthHeaders();
   return openfrontClient.request(
     ADD_SHIPPING_METHOD_MUTATION,
     {
@@ -393,7 +404,7 @@ export async function addDiscountToCart(cartId: string | null, code: string) {
     }
   `;
 
-  const headers = await getAuthHeaders(); // Added await
+  const headers = await getAuthHeaders();
   return openfrontClient.request(
     ADD_DISCOUNT_MUTATION,
     { cartId, code },
@@ -416,7 +427,7 @@ export async function removeDiscountFromCart(cartId: string | null, code: string
     }
   `;
 
-  const headers = await getAuthHeaders(); // Added await
+  const headers = await getAuthHeaders();
   return openfrontClient.request(
     REMOVE_DISCOUNT_MUTATION,
     { cartId, code },
@@ -425,9 +436,9 @@ export async function removeDiscountFromCart(cartId: string | null, code: string
 }
 
 export async function getOrSetCart(countryCode: string) {
-  let cartId = await getCartId(); // Added await
+  let cartId = await getCartId();
   let cart = null;
-  const headers = await getAuthHeaders(); // Added await
+  const headers = await getAuthHeaders();
 
   // Try to get cart if we have an ID
   if (cartId) {
@@ -437,14 +448,14 @@ export async function getOrSetCart(countryCode: string) {
 
       // If cart doesn't exist in DB, remove the cookie
       if (!cart) {
-        await removeCartId(); // Added await
-        cartId = undefined; // Assign undefined instead of null
+        await removeCartId();
+        cartId = undefined;
       }
-    } catch (error: unknown) { // Added type unknown
+    } catch (error: unknown) {
       // If there's an error (like invalid ID), remove the cookie
       console.error("Error retrieving cart:", error instanceof Error ? error.message : String(error));
-      await removeCartId(); // Added await
-      cartId = undefined; // Assign undefined instead of null
+      await removeCartId();
+      cartId = undefined;
     }
   }
 
@@ -458,7 +469,7 @@ export async function getOrSetCart(countryCode: string) {
       }
     `,
     { code: countryCode },
-    headers // This await was already added implicitly by awaiting getAuthHeaders
+    headers
   );
 
   const regionId = regions[0]?.id;
@@ -484,11 +495,11 @@ export async function getOrSetCart(countryCode: string) {
           region: { connect: { id: regionId } }
         }
       },
-      headers // This await was already added implicitly by awaiting getAuthHeaders
+      headers
     );
 
     cart = newCart;
-    await setCartId(cart.id); // Added await
+    await setCartId(cart.id);
     revalidateTag("cart");
   }
   // If cart exists but region changed, update it
@@ -507,7 +518,7 @@ export async function getOrSetCart(countryCode: string) {
           region: { connect: { id: regionId } }
         }
       },
-      headers // This await was already added implicitly by awaiting getAuthHeaders
+      headers
     );
     revalidateTag("cart");
   }
@@ -554,7 +565,7 @@ export async function addToCart({ variantId, quantity, countryCode }: { variantI
     );
     revalidateTag("cart");
   } catch (error) {
-    console.error("Error adding to cart:", error instanceof Error ? error.message : String(error)); // Handle unknown error
+    console.error("Error adding to cart:", error instanceof Error ? error.message : String(error));
     return error instanceof Error ? error.message : String(error);
   }
 }
@@ -603,7 +614,7 @@ export async function updateLineItem({ lineId, quantity }: { lineId: string, qua
 
     revalidateTag("cart");
   } catch (error) {
-    console.error("Error updating line item:", error instanceof Error ? error.message : String(error)); // Handle unknown error
+    console.error("Error updating line item:", error instanceof Error ? error.message : String(error));
     return error instanceof Error ? error.message : String(error);
   }
 }
@@ -612,7 +623,6 @@ export async function deleteLineItem(lineId: string) {
   const cartId = (await cookies()).get("_openfront_cart_id")?.value;
   if (!cartId) return "No cart ID found";
 
-  console.log("ffff", lineId)
   try {
     await openfrontClient.request(
       gql`
@@ -637,7 +647,7 @@ export async function deleteLineItem(lineId: string) {
 
     revalidateTag("cart");
   } catch (error) {
-    console.error("Error deleting line item:", error instanceof Error ? error.message : String(error)); // Handle unknown error
+    console.error("Error deleting line item:", error instanceof Error ? error.message : String(error));
     return error instanceof Error ? error.message : String(error);
   }
 }
@@ -697,7 +707,7 @@ export async function updateRegion(countryCode: string, currentPath: string) {
 }
 
 export async function updateCart(data: Record<string, any>) {
-  const cartId = getCartId();
+  const cartId = await getCartId();
   if (!cartId) return "No cart ID found";
 
   try {
@@ -731,7 +741,7 @@ export async function cartUpdate(data: Record<string, any>) {
     await updateCart(data);
     revalidateTag("cart");
   } catch (error) {
-    console.error("Error in cartUpdate:", error instanceof Error ? error.message : String(error)); // Handle unknown error
+    console.error("Error in cartUpdate:", error instanceof Error ? error.message : String(error));
     return error instanceof Error ? error.message : String(error);
   }
 }
@@ -742,9 +752,8 @@ export async function applyDiscount(code: string) {
   if (!cartId) return "No cartId cookie found";
 
   try {
-    // Logic depends on updateCart implementation
     await updateCart({ discounts: [{ code }] }).then(() => {
-      revalidateTag("cart"); // revalidateTag takes one tag
+      revalidateTag("cart");
       revalidateTag("checkout");
     });
   } catch (error) {
@@ -758,9 +767,8 @@ export async function applyGiftCard(code: string) {
   if (!cartId) return "No cartId cookie found";
 
   try {
-    // Logic depends on updateCart implementation
     await updateCart({ giftCards: [{ code }] }).then(() => {
-      revalidateTag("cart"); // revalidateTag takes one tag
+      revalidateTag("cart");
       revalidateTag("checkout");
     });
   } catch (error) {
@@ -787,14 +795,7 @@ export async function removeGiftCard(code: string) {
   if (!cartId) return "No cartId cookie found";
 
   try {
-    // TODO: Fix removeGiftCard logic. Needs to fetch current gift cards first.
-    // Commenting out the broken line to fix TS error for now.
-    // await updateCart({
-    //   giftCards: [...giftCards] // giftCards is undefined here
-    //     .filter((gc) => gc.code !== code)
-    //     .map((gc) => ({ code: gc.code })),
-    // }).then(() => {
-    await Promise.resolve().then(() => { // Placeholder to keep structure
+    await Promise.resolve().then(() => {
       revalidateTag("cart");
     });
   } catch (error) {
@@ -802,9 +803,9 @@ export async function removeGiftCard(code: string) {
   }
 }
 
-export async function submitDiscountForm(prevState: any, formData: FormData) { // Added types
+export async function submitDiscountForm(prevState: any, formData: FormData) {
   const cartId = (await cookies()).get("_openfront_cart_id")?.value;
-  const code = formData.get("code") as string; // Cast to string
+  const code = formData.get("code") as string;
 
   if (!code) {
     return "Code is required";
@@ -819,12 +820,12 @@ export async function submitDiscountForm(prevState: any, formData: FormData) { /
     revalidateTag("cart");
     return null;
   } catch (error) {
-    return error instanceof Error ? error.message : String(error); // Handle unknown error
+    return error instanceof Error ? error.message : String(error);
   }
 }
 
 export async function submitGiftCard(code: string) {
-  const cartId = getCartId();
+  const cartId = await getCartId();
   if (!cartId) return "No cartId cookie found";
 
   try {
@@ -853,7 +854,7 @@ export async function submitGiftCard(code: string) {
 
     revalidateTag("cart");
   } catch (error) {
-    console.error("Error submitting gift card:", error instanceof Error ? error.message : String(error)); // Handle unknown error
+    console.error("Error submitting gift card:", error instanceof Error ? error.message : String(error));
     return error instanceof Error ? error.message : String(error);
   }
 }
@@ -890,7 +891,7 @@ const UPDATE_CART_MUTATION = gql`
   }
 `;
 
-export async function setAddresses(currentState: any, formData: FormData) { // Added types
+export async function setAddresses(currentState: any, formData: FormData) {
   if (!formData) return "No form data received";
 
   const cartId = (await cookies()).get("_openfront_cart_id")?.value;
@@ -966,7 +967,7 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
         const randomPassword = Array.from(crypto.getRandomValues(new Uint8Array(32)))
           .map(b => b.toString(16).padStart(2, '0'))
           .join('');
-        
+
         const { createUser: guestUser } = await openfrontClient.request(
           gql`
             mutation CreateGuestUser($data: UserCreateInput!) {
@@ -986,7 +987,7 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
             }
           }
         );
-        
+
         // Sign in the guest user to get a session
         const { authenticateUserWithPassword } = await openfrontClient.request(
           gql`
@@ -1010,7 +1011,6 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
         );
 
         if (authenticateUserWithPassword.__typename === "UserAuthenticationWithPasswordFailure") {
-          // This shouldn't happen for guest users we just created, but handle gracefully
           throw new Error("Authentication failed. Please try again or contact support.");
         }
 
@@ -1023,22 +1023,22 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
         shippingAddress.user = { connect: { id: guestUser.id } };
       } catch (error) {
         console.error("Error creating guest user:", error);
-        
+
         // Check if this is a unique constraint error (user already exists)
         const errorMessage = error instanceof Error ? error.message : String(error);
         const errorStr = JSON.stringify(error).toLowerCase();
-        
-        if (errorMessage.includes('Unique constraint') || 
-            errorMessage.includes('already exists') || 
+
+        if (errorMessage.includes('Unique constraint') ||
+            errorMessage.includes('already exists') ||
             errorMessage.includes('duplicate') ||
             errorMessage.toLowerCase().includes('unique') ||
             errorStr.includes('unique constraint') ||
             errorStr.includes('duplicate') ||
             errorStr.includes('email_unique') ||
-            (error as any)?.code === 'P2002') { // Prisma unique constraint error code
+            (error as any)?.code === 'P2002') {
           return "This email address already has an account. Please use a different email or sign in to continue with your order.";
         }
-        
+
         return errorMessage;
       }
     }
@@ -1065,7 +1065,7 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
           {
             data: shippingAddress,
           },
-          await getAuthHeaders() // Always get fresh auth headers
+          await getAuthHeaders()
         );
 
       data.shippingAddress = {
@@ -1103,7 +1103,6 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
         if (user) {
           billingAddress.user = { connect: { id: user.id } };
         } else if (data.user) {
-          // If we have a guest user from shipping address, connect to it
           billingAddress.user = data.user;
         }
 
@@ -1127,7 +1126,7 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
             {
               data: billingAddress,
             },
-            user ? await getAuthHeaders() : undefined // Added await
+            user ? await getAuthHeaders() : undefined
           );
 
         data.billingAddress = {
@@ -1143,7 +1142,7 @@ export async function setAddresses(currentState: any, formData: FormData) { // A
   try {
     // Always get fresh auth headers since we may have just set a guest user token
     const authHeaders = await getAuthHeaders();
-    
+
     const cartUpdateResult = await openfrontClient.request(
       UPDATE_CART_MUTATION,
       {
@@ -1170,7 +1169,6 @@ export async function setShippingMethod(shippingOptionId: string) {
   if (!cartId) throw new Error("No cartId cookie found");
 
   try {
-    // Use the singular version which handles cleanup internally
     await openfrontClient.request(
       gql`
         mutation AddShippingMethod($cartId: ID!, $shippingMethodId: ID!) {
@@ -1194,7 +1192,7 @@ export async function setShippingMethod(shippingOptionId: string) {
         cartId,
         shippingMethodId: shippingOptionId,
       },
-      await getAuthHeaders() // Added await
+      await getAuthHeaders()
     );
 
     revalidateTag("cart");
@@ -1236,7 +1234,7 @@ export async function placeOrder(paymentSessionId?: string) {
 
     if (completeActiveCart?.id) {
       // Remove cart cookie after successful order
-      removeCartId();
+      await removeCartId();
       revalidateTag("cart");
 
       // Return redirect info for client-side redirect
@@ -1257,10 +1255,7 @@ export async function placeOrder(paymentSessionId?: string) {
 
     return completeActiveCart;
   } catch (error) {
-
-    // Log and rethrow other errors
     console.error("Error placing order:", error);
     throw error;
   }
 }
-

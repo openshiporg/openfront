@@ -30,8 +30,8 @@ export async function AccountInvoicingPage() {
   const unpaidLineItems = businessAccount ? await getUnpaidLineItemsByRegion(businessAccount.id) : null
 
   return (
-    <InvoicingTemplate 
-      customer={customer} 
+    <InvoicingTemplate
+      customer={customer}
       businessAccount={businessAccount}
       businessAccountRequest={businessAccountRequest}
       orders={orders}

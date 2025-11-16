@@ -29,10 +29,10 @@ export function SubmitButton({
       variant={variant}
       size={size}
       type="submit"
-      disabled={pending} 
+      disabled={pending}
       data-testid={dataTestId}
     >
-      {pending && <RiLoader2Fill className="mr-2 h-4 w-4 animate-spin" />} 
+      {pending && <RiLoader2Fill className="mr-2 h-4 w-4 animate-spin" />}
       {children}
     </Button>
   )

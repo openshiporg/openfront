@@ -1,5 +1,5 @@
-import { Button } from "@/components/ui/button" 
-import { cn } from "@/lib/utils" 
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import React, { Fragment, useMemo, useState } from "react"
 import {
   Dialog,
@@ -99,7 +99,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
     <>
       {/* Bottom action bar */}
       <div
-        className={cn("z-[60] lg:hidden inset-x-0 bottom-0 fixed transition-opacity duration-300", { 
+        className={cn("z-[60] lg:hidden inset-x-0 bottom-0 fixed transition-opacity duration-300", {
           "opacity-0 pointer-events-none": !show,
           "opacity-100": show,
         })}
@@ -138,16 +138,20 @@ const MobileActions: React.FC<MobileActionsProps> = ({
               <div></div>
             )}
           </div>
-          <div className={cn("grid grid-cols-2 w-full gap-x-4", { 
+          <div className={cn("grid grid-cols-2 w-full gap-x-4", {
             "!grid-cols-1": isSimple
           })}>
             {!isSimple && (
+              // TODO: Remove suppressHydrationWarning when React 19.2.0 useId bug is fixed upstream
+              // Known issue: https://github.com/radix-ui/primitives/issues/3700
+              // Radix UI generates different IDs on server vs client in React 19.2.0 (Next.js 16+)
               <Dialog open={optionsDialogOpen} onOpenChange={setOptionsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button
                     variant="outline" // Use Shadcn outline variant
                     className="w-full"
                     data-testid="mobile-actions-button"
+                    suppressHydrationWarning
                   >
                     <div className="flex items-center justify-between w-full">
                       <span>
@@ -159,7 +163,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                     </div>
                   </Button>
                 </DialogTrigger>
-                <DialogContent 
+                <DialogContent
                   className="w-full h-screen max-w-none rounded-none p-0 gap-0 flex flex-col"
                   data-testid="mobile-actions-modal"
                 >

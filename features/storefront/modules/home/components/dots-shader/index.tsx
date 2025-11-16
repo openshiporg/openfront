@@ -32,7 +32,6 @@ export const DotsShader: React.FC<DotsShaderProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isInView, setIsInView] = useState(false);
-  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
   const memoizedColor = useMemo(() => {
     const toRGBA = (color: string) => {
@@ -93,10 +92,8 @@ export const DotsShader: React.FC<DotsShaderProps> = ({
       squares: Float32Array,
       dpr: number,
     ) => {
-      // Clear with a single operation
       ctx.clearRect(0, 0, width, height);
 
-      // Batch drawing by opacity to reduce fillStyle changes
       const drawBatches: Map<string, Array<{x: number, y: number}>> = new Map();
 
       for (let i = 0; i < cols; i++) {
@@ -116,7 +113,6 @@ export const DotsShader: React.FC<DotsShaderProps> = ({
         }
       }
 
-      // Draw all squares with the same opacity together
       const rectWidth = Math.round(squareSize * dpr);
       const rectHeight = Math.round(squareSize * dpr);
 
@@ -137,11 +133,10 @@ export const DotsShader: React.FC<DotsShaderProps> = ({
 
     const ctx = canvas.getContext("2d", {
       alpha: true,
-      desynchronized: true, // Hint for better performance
+      desynchronized: true,
     });
     if (!ctx) return;
 
-    // Disable image smoothing for crisp pixels
     ctx.imageSmoothingEnabled = false;
 
     let animationFrameId: number;
@@ -150,7 +145,6 @@ export const DotsShader: React.FC<DotsShaderProps> = ({
     const updateCanvasSize = () => {
       const newWidth = width || container.clientWidth;
       const newHeight = height || container.clientHeight;
-      setCanvasSize({ width: newWidth, height: newHeight });
       gridParams = setupCanvas(canvas, newWidth, newHeight);
     };
 
@@ -205,11 +199,8 @@ export const DotsShader: React.FC<DotsShaderProps> = ({
     <div ref={containerRef} className={cn("w-full h-full", className)}>
       <canvas
         ref={canvasRef}
-        className="pointer-events-none"
-        style={{
-          width: canvasSize.width,
-          height: canvasSize.height,
-        }}
+        className="pointer-events-none w-full h-full"
+        suppressHydrationWarning
       />
     </div>
   );

@@ -13,7 +13,6 @@ const Hero = ({ title, description, logoColor }: HeroProps) => {
 
   return (
     <div className="h-[75vh] w-full border-b border-border relative bg-slate-950">
-      {/* Subtle colored background overlay */}
       <div
         className="absolute inset-0 opacity-20"
         style={{
@@ -22,7 +21,6 @@ const Hero = ({ title, description, logoColor }: HeroProps) => {
         }}
       />
 
-      {/* DotsShader with hue rotation */}
       <div
         style={{ filter: `hue-rotate(${hueRotation}deg)` }}
         className="absolute inset-0"

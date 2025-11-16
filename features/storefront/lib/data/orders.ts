@@ -44,49 +44,35 @@ export const listCustomerOrders = cache(async function(limit: number = 10, offse
   }
 });
 
-// Add other order-related functions...
-
 // Placeholder function for accepting order transfer
 export async function acceptTransferRequest(id: string, token: string): Promise<{ success: boolean; error: string | null }> {
   console.warn(`Placeholder: acceptTransferRequest called for order ${id} with token ${token}. Implement GraphQL mutation.`);
-  // Simulate success for now, replace with actual GraphQL call later
-  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 500));
   return { success: true, error: null };
-  // Example error return:
-  // return { success: false, error: "Accepting order transfer not implemented yet." };
 }
 
 // Placeholder function for declining order transfer
 export async function declineTransferRequest(id: string, token: string): Promise<{ success: boolean; error: string | null }> {
   console.warn(`Placeholder: declineTransferRequest called for order ${id} with token ${token}. Implement GraphQL mutation.`);
-  // Simulate success for now, replace with actual GraphQL call later
-  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 500));
   return { success: true, error: null };
-  // Example error return:
-  // return { success: false, error: "Declining order transfer not implemented yet." };
 }
 
-// Placeholder function for creating order transfer request (adjusted for useActionState)
+// Placeholder function for creating order transfer request
 export async function createTransferRequest(
-  prevState: { success: boolean; error: string | null; order?: { id: string; email: string } | null }, // Add prevState and optional order
+  prevState: { success: boolean; error: string | null; order?: { id: string; email: string } | null },
   formData: FormData
-): Promise<{ success: boolean; error: string | null; order?: { id: string; email: string } | null }> { // Match return type
+): Promise<{ success: boolean; error: string | null; order?: { id: string; email: string } | null }> {
   const orderId = formData.get("orderId") as string;
   const email = formData.get("email") as string;
 
   console.warn(`Placeholder: createTransferRequest called for order ${orderId} with email ${email}. Implement GraphQL mutation.`);
 
-  // Basic validation example
   if (!orderId || !email) {
     return { success: false, error: "Order ID and Email are required.", order: null };
   }
 
-  // Simulate success for now, replace with actual GraphQL call later
-  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 500));
 
-  // Simulate returning some order info on success
   return { success: true, error: null, order: { id: orderId, email: email } };
-
-  // Example error return:
-  // return { success: false, error: "Creating order transfer request not implemented yet.", order: null };
 }

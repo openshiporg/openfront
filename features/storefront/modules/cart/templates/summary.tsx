@@ -1,6 +1,6 @@
 "use client"
 
-import { Button } from "@/components/ui/button"; 
+import { Button } from "@/components/ui/button";
 
 import CartTotals from "@/features/storefront/modules/common/components/cart-totals"
 import Divider from "@/features/storefront/modules/common/components/divider"

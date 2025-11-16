@@ -138,7 +138,7 @@ const ShippingAddress = ({
             required
           />
         </div>
-        
+
         {/* Address - full width on mobile, but can be 2 columns on larger screens */}
         <div className="grid sm:grid-cols-2 gap-4">
           <Input
@@ -159,7 +159,7 @@ const ShippingAddress = ({
             className="sm:col-span-1"
           />
         </div>
-        
+
         {/* City and State - together on mobile and desktop */}
         <div className="grid grid-cols-2 gap-4">
           <Input
@@ -178,7 +178,7 @@ const ShippingAddress = ({
             onChange={handleChange}
           />
         </div>
-        
+
         {/* ZIP and Country - together on mobile, but can be 2 columns on larger screens */}
         <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
           <Input

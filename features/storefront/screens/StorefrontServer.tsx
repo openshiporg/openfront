@@ -1,6 +1,7 @@
 import { dehydrate, HydrationBoundary, QueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../lib/query-keys';
 import { fetchProducts, fetchCart, fetchUser, fetchCollections, fetchCategories } from '../lib/data';
+import QueryProvider from '../lib/providers/query-client-provider';
 
 interface StorefrontServerProps {
   children: React.ReactNode;
@@ -73,8 +74,10 @@ export default async function StorefrontServer({
   }
 
   return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
-      {children}
-    </HydrationBoundary>
+    <QueryProvider>
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        {children}
+      </HydrationBoundary>
+    </QueryProvider>
   );
 }

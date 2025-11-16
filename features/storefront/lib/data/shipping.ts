@@ -20,4 +20,4 @@ export const getCartShippingOptions = cache(async function (cartId: string) {
 
   const { activeCartShippingOptions } = await openfrontClient.request(GET_SHIPPING_OPTIONS, { cartId });
   return activeCartShippingOptions;
-}); 
+});

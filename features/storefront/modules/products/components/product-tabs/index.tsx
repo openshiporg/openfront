@@ -77,7 +77,7 @@ const ProductInfoTab = ({ product }: ProductTabsProps) => {
   const getMeasurement = (type: string) => {
     const variant = product.productVariants?.[0]; // Using first variant for now
     if (!variant?.measurements?.length) return null;
-    
+
     return variant.measurements.find((m: Measurement) => m.type === type); // Use Measurement type
   };
 

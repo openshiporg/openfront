@@ -22,8 +22,8 @@ export async function AccountInvoicesPage() {
   const paidInvoices = await getCustomerPaidInvoices(50) // Get up to 50 recent invoices
 
   return (
-    <InvoicesTemplate 
-      customer={customer} 
+    <InvoicesTemplate
+      customer={customer}
       invoices={paidInvoices}
     />
   )

@@ -3,8 +3,8 @@ import type { Metadata } from 'next';
 import type { SortOptions } from '@/features/storefront/modules/store/components/refinement-list/sort-products'; // Use @ alias
 import { notFound } from "next/navigation"
 
-import { getCollectionByHandle } from "@/features/storefront/lib/data/collections" 
-import CollectionTemplate from "@/features/storefront/modules/collections/templates" 
+import { getCollectionByHandle } from "@/features/storefront/lib/data/collections"
+import CollectionTemplate from "@/features/storefront/modules/collections/templates"
 
 // Type alias for props
 type Props = {
@@ -49,7 +49,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   }
 
   const metadata = {
-    title: `${collection.title}`, 
+    title: `${collection.title}`,
     description: `${collection.title} collection`,
   } as Metadata
 

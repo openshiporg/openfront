@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -12,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Openfront Store",
-  description: "Your favorite online store",
+  title: "Impossible Tees",
+  description: "Shop our unique collection",
 };
 
 export default function RootLayout({
@@ -27,9 +28,9 @@ export default function RootLayout({
         <link href="/favicon.svg" rel="icon" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background font-sans`}
       >
-        {children}
+        <main>{children}</main>
       </body>
     </html>
   );

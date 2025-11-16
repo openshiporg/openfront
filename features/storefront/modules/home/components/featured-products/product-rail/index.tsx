@@ -14,15 +14,12 @@ export default async function ProductRail({
   const {
     response: { products },
   } = await getProductsList({
-    // Access country code based on schema
-    countryCode: region.countries?.[0]?.iso2 || "us", // Corrected property name
+    countryCode: region.countries?.[0]?.iso2 || "us",
     queryParams: {
       collectionId: collection.id,
-      // limit: 4 // Optional: You might want to limit the number of products shown
     },
-    // sortBy: { createdAt: 'desc' } // Optional: Default sort is createdAt desc
   })
-  const pricedProducts = products // Keep variable name consistent for rest of component
+  const pricedProducts = products
 
   if (!pricedProducts) {
     return null
@@ -31,15 +28,14 @@ export default async function ProductRail({
   return (
     <div className="max-w-[1440px] w-full mx-auto px-6 py-12 sm:py-24">
       <div className="flex justify-between mb-8">
-        {/* Replace Text with span */}
         <span className="text-lg leading-8 font-normal">{collection.title}</span>
         <InteractiveLink href={`/collections/${collection.handle}`}>
           View all
         </InteractiveLink>
       </div>
-      <ul className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-24 sm:gap-y-36">
+      <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-6">
         {pricedProducts &&
-          pricedProducts.map((product: any) => ( // Added :any temporarily
+          pricedProducts.map((product: any) => (
             <li key={product.id}>
               <ProductPreview productPreview={product} region={region} isFeatured />
             </li>

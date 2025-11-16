@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useIntersection } from "../../../../lib/hooks/use-in-view";
 import { addToCart } from "@/features/storefront/lib/data/cart";
 // Removed HttpTypes import
-import { getProductPrice } from "@/features/storefront/lib/util/get-product-price"; 
+import { getProductPrice } from "@/features/storefront/lib/util/get-product-price";
 import Divider from "../../../common/components/divider";
 import OptionSelect from "./option-select";
 import ProductPrice from "../product-price";

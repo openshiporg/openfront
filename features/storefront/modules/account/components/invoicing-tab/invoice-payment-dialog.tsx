@@ -13,9 +13,7 @@ import { toast } from "@/components/ui/use-toast"
 import { CardElement } from '@stripe/react-stripe-js'
 import InvoicePaymentWrapper from "./invoice-payment-wrapper"
 import InvoicePaymentButton from "./invoice-payment-button"
-import { createInvoicePaymentSessions, createInvoiceFromLineItems, initiateInvoicePaymentSession, setInvoicePaymentSession } from "./invoice-actions"
-import { gql } from "graphql-request"
-import { openfrontClient } from "@/features/storefront/lib/config"
+import { createInvoicePaymentSessions, createInvoiceFromLineItems, initiateInvoicePaymentSession, setInvoicePaymentSession, getActiveInvoice } from "./invoice-actions"
 import { isStripe, paymentInfoMap } from "@/features/storefront/lib/constants"
 import { cn } from "@/lib/utils"
 import { listCartPaymentMethods } from "@/features/storefront/lib/data/payment"
@@ -87,18 +85,9 @@ export default function InvoicePaymentDialog({
         await createInvoicePaymentSessions(invoiceResult.invoiceId)
         
         // Get the invoice with payment sessions (now with clientSecret)
-        const invoiceWithSessions = await openfrontClient.request(
-          gql`
-            query GetActiveInvoice($invoiceId: ID!) {
-              activeInvoice(invoiceId: $invoiceId)
-            }
-          `,
-          { invoiceId: invoiceResult.invoiceId },
-          await import("@/features/storefront/lib/data/cookies").then(m => m.getAuthHeaders())
-        )
-        
-        if (invoiceWithSessions.activeInvoice) {
-          const invoiceData = invoiceWithSessions.activeInvoice
+        const invoiceData = await getActiveInvoice(invoiceResult.invoiceId)
+
+        if (invoiceData) {
           
           // Format the amount since JSON response doesn't have virtual fields
           const formatAmount = (amount, currency) => {
@@ -154,18 +143,9 @@ export default function InvoicePaymentDialog({
       await initiateInvoicePaymentSession(invoice.id, newPaymentMethod)
       
       // Refresh invoice data to get updated payment sessions with clientSecret/orderId
-      const invoiceWithSessions = await openfrontClient.request(
-        gql`
-          query GetActiveInvoice($invoiceId: ID!) {
-            activeInvoice(invoiceId: $invoiceId)
-          }
-        `,
-        { invoiceId: invoice.id },
-        await import("@/features/storefront/lib/data/cookies").then(m => m.getAuthHeaders())
-      )
-      
-      if (invoiceWithSessions.activeInvoice) {
-        const invoiceData = invoiceWithSessions.activeInvoice
+      const invoiceData = await getActiveInvoice(invoice.id)
+
+      if (invoiceData) {
         
         // Format the amount since JSON response doesn't have virtual fields
         const formatAmount = (amount, currency) => {
@@ -212,20 +192,11 @@ export default function InvoicePaymentDialog({
 
       if (currentSession && !currentSession.isInitiated) {
         await initiateInvoicePaymentSession(invoice.id, selectedPaymentMethod)
-        
+
         // Refresh invoice data to get updated payment sessions with clientSecret/orderId
-        const invoiceWithSessions = await openfrontClient.request(
-          gql`
-            query GetActiveInvoice($invoiceId: ID!) {
-              activeInvoice(invoiceId: $invoiceId)
-            }
-          `,
-          { invoiceId: invoice.id },
-          await import("@/features/storefront/lib/data/cookies").then(m => m.getAuthHeaders())
-        )
-        
-        if (invoiceWithSessions.activeInvoice) {
-          const invoiceData = invoiceWithSessions.activeInvoice
+        const invoiceData = await getActiveInvoice(invoice.id)
+
+        if (invoiceData) {
           
           // Format the amount since JSON response doesn't have virtual fields
           const formatAmount = (amount, currency) => {

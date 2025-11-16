@@ -1,13 +1,12 @@
-"use client";
-
 import { gql } from "graphql-request";
 import { openfrontClient } from "./config";
+import { getCartId, getAuthHeaders } from "./data/cookies";
 
-// Consolidated data functions used by both server prefetch and client useQuery
+// Simplified data functions for server-side prefetching
 
-export async function fetchProducts(params: { 
-  categoryId?: string; 
-  collectionId?: string; 
+export async function fetchProducts(params: {
+  categoryId?: string;
+  collectionId?: string;
   limit?: number;
   offset?: number;
 } = {}) {
@@ -19,31 +18,18 @@ export async function fetchProducts(params: {
         id
         title
         handle
-        description
         thumbnail
-        status
         productVariants {
           id
           title
+          sku
           prices {
+            id
             amount
             currency {
               code
             }
-            calculatedPrice {
-              calculatedAmount
-              originalAmount
-              currencyCode
-            }
           }
-        }
-        productCollections {
-          id
-          title
-        }
-        productCategories {
-          id
-          name
         }
       }
       productsCount(where: $where)
@@ -51,13 +37,13 @@ export async function fetchProducts(params: {
   `;
 
   let whereClause: any = {};
-  
+
   if (categoryId) {
     whereClause.productCategories = {
       some: { id: { equals: categoryId } }
     };
   }
-  
+
   if (collectionId) {
     whereClause.productCollections = {
       some: { id: { equals: collectionId } }
@@ -84,186 +70,24 @@ export async function fetchProducts(params: {
   }
 }
 
-export async function fetchProductByHandle(handle: string) {
-  const PRODUCT_QUERY = gql`
-    query GetProduct($where: ProductWhereUniqueInput!) {
-      product(where: $where) {
-        id
-        title
-        handle
-        description
-        thumbnail
-        images {
-          id
-          url
-          alt
-        }
-        status
-        weight
-        length
-        height
-        width
-        hsCode
-        originCountry
-        midCode
-        material
-        metadata
-        productVariants {
-          id
-          title
-          sku
-          inventory {
-            inventoryItems {
-              id
-              quantity
-            }
-          }
-          prices {
-            id
-            amount
-            currency {
-              code
-              symbol
-            }
-            calculatedPrice {
-              calculatedAmount
-              originalAmount
-              currencyCode
-            }
-          }
-          options {
-            id
-            value
-            optionValue {
-              value
-              metadata
-              option {
-                title
-              }
-            }
-          }
-        }
-        productOptions {
-          id
-          title
-          values {
-            id
-            value
-            metadata
-          }
-        }
-        productCollections {
-          id
-          title
-          handle
-        }
-        productCategories {
-          id
-          name
-          handle
-        }
-      }
-    }
-  `;
-
+export async function fetchCart() {
   try {
-    const { product } = await openfrontClient.request(
-      PRODUCT_QUERY,
-      {
-        where: { handle }
+    const cartId = await getCartId();
+    if (!cartId) return null;
+
+    const CART_QUERY = gql`
+      query GetCart($cartId: ID!) {
+        activeCart(cartId: $cartId)
       }
+    `;
+
+    const { activeCart } = await openfrontClient.request(
+      CART_QUERY,
+      { cartId },
+      {}
     );
 
-    return product;
-  } catch (error) {
-    console.error('Error fetching product:', error);
-    return null;
-  }
-}
-
-export async function fetchCart() {
-  const CART_QUERY = gql`
-    query GetCart {
-      cart {
-        id
-        email
-        createdAt
-        updatedAt
-        completedAt
-        metadata
-        region {
-          id
-          name
-          currencyCode
-          taxRate
-        }
-        items {
-          id
-          title
-          description
-          thumbnail
-          quantity
-          variant {
-            id
-            title
-            prices {
-              amount
-              currency {
-                code
-              }
-              calculatedPrice {
-                calculatedAmount
-                originalAmount
-                currencyCode
-              }
-            }
-          }
-        }
-        paymentSessions {
-          id
-          providerId
-          isInitiated
-          status
-          data
-        }
-        customer {
-          id
-          email
-          firstName
-          lastName
-          phone
-        }
-        shippingAddress {
-          id
-          firstName
-          lastName
-          address1
-          address2
-          city
-          countryCode
-          province
-          postalCode
-          phone
-        }
-        billingAddress {
-          id
-          firstName
-          lastName
-          address1
-          address2
-          city
-          countryCode
-          province
-          postalCode
-          phone
-        }
-      }
-    }
-  `;
-
-  try {
-    const { cart } = await openfrontClient.request(CART_QUERY);
-    return cart;
+    return activeCart;
   } catch (error) {
     console.error('Error fetching cart:', error);
     return null;
@@ -271,60 +95,44 @@ export async function fetchCart() {
 }
 
 export async function fetchUser() {
-  const USER_QUERY = gql`
-    query GetUser {
-      user {
-        id
-        email
-        firstName
-        lastName
-        phone
-        billingAddress {
-          id
-          firstName
-          lastName
-          address1
-          address2
-          city
-          countryCode
-          province
-          postalCode
-          phone
-        }
-        orders {
-          id
-          status
-          fulfillmentStatus
-          paymentStatus
-          displayId
-          createdAt
-          items {
-            id
-            title
-            description
-            thumbnail
-            quantity
-            variant {
+  try {
+    const headers = await getAuthHeaders();
+    const { authenticatedItem } = await openfrontClient.request(
+      gql`
+        query GetAuthenticatedItem {
+          authenticatedItem {
+            ... on User {
               id
-              title
-              prices {
-                amount
-                currency {
-                  code
+              email
+              firstName
+              lastName
+              phone
+              billingAddress {
+                id
+                firstName
+                lastName
+                company
+                address1
+                address2
+                city
+                province
+                postalCode
+                country {
+                  id
+                  iso2
+                  name
                 }
+                phone
               }
             }
           }
         }
-      }
-    }
-  `;
-
-  try {
-    const { user } = await openfrontClient.request(USER_QUERY);
-    return user;
+      `,
+      {},
+      headers
+    );
+    return authenticatedItem;
   } catch (error) {
-    console.error('Error fetching user:', error);
     return null;
   }
 }
@@ -336,13 +144,6 @@ export async function fetchCollections() {
         id
         title
         handle
-        metadata
-        products {
-          id
-          title
-          handle
-          thumbnail
-        }
       }
     }
   `;
@@ -361,16 +162,9 @@ export async function fetchCategories() {
     query GetCategories {
       productCategories {
         id
-        name
+        title
         handle
-        description
-        metadata
-        products {
-          id
-          title
-          handle
-          thumbnail
-        }
+        isActive
       }
     }
   `;

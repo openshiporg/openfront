@@ -70,6 +70,7 @@ const Payment = ({ cart, availablePaymentMethods }: PaymentProps) => {
       style: {
         base: {
           fontFamily: "Inter, sans-serif",
+          fontSize: "16px",
           color: "#424270",
           "::placeholder": {
             color: "rgb(107 114 128)",
@@ -77,7 +78,7 @@ const Payment = ({ cart, availablePaymentMethods }: PaymentProps) => {
         },
       },
       classes: {
-        base: "pt-3 pb-1 block w-full h-11 px-4 mt-0 bg-background border rounded-md appearance-none focus:outline-none focus:ring-0 focus:shadow-borders-interactive-with-active border-border hover:bg-muted transition-all duration-300 ease-in-out",
+        base: "pt-3 pb-1 block w-full h-12 px-4 mt-0 bg-background border rounded-md appearance-none focus:outline-none focus:ring-0 focus:shadow-borders-interactive-with-active border-border hover:bg-muted transition-all duration-300 ease-in-out text-[50px]",
       },
     };
   }, []);
@@ -146,7 +147,7 @@ const Payment = ({ cart, availablePaymentMethods }: PaymentProps) => {
           )}
         >
           Payment
-          {!isOpen && paymentReady && <CircleCheck className="h-5 w-5" />}
+          {!isOpen && paymentReady && <CircleCheck className="hidden sm:block h-5 w-5" />}
         </h2>
         {!isOpen && paymentReady && (
           <span>
@@ -175,12 +176,12 @@ const Payment = ({ cart, availablePaymentMethods }: PaymentProps) => {
                     key={method.id}
                     className="relative"
                   >
-                    <RadioGroupItem 
-                      value={method.code} 
-                      id={method.id} 
+                    <RadioGroupItem
+                      value={method.code}
+                      id={method.id}
                       className="sr-only" // Hide the radio button visually but keep it accessible
                     />
-                    <Label 
+                    <Label
                       htmlFor={method.id}
                       className={cn(
                         "flex items-center justify-between text-sm font-normal cursor-pointer py-4 border rounded-md px-8 transition-colors",
@@ -272,8 +273,8 @@ const Payment = ({ cart, availablePaymentMethods }: PaymentProps) => {
 
         <div className={isOpen ? "hidden" : "block"}>
           {cart && paymentReady && activeSession ? (
-            <div className="flex items-start gap-x-1 w-full">
-              <div className="flex flex-col w-1/3">
+            <div className="flex flex-col sm:flex-row items-start gap-6 sm:gap-x-8 w-full">
+              <div className="flex flex-col w-full sm:w-1/3">
                 <p className="text-sm font-medium mb-1">
                   Payment method
                 </p>
@@ -285,7 +286,7 @@ const Payment = ({ cart, availablePaymentMethods }: PaymentProps) => {
                     selectedPaymentMethod}
                 </p>
               </div>
-              <div className="flex flex-col w-1/3">
+              <div className="flex flex-col w-full sm:w-1/3">
                 <p className="text-sm font-medium mb-1">
                   Payment details
                 </p>

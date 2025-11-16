@@ -31,13 +31,13 @@ export default async function Logo() {
       <div
         dangerouslySetInnerHTML={{ __html: logoSvg }}
         style={{ filter: `hue-rotate(${logoColor}deg)` }}
-        className="size-5"
+        className="size-4 sm:size-5"
       />
-      <h1 className="flex items-center tracking-wide text-lg">
+      <h1 className="flex items-center tracking-wide text-base sm:text-lg">
         <span className="font-medium">{first.toLowerCase()}</span>
         {second && (
           <>
-            <span className="mx-1.5 text-base text-muted-foreground">x</span>
+            <span className="mx-1.5 text-sm sm:text-base text-muted-foreground">x</span>
             <span className="font-light">{second.toLowerCase()}</span>
           </>
         )}

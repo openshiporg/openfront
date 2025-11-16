@@ -10,7 +10,7 @@ interface ProductPreviewProps {
   productPreview: {
     id: string
     handle: string
-    thumbnail: any // TODO: Define proper thumbnail type
+    thumbnail: any
     title: string
   }
   isFeatured?: boolean
@@ -31,7 +31,6 @@ export default async function ProductPreview({
     return null
   }
 
-  // Pass the first variant's ID if it exists, otherwise pass null
   const firstVariantId = product.productVariants?.[0]?.id || null
   const { cheapestPrice } = getProductPrice({
     product,
@@ -41,17 +40,19 @@ export default async function ProductPreview({
 
   return (
     <LocalizedClientLink href={`/products/${productPreview.handle}`} className="group">
-      <div>
-        <Thumbnail thumbnail={productPreview.thumbnail} size="full" isFeatured={isFeatured} />
-        <div className="flex txt-compact-medium mt-4 justify-between">
-          <p className="text-muted-foreground">{productPreview.title}</p>
-          <div className="flex items-center gap-x-2">
-            {cheapestPrice ? (
-              <PreviewPrice price={cheapestPrice} region={region} />
-            ) : (
-              <p className="text-muted-foreground">Price not available</p>
-            )}
-          </div>
+      <div className="flex flex-col gap-3">
+        <div className="aspect-square overflow-hidden rounded-lg bg-muted">
+          <Thumbnail thumbnail={productPreview.thumbnail} size="square" isFeatured={isFeatured} />
+        </div>
+        <div className="flex items-baseline justify-between gap-2">
+          <h3 className="text-base font-medium text-foreground">
+            {productPreview.title}
+          </h3>
+          {cheapestPrice ? (
+            <PreviewPrice price={cheapestPrice} region={region} />
+          ) : (
+            <p className="text-sm text-muted-foreground/60">N/A</p>
+          )}
         </div>
       </div>
     </LocalizedClientLink>

@@ -3,9 +3,9 @@
 import { gql } from "graphql-request";
 import { openfrontClient } from "../config";
 
-export async function listProducts(params: { 
-  categoryId?: string; 
-  collectionId?: string; 
+export async function listProducts(params: {
+  categoryId?: string;
+  collectionId?: string;
   limit?: number;
   offset?: number;
 } = {}) {
@@ -49,13 +49,13 @@ export async function listProducts(params: {
   `;
 
   let whereClause: any = {};
-  
+
   if (categoryId) {
     whereClause.productCategories = {
       some: { id: { equals: categoryId } }
     };
   }
-  
+
   if (collectionId) {
     whereClause.productCollections = {
       some: { id: { equals: collectionId } }

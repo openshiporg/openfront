@@ -23,24 +23,23 @@ export default function PreviewPrice({ price, region }: PreviewPriceProps) {
   const isOnSale = price.calculatedAmount < price.originalAmount;
 
   return (
-    <>
+    <div className="flex flex-col items-end gap-0.5">
       {isOnSale && (
         <span
-          className="line-through text-muted-foreground"
+          className="text-xs line-through text-muted-foreground/60"
           data-testid="original-price"
         >
-          {" "}
           {formattedOriginalPrice}
         </span>
       )}
       <span
-        className={cn("text-muted-foreground", {
+        className={cn("text-base font-semibold text-foreground/70 whitespace-nowrap", {
           "text-primary": isOnSale,
         })}
         data-testid="price"
       >
         {formattedPrice}
       </span>
-    </>
+    </div>
   );
 }

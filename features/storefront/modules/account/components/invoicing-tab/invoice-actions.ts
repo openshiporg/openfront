@@ -210,7 +210,7 @@ export async function getInvoicePaymentSessions(invoiceId: string) {
 // Get unpaid line items by region (from backend mutation)
 export async function getUnpaidLineItemsByRegion(accountId: string) {
   const headers = await getAuthHeaders();
-  
+
   try {
     const { getUnpaidLineItemsByRegion } = await openfrontClient.request(
       gql`
@@ -233,12 +233,33 @@ export async function getUnpaidLineItemsByRegion(accountId: string) {
       { accountId },
       headers
     );
-    
+
     return getUnpaidLineItemsByRegion;
   } catch (error: any) {
     return {
       success: false,
       error: error.message || 'Failed to fetch unpaid line items'
     };
+  }
+}
+
+// Get active invoice (for loading invoice data in client components)
+export async function getActiveInvoice(invoiceId: string) {
+  const headers = await getAuthHeaders();
+
+  try {
+    const { activeInvoice } = await openfrontClient.request(
+      gql`
+        query GetActiveInvoice($invoiceId: ID!) {
+          activeInvoice(invoiceId: $invoiceId)
+        }
+      `,
+      { invoiceId },
+      headers
+    );
+
+    return activeInvoice;
+  } catch (error: any) {
+    return null;
   }
 }

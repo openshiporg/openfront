@@ -7,8 +7,7 @@ import RefinementList from "@/features/storefront/modules/store/components/refin
 import { SortOptions } from "@/features/storefront/modules/store/components/refinement-list/sort-products"
 import PaginatedProducts from "@/features/storefront/modules/store/templates/paginated-products"
 import LocalizedClientLink from "@/features/storefront/modules/common/components/localized-client-link"
-// Removed unused HttpTypes import
-import type { StorefrontProductCategory } from "@/features/storefront/types" // Add import
+import type { StorefrontProductCategory } from "@/features/storefront/types"
 
 export default function CategoryTemplate({
   category,
@@ -16,7 +15,7 @@ export default function CategoryTemplate({
   page,
   countryCode,
 }: {
-  category: StorefrontProductCategory // Update type here
+  category: StorefrontProductCategory
   sortBy?: SortOptions
   page?: string
   countryCode: string
@@ -25,9 +24,9 @@ export default function CategoryTemplate({
   const sort = sortBy || "created_at"
 if (!category || !countryCode) notFound()
 
-const parents = [] as StorefrontProductCategory[] // Update type here
+const parents = [] as StorefrontProductCategory[]
 
-const getParents = (category: StorefrontProductCategory) => { // Update type here
+const getParents = (category: StorefrontProductCategory) => {
   if (category.parent_category) {
     parents.push(category.parent_category)
       parents.push(category.parent_category)
@@ -53,12 +52,12 @@ const getParents = (category: StorefrontProductCategory) => { // Update type her
                   href={`/categories/${parent.handle}`}
                   data-testid="sort-by-link"
                 >
-                  {parent.title} {/* Changed name to title */}
+                  {parent.title}
                 </LocalizedClientLink>
                 /
               </span>
             ))}
-          <h1 data-testid="category-page-title">{category.title}</h1> {/* Changed name to title */}
+          <h1 data-testid="category-page-title">{category.title}</h1>
         </div>
         {category.description && (
           <div className="mb-8 text-sm leading-6 font-normal">
@@ -68,10 +67,10 @@ const getParents = (category: StorefrontProductCategory) => { // Update type her
         {category.category_children && (
           <div className="mb-8 text-base-large">
             <ul className="grid grid-cols-1 gap-2">
-              {category.category_children?.map((c: StorefrontProductCategory) => ( // Added type for c
+              {category.category_children?.map((c: StorefrontProductCategory) => (
                 <li key={c.id}>
                   <InteractiveLink href={`/categories/${c.handle}`}>
-                    {c.title} {/* Changed name to title */}
+                    {c.title}
                   </InteractiveLink>
                 </li>
               ))}
@@ -88,7 +87,7 @@ const getParents = (category: StorefrontProductCategory) => { // Update type her
           <PaginatedProducts
             sortBy={sort}
             page={pageNumber}
-            collectionId={category.id} // Changed categoryId to collectionId based on TS error
+            collectionId={category.id}
             countryCode={countryCode}
           />
         </Suspense>

@@ -76,7 +76,7 @@ const CREATE_BUSINESS_ACCOUNT_REQUEST_MUTATION = gql`
 
 export const getCustomerBusinessAccount = cache(async function (customerId: string) {
   const headers = await getAuthHeaders();
-  
+
   try {
     const { getCustomerAccounts } = await openfrontClient.request(
       CUSTOMER_BUSINESS_ACCOUNT_QUERY,
@@ -91,7 +91,7 @@ export const getCustomerBusinessAccount = cache(async function (customerId: stri
 
 export const getBusinessAccountRequest = cache(async function (customerId: string) {
   const headers = await getAuthHeaders();
-  
+
   try {
     const { businessAccountRequests } = await openfrontClient.request(
       BUSINESS_ACCOUNT_REQUEST_QUERY,
@@ -106,7 +106,7 @@ export const getBusinessAccountRequest = cache(async function (customerId: strin
 
 export const getCustomerOrdersForAccount = cache(async function (customerId: string) {
   const headers = await getAuthHeaders();
-  
+
   try {
     const { getCustomerOrders } = await openfrontClient.request(
       CUSTOMER_ORDERS_QUERY,
@@ -128,7 +128,7 @@ export async function createBusinessAccountRequest(formData: {
   taxId?: string;
 }) {
   const headers = await getAuthHeaders();
-  
+
   try {
     const { createBusinessAccountRequest } = await openfrontClient.request(
       CREATE_BUSINESS_ACCOUNT_REQUEST_MUTATION,
@@ -145,7 +145,7 @@ export async function createBusinessAccountRequest(formData: {
 export async function submitBusinessAccountRequest(prevState: any, formData: FormData) {
   try {
     const headers = await getAuthHeaders();
-    
+
     const { createBusinessAccountRequest } = await openfrontClient.request(
       CREATE_BUSINESS_ACCOUNT_REQUEST_MUTATION,
       {
@@ -158,7 +158,7 @@ export async function submitBusinessAccountRequest(prevState: any, formData: For
       },
       headers
     );
-    
+
     return {
       success: true,
       message: 'Business account request submitted successfully',
@@ -176,7 +176,7 @@ export async function updateWebhookUrl(prevState: any, formData: FormData) {
   try {
     const headers = await getAuthHeaders();
     const webhookUrl = formData.get('webhookUrl') as string;
-    
+
     const result = await openfrontClient.request(
       gql`
         mutation UpdateUserWebhookUrl($data: UserUpdateProfileInput!) {
@@ -191,11 +191,11 @@ export async function updateWebhookUrl(prevState: any, formData: FormData) {
       },
       headers
     );
-    
+
     if (!result || !result.updateActiveUser) {
       throw new Error('No response from updateActiveUser mutation');
     }
-    
+
     return {
       success: true,
       message: 'Webhook URL updated successfully'
@@ -211,7 +211,7 @@ export async function updateWebhookUrl(prevState: any, formData: FormData) {
 export async function regenerateCustomerToken(prevState: any, formData: FormData) {
   try {
     const headers = await getAuthHeaders();
-    
+
     const { regenerateCustomerToken } = await openfrontClient.request(
       gql`
         mutation RegenerateCustomerToken {
@@ -224,7 +224,7 @@ export async function regenerateCustomerToken(prevState: any, formData: FormData
       {},
       headers
     );
-    
+
     return {
       success: regenerateCustomerToken.success,
       token: regenerateCustomerToken.token,
@@ -240,7 +240,7 @@ export async function regenerateCustomerToken(prevState: any, formData: FormData
 
 export const getCustomerPaidInvoices = cache(async function (limit: number = 10, offset: number = 0) {
   const headers = await getAuthHeaders();
-  
+
   try {
     const { getCustomerPaidInvoices } = await openfrontClient.request(
       CUSTOMER_PAID_INVOICES_QUERY,

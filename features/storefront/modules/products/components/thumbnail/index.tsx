@@ -1,15 +1,8 @@
-import { cn } from "@/lib/utils" 
-// Removed Container import
+import { cn } from "@/lib/utils"
 import Image from "next/image"
 import React from "react"
 
 import PlaceholderImage from "@/features/storefront/modules/common/icons/placeholder-image"
-
-// Define inline type based on GraphQL Image schema
-type ImageInfoForThumbnail = {
-  id?: string; // ID might not be present depending on query
-  url?: string | null;
-};
 
 type ThumbnailProps = {
   thumbnail?: string | null;
@@ -70,6 +63,7 @@ const ImageOrPlaceholder = ({
       quality={50}
       sizes="(max-width: 576px) 280px, (max-width: 768px) 360px, (max-width: 992px) 480px, 800px"
       fill
+      suppressHydrationWarning
     />
   ) : (
     <div className="w-full h-full absolute inset-0 flex items-center justify-center">

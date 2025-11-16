@@ -7,7 +7,7 @@ type ProductPreviewType = {
   handle: string;
   title: string;
   thumbnail: string;
-} 
+}
 import { StoreRegion } from "@/features/storefront/types/storefront"
 
 // Define inline types based on schema assumptions
@@ -52,17 +52,17 @@ export default async function RelatedProducts({
 
   // Define query parameters for related products
   const queryParams: ProductListQueryParams = {} // Use defined type
-  
+
   // Add collection filter if product has collections
   if (product.productCollections && product.productCollections.length > 0) {
     queryParams.collections = product.productCollections.map((c: CollectionInfo) => c.id) // Use CollectionInfo type
   }
-  
+
   // Add tag filter if product has tags
   if (product.tags && product.tags.length > 0) {
     queryParams.tags = product.tags.map((t: TagInfo) => t.id) // Use TagInfo type
   }
-  
+
   // Exclude gift cards
   queryParams.isGiftCard = false
 
@@ -89,8 +89,8 @@ export default async function RelatedProducts({
         </p>
       </div>
 
-      <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-6 gap-y-8">
-        {filteredProducts.map((productPreview: ProductPreviewType) => ( 
+      <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-6">
+        {filteredProducts.map((productPreview: ProductPreviewType) => (
           <li key={productPreview.id}>
             <ProductPreview region={region} productPreview={productPreview} />
           </li>

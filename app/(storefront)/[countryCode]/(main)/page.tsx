@@ -1,3 +1,5 @@
-import { HomePage } from "@/features/storefront/screens/HomePage";
+import { HomePage, generateMetadata } from "@/features/storefront/screens/HomePage"
 
-export default HomePage;
+export { generateMetadata }
+
+export default HomePage

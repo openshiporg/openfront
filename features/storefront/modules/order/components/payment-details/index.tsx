@@ -15,8 +15,8 @@ const PaymentDetails = ({ order }: { order: StoreOrder }) => {
       <h2 className="flex flex-row text-3xl font-medium my-6">Payment</h2>
       <div>
         {payment && provider?.code && (
-          <div className="flex items-start gap-x-1 w-full">
-            <div className="flex flex-col w-1/3">
+          <div className="flex flex-col sm:flex-row items-start gap-6 sm:gap-x-8 w-full">
+            <div className="flex flex-col w-full sm:w-1/3">
               <p className="text-sm font-medium text-foreground mb-1">
                 Payment Method
               </p>
@@ -24,7 +24,7 @@ const PaymentDetails = ({ order }: { order: StoreOrder }) => {
                 {paymentInfoMap[provider.code]?.title}
               </p>
             </div>
-            <div className="flex flex-col w-2/3">
+            <div className="flex flex-col w-full sm:w-2/3">
               <p className="text-sm font-medium text-foreground mb-1">
                 Payment Details
               </p>
