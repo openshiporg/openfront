@@ -36,8 +36,15 @@ export async function getBaseUrl(): Promise<string> {
 
 /**
  * Get the GraphQL endpoint URL
+ * Uses NEXT_PUBLIC_BACKEND_URL if set, otherwise falls back to current origin
  */
 export async function getGraphQLEndpoint(): Promise<string> {
+  // Use environment variable if set
+  if (process.env.NEXT_PUBLIC_BACKEND_URL) {
+    return `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/graphql`;
+  }
+
+  // Fallback to current origin
   const baseUrl = await getBaseUrl();
   return `${baseUrl}/api/graphql`;
 }
