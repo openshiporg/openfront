@@ -6,13 +6,20 @@
 
 Openfront is a comprehensive e-commerce platform that provides everything you need to build and manage online stores. It includes a powerful admin dashboard, customer storefront, payment processing, inventory management, and advanced e-commerce features.
 
-## Demo Video
+## Demo
 
-[![Watch Openfront Demo](https://img.youtube.com/vi/jz0ZZmtBHgo/maxresdefault.jpg)](https://youtu.be/jz0ZZmtBHgo)
+<a href="https://impossible-tees.openship.org"><img src="https://github.com/user-attachments/assets/c0cf0110-a79e-4b1c-8ba7-2a9ca09947cf" alt="Openfront Demo" width="600"></a>
 
-*Watch a complete demo of Openfront's checkout and admin features*
+| | |
+|---|---|
+| **Storefront** | [impossible-tees.openship.org](https://impossible-tees.openship.org) |
+| **Dashboard** | [impossible-tees.openship.org/dashboard](https://impossible-tees.openship.org/dashboard) |
+| **User** | `impossible@openship.org` |
+| **Password** | `UBaamC6WA*vL9dP46Lcrip2S52V4yNJ*6Xu` |
 
-Built on top of [next-keystone-starter](https://github.com/junaid33/next-keystone-starter), which provides the foundational architecture for modern full-stack applications with KeystoneJS and Next.js.
+[Watch full demo on YouTube →](https://youtu.be/jz0ZZmtBHgo)
+
+[Learn more →](https://openship.org/openfront-ecommerce)
 
 ## Core Features
 
@@ -41,7 +48,6 @@ Integrated payment processing with support for multiple payment providers includ
 - **Database**: PostgreSQL with Prisma ORM
 - **Styling**: Tailwind CSS with shadcn/ui components
 - **Authentication**: Session-based with role-based permissions
-- **Foundation**: Built on [next-keystone-starter](https://github.com/junaid33/next-keystone-starter)
 
 ### Application Structure
 ```
@@ -72,7 +78,7 @@ Openfront includes 78+ sophisticated data models covering:
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+ 
+- Node.js 18+
 - PostgreSQL database
 - npm, yarn, pnpm, or bun
 
@@ -89,32 +95,32 @@ Openfront includes 78+ sophisticated data models covering:
    ```bash
    cp .env.example .env
    ```
-   
+
    Update `.env` with your configuration:
    ```env
    # Required - Database Connection
    DATABASE_URL="postgresql://username:password@localhost:5432/openfront"
-   
+
    # Required - Session Security (must be at least 32 characters)
    SESSION_SECRET="your-very-long-session-secret-key-here-32-chars-minimum"
-   
+
    # Optional - Payment Providers (Stripe)
    STRIPE_SECRET_KEY="sk_test_51..."
    STRIPE_WEBHOOK_SECRET="whsec_..."
-   
+
    # Optional - Payment Providers (PayPal)
    PAYPAL_CLIENT_ID="your-paypal-client-id"
    PAYPAL_CLIENT_SECRET="your-paypal-client-secret"
-   
+
    # Optional - Shipping Provider (Shippo)
    SHIPPO_API_KEY="shippo_test_..."
-   
+
    # Optional - File Storage (S3-compatible)
    S3_BUCKET_NAME="your-bucket-name"
    S3_REGION="us-east-1"
    S3_ACCESS_KEY_ID="your-access-key"
    S3_SECRET_ACCESS_KEY="your-secret-key"
-   
+
    # Optional - Email Configuration
    SMTP_HOST="smtp.gmail.com"
    SMTP_PORT="587"
@@ -258,5 +264,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Openfront** - Enterprise E-commerce Platform  
-Built with Next.js 15 and KeystoneJS 6
+Built on top of [next-keystone-starter](https://github.com/junaid33/next-keystone-starter)
