@@ -1,71 +1,38 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import React, { Fragment, useMemo, useState } from "react"
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-  DialogTitle,
-} from "@/components/ui/dialog"
-
-import useToggleState from "@/features/storefront/lib/hooks/use-toggle-state"
-import ChevronDown from "@/features/storefront/modules/common/icons/chevron-down"
-
+import React, { useMemo, useState } from "react"
+import { X, ChevronUp } from "lucide-react"
 import { getProductPrice } from "@/features/storefront/lib/util/get-product-price"
 import OptionSelect from "./option-select"
-// Removed HttpTypes import
-import { isSimpleProduct } from "@/features/storefront/lib/util/product"
+import { StoreRegion, StoreProduct } from "@/features/storefront/types/storefront"
 
-// Define inline types matching those used in ProductActions
-type ProductOptionValueInfo = {
-  id: string;
-  value: string;
-  productOption?: { // Link back to the option - CONSISTENT WITH ProductActions
-    id: string;
-  } | null;
-};
-
-type ProductOptionInfoForActions = {
-  id: string;
-  title: string;
-  name?: string | null;
-  metadata?: Record<string, any>;
-  productOptionValues?: ProductOptionValueInfo[];
-};
-
-type ProductVariantInfoForActions = {
-  id: string;
-  title?: string | null; // Correct field name from schema
-  inventoryQuantity?: number | null; // Correct field name from schema (camelCase)
-  allowBackorder?: boolean | null; // Correct field name from schema (camelCase)
-  productOptionValues?: ProductOptionValueInfo[] | null; // Correct field name from schema - CONSISTENT
-  prices?: { amount: number; currencyCode: string }[] | null;
-};
-
-import { StoreRegion } from "@/features/storefront/types/storefront";
-
-type RegionInfoForActions = StoreRegion;
-
-import { StoreProduct } from "@/features/storefront/types/storefront";
-
-type ProductInfoForActions = StoreProduct;
+type ProductVariantInfo = {
+  id: string
+  title?: string | null
+  inventoryQuantity?: number | null
+  allowBackorder?: boolean | null
+  productOptionValues?: { id: string; value: string; productOption?: { id: string } | null }[] | null
+  prices?: { amount: number; currencyCode: string }[] | null
+}
 
 type MobileActionsProps = {
-  product: ProductInfoForActions; // Use updated type
-  region: RegionInfoForActions; // Use updated type
-  variant?: ProductVariantInfoForActions; // Use updated type
-  options: Record<string, string | undefined>;
-  updateOptions: (update: Record<string, string>) => void;
-  inStock?: boolean;
-  handleAddToCart: () => void;
-  isAdding?: boolean;
-  show: boolean;
-  optionsDisabled: boolean;
-};
+  product: StoreProduct
+  region: StoreRegion
+  variant?: ProductVariantInfo
+  options: Record<string, string | undefined>
+  updateOptions: (update: Record<string, string>) => void
+  inStock?: boolean
+  handleAddToCart: () => void
+  isAdding?: boolean
+  show: boolean
+  optionsDisabled: boolean
+}
 
-const MobileActions: React.FC<MobileActionsProps> = ({
+export default function MobileActions({
   product,
-  region, // Destructure region prop
+  region,
   variant,
   options,
   updateOptions,
@@ -74,155 +41,147 @@ const MobileActions: React.FC<MobileActionsProps> = ({
   isAdding,
   show,
   optionsDisabled,
-}) => {
-  const [optionsDialogOpen, setOptionsDialogOpen] = useState(false)
+}: MobileActionsProps) {
+  const [isOpen, setIsOpen] = useState(false)
 
   const price = getProductPrice({
     product: product,
     variantId: variant?.id,
     region,
-  });
+  })
 
   const selectedPrice = useMemo(() => {
-    if (!price) {
-      return null
-    }
-    const { variantPrice, cheapestPrice } = price
-
-    return variantPrice || cheapestPrice || null
+    if (!price) return null
+    return price.variantPrice || price.cheapestPrice || null
   }, [price])
 
-  // Replicate isSimpleProduct logic locally to match ProductInfoForActions type
-  const isSimple = useMemo(() => (product.productVariants?.length ?? 0) <= 1, [product.productVariants]); // Use productVariants and handle null/0 cases
+  const isSimple = (product.productVariants?.length ?? 0) <= 1
+
+  const formatPrice = (amount: number, currency: string) => {
+    return new Intl.NumberFormat(region.locale || "en-US", {
+      style: "currency",
+      currency,
+    }).format(amount / 100)
+  }
 
   return (
     <>
-      {/* Bottom action bar */}
+      {/* Dark overlay when panel is open */}
       <div
-        className={cn("z-[60] lg:hidden inset-x-0 bottom-0 fixed transition-opacity duration-300", {
-          "opacity-0 pointer-events-none": !show,
-          "opacity-100": show,
-        })}
+        className={cn(
+          "fixed inset-0 bg-black transition-opacity duration-300 lg:hidden",
+          isOpen ? "opacity-50 z-[100]" : "opacity-0 pointer-events-none z-[-1]"
+        )}
+        onClick={() => setIsOpen(false)}
+        aria-hidden="true"
+      />
+
+      {/* Sliding options panel */}
+      <div
+        className={cn(
+          "fixed left-0 right-0 bg-white rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.15)] transition-all duration-300 ease-out lg:hidden",
+          isOpen ? "bottom-0 z-[101]" : "-bottom-full z-[-1]"
+        )}
       >
-        <div
-          className="bg-background flex flex-col gap-y-3 justify-center items-center text-base leading-6 font-normal p-4 h-full w-full border-t"
-          data-testid="mobile-actions"
-        >
-          <div className="flex items-center gap-x-2">
-            <span data-testid="mobile-title">{product.title}</span>
-            <span>—</span>
-            {selectedPrice ? (
-              <div className="flex items-end gap-x-2 text-foreground">
-                {selectedPrice.calculatedAmount < selectedPrice.originalAmount && (
-                  <p>
-                    <span className="line-through text-xs leading-5 font-normal">
-                      {new Intl.NumberFormat(region.locale || 'en-US', {
-                        style: 'currency',
-                        currency: selectedPrice.currencyCode,
-                      }).format(selectedPrice.originalAmount / 100)}
-                    </span>
-                  </p>
-                )}
-                <span
-                  className={cn({
-                    "text-primary": selectedPrice.calculatedAmount < selectedPrice.originalAmount,
-                  })}
-                >
-                  {new Intl.NumberFormat(region.locale || 'en-US', {
-                    style: 'currency',
-                    currency: selectedPrice.currencyCode,
-                  }).format(selectedPrice.calculatedAmount / 100)}
-                </span>
-              </div>
-            ) : (
-              <div></div>
+        {/* Panel header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <h2 className="text-lg font-semibold">Select Options</h2>
+          <button
+            onClick={() => setIsOpen(false)}
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 transition-colors"
+            aria-label="Close options"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Panel content - options (scrollable with max height) */}
+        <div className="px-5 py-6 max-h-[50vh] overflow-y-auto">
+          <div className="flex flex-col gap-6">
+            {(product.productOptions || []).map((option) => (
+              <OptionSelect
+                key={option.id}
+                option={option}
+                current={options[option.id]}
+                updateOption={updateOptions}
+                title={option.title}
+                disabled={optionsDisabled}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Panel footer - add to cart */}
+        <div className="px-5 py-4 border-t bg-white">
+          <Button
+            onClick={async () => {
+              await handleAddToCart()
+              setIsOpen(false)
+            }}
+            disabled={!inStock || !variant || !!isAdding}
+            className="w-full"
+          >
+            {isAdding
+              ? "Adding..."
+              : !variant
+              ? "Select variant"
+              : !inStock
+              ? "Out of stock"
+              : "Add to cart"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Fixed bottom bar */}
+      <div
+        className={cn(
+          "fixed left-0 right-0 bottom-0 bg-white border-t z-[99] transition-all duration-300 lg:hidden",
+          show ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
+        )}
+      >
+        <div className="px-4 py-3">
+          {/* Product title and price */}
+          <div className="flex items-center justify-center gap-2 mb-3 text-sm">
+            <span className="font-medium truncate max-w-[200px]">{product.title}</span>
+            <span className="text-gray-400">—</span>
+            {selectedPrice && (
+              <span className={cn(selectedPrice.calculatedAmount < selectedPrice.originalAmount && "text-red-600")}>
+                {formatPrice(selectedPrice.calculatedAmount, selectedPrice.currencyCode)}
+              </span>
             )}
           </div>
-          <div className={cn("grid grid-cols-2 w-full gap-x-4", {
-            "!grid-cols-1": isSimple
-          })}>
+
+          {/* Action buttons */}
+          <div className={cn("grid gap-3", isSimple ? "grid-cols-1" : "grid-cols-2")}>
             {!isSimple && (
-              // TODO: Remove suppressHydrationWarning when React 19.2.0 useId bug is fixed upstream
-              // Known issue: https://github.com/radix-ui/primitives/issues/3700
-              // Radix UI generates different IDs on server vs client in React 19.2.0 (Next.js 16+)
-              <Dialog open={optionsDialogOpen} onOpenChange={setOptionsDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline" // Use Shadcn outline variant
-                    className="w-full"
-                    data-testid="mobile-actions-button"
-                    suppressHydrationWarning
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span>
-                        {variant
-                          ? Object.values(options).join(" / ")
-                          : "Select Options"}
-                      </span>
-                      <ChevronDown />
-                    </div>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent
-                  className="w-full h-screen max-w-none rounded-none p-0 gap-0 flex flex-col"
-                  data-testid="mobile-actions-modal"
-                >
-                  <DialogTitle className="sr-only">Select Product Options</DialogTitle>
-                  <div className="bg-background px-6 py-12 flex-1">
-                    {(product.productVariants?.length ?? 0) > 1 && ( // Use productVariants
-                      <div className="flex flex-col gap-y-6">
-                        {(product.productOptions || []).map((option) => { // Use productOptions
-                          return (
-                            <div key={option.id}>
-                              <OptionSelect
-                                option={option}
-                                current={options[option.id]}
-                                updateOption={updateOptions}
-                                title={option.title}
-                                disabled={optionsDisabled}
-                              />
-                            </div>
-                          )
-                        })}
-                      </div>
+              <Button
+                variant="outline"
+                onClick={() => setIsOpen(!isOpen)}
+              >
+                <span className="flex items-center justify-between w-full">
+                  <span className="truncate">
+                    {variant ? Object.values(options).filter(Boolean).join(" / ") : "Select Options"}
+                  </span>
+                  <ChevronUp
+                    className={cn(
+                      "w-4 h-4 ml-2 flex-shrink-0 transition-transform duration-200",
+                      isOpen && "rotate-180"
                     )}
-                  </div>
-                  {/* Add to Cart button inside dialog */}
-                  <div className="bg-background px-6 pb-6 border-t">
-                    <Button
-                      onClick={async () => {
-                        await handleAddToCart();
-                        setOptionsDialogOpen(false);
-                      }}
-                      disabled={!inStock || !variant || !!isAdding}
-                      className="w-full"
-                      data-testid="mobile-cart-button-dialog"
-                    >
-                      {isAdding
-                        ? "Adding..."
-                        : !variant
-                          ? "Select variant"
-                          : !inStock
-                            ? "Out of stock"
-                            : "Add to cart"}
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  />
+                </span>
+              </Button>
             )}
             <Button
               onClick={handleAddToCart}
-              disabled={!inStock || !variant || !!isAdding} // Combine disabled logic
-              className="w-full"
-              data-testid="mobile-cart-button"
+              disabled={!inStock || !variant || !!isAdding}
             >
               {isAdding
-                ? "Adding..." // Indicate loading state
+                ? "Adding..."
                 : !variant
-                  ? "Select variant"
-                  : !inStock
-                    ? "Out of stock"
-                    : "Add to cart"}
+                ? "Select variant"
+                : !inStock
+                ? "Out of stock"
+                : "Add to cart"}
             </Button>
           </div>
         </div>
@@ -230,5 +189,3 @@ const MobileActions: React.FC<MobileActionsProps> = ({
     </>
   )
 }
-
-export default MobileActions
