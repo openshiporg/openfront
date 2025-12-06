@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import Back from "../../../common/icons/back"
 import FastDelivery from "../../../common/icons/fast-delivery"
 import Refresh from "../../../common/icons/refresh"
@@ -43,6 +44,8 @@ type ProductTabsProps = {
 };
 
 const ProductTabs = ({ product }: ProductTabsProps) => {
+  const [activeTab, setActiveTab] = useState(0)
+
   const tabs = [
     {
       label: "Product Information",
@@ -56,18 +59,43 @@ const ProductTabs = ({ product }: ProductTabsProps) => {
 
   return (
     <div className="w-full">
-      <Accordion type="multiple">
-        {tabs.map((tab, i) => (
-          <Accordion.Item
-            key={i}
-            title={tab.label}
-            headingSize="medium"
-            value={tab.label}
-          >
-            {tab.component}
-          </Accordion.Item>
-        ))}
-      </Accordion>
+      {/* Accordion for large screens */}
+      <div className="hidden lg:block">
+        <Accordion type="multiple">
+          {tabs.map((tab, i) => (
+            <Accordion.Item
+              key={i}
+              title={tab.label}
+              headingSize="medium"
+              value={tab.label}
+            >
+              {tab.component}
+            </Accordion.Item>
+          ))}
+        </Accordion>
+      </div>
+
+      {/* Regular tabs for medium and small screens */}
+      <div className="lg:hidden">
+        <div className="flex border-b border-gray-200">
+          {tabs.map((tab, i) => (
+            <button
+              key={i}
+              onClick={() => setActiveTab(i)}
+              className={`flex-1 py-3 px-4 text-sm font-medium text-center transition-colors ${
+                activeTab === i
+                  ? "border-b-2 border-black text-black"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <div className="pt-4">
+          {tabs[activeTab].component}
+        </div>
+      </div>
     </div>
   )
 }

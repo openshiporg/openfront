@@ -1,4 +1,3 @@
-import { Circle } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { cn } from "@/lib/utils"
@@ -28,24 +27,28 @@ const FilterRadioGroup = ({
         {items?.map((i) => (
           <div
             key={i.value}
-            className={cn("flex gap-x-2 items-center", {
-              "ml-[-1.4375rem]": i.value === value,
-            })}
+            className={cn(
+              "relative flex gap-2 rounded-md py-1.5 pr-3 text-sm transition cursor-pointer",
+              i.value === value
+                ? "pl-4 rounded bg-white text-blue-600 shadow ring-1 ring-gray-200 dark:bg-gray-900 dark:text-blue-500 dark:ring-gray-800"
+                : "pl-4 text-gray-700 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50"
+            )}
+            onClick={() => handleChange(i.value)}
           >
-            {i.value === value && <Circle className="h-2 w-2 fill-current" />}
+            {i.value === value && (
+              <div
+                className="absolute left-1.5 top-1/2 h-5 w-px -translate-y-1/2 bg-blue-500 dark:bg-blue-500"
+                aria-hidden="true"
+              />
+            )}
             <RadioGroupItem
               id={i.value}
               value={i.value}
-              className="h-3 w-3"
+              className="sr-only"
             />
             <Label
               htmlFor={i.value}
-              className={cn(
-                "text-xs leading-5 !transform-none text-muted-foreground hover:cursor-pointer",
-                {
-                  "text-foreground": i.value === value,
-                }
-              )}
+              className="text-sm leading-5 !transform-none hover:cursor-pointer"
               data-testid="radio-label"
               data-active={i.value === value}
             >

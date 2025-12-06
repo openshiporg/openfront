@@ -1,4 +1,4 @@
-import { getProductsListWithSort } from "../../../lib/data/products"
+import { getProductsListWithSort, getProductsListByPrice } from "../../../lib/data/products"
 import { getRegion } from "../../../lib/data/regions"
 import ProductPreview from "../../products/components/product-preview"
 import { Pagination } from "../components/pagination"
@@ -9,48 +9,36 @@ const PRODUCT_LIMIT = 12
 type GetProductsListParams = {
   limit: number
   collectionId?: string
+  categoryId?: string
   id?: string[]
   isGiftcard?: boolean
-}
-
-type SortParam = {
-  'variants.prices.amount'?: 'asc' | 'desc';
-  createdAt: 'asc' | 'desc';
-}
-
-const mapSortBy = (sortByOption?: SortOptions): SortParam => {
-  switch (sortByOption) {
-    case "price_asc":
-      return { 'variants.prices.amount': "asc", createdAt: "desc" }
-    case "price_desc":
-      return { 'variants.prices.amount': "desc", createdAt: "desc" }
-    case "created_at":
-    default:
-      return { createdAt: "desc" }
-  }
 }
 
 export default async function PaginatedProducts({
   sortBy: sortByOption,
   page,
   collectionId,
+  categoryId,
   productsIds,
   countryCode,
 }: {
   sortBy?: SortOptions
   page: number
   collectionId?: string
+  categoryId?: string
   productsIds?: string[]
   countryCode: string
 }) {
-  const sortBy = mapSortBy(sortByOption)
-
   const queryParams: GetProductsListParams = {
     limit: PRODUCT_LIMIT,
   }
 
   if (collectionId) {
     queryParams["collectionId"] = collectionId
+  }
+
+  if (categoryId) {
+    queryParams["categoryId"] = categoryId
   }
 
   if (productsIds) {
@@ -63,14 +51,32 @@ export default async function PaginatedProducts({
     return null
   }
 
-  let {
-    response: { products, count },
-  } = await getProductsListWithSort({
-    page,
-    queryParams,
-    sortBy,
-    countryCode,
-  })
+  let products: any[] = []
+  let count = 0
+
+  // Use different queries based on sort option
+  if (sortByOption === "price_asc" || sortByOption === "price_desc") {
+    // Use the custom price sorting query
+    const priceOrder = sortByOption === "price_asc" ? "asc" : "desc"
+    const result = await getProductsListByPrice({
+      page,
+      queryParams,
+      priceOrder,
+      countryCode,
+    })
+    products = result.response.products
+    count = result.response.count
+  } else {
+    // Use standard sorting (created_at)
+    const result = await getProductsListWithSort({
+      page,
+      queryParams,
+      sortBy: { createdAt: "desc" },
+      countryCode,
+    })
+    products = result.response.products
+    count = result.response.count
+  }
 
   const totalPages = Math.ceil(count / PRODUCT_LIMIT)
 

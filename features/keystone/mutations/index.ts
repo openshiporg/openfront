@@ -42,6 +42,7 @@ import initiateInvoicePaymentSession from './initiateInvoicePaymentSession';
 import setInvoicePaymentSession from './setInvoicePaymentSession';
 import activeInvoice from './activeInvoice';
 import getCustomerPaidInvoices from './getCustomerPaidInvoices';
+import getProductsSortedByPrice from '../queries/getProductsSortedByPrice';
 
 const graphql = String.raw;
 
@@ -68,6 +69,19 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         getAnalytics(timeframe: String): JSON
         activeInvoice(invoiceId: ID!): JSON
         getCustomerPaidInvoices(limit: Int, offset: Int): JSON
+        getProductsSortedByPrice(
+          countryCode: String!
+          limit: Int!
+          offset: Int!
+          priceOrder: String!
+          collectionId: ID
+          categoryId: ID
+        ): ProductsSortedByPriceResult!
+      }
+
+      type ProductsSortedByPriceResult {
+        products: [Product!]!
+        count: Int!
       }
 
       type ShippingRate {
@@ -251,7 +265,7 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
       }
     `,
     resolvers: {
-      Query: { 
+      Query: {
         redirectToInit,
         activeCart,
         activeCartShippingOptions,
@@ -266,6 +280,7 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         getAnalytics,
         activeInvoice,
         getCustomerPaidInvoices,
+        getProductsSortedByPrice,
       },
       Mutation: {
         updateActiveUserPassword,

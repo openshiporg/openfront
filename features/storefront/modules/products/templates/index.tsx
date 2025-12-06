@@ -29,17 +29,22 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
   return (
     <>
       <div
-        className="max-w-[1440px] w-full mx-auto px-6 flex flex-col sm:flex-row sm:items-start py-6 relative"
+        className="max-w-[1440px] w-full mx-auto px-6 flex flex-col lg:flex-row lg:items-start py-6 relative"
         data-testid="product-container"
       >
-        <div className="flex flex-col sm:sticky sm:top-48 sm:py-0 sm:max-w-[300px] w-full py-8 gap-y-6">
+        {/* Left column - Product info (visible on lg+) */}
+        <div className="hidden lg:flex flex-col lg:sticky lg:top-48 lg:py-0 lg:max-w-[300px] w-full py-8 gap-y-6">
           <ProductInfo product={product} />
           <ProductTabs product={product} />
         </div>
+
+        {/* Center - Image gallery */}
         <div className="block w-full relative">
           <ImageGallery images={product?.productImages || []} handle={product.handle} region={region} />
         </div>
-        <div className="flex flex-col sm:sticky sm:top-48 sm:py-0 sm:max-w-[300px] w-full py-8 gap-y-12">
+
+        {/* Right column - Actions (visible on lg+) */}
+        <div className="hidden lg:flex flex-col lg:sticky lg:top-48 lg:py-0 lg:max-w-[300px] w-full py-8 gap-y-12">
           <ProductOnboardingCta />
           <Suspense
             fallback={
@@ -52,6 +57,24 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
           >
             <ProductActionsWrapper handle={product.handle} region={region} />
           </Suspense>
+        </div>
+
+        {/* Mobile/tablet layout - stacked below image */}
+        <div className="flex lg:hidden flex-col w-full py-8 gap-y-8">
+          <ProductInfo product={product} />
+          <ProductOnboardingCta />
+          <Suspense
+            fallback={
+              <ProductActions
+                disabled={true}
+                product={product}
+                region={region}
+              />
+            }
+          >
+            <ProductActionsWrapper handle={product.handle} region={region} />
+          </Suspense>
+          <ProductTabs product={product} />
         </div>
       </div>
       <div

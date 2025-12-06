@@ -32,7 +32,7 @@ const RefinementList = ({ sortBy, 'data-testid': dataTestId }: RefinementListPro
   }
 
   return (
-    <div className="flex lg:flex-col gap-12 py-4 mb-8 lg:px-0 pl-6 lg:min-w-[250px] lg:ml-[1.675rem]">
+    <div className="flex lg:flex-col gap-12 py-4 mb-8 lg:px-0 pl-6 lg:min-w-[250px] lg:ml-[1.675rem] lg:mt-14">
       <SortProducts sortBy={sortBy} setQueryParams={setQueryParams} data-testid={dataTestId} />
     </div>
   )

@@ -277,3 +277,81 @@ export const getProductsListWithSort = cache(async function ({
     queryParams,
   };
 });
+
+interface GetProductsListByPriceParams {
+  page?: number;
+  queryParams: Record<string, any>;
+  priceOrder: 'asc' | 'desc';
+  countryCode: string;
+}
+
+// Query products sorted by price using custom backend query with Prisma raw SQL
+export const getProductsListByPrice = cache(async function ({
+  page = 0,
+  queryParams,
+  priceOrder,
+  countryCode,
+}: GetProductsListByPriceParams) {
+  const limit = queryParams?.limit || 12;
+  const pageParam = Math.max(0, page - 1);
+  const offset = pageParam * limit;
+
+  const GET_PRODUCTS_SORTED_BY_PRICE_QUERY = gql`
+    query GetProductsSortedByPrice(
+      $countryCode: String!
+      $limit: Int!
+      $offset: Int!
+      $priceOrder: String!
+      $collectionId: ID
+      $categoryId: ID
+    ) {
+      getProductsSortedByPrice(
+        countryCode: $countryCode
+        limit: $limit
+        offset: $offset
+        priceOrder: $priceOrder
+        collectionId: $collectionId
+        categoryId: $categoryId
+      ) {
+        products {
+          id
+          title
+          handle
+          thumbnail
+          productVariants {
+            id
+            title
+            prices {
+              id
+              amount
+              currency {
+                code
+              }
+            }
+          }
+        }
+        count
+      }
+    }
+  `;
+
+  const data = await openfrontClient.request(GET_PRODUCTS_SORTED_BY_PRICE_QUERY, {
+    countryCode,
+    limit,
+    offset,
+    priceOrder,
+    collectionId: queryParams?.collectionId || null,
+    categoryId: queryParams?.categoryId || null,
+  });
+
+  const result = data.getProductsSortedByPrice;
+
+  return {
+    response: {
+      products: result.products,
+      count: result.count,
+    },
+    nextPage: result.count > offset + limit ? page + 1 : null,
+    queryParams,
+  };
+});

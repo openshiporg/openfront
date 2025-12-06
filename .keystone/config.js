@@ -5592,6 +5592,127 @@ async function getCustomerPaidInvoices(root, { limit = 10, offset = 0 }, context
 }
 var getCustomerPaidInvoices_default = getCustomerPaidInvoices;
 
+// features/keystone/queries/getProductsSortedByPrice.ts
+async function getProductsSortedByPrice(root, { countryCode, limit, offset, priceOrder, collectionId, categoryId }, context) {
+  const prisma = context.prisma;
+  const productWhere = {
+    status: "published",
+    productVariants: {
+      some: {
+        prices: {
+          some: {
+            region: {
+              countries: {
+                some: {
+                  iso2: countryCode
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  };
+  if (collectionId) {
+    productWhere.productCollections = {
+      some: { id: collectionId }
+    };
+  }
+  if (categoryId) {
+    productWhere.productCategories = {
+      some: { id: categoryId }
+    };
+  }
+  const region2 = await prisma.region.findFirst({
+    where: {
+      countries: {
+        some: { iso2: countryCode }
+      }
+    },
+    select: { id: true }
+  });
+  if (!region2) {
+    return {
+      products: [],
+      count: 0
+    };
+  }
+  const orderDirection = priceOrder === "asc" ? "ASC" : "DESC";
+  let whereConditions = `p."status" = 'published'`;
+  if (collectionId) {
+    whereConditions += ` AND EXISTS (
+      SELECT 1 FROM "_Product_productCollections" ptpc
+      WHERE ptpc."A" = p."id" AND ptpc."B" = '${collectionId}'
+    )`;
+  }
+  if (categoryId) {
+    whereConditions += ` AND EXISTS (
+      SELECT 1 FROM "_Product_productCategories" ptpc
+      WHERE ptpc."A" = p."id" AND ptpc."B" = '${categoryId}'
+    )`;
+  }
+  const sqlQuery = `
+    SELECT p."id", MIN(ma."amount") as min_price
+    FROM "Product" p
+    INNER JOIN "ProductVariant" pv ON pv."product" = p."id"
+    INNER JOIN "MoneyAmount" ma ON ma."productVariant" = pv."id"
+    WHERE ma."region" = '${region2.id}'
+      AND ${whereConditions}
+    GROUP BY p."id"
+    ORDER BY min_price ${orderDirection}
+    LIMIT ${limit}
+    OFFSET ${offset}
+  `;
+  const rawResult = await prisma.$queryRawUnsafe(sqlQuery);
+  const sortedProductIds = Array.isArray(rawResult) ? rawResult : [];
+  const countRaw = await prisma.$queryRawUnsafe(`
+    SELECT COUNT(DISTINCT p."id") as count
+    FROM "Product" p
+    INNER JOIN "ProductVariant" pv ON pv."product" = p."id"
+    INNER JOIN "MoneyAmount" ma ON ma."productVariant" = pv."id"
+    WHERE ma."region" = '${region2.id}'
+      AND ${whereConditions}
+  `);
+  const countResult = Array.isArray(countRaw) ? countRaw : [];
+  const totalCount = Number(countResult[0]?.count || 0);
+  if (sortedProductIds.length === 0) {
+    return {
+      products: [],
+      count: totalCount
+    };
+  }
+  const productIds = sortedProductIds.map((p) => p.id);
+  const products = await prisma.product.findMany({
+    where: {
+      id: { in: productIds }
+    },
+    include: {
+      productVariants: {
+        include: {
+          prices: {
+            where: {
+              region: {
+                countries: {
+                  some: { iso2: countryCode }
+                }
+              }
+            },
+            include: {
+              currency: true
+            }
+          }
+        }
+      }
+    }
+  });
+  const productMap = new Map(products.map((p) => [p.id, p]));
+  const sortedProducts = productIds.map((id) => productMap.get(id)).filter(Boolean);
+  return {
+    products: sortedProducts,
+    count: totalCount
+  };
+}
+
 // features/keystone/mutations/index.ts
 var graphql = String.raw;
 var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
@@ -5616,6 +5737,19 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
         getAnalytics(timeframe: String): JSON
         activeInvoice(invoiceId: ID!): JSON
         getCustomerPaidInvoices(limit: Int, offset: Int): JSON
+        getProductsSortedByPrice(
+          countryCode: String!
+          limit: Int!
+          offset: Int!
+          priceOrder: String!
+          collectionId: ID
+          categoryId: ID
+        ): ProductsSortedByPriceResult!
+      }
+
+      type ProductsSortedByPriceResult {
+        products: [Product!]!
+        count: Int!
       }
 
       type ShippingRate {
@@ -5813,7 +5947,8 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
       getInvoicePaymentSessions: getInvoicePaymentSessions_default,
       getAnalytics: getAnalytics_default,
       activeInvoice: activeInvoice_default,
-      getCustomerPaidInvoices: getCustomerPaidInvoices_default
+      getCustomerPaidInvoices: getCustomerPaidInvoices_default,
+      getProductsSortedByPrice
     },
     Mutation: {
       updateActiveUserPassword: updateActiveUserPassword_default,

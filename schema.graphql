@@ -10506,6 +10506,7 @@ type Query {
   getAnalytics(timeframe: String): JSON
   activeInvoice(invoiceId: ID!): JSON
   getCustomerPaidInvoices(limit: Int, offset: Int): JSON
+  getProductsSortedByPrice(countryCode: String!, limit: Int!, offset: Int!, priceOrder: String!, collectionId: ID, categoryId: ID): ProductsSortedByPriceResult!
 }
 
 union AuthenticatedItem = User
@@ -10648,6 +10649,11 @@ enum KeystoneAdminUISortDirection {
 
 input CartCodeInput {
   code: String!
+}
+
+type ProductsSortedByPriceResult {
+  products: [Product!]!
+  count: Int!
 }
 
 type ShippingRate {
