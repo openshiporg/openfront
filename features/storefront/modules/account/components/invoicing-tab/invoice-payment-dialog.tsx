@@ -347,6 +347,8 @@ export default function InvoicePaymentDialog({
                       classes: {
                         base: "pt-3 pb-1 block w-full h-11 px-4 mt-0 bg-background border rounded-md appearance-none focus:outline-none focus:ring-0 focus:shadow-borders-interactive-with-active border-border hover:bg-muted transition-all duration-300 ease-in-out",
                       },
+                      // Hide postal code - billing address is already collected
+                      hidePostalCode: true,
                     }}
                     onChange={(e) => {
                       setCardError(e.error?.message || null)

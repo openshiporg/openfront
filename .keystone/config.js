@@ -245,7 +245,8 @@ async function handleWebhookFunction2({ event, headers }) {
     throw new Error("PayPal webhook ID is not configured");
   }
   const accessToken = await getPayPalAccessToken();
-  const response = await fetch("https://api-m.sandbox.paypal.com/v1/notifications/verify-webhook-signature", {
+  const baseUrl = getPayPalBaseUrl();
+  const response = await fetch(`${baseUrl}/v1/notifications/verify-webhook-signature`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -275,8 +276,9 @@ async function handleWebhookFunction2({ event, headers }) {
 }
 async function createPaymentFunction2({ cart, amount, currency }) {
   const accessToken = await getPayPalAccessToken();
+  const baseUrl = getPayPalBaseUrl();
   const response = await fetch(
-    "https://api-m.sandbox.paypal.com/v2/checkout/orders",
+    `${baseUrl}/v2/checkout/orders`,
     {
       method: "POST",
       headers: {
@@ -289,7 +291,7 @@ async function createPaymentFunction2({ cart, amount, currency }) {
           {
             amount: {
               currency_code: currency.toUpperCase(),
-              value: (amount / 100).toFixed(2)
+              value: formatPayPalAmount(amount, currency)
             }
           }
         ]
@@ -307,8 +309,9 @@ async function createPaymentFunction2({ cart, amount, currency }) {
 }
 async function capturePaymentFunction2({ paymentId }) {
   const accessToken = await getPayPalAccessToken();
+  const baseUrl = getPayPalBaseUrl();
   const response = await fetch(
-    `https://api-m.sandbox.paypal.com/v2/checkout/orders/${paymentId}/capture`,
+    `${baseUrl}/v2/checkout/orders/${paymentId}/capture`,
     {
       method: "POST",
       headers: {
@@ -321,16 +324,18 @@ async function capturePaymentFunction2({ paymentId }) {
   if (capture.error) {
     throw new Error(`PayPal capture failed: ${capture.error.message}`);
   }
+  const capturedAmount = capture.purchase_units[0].payments.captures[0].amount;
   return {
     status: capture.status,
-    amount: parseFloat(capture.purchase_units[0].payments.captures[0].amount.value) * 100,
+    amount: parsePayPalAmount(capturedAmount.value, capturedAmount.currency_code),
     data: capture
   };
 }
-async function refundPaymentFunction2({ paymentId, amount }) {
+async function refundPaymentFunction2({ paymentId, amount, currency = "USD" }) {
   const accessToken = await getPayPalAccessToken();
+  const baseUrl = getPayPalBaseUrl();
   const response = await fetch(
-    `https://api-m.sandbox.paypal.com/v2/payments/captures/${paymentId}/refund`,
+    `${baseUrl}/v2/payments/captures/${paymentId}/refund`,
     {
       method: "POST",
       headers: {
@@ -339,9 +344,8 @@ async function refundPaymentFunction2({ paymentId, amount }) {
       },
       body: JSON.stringify({
         amount: {
-          value: (amount / 100).toFixed(2),
-          currency_code: "USD"
-          // This should come from the original payment
+          value: formatPayPalAmount(amount, currency),
+          currency_code: currency.toUpperCase()
         }
       })
     }
@@ -352,14 +356,15 @@ async function refundPaymentFunction2({ paymentId, amount }) {
   }
   return {
     status: refund.status,
-    amount: parseFloat(refund.amount.value) * 100,
+    amount: parsePayPalAmount(refund.amount.value, refund.amount.currency_code),
     data: refund
   };
 }
 async function getPaymentStatusFunction2({ paymentId }) {
   const accessToken = await getPayPalAccessToken();
+  const baseUrl = getPayPalBaseUrl();
   const response = await fetch(
-    `https://api-m.sandbox.paypal.com/v2/checkout/orders/${paymentId}`,
+    `${baseUrl}/v2/checkout/orders/${paymentId}`,
     {
       headers: {
         "Content-Type": "application/json",
@@ -371,27 +376,70 @@ async function getPaymentStatusFunction2({ paymentId }) {
   if (order.error) {
     throw new Error(`PayPal status check failed: ${order.error.message}`);
   }
+  const orderAmount = order.purchase_units[0].amount;
   return {
     status: order.status,
-    amount: parseFloat(order.purchase_units[0].amount.value) * 100,
+    amount: parsePayPalAmount(orderAmount.value, orderAmount.currency_code),
     data: order
   };
 }
 async function generatePaymentLinkFunction2({ paymentId }) {
   return `https://www.paypal.com/activity/payment/${paymentId}`;
 }
-var getPayPalAccessToken;
+var NO_DIVISION_CURRENCIES, getPayPalBaseUrl, formatPayPalAmount, parsePayPalAmount, getPayPalAccessToken;
 var init_paypal = __esm({
   "features/integrations/payment/paypal.ts"() {
     "use strict";
+    NO_DIVISION_CURRENCIES = [
+      "JPY",
+      "KRW",
+      "VND",
+      "CLP",
+      "PYG",
+      "XAF",
+      "XOF",
+      "BIF",
+      "DJF",
+      "GNF",
+      "KMF",
+      "MGA",
+      "RWF",
+      "XPF",
+      "HTG",
+      "VUV",
+      "XAG",
+      "XDR",
+      "XAU"
+    ];
+    getPayPalBaseUrl = () => {
+      const isSandbox = process.env.NEXT_PUBLIC_PAYPAL_SANDBOX !== "false";
+      return isSandbox ? "https://api-m.sandbox.paypal.com" : "https://api-m.paypal.com";
+    };
+    formatPayPalAmount = (amount, currency) => {
+      const upperCurrency = currency.toUpperCase();
+      const isNoDivision = NO_DIVISION_CURRENCIES.includes(upperCurrency);
+      if (isNoDivision) {
+        return amount.toString();
+      }
+      return (amount / 100).toFixed(2);
+    };
+    parsePayPalAmount = (value, currency) => {
+      const upperCurrency = currency.toUpperCase();
+      const isNoDivision = NO_DIVISION_CURRENCIES.includes(upperCurrency);
+      if (isNoDivision) {
+        return parseInt(value, 10);
+      }
+      return Math.round(parseFloat(value) * 100);
+    };
     getPayPalAccessToken = async () => {
       const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
       const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
       if (!clientId || !clientSecret) {
         throw new Error("PayPal credentials not configured");
       }
+      const baseUrl = getPayPalBaseUrl();
       const response = await fetch(
-        "https://api-m.sandbox.paypal.com/v1/oauth2/token",
+        `${baseUrl}/v1/oauth2/token`,
         {
           method: "POST",
           headers: {
@@ -1912,6 +1960,13 @@ var deleteActiveUserAddress_default = deleteActiveUserAddress;
 // features/keystone/mutations/addDiscountToActiveCart.ts
 async function addDiscountToActiveCart(root, { cartId, code }, context) {
   const sudoContext = context.sudo();
+  const cart = await sudoContext.query.Cart.findOne({
+    where: { id: cartId },
+    query: `id`
+  });
+  if (!cart) {
+    throw new Error(`Cart not found`);
+  }
   const discount = await sudoContext.query.Discount.findOne({
     where: { code },
     query: `
@@ -7532,7 +7587,7 @@ var Country = (0, import_core10.list)({
 // features/keystone/models/Currency.ts
 var import_core11 = require("@keystone-6/core");
 var import_fields14 = require("@keystone-6/core/fields");
-var NO_DIVISION_CURRENCIES = ["jpy", "krw", "vnd"];
+var NO_DIVISION_CURRENCIES2 = ["jpy", "krw", "vnd"];
 var Currency = (0, import_core11.list)({
   access: {
     operation: {
@@ -7592,7 +7647,7 @@ var Currency = (0, import_core11.list)({
           field: import_core11.graphql.field({
             type: import_core11.graphql.Boolean,
             resolve(item) {
-              return NO_DIVISION_CURRENCIES.includes(item.code.toLowerCase());
+              return NO_DIVISION_CURRENCIES2.includes(item.code.toLowerCase());
             }
           })
         })

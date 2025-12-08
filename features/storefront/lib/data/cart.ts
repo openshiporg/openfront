@@ -819,8 +819,16 @@ export async function submitDiscountForm(prevState: any, formData: FormData) {
     await addDiscountToCart(cartId, code);
     revalidateTag("cart");
     return null;
-  } catch (error) {
-    return error instanceof Error ? error.message : String(error);
+  } catch (error: any) {
+    // Check for originalError message first (Keystone wraps errors with "Unexpected error")
+    if (error?.response?.errors?.[0]?.extensions?.originalError?.message) {
+      return error.response.errors[0].extensions.originalError.message;
+    }
+    // GraphQL errors from graphql-request come as ClientError with response.errors
+    if (error?.response?.errors?.[0]?.message && error.response.errors[0].message !== "Unexpected error.") {
+      return error.response.errors[0].message;
+    }
+    return error instanceof Error ? error.message : "Failed to apply discount code";
   }
 }
 

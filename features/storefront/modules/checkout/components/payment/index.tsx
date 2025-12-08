@@ -1,12 +1,12 @@
 "use client";
-import { isStripe, paymentInfoMap } from "@/features/storefront/lib/constants";
+import { isStripe, paymentInfoMap, isStripeSandbox, isPayPalSandbox } from "@/features/storefront/lib/constants";
 import { initiatePaymentSession } from "@/features/storefront/lib/data/payment";
-import { CircleCheck, CreditCard } from "lucide-react";
+import { CircleCheck, CreditCard, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import ErrorMessage from "../error-message";
-// PaymentContainer is not used in this component
 import { StripeContext } from "../payment-wrapper/stripe-wrapper";
 import Divider from "@/features/storefront/modules/common/components/divider";
 import { CardElement } from "@stripe/react-stripe-js";
@@ -59,6 +59,9 @@ const Payment = ({ cart, availablePaymentMethods }: PaymentProps) => {
   const isStripePayment = isStripe(selectedPaymentMethod);
   const stripeReady = useContext(StripeContext);
 
+  // Check if we're in sandbox/test mode
+  const isSandboxMode = isStripeSandbox() || isPayPalSandbox();
+
   const paidByGiftcard =
     cart?.giftCards && cart?.giftCards?.length > 0 && cart?.total === 0;
 
@@ -80,6 +83,8 @@ const Payment = ({ cart, availablePaymentMethods }: PaymentProps) => {
       classes: {
         base: "pt-3 pb-1 block w-full h-12 px-4 mt-0 bg-background border rounded-md appearance-none focus:outline-none focus:ring-0 focus:shadow-borders-interactive-with-active border-border hover:bg-muted transition-all duration-300 ease-in-out text-[50px]",
       },
+      // Hide postal code since we already collect it in the billing address form
+      hidePostalCode: true,
     };
   }, []);
 
@@ -207,8 +212,24 @@ const Payment = ({ cart, availablePaymentMethods }: PaymentProps) => {
                           {paymentInfoMap[method.code]?.title || method.code}
                         </span>
                       </div>
-                      <div className="flex items-center">
-                        {paymentInfoMap[method.code]?.icon}
+                      <div className="flex items-center gap-x-3">
+                        {isSandboxMode && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="w-5 h-5 flex items-center justify-center rounded-full bg-rose-400/15 text-rose-700 border border-rose-200">
+                                  <FlaskConical className="w-3 h-3" strokeWidth={2.5} />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Sandbox environment – do not enter real payment info</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                        <div className="w-5 h-5 flex items-center justify-center">
+                          {paymentInfoMap[method.code]?.icon}
+                        </div>
                       </div>
                     </Label>
                   </div>

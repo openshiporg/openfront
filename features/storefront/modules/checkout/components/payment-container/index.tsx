@@ -97,6 +97,8 @@ export const StripeCardContainer = ({
       classes: {
         base: "pt-3 pb-1 block w-full h-11 px-4 mt-0 bg-background border rounded-md appearance-none focus:outline-none focus:ring-0 border-border hover:bg-accent transition-all duration-300 ease-in-out", // Use Tailwind classes, remove focus shadow
       },
+      // Hide postal code since we already collect it in the billing address form
+      hidePostalCode: true,
     }
   }, [])
 

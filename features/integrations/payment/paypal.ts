@@ -1,3 +1,42 @@
+// Currencies that don't use decimal places (amount is in whole units, not cents)
+const NO_DIVISION_CURRENCIES = [
+  "JPY", "KRW", "VND", "CLP", "PYG", "XAF", "XOF",
+  "BIF", "DJF", "GNF", "KMF", "MGA", "RWF", "XPF",
+  "HTG", "VUV", "XAG", "XDR", "XAU"
+];
+
+// Get PayPal API base URL based on sandbox/production mode
+const getPayPalBaseUrl = () => {
+  const isSandbox = process.env.NEXT_PUBLIC_PAYPAL_SANDBOX !== "false";
+  return isSandbox
+    ? "https://api-m.sandbox.paypal.com"
+    : "https://api-m.paypal.com";
+};
+
+// Format amount for PayPal API (handles no-division currencies)
+const formatPayPalAmount = (amount: number, currency: string): string => {
+  const upperCurrency = currency.toUpperCase();
+  const isNoDivision = NO_DIVISION_CURRENCIES.includes(upperCurrency);
+
+  if (isNoDivision) {
+    // No division needed - amount is already in whole units
+    return amount.toString();
+  }
+  // Standard currencies - divide by 100 to convert cents to dollars
+  return (amount / 100).toFixed(2);
+};
+
+// Parse amount from PayPal API response back to internal format (cents)
+const parsePayPalAmount = (value: string, currency: string): number => {
+  const upperCurrency = currency.toUpperCase();
+  const isNoDivision = NO_DIVISION_CURRENCIES.includes(upperCurrency);
+
+  if (isNoDivision) {
+    return parseInt(value, 10);
+  }
+  return Math.round(parseFloat(value) * 100);
+};
+
 const getPayPalAccessToken = async () => {
   const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
   const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
@@ -6,8 +45,9 @@ const getPayPalAccessToken = async () => {
     throw new Error("PayPal credentials not configured");
   }
 
+  const baseUrl = getPayPalBaseUrl();
   const response = await fetch(
-    "https://api-m.sandbox.paypal.com/v1/oauth2/token",
+    `${baseUrl}/v1/oauth2/token`,
     {
       method: "POST",
       headers: {
@@ -36,8 +76,9 @@ export async function handleWebhookFunction({ event, headers }) {
   }
 
   const accessToken = await getPayPalAccessToken();
+  const baseUrl = getPayPalBaseUrl();
 
-  const response = await fetch('https://api-m.sandbox.paypal.com/v1/notifications/verify-webhook-signature', {
+  const response = await fetch(`${baseUrl}/v1/notifications/verify-webhook-signature`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -71,9 +112,10 @@ export async function handleWebhookFunction({ event, headers }) {
 
 export async function createPaymentFunction({ cart, amount, currency }) {
   const accessToken = await getPayPalAccessToken();
+  const baseUrl = getPayPalBaseUrl();
 
   const response = await fetch(
-    "https://api-m.sandbox.paypal.com/v2/checkout/orders",
+    `${baseUrl}/v2/checkout/orders`,
     {
       method: "POST",
       headers: {
@@ -86,7 +128,7 @@ export async function createPaymentFunction({ cart, amount, currency }) {
           {
             amount: {
               currency_code: currency.toUpperCase(),
-              value: (amount / 100).toFixed(2),
+              value: formatPayPalAmount(amount, currency),
             },
           },
         ],
@@ -107,9 +149,10 @@ export async function createPaymentFunction({ cart, amount, currency }) {
 
 export async function capturePaymentFunction({ paymentId }) {
   const accessToken = await getPayPalAccessToken();
+  const baseUrl = getPayPalBaseUrl();
 
   const response = await fetch(
-    `https://api-m.sandbox.paypal.com/v2/checkout/orders/${paymentId}/capture`,
+    `${baseUrl}/v2/checkout/orders/${paymentId}/capture`,
     {
       method: "POST",
       headers: {
@@ -124,18 +167,20 @@ export async function capturePaymentFunction({ paymentId }) {
     throw new Error(`PayPal capture failed: ${capture.error.message}`);
   }
 
+  const capturedAmount = capture.purchase_units[0].payments.captures[0].amount;
   return {
     status: capture.status,
-    amount: parseFloat(capture.purchase_units[0].payments.captures[0].amount.value) * 100,
+    amount: parsePayPalAmount(capturedAmount.value, capturedAmount.currency_code),
     data: capture,
   };
 }
 
-export async function refundPaymentFunction({ paymentId, amount }) {
+export async function refundPaymentFunction({ paymentId, amount, currency = "USD" }) {
   const accessToken = await getPayPalAccessToken();
+  const baseUrl = getPayPalBaseUrl();
 
   const response = await fetch(
-    `https://api-m.sandbox.paypal.com/v2/payments/captures/${paymentId}/refund`,
+    `${baseUrl}/v2/payments/captures/${paymentId}/refund`,
     {
       method: "POST",
       headers: {
@@ -144,8 +189,8 @@ export async function refundPaymentFunction({ paymentId, amount }) {
       },
       body: JSON.stringify({
         amount: {
-          value: (amount / 100).toFixed(2),
-          currency_code: "USD", // This should come from the original payment
+          value: formatPayPalAmount(amount, currency),
+          currency_code: currency.toUpperCase(),
         },
       }),
     }
@@ -158,16 +203,17 @@ export async function refundPaymentFunction({ paymentId, amount }) {
 
   return {
     status: refund.status,
-    amount: parseFloat(refund.amount.value) * 100,
+    amount: parsePayPalAmount(refund.amount.value, refund.amount.currency_code),
     data: refund,
   };
 }
 
 export async function getPaymentStatusFunction({ paymentId }) {
   const accessToken = await getPayPalAccessToken();
+  const baseUrl = getPayPalBaseUrl();
 
   const response = await fetch(
-    `https://api-m.sandbox.paypal.com/v2/checkout/orders/${paymentId}`,
+    `${baseUrl}/v2/checkout/orders/${paymentId}`,
     {
       headers: {
         "Content-Type": "application/json",
@@ -181,9 +227,10 @@ export async function getPaymentStatusFunction({ paymentId }) {
     throw new Error(`PayPal status check failed: ${order.error.message}`);
   }
 
+  const orderAmount = order.purchase_units[0].amount;
   return {
     status: order.status,
-    amount: parseFloat(order.purchase_units[0].amount.value) * 100,
+    amount: parsePayPalAmount(orderAmount.value, orderAmount.currency_code),
     data: order,
   };
 }

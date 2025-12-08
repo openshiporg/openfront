@@ -1,6 +1,16 @@
 async function addDiscountToActiveCart(root, { cartId, code }, context) {
   const sudoContext = context.sudo();
 
+  // Validate cart exists first
+  const cart = await sudoContext.query.Cart.findOne({
+    where: { id: cartId },
+    query: `id`
+  });
+
+  if (!cart) {
+    throw new Error(`Cart not found`);
+  }
+
   // Try to find as discount
   const discount = await sudoContext.query.Discount.findOne({
     where: { code },

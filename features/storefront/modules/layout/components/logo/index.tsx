@@ -24,7 +24,7 @@ export default async function Logo() {
       href="/"
       className={cn(
         tektur.className,
-        'flex items-center gap-2 text-2xl text-foreground hover:text-muted-foreground opacity-75'
+        'flex items-center gap-2 text-2xl text-foreground hover:text-muted-foreground opacity-75 cursor-pointer'
       )}
       data-testid="nav-store-link"
     >

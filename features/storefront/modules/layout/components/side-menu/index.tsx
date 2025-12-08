@@ -36,7 +36,7 @@ const SideMenu = ({ regions }: { regions: StoreRegion[] | null }) => {
           <SheetTrigger asChild>
             <button
               data-testid="nav-menu-button"
-              className="relative h-full flex items-center transition-all ease-out duration-200 focus:outline-none hover:text-foreground"
+              className="relative h-full flex items-center transition-all ease-out duration-200 focus:outline-none hover:text-foreground cursor-pointer"
               suppressHydrationWarning
             >
               Menu
@@ -61,7 +61,7 @@ const SideMenu = ({ regions }: { regions: StoreRegion[] | null }) => {
                     <li key={name}>
                       <LocalizedClientLink
                         href={href}
-                        className="text-2xl leading-10 hover:text-muted-foreground"
+                        className="text-2xl leading-10 hover:text-muted-foreground cursor-pointer"
                         data-testid={`${name.toLowerCase()}-link`}
                         onClick={() => setOpen(false)}
                       >
