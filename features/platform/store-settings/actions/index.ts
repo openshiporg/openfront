@@ -2,6 +2,30 @@
 
 import { keystoneClient } from '@/features/dashboard/lib/keystoneClient';
 import { revalidatePath } from 'next/cache';
+import { optimize } from 'svgo';
+
+function sanitizeSvg(svg: string): string {
+  try {
+    const result = optimize(svg, {
+      plugins: [
+        'preset-default',
+        // Remove script elements
+        'removeScripts',
+        // Remove event handlers like onclick, onload, etc.
+        {
+          name: 'removeAttrs',
+          params: {
+            attrs: ['on*', 'onclick', 'onload', 'onerror', 'onmouseover'],
+          },
+        },
+      ],
+    });
+    return result.data;
+  } catch {
+    // If SVGO fails to parse, return empty string to prevent malicious input
+    return '';
+  }
+}
 
 export async function getStoreSettings() {
   const query = `
@@ -33,6 +57,17 @@ export async function updateStoreSettings(storeId: string, data: {
   homepageTitle?: string;
   homepageDescription?: string;
 }) {
+  // Sanitize SVG before saving to prevent XSS attacks
+  const sanitizedData = {
+    ...data,
+    logoIcon: data.logoIcon ? sanitizeSvg(data.logoIcon) : undefined,
+  };
+
+  // If SVG sanitization failed (returned empty string), reject the update
+  if (data.logoIcon && !sanitizedData.logoIcon) {
+    return { success: false, error: 'Invalid SVG format' };
+  }
+
   const mutation = `
     mutation UpdateStore($id: ID!, $data: StoreUpdateInput!) {
       updateStore(where: { id: $id }, data: $data) {
@@ -46,7 +81,7 @@ export async function updateStoreSettings(storeId: string, data: {
     }
   `;
 
-  const response = await keystoneClient(mutation, { id: storeId, data });
+  const response = await keystoneClient(mutation, { id: storeId, data: sanitizedData });
 
   if (!response.success) {
     return { success: false, error: response.error };

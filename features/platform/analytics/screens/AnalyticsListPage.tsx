@@ -30,6 +30,7 @@ import { PageBreadcrumbs } from "@/features/dashboard/components/PageBreadcrumbs
 import { StatsCards } from "../components/StatsCards";
 import { DateRangePickerWrapper } from "../components/DateRangePickerWrapper";
 import { RegionalTabs } from "../components/RegionalTabs";
+import { RegionalSelector } from "../components/RegionalSelector";
 import { ConvertToTabs } from "../components/ConvertToTabs";
 import { AnalyticsClientWrapper } from "../components/AnalyticsClientWrapper";
 
@@ -435,10 +436,14 @@ export async function AnalyticsListPage({ searchParams }: PageProps) {
           {/* Regional Tabs */}
           <div className="px-6 pb-4">
             {regions.length > 0 && (
-              <RegionalTabs 
-                regions={regions} 
-                selectedRegion={selectedRegion}
-              />
+              <>
+                <RegionalSelector
+                  regions={regions}
+                  selectedRegion={selectedRegion}
+                  className="md:hidden w-full"
+                />
+                <RegionalTabs regions={regions} selectedRegion={selectedRegion} className="hidden md:flex" />
+              </>
             )}
           </div>
 

@@ -32,7 +32,7 @@ export function RegionalSelector({ regions, selectedRegion, className }: Regiona
 
   const getDisplayValue = () => {
     if (!selectedRegion || selectedRegion === 'all') {
-      return 'All Regions (Converted to USD)';
+      return 'All Regions';
     }
     
     const region = regions.find(r => r.code === selectedRegion);
@@ -54,7 +54,7 @@ export function RegionalSelector({ regions, selectedRegion, className }: Regiona
         <SelectItem value="all">
           <div className="flex items-center gap-2">
             <span>🌍</span>
-            <span>All Regions (Converted to USD)</span>
+            <span>All Regions</span>
           </div>
         </SelectItem>
         {regions.map((region) => (
