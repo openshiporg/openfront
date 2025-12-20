@@ -13,9 +13,10 @@ const regionMapCache = {
 async function getRegionMap(request: NextRequest) {
   const { regionMap, regionMapUpdated } = regionMapCache;
 
+  // Cache for 24 hours - regions rarely change
   if (
     !regionMap.keys().next().value ||
-    regionMapUpdated < Date.now() - 3600 * 1000
+    regionMapUpdated < Date.now() - 3600 * 1000 * 24
   ) {
     try {
       const headers = {

@@ -33,45 +33,56 @@ export default async function StorefrontServer({
     },
   });
 
-  // Prefetch products
+  // Prefetch all data in parallel for faster initial load
+  const prefetchPromises: Promise<void>[] = [];
+
   if (prefetchProducts) {
-    await queryClient.prefetchQuery({
-      queryKey: queryKeys.products.list(prefetchProducts),
-      queryFn: () => fetchProducts(prefetchProducts),
-    });
+    prefetchPromises.push(
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.products.list(prefetchProducts),
+        queryFn: () => fetchProducts(prefetchProducts),
+      })
+    );
   }
 
-  // Prefetch user data
   if (prefetchUser) {
-    await queryClient.prefetchQuery({
-      queryKey: queryKeys.user.profile(),
-      queryFn: () => fetchUser(),
-    });
+    prefetchPromises.push(
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.user.profile(),
+        queryFn: () => fetchUser(),
+      })
+    );
   }
 
-  // Prefetch cart
   if (prefetchCart) {
-    await queryClient.prefetchQuery({
-      queryKey: queryKeys.cart.active(),
-      queryFn: () => fetchCart(),
-    });
+    prefetchPromises.push(
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.cart.active(),
+        queryFn: () => fetchCart(),
+      })
+    );
   }
 
-  // Prefetch collections
   if (prefetchCollections) {
-    await queryClient.prefetchQuery({
-      queryKey: queryKeys.collections.list(),
-      queryFn: () => fetchCollections(),
-    });
+    prefetchPromises.push(
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.collections.list(),
+        queryFn: () => fetchCollections(),
+      })
+    );
   }
 
-  // Prefetch categories
   if (prefetchCategories) {
-    await queryClient.prefetchQuery({
-      queryKey: queryKeys.categories.list(),
-      queryFn: () => fetchCategories(),
-    });
+    prefetchPromises.push(
+      queryClient.prefetchQuery({
+        queryKey: queryKeys.categories.list(),
+        queryFn: () => fetchCategories(),
+      })
+    );
   }
+
+  // Wait for all prefetches to complete in parallel
+  await Promise.all(prefetchPromises);
 
   return (
     <QueryProvider>
