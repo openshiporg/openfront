@@ -87,7 +87,6 @@ export async function updateStoreSettings(storeId: string, data: {
     return { success: false, error: response.error };
   }
 
-  revalidatePath('/');
   revalidatePath('/dashboard');
 
   return { success: true, data: response.data?.updateStore };
