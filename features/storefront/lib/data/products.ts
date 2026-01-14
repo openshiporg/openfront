@@ -24,6 +24,9 @@ export const getProductsList = cache(async function ({
     productCollections: queryParams?.collectionId ? {
       some: { id: { equals: queryParams.collectionId } }
     } : undefined,
+    productCategories: queryParams?.categoryId ? {
+      some: { id: { equals: queryParams.categoryId } }
+    } : undefined,
     isGiftcard: { equals: queryParams?.isGiftcard },
     productVariants: {
       some: {

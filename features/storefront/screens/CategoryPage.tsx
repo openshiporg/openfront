@@ -44,18 +44,17 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
   try {
     // Fetch category using the new function and structure
-    const { product_categories }: { product_categories: StorefrontProductCategory[] } = await getCategoryByHandle(handle)
-    const category: StorefrontProductCategory | undefined = product_categories[0]
+    const { productCategory } = await getCategoryByHandle(handle) as { productCategory: StorefrontProductCategory | null }
 
-    if (!category) {
+    if (!productCategory) {
       notFound()
     }
 
     // Assuming 'title' exists on the category object from the new API
-    const title = category.title
+    const title = productCategory.title
 
-    // Assuming 'description' might exist, otherwise use title
-    const description = category.description ?? `${category.title} category.`
+    // Use title for description since ProductCategory doesn't have a description field
+    const description = `${productCategory.title} category.`
 
     return {
       title: title,
@@ -77,11 +76,17 @@ export async function CategoryPage(props: Props) {
   const handle = params.category[params.category.length - 1] // Get the last handle
 
   // Fetch category using the new function and structure
-  const { product_categories }: { product_categories: StorefrontProductCategory[] } = await getCategoryByHandle(handle)
-  const category: StorefrontProductCategory | undefined = product_categories[0]
+  const { productCategory } = await getCategoryByHandle(handle) as { productCategory: StorefrontProductCategory | null }
 
-  if (!category) {
+  if (!productCategory) {
     notFound()
+  }
+
+  // Map to expected format for CategoryTemplate
+  const category: StorefrontProductCategory = {
+    ...productCategory,
+    parent_category: productCategory.parent_category,
+    category_children: productCategory.category_children,
   }
 
   return (

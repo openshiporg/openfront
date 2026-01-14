@@ -22,7 +22,7 @@ export default function CollectionTemplate({
   const sort = sortBy || "created_at"
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start py-6 max-w-[1440px] w-full mx-auto px-6">
+    <div className="flex flex-col sm:flex-row sm:items-start py-6 max-w-[1440px] w-full mx-auto px-6 gap-8">
       <RefinementList sortBy={sort} />
       <div className="w-full">
         <div className="mb-8 text-3xl font-semibold">

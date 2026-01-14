@@ -53,7 +53,8 @@ export const getCategoryByHandle = cache(async function (categoryHandle: string)
         id
         title
         handle
-        description
+        metadata
+        isActive
         parentCategory {
           id
           title

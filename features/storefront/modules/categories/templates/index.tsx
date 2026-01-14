@@ -38,7 +38,7 @@ const getParents = (category: StorefrontProductCategory) => {
 
   return (
     <div
-      className="flex flex-col sm:flex-row sm:items-start py-6 max-w-[1440px] w-full mx-auto px-6"
+      className="flex flex-col sm:flex-row sm:items-start py-6 max-w-[1440px] w-full mx-auto px-6 gap-8"
       data-testid="category-container"
     >
       <RefinementList sortBy={sort} data-testid="sort-by-container" />
@@ -59,11 +59,6 @@ const getParents = (category: StorefrontProductCategory) => {
             ))}
           <h1 data-testid="category-page-title">{category.title}</h1>
         </div>
-        {category.description && (
-          <div className="mb-8 text-sm leading-6 font-normal">
-            <p>{category.description}</p>
-          </div>
-        )}
         {category.category_children && (
           <div className="mb-8 text-base-large">
             <ul className="grid grid-cols-1 gap-2">
@@ -80,14 +75,14 @@ const getParents = (category: StorefrontProductCategory) => {
         <Suspense
           fallback={
             <SkeletonProductGrid
-              numberOfProducts={category.products?.length ?? 8}
+              numberOfProducts={8}
             />
           }
         >
           <PaginatedProducts
             sortBy={sort}
             page={pageNumber}
-            collectionId={category.id}
+            categoryId={category.id}
             countryCode={countryCode}
           />
         </Suspense>

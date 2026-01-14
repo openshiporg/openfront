@@ -2,6 +2,9 @@ export interface ProductWhereClause {
   productCollections?: {
     some: { id: { equals: any } }
   },
+  productCategories?: {
+    some: { id: { equals: any } }
+  },
   isGiftcard: { equals: any },
   productVariants: {
     some: {
@@ -15,6 +18,16 @@ export interface ProductWhereClause {
     }
   },
   id?: { in: any }
+}
+
+export interface StorefrontProductCategory {
+  id: string;
+  title: string;
+  handle: string;
+  metadata?: Record<string, any>;
+  isActive?: boolean;
+  parent_category?: StorefrontProductCategory;
+  category_children?: StorefrontProductCategory[];
 }
 
 export interface StoreCollection {
