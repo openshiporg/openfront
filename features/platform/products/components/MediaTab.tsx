@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import Image from "next/image"
+import { useState, useCallback, useMemo } from "react"
 import { AlertCircleIcon, ImageIcon, UploadIcon, XIcon, GripVerticalIcon } from "lucide-react"
 import { toast } from "sonner"
 
@@ -15,6 +16,15 @@ import { useProductData } from "../hooks/useProductData"
 
 interface MediaTabProps {
   product: Record<string, any>
+}
+
+type CombinedImage = {
+  id: string
+  isUploading: boolean
+  preview: string
+  altText: string
+  size?: number
+  order: number
 }
 
 export function MediaTab({ product: initialProduct }: MediaTabProps) {
@@ -61,13 +71,13 @@ export function MediaTab({ product: initialProduct }: MediaTabProps) {
         return
       }
 
-      setIsLoading(true)
+      // Don't block UI - files are already shown optimistically
       const successfulUploads: string[] = []
 
       try {
         // Upload each file
         for (const fileWithPreview of addedFiles) {
-          const file = fileWithPreview.file as File // New files will always be File objects
+          const file = fileWithPreview.file as File
           const result = await createProductImage({
             image: file,
             altText: file.name,
@@ -76,25 +86,48 @@ export function MediaTab({ product: initialProduct }: MediaTabProps) {
 
           if (result.success) {
             toast.success(`${file.name} uploaded successfully`)
-            successfulUploads.push(fileWithPreview.id) // Track successful uploads
+            successfulUploads.push(fileWithPreview.id)
           } else {
             toast.error(`Failed to upload ${file.name}: ${result.error}`)
           }
         }
 
-        // Clear all files from local state after successful uploads
+        // Clear local files state and refresh product data
         clearFiles()
-
-        // Refresh the product data to get updated images
         refetch()
       } catch (error) {
         console.error('Error uploading images:', error)
         toast.error('Failed to upload images')
-      } finally {
-        setIsLoading(false)
       }
     }
   })
+
+  // Combine remote images and local uploading files into a single list
+  const combinedImages: CombinedImage[] = useMemo(() => {
+    const remoteImages = productImages
+      .filter((img: any) => (img.image && img.image.url) || img.imagePath)
+      .map((img: any) => ({
+        id: img.id,
+        isUploading: false,
+        preview: img.image?.url || img.imagePath || '',
+        altText: img.altText || (img.image?.id ? `${img.image.id}.${img.image.extension}` : 'Product image'),
+        size: img.image?.filesize,
+        order: img.order || 0,
+      }))
+
+    const localFiles = files
+      .filter(file => file.file instanceof File)
+      .map((file, index) => ({
+        id: file.id,
+        isUploading: true,
+        preview: file.preview,
+        altText: (file.file as File).name,
+        size: (file.file as File).size,
+        order: productImages.length + index,
+      }))
+
+    return [...remoteImages, ...localFiles].sort((a, b) => a.order - b.order)
+  }, [productImages, files])
 
   // Drag and drop handlers for reordering images
   const handleImageDragStart = useCallback((e: React.DragEvent, imageId: string) => {
@@ -126,12 +159,12 @@ export function MediaTab({ product: initialProduct }: MediaTabProps) {
     try {
       // Get current ordered images
       const orderedImages = productImages
-        .filter(img => (img.image && img.image.url) || img.imagePath)
-        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .filter((img: any) => (img.image && img.image.url) || img.imagePath)
+        .sort((a: any, b: any) => (a.order || 0) - (b.order || 0))
 
       // Find the indices
-      const draggedIndex = orderedImages.findIndex(img => img.id === draggedItem)
-      const targetIndex = orderedImages.findIndex(img => img.id === targetImageId)
+      const draggedIndex = orderedImages.findIndex((img: any) => img.id === draggedItem)
+      const targetIndex = orderedImages.findIndex((img: any) => img.id === targetImageId)
 
       if (draggedIndex === -1 || targetIndex === -1) {
         throw new Error('Invalid drag operation')
@@ -144,7 +177,7 @@ export function MediaTab({ product: initialProduct }: MediaTabProps) {
       newOrder.splice(targetIndex, 0, draggedImage)
 
       // Create order updates with new indices
-      const orderUpdates = newOrder.map((img, index) => ({
+      const orderUpdates = newOrder.map((img: any, index: number) => ({
         id: img.id,
         order: index
       }))
@@ -154,7 +187,7 @@ export function MediaTab({ product: initialProduct }: MediaTabProps) {
 
       if (result.success) {
         toast.success('Image order updated successfully')
-        refetch() // Refresh the product data
+        refetch()
       } else {
         toast.error('Failed to update image order')
       }
@@ -181,7 +214,6 @@ export function MediaTab({ product: initialProduct }: MediaTabProps) {
         const result = await deleteProductImage(fileId, currentProduct.id)
         if (result.success) {
           toast.success('Image removed successfully')
-          // Refresh the product data to get updated images
           refetch()
         } else {
           toast.error(result.error || 'Failed to remove image')
@@ -193,12 +225,11 @@ export function MediaTab({ product: initialProduct }: MediaTabProps) {
         setIsLoading(false)
       }
     } else {
-      // Just remove from local state for new uploads
       removeFile(fileId)
     }
   }, [currentProduct?.id, removeFile, refetch])
 
-  // Show loading state while fetching product data - AFTER all hooks are declared
+  // Show loading state while fetching product data
   if (productLoading) {
     return <div>Loading product data...</div>
   }
@@ -258,8 +289,8 @@ export function MediaTab({ product: initialProduct }: MediaTabProps) {
         </div>
       )}
 
-      {/* Current product images from server */}
-      {productImages.filter(img => (img.image && img.image.url) || img.imagePath).length > 0 && (
+      {/* Combined image gallery (remote + uploading) */}
+      {combinedImages.length > 0 && (
         <div className="space-y-2">
           <div className="flex flex-col gap-1 mb-4">
             <h3 className="text-base font-medium">Product Images</h3>
@@ -267,13 +298,10 @@ export function MediaTab({ product: initialProduct }: MediaTabProps) {
           </div>
 
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-            {productImages
-              .filter(img => (img.image && img.image.url) || img.imagePath)
-              .sort((a, b) => (a.order || 0) - (b.order || 0))
-              .map((img) => (
+            {combinedImages.map((img) => (
               <div
                 key={img.id}
-                draggable={!isLoading}
+                draggable={!isLoading && !img.isUploading}
                 onDragStart={(e) => handleImageDragStart(e, img.id)}
                 onDragOver={(e) => handleImageDragOver(e, img.id)}
                 onDragLeave={handleImageDragLeave}
@@ -285,31 +313,45 @@ export function MediaTab({ product: initialProduct }: MediaTabProps) {
                     : dragOverItem === img.id
                       ? 'border-primary bg-accent/50'
                       : 'hover:bg-accent/20'
-                } ${!isLoading ? 'cursor-move' : 'cursor-default'}`}
+                } ${!isLoading && !img.isUploading ? 'cursor-move' : 'cursor-default'} ${img.isUploading ? 'opacity-75' : ''}`}
               >
                 {/* Drag handle overlay */}
-                <div className="absolute top-2 left-2 z-10 opacity-60 hover:opacity-100 transition-opacity">
-                  <div className="bg-background/80 backdrop-blur-sm rounded-md p-1">
-                    <GripVerticalIcon className="size-3" aria-hidden="true" />
+                {!img.isUploading && (
+                  <div className="absolute top-2 left-2 z-10 opacity-60 hover:opacity-100 transition-opacity">
+                    <div className="bg-background/80 backdrop-blur-sm rounded-md p-1">
+                      <GripVerticalIcon className="size-3" aria-hidden="true" />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Image preview */}
-                <div className="bg-accent flex aspect-square items-center justify-center overflow-hidden rounded-t-[inherit]">
-                  <img
-                    src={img.image?.url || img.imagePath || ''}
-                    alt={img.altText || 'Product image'}
-                    className="size-full rounded-t-[inherit] object-cover"
-                  />
+                <div className="bg-accent flex aspect-square relative items-center justify-center overflow-hidden rounded-t-[inherit]">
+                  {img.isUploading || img.preview.startsWith('blob:') ? (
+                    // Use regular img for blob URLs (local previews)
+                    <img
+                      src={img.preview}
+                      alt={img.altText}
+                      className="size-full rounded-t-[inherit] object-cover"
+                    />
+                  ) : (
+                    // Use Next.js Image for remote URLs
+                    <Image
+                      src={img.preview}
+                      alt={img.altText}
+                      fill
+                      className="rounded-t-[inherit] object-cover"
+                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                    />
+                  )}
                 </div>
 
                 {/* Remove button */}
                 <Button
-                  onClick={() => handleRemove(img.id, true)}
+                  onClick={() => handleRemove(img.id, !img.isUploading)}
                   size="icon"
                   className="border-background focus-visible:border-background absolute -top-2 -right-2 size-6 rounded-full border-2 shadow-none"
-                  aria-label="Remove image"
-                  disabled={isLoading}
+                  aria-label={img.isUploading ? "Cancel upload" : "Remove image"}
+                  disabled={isLoading && !img.isUploading}
                 >
                   <XIcon className="size-3.5" />
                 </Button>
@@ -317,60 +359,14 @@ export function MediaTab({ product: initialProduct }: MediaTabProps) {
                 {/* Image info */}
                 <div className="flex min-w-0 flex-col gap-0.5 border-t p-3">
                   <p className="truncate text-[13px] font-medium">
-                    {img.altText || (img.image?.id ? `${img.image.id}.${img.image.extension}` : 'Product image')}
+                    {img.altText}
                   </p>
                   <p className="text-muted-foreground truncate text-xs">
-                    {img.image?.filesize
-                      ? formatBytes(img.image.filesize)
-                      : img.imagePath
-                        ? img.imagePath
-                        : 'No size info'}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Local files being uploaded */}
-      {files.length > 0 && files.some(file => file.file instanceof File) && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-medium">Uploading...</h3>
-
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-            {files.filter(file => file.file instanceof File).map((file) => (
-              <div
-                key={file.id}
-                className="bg-background relative flex flex-col rounded-md border opacity-75"
-              >
-                {/* Image preview */}
-                <div className="bg-accent flex aspect-square items-center justify-center overflow-hidden rounded-t-[inherit]">
-                  <img
-                    src={file.preview}
-                    alt={file.file.name}
-                    className="size-full rounded-t-[inherit] object-cover"
-                  />
-                </div>
-
-                {/* Cancel upload button */}
-                <Button
-                  onClick={() => handleRemove(file.id, false)}
-                  size="icon"
-                  className="border-background focus-visible:border-background absolute -top-2 -right-2 size-6 rounded-full border-2 shadow-none"
-                  aria-label="Cancel upload"
-                  disabled={isLoading}
-                >
-                  <XIcon className="size-3.5" />
-                </Button>
-
-                {/* File info */}
-                <div className="flex min-w-0 flex-col gap-0.5 border-t p-3">
-                  <p className="truncate text-[13px] font-medium">
-                    {file.file.name}
-                  </p>
-                  <p className="text-muted-foreground truncate text-xs">
-                    {formatBytes(file.file.size)} • Uploading...
+                    {img.isUploading ? (
+                      <>{formatBytes(img.size || 0)} - Uploading...</>
+                    ) : (
+                      img.size ? formatBytes(img.size) : 'No size info'
+                    )}
                   </p>
                 </div>
               </div>
