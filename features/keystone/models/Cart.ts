@@ -44,28 +44,94 @@ async function calculateCartSubtotal(cart, context) {
   return subtotal;
 }
 
+/**
+ * Calculate total discount amount for a cart
+ * 
+ * Based on Medusa's discount flow:
+ * 1. For each discount on the cart
+ * 2. For each line item, validate if the product matches the discount conditions
+ * 3. Only apply discount to line items that pass validation
+ * 
+ * Handles three discount types:
+ * - percentage: X% off
+ * - fixed: $X off
+ * - free_shipping: waive shipping costs
+ * 
+ * And two allocation modes:
+ * - total: apply discount proportionally across eligible items
+ * - item: apply fixed amount per eligible item
+ */
 async function calculateCartDiscount(cart, context) {
   const sudoContext = context.sudo();
 
   if (!cart?.discounts?.length) return 0;
 
-  const subtotal = await calculateCartSubtotal(cart, context);
-  let discountAmount = 0;
+  let totalDiscountAmount = 0;
 
   for (const discount of cart.discounts) {
     if (!discount.discountRule?.type) continue;
 
-    switch (discount.discountRule.type) {
+    const { type, value, allocation } = discount.discountRule;
+    const conditions = discount.discountRule.discountConditions || [];
+    const currencyMultiplier = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
+
+    // Filter line items to only those that pass all product-related conditions
+    const eligibleLineItems = [];
+    
+    for (const lineItem of (cart.lineItems || [])) {
+      // Check if product is discountable
+      if (lineItem.productVariant?.product?.discountable === false) {
+        continue;
+      }
+
+      const product = lineItem.productVariant?.product;
+      if (!product) continue;
+
+      // Validate this product against all discount conditions
+      const isEligible = validateProductAgainstConditions(product, conditions);
+      
+      if (isEligible) {
+        eligibleLineItems.push(lineItem);
+      }
+    }
+
+    // If no items are eligible, skip this discount
+    if (eligibleLineItems.length === 0 && type !== 'free_shipping') {
+      continue;
+    }
+
+    // Calculate subtotal for eligible items only
+    let eligibleSubtotal = 0;
+    for (const lineItem of eligibleLineItems) {
+      const prices = await sudoContext.query.MoneyAmount.findMany({
+        where: {
+          productVariant: { id: { equals: lineItem.productVariant.id } },
+          region: { id: { equals: cart.region?.id } },
+          currency: { code: { equals: cart.region?.currency?.code } },
+        },
+        query: "calculatedPrice { calculatedAmount }",
+      });
+      const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
+      eligibleSubtotal += price * lineItem.quantity;
+    }
+
+    switch (type) {
       case "percentage":
-        discountAmount += subtotal * (discount.discountRule.value / 100);
+        // Apply percentage to eligible subtotal
+        totalDiscountAmount += eligibleSubtotal * (value / 100);
         break;
       case "fixed":
-        discountAmount +=
-          discount.discountRule.value *
-          (cart.region?.currency?.noDivisionCurrency ? 1 : 100);
+        if (allocation === 'item') {
+          // For item allocation, apply fixed amount per eligible item
+          const eligibleQuantity = eligibleLineItems.reduce((sum, li) => sum + li.quantity, 0);
+          totalDiscountAmount += (value * currencyMultiplier) * eligibleQuantity;
+        } else {
+          // For total allocation, apply fixed amount once (proportionally to eligible items)
+          totalDiscountAmount += value * currencyMultiplier;
+        }
         break;
       case "free_shipping":
-        discountAmount +=
+        totalDiscountAmount +=
           cart.shippingMethods?.reduce(
             (total, method) => total + (method.price || 0),
             0
@@ -74,7 +140,81 @@ async function calculateCartDiscount(cart, context) {
     }
   }
 
-  return discountAmount;
+  // Ensure discount doesn't exceed subtotal (can't have negative totals)
+  const subtotal = await calculateCartSubtotal(cart, context);
+  return Math.min(totalDiscountAmount, subtotal);
+}
+
+/**
+ * Validate if a product matches all product-related discount conditions
+ * 
+ * Condition types checked:
+ * - products: specific product IDs
+ * - product_types: product type IDs
+ * - product_collections: collection IDs
+ * - product_tags: tag IDs
+ * 
+ * Note: customer_groups conditions are validated at cart level in addDiscountToActiveCart
+ */
+function validateProductAgainstConditions(product, conditions) {
+  // If no conditions, discount applies to all products
+  const productConditions = conditions.filter(c => 
+    c.type === 'products' || 
+    c.type === 'product_types' || 
+    c.type === 'product_collections' || 
+    c.type === 'product_tags'
+  );
+
+  if (productConditions.length === 0) {
+    return true;
+  }
+
+  // All product conditions must pass (AND logic)
+  for (const condition of productConditions) {
+    const { type, operator } = condition;
+    
+    let conditionEntityIds = [];
+    let productEntityIds = [];
+
+    switch (type) {
+      case 'products':
+        conditionEntityIds = condition.products?.map(p => p.id) || [];
+        productEntityIds = [product.id];
+        break;
+      case 'product_types':
+        conditionEntityIds = condition.productTypes?.map(t => t.id) || [];
+        productEntityIds = product.productType ? [product.productType.id] : [];
+        break;
+      case 'product_collections':
+        conditionEntityIds = condition.productCollections?.map(c => c.id) || [];
+        productEntityIds = product.productCollections?.map(c => c.id) || [];
+        break;
+      case 'product_tags':
+        conditionEntityIds = condition.productTags?.map(t => t.id) || [];
+        productEntityIds = product.productTags?.map(t => t.id) || [];
+        break;
+      default:
+        continue;
+    }
+
+    // Skip if condition has no entities defined
+    if (conditionEntityIds.length === 0) {
+      continue;
+    }
+
+    const hasMatch = productEntityIds.some(id => conditionEntityIds.includes(id));
+
+    if (operator === 'in' && !hasMatch) {
+      // Product must be IN the condition set but isn't
+      return false;
+    }
+    if (operator === 'not_in' && hasMatch) {
+      // Product must NOT be in the condition set but is
+      return false;
+    }
+  }
+
+  return true;
 }
 
 async function calculateCartShipping(cart) {
@@ -384,6 +524,13 @@ export const Cart = list({
                     quantity
                     productVariant {
                       id
+                      product {
+                        id
+                        discountable
+                        productType { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   discounts {
@@ -391,6 +538,16 @@ export const Cart = list({
                     discountRule {
                       type
                       value
+                      allocation
+                      discountConditions {
+                        id
+                        type
+                        operator
+                        products { id }
+                        productTypes { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   shippingMethods {
@@ -430,6 +587,13 @@ export const Cart = list({
                     quantity
                     productVariant {
                       id
+                      product {
+                        id
+                        discountable
+                        productType { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   discounts {
@@ -437,6 +601,16 @@ export const Cart = list({
                     discountRule {
                       type
                       value
+                      allocation
+                      discountConditions {
+                        id
+                        type
+                        operator
+                        products { id }
+                        productTypes { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   shippingMethods {
@@ -530,6 +704,13 @@ export const Cart = list({
                     quantity
                     productVariant {
                       id
+                      product {
+                        id
+                        discountable
+                        productType { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   discounts {
@@ -537,6 +718,16 @@ export const Cart = list({
                     discountRule {
                       type
                       value
+                      allocation
+                      discountConditions {
+                        id
+                        type
+                        operator
+                        products { id }
+                        productTypes { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   shippingMethods {
@@ -572,6 +763,13 @@ export const Cart = list({
                     quantity 
                     productVariant {
                       id
+                      product {
+                        id
+                        discountable
+                        productType { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   discounts {
@@ -580,6 +778,15 @@ export const Cart = list({
                       type
                       value
                       allocation
+                      discountConditions {
+                        id
+                        type
+                        operator
+                        products { id }
+                        productTypes { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   region {
@@ -730,6 +937,13 @@ export const Cart = list({
                     quantity
                     productVariant {
                       id
+                      product {
+                        id
+                        discountable
+                        productType { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   discounts {
@@ -737,6 +951,16 @@ export const Cart = list({
                     discountRule {
                       type
                       value
+                      allocation
+                      discountConditions {
+                        id
+                        type
+                        operator
+                        products { id }
+                        productTypes { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                 `,
@@ -903,6 +1127,13 @@ export const Cart = list({
                     quantity 
                     productVariant {
                       id
+                      product {
+                        id
+                        discountable
+                        productType { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   discounts {
@@ -911,6 +1142,15 @@ export const Cart = list({
                       type
                       value
                       allocation
+                      discountConditions {
+                        id
+                        type
+                        operator
+                        products { id }
+                        productTypes { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   region {
