@@ -12,7 +12,7 @@ const Hero = ({ title, description, logoColor }: HeroProps) => {
   const hueRotation = logoColor || "0";
 
   return (
-    <div className="h-[75vh] w-full border-b border-border relative bg-slate-950">
+    <div className="h-[75vh] w-full border-b border-border relative bg-slate-950 overflow-hidden">
       <div
         className="absolute inset-0 opacity-20"
         style={{

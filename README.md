@@ -21,6 +21,14 @@ Openfront is a comprehensive e-commerce platform that provides everything you ne
 
 [Learn more →](https://openship.org/openfront-ecommerce)
 
+## The Openfront Ecosystem
+
+Openfront is part of an ecosystem of open-source commerce tools:
+
+- **Openfront E-commerce**: (This repository) Headless e-commerce for retail.
+- **[Openfront Restaurant](https://github.com/openshiporg/openfront-restaurant)**: Specialized platform for the F&B industry with POS and KDS.
+- **[Openship](https://github.com/openshiporg/openship)**: High-performance order router for multi-channel fulfillment.
+
 ## Core Features
 
 ### Admin Dashboard
@@ -39,6 +47,12 @@ Integrated payment processing with support for multiple payment providers includ
 - **Claims & Returns**: Sophisticated return and refund processing workflows
 - **Analytics**: Real-time business insights and comprehensive reporting
 - **Discount System**: Flexible promotions, discount rules, and automated campaigns
+
+### AI Assistant
+Every Openfront instance comes with a built-in AI Assistant powered by the Model Context Protocol (MCP).
+- **Direct Management**: Add products, change prices, and configure regions using natural language.
+- **Permission Safe**: The AI uses your logged-in session, ensuring it can only perform actions your user role allows.
+- **Workflow Efficiency**: Skip the dashboard menus and manage your store through a simple chat interface.
 
 ## Architecture
 

@@ -196,10 +196,10 @@ export const DotsShader: React.FC<DotsShaderProps> = ({
   }, [setupCanvas, updateSquares, drawGrid, width, height, isInView]);
 
   return (
-    <div ref={containerRef} className={cn("w-full h-full", className)}>
+    <div ref={containerRef} className={cn("w-full h-full overflow-hidden", className)}>
       <canvas
         ref={canvasRef}
-        className="pointer-events-none w-full h-full"
+        className="pointer-events-none block w-full h-full"
         suppressHydrationWarning
       />
     </div>

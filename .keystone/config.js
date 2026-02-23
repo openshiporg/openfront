@@ -1962,10 +1962,32 @@ async function addDiscountToActiveCart(root, { cartId, code }, context) {
   const sudoContext = context.sudo();
   const cart = await sudoContext.query.Cart.findOne({
     where: { id: cartId },
-    query: `id`
+    query: `
+      id
+      region {
+        id
+      }
+      user {
+        id
+        customerGroups {
+          id
+        }
+      }
+      lineItems {
+        id
+      }
+      discounts {
+        id
+        code
+        stackable
+      }
+    `
   });
   if (!cart) {
     throw new Error(`Cart not found`);
+  }
+  if (!cart.lineItems || cart.lineItems.length === 0) {
+    throw new Error(`Cannot apply discount to an empty cart`);
   }
   const discount = await sudoContext.query.Discount.findOne({
     where: { code },
@@ -1979,6 +2001,9 @@ async function addDiscountToActiveCart(root, { cartId, code }, context) {
       endsAt
       usageLimit
       usageCount
+      regions {
+        id
+      }
       discountRule {
         id
         type
@@ -1988,12 +2013,6 @@ async function addDiscountToActiveCart(root, { cartId, code }, context) {
           id
           type
           operator
-          products {
-            id
-          }
-          productCategories {
-            id
-          }
           customerGroups {
             id
           }
@@ -2002,48 +2021,58 @@ async function addDiscountToActiveCart(root, { cartId, code }, context) {
     `
   });
   if (!discount) {
-    throw new Error(`No discount found with code: ${code}`);
+    throw new Error(`Invalid discount code: ${code}`);
+  }
+  if (cart.discounts?.some((d) => d.id === discount.id)) {
+    throw new Error(`Discount ${code} is already applied to this cart`);
   }
   if (discount.isDisabled) {
-    throw new Error(`Discount ${code} is disabled`);
+    throw new Error(`Discount ${code} is no longer available`);
   }
   const now = /* @__PURE__ */ new Date();
   if (discount.startsAt && new Date(discount.startsAt) > now) {
-    throw new Error(`Discount ${code} has not started yet`);
+    throw new Error(`Discount ${code} is not yet active`);
   }
   if (discount.endsAt && new Date(discount.endsAt) < now) {
     throw new Error(`Discount ${code} has expired`);
   }
-  if (discount.usageLimit) {
-    if (discount.usageCount >= discount.usageLimit) {
-      throw new Error(`Discount ${code} usage limit reached`);
-    }
-    await sudoContext.db.Discount.updateOne({
-      where: { id: discount.id },
-      data: { usageCount: discount.usageCount + 1 }
-    });
+  if (discount.usageLimit && discount.usageCount >= discount.usageLimit) {
+    throw new Error(`Discount ${code} has reached its usage limit`);
   }
-  const existingCart = await sudoContext.query.Cart.findOne({
-    where: { id: cartId },
-    query: `
-      discounts {
-        id
-        code
-        stackable
+  if (discount.regions && discount.regions.length > 0 && cart.region) {
+    const isValidForRegion = discount.regions.some((r) => r.id === cart.region.id);
+    if (!isValidForRegion) {
+      throw new Error(`Discount ${code} is not available in your region`);
+    }
+  }
+  if (discount.discountRule?.discountConditions) {
+    const customerGroupConditions = discount.discountRule.discountConditions.filter(
+      (c) => c.type === "customer_groups"
+    );
+    for (const condition of customerGroupConditions) {
+      const conditionGroupIds = condition.customerGroups?.map((g) => g.id) || [];
+      const customerGroupIds = cart.user?.customerGroups?.map((g) => g.id) || [];
+      if (conditionGroupIds.length === 0) continue;
+      const hasMatch = customerGroupIds.some((id) => conditionGroupIds.includes(id));
+      if (condition.operator === "in" && !hasMatch) {
+        throw new Error(`Discount ${code} is not available for your customer group`);
       }
-    `
-  });
+      if (condition.operator === "not_in" && hasMatch) {
+        throw new Error(`Discount ${code} is not available for your customer group`);
+      }
+    }
+  }
   let discountUpdate;
-  if (existingCart?.discounts?.length > 0) {
-    const hasNonStackable = existingCart.discounts.some((d) => !d.stackable);
+  if (cart.discounts && cart.discounts.length > 0) {
+    const hasNonStackable = cart.discounts.some((d) => !d.stackable);
     if (hasNonStackable) {
       discountUpdate = {
-        disconnect: existingCart.discounts.map((d) => ({ id: d.id })),
+        disconnect: cart.discounts.map((d) => ({ id: d.id })),
         connect: [{ id: discount.id }]
       };
     } else if (!discount.stackable) {
       discountUpdate = {
-        disconnect: existingCart.discounts.map((d) => ({ id: d.id })),
+        disconnect: cart.discounts.map((d) => ({ id: d.id })),
         connect: [{ id: discount.id }]
       };
     } else {
@@ -2056,12 +2085,13 @@ async function addDiscountToActiveCart(root, { cartId, code }, context) {
       connect: [{ id: discount.id }]
     };
   }
-  return await sudoContext.db.Cart.updateOne({
+  const updatedCart = await sudoContext.db.Cart.updateOne({
     where: { id: cartId },
     data: {
       discounts: discountUpdate
     }
   });
+  return updatedCart;
 }
 var addDiscountToActiveCart_default = addDiscountToActiveCart;
 
@@ -6423,26 +6453,106 @@ async function calculateCartSubtotal(cart, context) {
 async function calculateCartDiscount(cart, context) {
   const sudoContext = context.sudo();
   if (!cart?.discounts?.length) return 0;
-  const subtotal = await calculateCartSubtotal(cart, context);
-  let discountAmount = 0;
+  let totalDiscountAmount = 0;
   for (const discount of cart.discounts) {
     if (!discount.discountRule?.type) continue;
-    switch (discount.discountRule.type) {
+    const { type, value, allocation } = discount.discountRule;
+    const conditions = discount.discountRule.discountConditions || [];
+    const currencyMultiplier = cart.region?.currency?.noDivisionCurrency ? 1 : 100;
+    const eligibleLineItems = [];
+    for (const lineItem of cart.lineItems || []) {
+      if (lineItem.productVariant?.product?.discountable === false) {
+        continue;
+      }
+      const product = lineItem.productVariant?.product;
+      if (!product) continue;
+      const isEligible = validateProductAgainstConditions(product, conditions);
+      if (isEligible) {
+        eligibleLineItems.push(lineItem);
+      }
+    }
+    if (eligibleLineItems.length === 0 && type !== "free_shipping") {
+      continue;
+    }
+    let eligibleSubtotal = 0;
+    for (const lineItem of eligibleLineItems) {
+      const prices = await sudoContext.query.MoneyAmount.findMany({
+        where: {
+          productVariant: { id: { equals: lineItem.productVariant.id } },
+          region: { id: { equals: cart.region?.id } },
+          currency: { code: { equals: cart.region?.currency?.code } }
+        },
+        query: "calculatedPrice { calculatedAmount }"
+      });
+      const price = prices[0]?.calculatedPrice?.calculatedAmount || 0;
+      eligibleSubtotal += price * lineItem.quantity;
+    }
+    switch (type) {
       case "percentage":
-        discountAmount += subtotal * (discount.discountRule.value / 100);
+        totalDiscountAmount += eligibleSubtotal * (value / 100);
         break;
       case "fixed":
-        discountAmount += discount.discountRule.value * (cart.region?.currency?.noDivisionCurrency ? 1 : 100);
+        if (allocation === "item") {
+          const eligibleQuantity = eligibleLineItems.reduce((sum, li) => sum + li.quantity, 0);
+          totalDiscountAmount += value * currencyMultiplier * eligibleQuantity;
+        } else {
+          totalDiscountAmount += value * currencyMultiplier;
+        }
         break;
       case "free_shipping":
-        discountAmount += cart.shippingMethods?.reduce(
+        totalDiscountAmount += cart.shippingMethods?.reduce(
           (total, method) => total + (method.price || 0),
           0
         ) || 0;
         break;
     }
   }
-  return discountAmount;
+  const subtotal = await calculateCartSubtotal(cart, context);
+  return Math.min(totalDiscountAmount, subtotal);
+}
+function validateProductAgainstConditions(product, conditions) {
+  const productConditions = conditions.filter(
+    (c) => c.type === "products" || c.type === "product_types" || c.type === "product_collections" || c.type === "product_tags"
+  );
+  if (productConditions.length === 0) {
+    return true;
+  }
+  for (const condition of productConditions) {
+    const { type, operator } = condition;
+    let conditionEntityIds = [];
+    let productEntityIds = [];
+    switch (type) {
+      case "products":
+        conditionEntityIds = condition.products?.map((p) => p.id) || [];
+        productEntityIds = [product.id];
+        break;
+      case "product_types":
+        conditionEntityIds = condition.productTypes?.map((t) => t.id) || [];
+        productEntityIds = product.productType ? [product.productType.id] : [];
+        break;
+      case "product_collections":
+        conditionEntityIds = condition.productCollections?.map((c) => c.id) || [];
+        productEntityIds = product.productCollections?.map((c) => c.id) || [];
+        break;
+      case "product_tags":
+        conditionEntityIds = condition.productTags?.map((t) => t.id) || [];
+        productEntityIds = product.productTags?.map((t) => t.id) || [];
+        break;
+      default:
+        continue;
+    }
+    if (conditionEntityIds.length === 0) {
+      continue;
+    }
+    const hasMatch = productEntityIds.some((id) => conditionEntityIds.includes(id));
+    if (operator === "in" && !hasMatch) {
+      return false;
+    }
+    if (operator === "not_in" && hasMatch) {
+      return false;
+    }
+  }
+  return true;
 }
 async function calculateCartShipping(cart) {
   if (!cart?.shippingMethods?.length) return 0;
@@ -6715,6 +6825,13 @@ var Cart = (0, import_core5.list)({
                     quantity
                     productVariant {
                       id
+                      product {
+                        id
+                        discountable
+                        productType { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   discounts {
@@ -6722,6 +6839,16 @@ var Cart = (0, import_core5.list)({
                     discountRule {
                       type
                       value
+                      allocation
+                      discountConditions {
+                        id
+                        type
+                        operator
+                        products { id }
+                        productTypes { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   shippingMethods {
@@ -6756,6 +6883,13 @@ var Cart = (0, import_core5.list)({
                     quantity
                     productVariant {
                       id
+                      product {
+                        id
+                        discountable
+                        productType { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   discounts {
@@ -6763,6 +6897,16 @@ var Cart = (0, import_core5.list)({
                     discountRule {
                       type
                       value
+                      allocation
+                      discountConditions {
+                        id
+                        type
+                        operator
+                        products { id }
+                        productTypes { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   shippingMethods {
@@ -6847,6 +6991,13 @@ ${breakdown.join("\n")}`;
                     quantity
                     productVariant {
                       id
+                      product {
+                        id
+                        discountable
+                        productType { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   discounts {
@@ -6854,6 +7005,16 @@ ${breakdown.join("\n")}`;
                     discountRule {
                       type
                       value
+                      allocation
+                      discountConditions {
+                        id
+                        type
+                        operator
+                        products { id }
+                        productTypes { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   shippingMethods {
@@ -6884,6 +7045,13 @@ ${breakdown.join("\n")}`;
                     quantity 
                     productVariant {
                       id
+                      product {
+                        id
+                        discountable
+                        productType { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   discounts {
@@ -6892,6 +7060,15 @@ ${breakdown.join("\n")}`;
                       type
                       value
                       allocation
+                      discountConditions {
+                        id
+                        type
+                        operator
+                        products { id }
+                        productTypes { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   region {
@@ -7014,6 +7191,13 @@ ${breakdown.join("\n")}`;
                     quantity
                     productVariant {
                       id
+                      product {
+                        id
+                        discountable
+                        productType { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   discounts {
@@ -7021,6 +7205,16 @@ ${breakdown.join("\n")}`;
                     discountRule {
                       type
                       value
+                      allocation
+                      discountConditions {
+                        id
+                        type
+                        operator
+                        products { id }
+                        productTypes { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                 `
@@ -7152,6 +7346,13 @@ ${breakdown.join("\n")}`;
                     quantity 
                     productVariant {
                       id
+                      product {
+                        id
+                        discountable
+                        productType { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   discounts {
@@ -7160,6 +7361,15 @@ ${breakdown.join("\n")}`;
                       type
                       value
                       allocation
+                      discountConditions {
+                        id
+                        type
+                        operator
+                        products { id }
+                        productTypes { id }
+                        productCollections { id }
+                        productTags { id }
+                      }
                     }
                   }
                   region {
