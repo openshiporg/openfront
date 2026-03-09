@@ -21,6 +21,8 @@ Openfront is a comprehensive e-commerce platform that provides everything you ne
 
 [Learn more →](https://openship.org/openfront-ecommerce)
 
+[Documentation →](https://docs.openship.org/docs/openfront/ecommerce/)
+
 ## The Openfront Ecosystem
 
 Openfront is part of an ecosystem of open-source commerce tools:
