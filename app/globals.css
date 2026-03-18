@@ -1,7 +1,7 @@
 @import "tailwindcss";
-@source not "../.local";
-@source not "../brand-pack";
-@source not "../node_modules";
+@source not "../.local/**";
+@source not "../brand-pack/**";
+@source not "../node_modules/**";
 
 @custom-variant dark (&:is(.dark *));
 

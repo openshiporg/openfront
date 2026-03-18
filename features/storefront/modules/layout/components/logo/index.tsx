@@ -3,6 +3,7 @@ import { Tektur } from 'next/font/google';
 import LocalizedClientLink from '@/features/storefront/modules/common/components/localized-client-link';
 import { getStore } from '@/features/storefront/lib/data/store';
 import { formatStoreName } from '@/features/storefront/lib/utils/store';
+import { SYSmoAILogo, SYSmoAIWordmark } from '@/components/ui/sysmoai-logo';
 
 const tektur = Tektur({
   subsets: ['latin'],
@@ -10,14 +11,29 @@ const tektur = Tektur({
   adjustFontFallback: false,
 });
 
-const DEFAULT_LOGO = '<svg fill="none" height="100%" viewBox="0 0 44 48" width="100%" xmlns="http://www.w3.org/2000/svg"><path clip-rule="evenodd" d="m17.6264 6.5h14.8017l11.4661 18.6661-15.7786 15.9489-22.68835-4.0459-5.157719-19.2098zm.5273 4.9692-6.816 15.105 6.4504 5.3411 8.8246-3.7975zm12.3276 15.3 9.2139-2.7073-7.1983-11.7184zm-.6163-17.2692h-9.3468l7.3309 14.4284zm6.9795 18.5263-6.779 1.9919-.5448 5.4109zm-10.5005 9.008.5824-5.7856-6.0573 2.6067zm-6.8394-.5022-10.91261-1.9459 1.64741-5.0264 6.438 5.3308zm-11.69782-9.1824-2.7037-3.0571 1.66868 6.215zm-3.53432-8.5248 4.81433 5.4437 5.50351-12.1963z" fill="#155eef" fill-rule="evenodd"/></svg>';
+const SYSMOAI_SVG = `<svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M25 34 L50 24 L75 34 L75 54 L50 64 L25 54 Z" fill="#1E3A8A" fill-opacity="0.08" stroke="#1E40AF" stroke-opacity="0.35" stroke-width="3" stroke-linejoin="round"/><path d="M30 49 L50 40 L70 49 L70 64 L50 73 L30 64 Z" fill="#2563EB" fill-opacity="0.15" stroke="#2563EB" stroke-opacity="0.55" stroke-width="3" stroke-linejoin="round"/><path d="M40 61 L50 56 L60 61 L60 71 L50 76 L40 71 Z" fill="#1E3A8A" fill-opacity="0.85" stroke="#1E3A8A" stroke-opacity="1" stroke-width="3" stroke-linejoin="round"/></svg>`;
 
 export default async function Logo() {
   const store = await getStore();
-  const storeName = store?.name || 'Openfront Store';
-  const logoSvg = store?.logoIcon || DEFAULT_LOGO;
+  const storeName = store?.name || 'SYSmoAI';
+  const logoSvg = store?.logoIcon || SYSMOAI_SVG;
   const logoColor = store?.logoColor || '0';
   const { first, second } = formatStoreName(storeName);
+
+  if (!store?.name) {
+    return (
+      <LocalizedClientLink
+        href="/"
+        className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+        data-testid="nav-store-link"
+      >
+        <div className="size-5 sm:size-6">
+          <SYSmoAILogo size={24} variant="brand-light" />
+        </div>
+        <SYSmoAIWordmark size={16} color="#030213" />
+      </LocalizedClientLink>
+    );
+  }
 
   return (
     <LocalizedClientLink

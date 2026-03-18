@@ -358,7 +358,7 @@ export function Sidebar({ adminMeta, user, onOpenDialog }: SidebarProps) {
           <OnboardingCards
             steps={[{
               href: '#onboarding',
-              title: 'Welcome to Openfront',
+              title: 'Welcome to SYSmoAI',
               description: 'Your store is empty. Click get started to configure your store with products, categories, and regions.',
             }]}
             onboardingStatus={user?.onboardingStatus}

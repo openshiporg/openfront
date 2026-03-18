@@ -195,7 +195,7 @@ export const platformNavItems: PlatformNavItem[] = [
     title: 'API Keys',
     href: '/platform/api-keys',
     color: 'violet',
-    description: 'Manage API keys for programmatic access to Openfront.',
+    description: 'Manage API keys for programmatic access to SYSmoAI.',
     icon: Key,
     group: 'integrations'
   }

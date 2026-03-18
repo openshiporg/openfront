@@ -24,6 +24,8 @@
 .DS_Store
 *.pem
 .claude/
+.local/
+brand-pack/
 
 # debug
 npm-debug.log*

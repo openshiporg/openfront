@@ -397,7 +397,7 @@ export function CreateApiKey() {
             <DialogHeader>
               <DialogTitle>Create API Key</DialogTitle>
               <DialogDescription>
-                Create a new API key for programmatic access to Openfront. Choose the minimum permissions needed.
+                Create a new API key for programmatic access to SYSmoAI. Choose the minimum permissions needed.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit}>

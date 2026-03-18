@@ -9,7 +9,7 @@ export default async function Footer() {
   const { collections } = await getCollectionsList(0, 6)
   const { productCategories } = await getCategoriesList(0, 6)
   const store = await getStore()
-  const storeName = store?.name || "Openfront Store"
+  const storeName = store?.name || "SYSmoAI"
 
   return (
     <footer className="border-t border-border w-full">
@@ -82,20 +82,20 @@ export default async function Footer() {
               </div>
             )}
             <div className="flex flex-col gap-y-2">
-              <span className="text-[0.8125rem] leading-[1.375rem] font-medium text-foreground">Openfront</span>
+              <span className="text-[0.8125rem] leading-[1.375rem] font-medium text-foreground">SYSmoAI</span>
               <ul className="grid grid-cols-1 gap-y-2 text-muted-foreground text-[0.8125rem] leading-[1.375rem] font-normal">
                 <li>
                   <a
-                    href="https://github.com/openshiporg"
+                    href="https://sysmoai.com"
                     target="_blank"
                     rel="noreferrer"
                     className="hover:text-foreground">
-                    GitHub
+                    Website
                   </a>
                 </li>
                 <li>
                   <a
-                    href="https://docs.openship.org"
+                    href="https://sysmoai.com/docs"
                     target="_blank"
                     rel="noreferrer"
                     className="hover:text-foreground">
@@ -104,11 +104,11 @@ export default async function Footer() {
                 </li>
                 <li>
                   <a
-                    href="https://github.com/openshiporg/openfront"
+                    href="https://sysmoai.com/support"
                     target="_blank"
                     rel="noreferrer"
                     className="hover:text-foreground">
-                    Source code
+                    Support
                   </a>
                 </li>
               </ul>
