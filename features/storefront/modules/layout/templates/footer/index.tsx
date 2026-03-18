@@ -1,128 +1,115 @@
-import { cn } from "@/lib/utils";
-import { getCategoriesList } from "@/features/storefront/lib/data/categories"
-import { getCollectionsList } from "@/features/storefront/lib/data/collections"
 import LocalizedClientLink from "@/features/storefront/modules/common/components/localized-client-link"
-import Logo from "@/features/storefront/modules/layout/components/logo"
-import { getStore } from "@/features/storefront/lib/data/store"
 
 export default async function Footer() {
-  const { collections } = await getCollectionsList(0, 6)
-  const { productCategories } = await getCategoriesList(0, 6)
-  const store = await getStore()
-  const storeName = store?.name || "SYSmoAI"
-
   return (
-    <footer className="border-t border-border w-full">
-      <div className="max-w-[1440px] mx-auto px-6 flex flex-col">
-        <div className="flex flex-col gap-y-6 sm:flex-row items-start justify-between py-40">
-          <div>
-            <Logo />
+    <footer className="border-t border-[#1E1E2E] bg-[#0A0A0F] w-full">
+      <div className="max-w-[1440px] mx-auto px-6 py-16">
+
+        {/* 5-column grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-10">
+
+          {/* Column 1 — Brand */}
+          <div className="col-span-2 md:col-span-1 flex flex-col gap-4">
+            <img src="/images/logo.svg" alt="SYSmoAI" width="110" height="28" />
+            <p className="text-sm text-white/50 leading-relaxed max-w-xs">
+              AI Tools &amp; Systems for Bangladesh
+            </p>
+            <p className="text-xs text-white/30" suppressHydrationWarning>
+              © {new Date().getFullYear()} SYSmoAI Private Limited.<br />Dhaka, Bangladesh.
+            </p>
           </div>
-          <div className="text-xs leading-5 font-normal gap-10 md:gap-x-16 grid grid-cols-2 sm:grid-cols-3">
-            {productCategories && productCategories?.length > 0 && (
-              <div className="flex flex-col gap-y-2">
-                <span className="text-[0.8125rem] leading-[1.375rem] font-medium text-foreground">
-                  Categories
-                </span>
-                <ul className="grid grid-cols-1 gap-2">
-                  {productCategories?.slice(0, 6).map((c: any) => {
-                    if (c.parentCategory) {
-                      return
-                    }
 
-                    const children =
-                      c.categoryChildren?.map((child: any) => ({
-                        title: child.title,
-                        handle: child.handle,
-                        id: child.id,
-                      })) || null
+          {/* Column 2 — Shop */}
+          <div className="flex flex-col gap-3">
+            <span className="text-xs font-semibold text-white uppercase tracking-widest">Shop</span>
+            <ul className="flex flex-col gap-2 text-sm text-white/50">
+              <li>
+                <LocalizedClientLink href="/store" className="hover:text-white transition-colors">
+                  Browse All Tools
+                </LocalizedClientLink>
+              </li>
+              <li>
+                <LocalizedClientLink href="/store" className="hover:text-white transition-colors">
+                  Bundles
+                </LocalizedClientLink>
+              </li>
+              <li>
+                <LocalizedClientLink href="/store" className="hover:text-white transition-colors">
+                  Best Sellers
+                </LocalizedClientLink>
+              </li>
+            </ul>
+          </div>
 
-                    return (
-                      <li className="flex flex-col text-muted-foreground text-[0.8125rem] leading-[1.375rem] font-normal" key={c.id}>
-                        <LocalizedClientLink
-                          className={cn("hover:text-foreground")}
-                          href={`/categories/${c.handle}`}>
-                          {c.title}
-                        </LocalizedClientLink>
-                        {children && (
-                          <ul className="grid grid-cols-1 ml-3 gap-2">
-                            {children &&
-                              children.map((child: any) => (
-                                <li key={child.id}>
-                                  <LocalizedClientLink className="hover:text-foreground" href={`/categories/${child.handle}`}>
-                                    {child.title}
-                                  </LocalizedClientLink>
-                                </li>
-                              ))}
-                          </ul>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            )}
-            {collections && collections.length > 0 && (
-              <div className="flex flex-col gap-y-2">
-                <span className="text-[0.8125rem] leading-[1.375rem] font-medium text-foreground">
-                  Collections
-                </span>
-                <ul
-                  className={cn("grid grid-cols-1 gap-2 text-muted-foreground text-[0.8125rem] leading-[1.375rem] font-normal", {
-                    "grid-cols-2": (collections?.length || 0) > 3,
-                  })}>
-                  {collections?.slice(0, 6).map((c: any) => (
-                    <li key={c.id}>
-                      <LocalizedClientLink className="hover:text-foreground" href={`/collections/${c.handle}`}>
-                        {c.title}
-                      </LocalizedClientLink>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            <div className="flex flex-col gap-y-2">
-              <span className="text-[0.8125rem] leading-[1.375rem] font-medium text-foreground">SYSmoAI</span>
-              <ul className="grid grid-cols-1 gap-y-2 text-muted-foreground text-[0.8125rem] leading-[1.375rem] font-normal">
-                <li>
-                  <a href="/" className="hover:text-foreground">
-                    Home
-                  </a>
-                </li>
-                <li>
-                  <a href="/us" className="hover:text-foreground">
-                    Shop
-                  </a>
-                </li>
-                <li>
-                  <a href="/services" className="hover:text-foreground">
-                    Services
-                  </a>
-                </li>
-                <li>
-                  <a href="/contact" className="hover:text-foreground">
-                    Contact
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="https://wa.me/8801865385348"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:text-foreground">
-                    WhatsApp
-                  </a>
-                </li>
-              </ul>
-            </div>
+          {/* Column 3 — Company */}
+          <div className="flex flex-col gap-3">
+            <span className="text-xs font-semibold text-white uppercase tracking-widest">Company</span>
+            <ul className="flex flex-col gap-2 text-sm text-white/50">
+              <li>
+                <a href="/about" className="hover:text-white transition-colors">About</a>
+              </li>
+              <li>
+                <a href="/services" className="hover:text-white transition-colors">Services</a>
+              </li>
+              <li>
+                <a href="/contact" className="hover:text-white transition-colors">Contact</a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 4 — Legal */}
+          <div className="flex flex-col gap-3">
+            <span className="text-xs font-semibold text-white uppercase tracking-widest">Legal</span>
+            <ul className="flex flex-col gap-2 text-sm text-white/50">
+              <li>
+                <a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a>
+              </li>
+              <li>
+                <a href="/terms" className="hover:text-white transition-colors">Terms of Service</a>
+              </li>
+              <li>
+                <a href="/terms" className="hover:text-white transition-colors">Refund Policy</a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 5 — Contact */}
+          <div className="flex flex-col gap-3">
+            <span className="text-xs font-semibold text-white uppercase tracking-widest">Contact</span>
+            <ul className="flex flex-col gap-2 text-sm text-white/50">
+              <li>
+                <a
+                  href="https://wa.me/8801865385348"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-[#25D366] transition-colors flex items-center gap-1.5"
+                >
+                  💬 WhatsApp
+                </a>
+              </li>
+              <li>
+                <a href="mailto:hello@sysmoai.com" className="hover:text-white transition-colors">
+                  📧 hello@sysmoai.com
+                </a>
+              </li>
+              <li className="flex items-center gap-1.5">
+                📍 Dhaka, Bangladesh
+              </li>
+            </ul>
           </div>
         </div>
-        <div className="flex w-full mb-16 justify-center text-muted-foreground">
-          <p className="text-[0.8125rem] leading-5 font-normal">
-            <span suppressHydrationWarning>
-              © {new Date().getFullYear()} {storeName}. All rights reserved.
-            </span>
+
+        {/* Bottom bar */}
+        <div className="mt-12 pt-6 border-t border-[#1E1E2E] flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-white/30" suppressHydrationWarning>
+            © {new Date().getFullYear()} SYSmoAI Private Limited
           </p>
+          <div className="flex items-center gap-3 text-xs text-white/40">
+            <span className="px-2 py-1 border border-white/10 rounded text-[10px]">bKash</span>
+            <span className="px-2 py-1 border border-white/10 rounded text-[10px]">Nagad</span>
+            <span className="px-2 py-1 border border-white/10 rounded text-[10px]">Rocket</span>
+            <span className="px-2 py-1 border border-white/10 rounded text-[10px]">Bank Transfer</span>
+          </div>
         </div>
       </div>
     </footer>

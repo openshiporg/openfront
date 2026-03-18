@@ -1,0 +1,306 @@
+You are rebuilding the SYSmoAI eCommerce website completely.
+This is a Next.js + Tailwind + Openfront/Medusa storefront.
+Site URL for reference: the current Replit dev URL.
+
+Fix ALL of the following issues in order. Do not stop between steps.
+Report which file was changed after each step.
+
+═══════════════════════════════════════
+PART A — CRITICAL BUG FIXES
+═══════════════════════════════════════
+
+A1 — Fix ALL remaining "SYS mo AI" wrong spacing:
+- Run: grep -r "SYS mo AI" . --include="*.tsx" --include="*.ts" 
+  --include="*.jsx" --include="*.js" --include="*.mdx" -l
+- Replace every single instance with "SYSmoAI"
+- This includes the "Powered By SYS mo AI" in the footer
+- Also fix in the /dashboard admin login page
+
+A2 — Fix the Navbar completely:
+Find the main Nav/Header component and rebuild it as follows:
+- Left: SYSmoAI logo text (large, bold, white, links to /)
+- Center: navigation links — Home (/) · Shop (/us/store) · 
+  Services (/services) · About (/about) · Contact (/contact)
+- Right: WhatsApp button (green #25D366) + Account icon + Cart icon
+- Sticky at top (position: sticky, top: 0)
+- Dark background: #0A0A0F with bottom border #1E1E2E
+- All text white, hover color: #6366F1
+- Fully responsive: on mobile collapse to hamburger menu
+
+A3 — Fix the Mobile Menu (hamburger dropdown):
+The current mobile menu shows empty bullet points. Fix it:
+- Hamburger icon opens a slide-down menu
+- Menu items: Home · Shop · Services · About · Contact · WhatsApp
+- Each item has proper text and link
+- Close button or click outside to close
+
+A4 — Fix the WhatsApp floating button visibility:
+- The floating WhatsApp button must NOT appear on /dashboard or 
+  any /dashboard/* routes
+- Add a check: if the current path starts with /dashboard, 
+  do not render the WhatsApp button
+- On all other pages: show it fixed bottom-right
+
+A5 — Fix the Hero section on Homepage:
+Replace the current basic hero with this full version:
+
+Section 1 — Hero:
+- Full-width, dark bg (#0A0A0F), min-height: 100vh
+- Centered content:
+  - Small badge above headline: "🇧🇩 Made for Bangladesh"
+    (indigo bg, white text, rounded pill)
+  - H1: "AI Tools & Systems for Bangladesh"
+    (white, bold, 56px desktop / 36px mobile)
+  - Subtext: "Premium AI subscriptions for students, freelancers 
+    and researchers. AI implementation services for agencies, 
+    businesses and F-commerce." (gray #94A3B8, 18px)
+  - Two buttons:
+    Button 1: "Browse AI Tools →" links to /us/store
+    (indigo #6366F1 bg, white text, rounded-lg, px-6 py-3)
+    Button 2: "💬 WhatsApp Us" links to 
+    https://wa.me/8801865385348?text=Hi%20SYSmoAI
+    (green #25D366 bg, white text, rounded-lg, px-6 py-3)
+  - Below buttons: "⭐⭐⭐⭐⭐  Trusted by 1,000+ customers"
+    (small gray text)
+
+Section 2 — Who We Help (7 segment cards):
+After the hero, add a section:
+- Heading: "Who We Help"
+- 7 cards in a responsive grid (4 cols desktop, 2 cols mobile):
+  🎓 Students | 💼 Job Seekers | 🖥️ Freelancers | 🏢 Agencies
+  🏪 Business | 📦 F-commerce | 🔬 Researchers
+- Each card: dark surface bg (#13131A), border (#1E1E2E), 
+  emoji icon, name, 1-line description, hover effect
+
+Section 3 — How It Works (2 columns):
+Left column — For the Shop:
+  Step 1: Browse AI tools by category
+  Step 2: Pay with bKash / Nagad / Card
+  Step 3: Get instant access
+Right column — For Services:
+  Step 1: Message us on WhatsApp
+  Step 2: We diagnose your problem
+  Step 3: We build your AI system
+
+Section 4 — Final CTA banner:
+- Dark indigo bg (#312E81)
+- Text: "Ready to start? Two ways to work with us."
+- Button 1: "Shop AI Tools" → /us/store
+- Button 2: "Get a Service" → https://wa.me/8801865385348
+
+═══════════════════════════════════════
+PART B — MISSING PAGES (CREATE THESE)
+═══════════════════════════════════════
+
+B1 — Create /services page:
+File: src/app/[countryCode]/(main)/services/page.tsx
+Content — full page with these sections:
+- Hero: "AI Implementation. Done For You."
+  Subtext: "We build AI-powered operating systems for your business."
+- 3 Service tier cards:
+  Card 1: Quick Win — "Fix your biggest bottleneck in 3 days"
+          Price: Starting from ৳7,500
+          Best for: Freelancers, small businesses
+          CTA: WhatsApp button
+  Card 2: Sprint — "Full AI system built in 14 days"  
+          Price: Starting from ৳35,000
+          Best for: Agencies, growing businesses
+          CTA: WhatsApp button
+  Card 3: Retainer — "Ongoing AI operations monthly"
+          Price: Starting from ৳20,000/month
+          Best for: Established businesses
+          CTA: WhatsApp button
+- How it works: WhatsApp → Diagnose → Build → Handover
+- FAQ section with 5 questions:
+  Q: How do I pay? A: bKash, Nagad, Rocket, or bank transfer.
+  Q: What if it doesn't work? A: Quick Win has a full refund guarantee.
+  Q: How fast? A: Quick Win = 3 days. Sprint = 14 days.
+  Q: Do I need technical knowledge? A: No. We handle everything.
+  Q: What after handover? A: We provide 30 days of support.
+
+B2 — Create /about page:
+File: src/app/[countryCode]/(main)/about/page.tsx
+Content:
+- Heading: "Built in Bangladesh. For Bangladesh."
+- Founder section:
+  Name: Emon Hossain
+  Title: Founder & CEO, SYSmoAI Private Limited
+  Bio: "I started SYSmoAI because I saw a gap — businesses in 
+  Bangladesh were using AI tools without real systems behind them. 
+  We fix that."
+- What we do:
+  - Sell premium AI subscriptions at Bangladesh prices
+  - Build AI-powered operating systems for businesses
+  - Deliver in Bangla and English
+- Company info:
+  Location: Dhaka, Bangladesh
+  Email: hello@sysmoai.com
+  WhatsApp: +880 1865-385348
+
+B3 — Create /contact page:
+File: src/app/[countryCode]/(main)/contact/page.tsx
+Content:
+- Heading: "Let's Talk"
+- Subtext: "The fastest way to reach us is WhatsApp."
+- Large WhatsApp button: "Message us on WhatsApp"
+  href: https://wa.me/8801865385348?text=Hi%20SYSmoAI%2C%20I%20need%20help
+- Also show:
+  Email: hello@sysmoai.com
+  Support: support@sysmoai.com
+  Location: Dhaka, Bangladesh
+- Simple contact form below (Name, Email, Message, Send button)
+  Form just shows "Thank you, we'll reply within 24 hours" on submit
+
+B4 — Create /privacy page:
+File: src/app/[countryCode]/(main)/privacy/page.tsx
+Simple privacy policy page:
+- Heading: "Privacy Policy"
+- Last updated: March 2026
+- Sections: What we collect, How we use it, 
+  Your rights, Contact us
+- Keep it simple and readable
+
+B5 — Create /terms page:
+File: src/app/[countryCode]/(main)/terms/page.tsx
+Simple terms of service:
+- Heading: "Terms of Service"
+- Sections: Service description, Payment terms, 
+  Refund policy, Limitation of liability
+- Note about bKash/Nagad payments
+
+B6 — Create a 404 Not Found page:
+File: src/app/not-found.tsx
+Content: 
+- "404 — Page Not Found"
+- "The page you are looking for doesn't exist."
+- Button: "Go Home" → /
+- Button: "Browse Shop" → /us/store
+
+═══════════════════════════════════════
+PART C — BRAND PACK APPLICATION
+═══════════════════════════════════════
+
+C1 — Read the brand pack:
+- List all files in /brand-pack/src/
+- Open every CSS file and show me the CSS variables
+- List all font references
+- List all SVG/image files
+
+C2 — Update tailwind.config.js with these brand colors
+(use brand pack values if different, otherwise use these):
+colors: {
+  brand: {
+    bg: '#0A0A0F',
+    surface: '#13131A', 
+    border: '#1E1E2E',
+    primary: '#6366F1',
+    primaryHover: '#4F46E5',
+    accent: '#10B981',
+    text: '#F8FAFC',
+    muted: '#94A3B8',
+    warning: '#F59E0B',
+    error: '#EF4444',
+  }
+}
+
+C3 — Update globals.css:
+- Add Google Fonts import:
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap');
+- Set default font: body { font-family: 'Inter', sans-serif; }
+- Set background: html { background: #0A0A0F; color: #F8FAFC; }
+
+C4 — If there is a logo file (SVG or PNG) in brand-pack/src/:
+- Copy it to /public/logo.svg (or logo.png)
+- In the Navbar, replace the "SYSmoAI" text with:
+  <img src="/logo.svg" alt="SYSmoAI" height="32" />
+- If no logo file exists, keep the text but style it:
+  font-weight: 800, color: white, font-size: 20px
+
+═══════════════════════════════════════
+PART D — SEO + METADATA
+═══════════════════════════════════════
+
+D1 — Update root layout metadata (app/layout.tsx or similar):
+export const metadata = {
+  title: {
+    default: 'SYSmoAI — AI Tools & Systems for Bangladesh',
+    template: '%s | SYSmoAI'
+  },
+  description: 'Premium AI subscriptions and AI implementation 
+    services for students, freelancers, agencies, and businesses 
+    in Bangladesh. bKash, Nagad, Rocket payments accepted.',
+  keywords: ['AI tools Bangladesh', 'ChatGPT Bangladesh', 
+    'AI subscription Bangladesh', 'SYSmoAI'],
+  openGraph: {
+    title: 'SYSmoAI — AI Tools & Systems for Bangladesh',
+    description: 'Premium AI subscriptions and services.',
+    url: 'https://sysmoai.com',
+    siteName: 'SYSmoAI',
+    locale: 'en_US',
+    type: 'website',
+  }
+}
+
+D2 — Add individual page titles:
+- /services page: title = "AI Implementation Services | SYSmoAI"
+- /about page: title = "About Us | SYSmoAI"
+- /contact page: title = "Contact | SYSmoAI"
+- /us/store page: title = "Shop AI Tools | SYSmoAI"
+
+D3 — Create /sitemap.xml route:
+File: src/app/sitemap.ts
+Include these URLs:
+/, /us/store, /services, /about, /contact, /privacy, /terms
+
+═══════════════════════════════════════
+PART E — FOOTER FINAL FIX
+═══════════════════════════════════════
+
+E1 — Rebuild the footer completely:
+Find the Footer component and replace with:
+
+Column 1 — Brand:
+  SYSmoAI logo/name
+  "AI Tools & Systems for Bangladesh"
+  © 2026 SYSmoAI Private Limited. Dhaka, Bangladesh.
+
+Column 2 — Shop:
+  Browse All Tools → /us/store
+  Bundles → /us/store
+  Best Sellers → /us/store
+  
+Column 3 — Company:
+  About → /about
+  Services → /services
+  Contact → /contact
+  Blog → /blog
+
+Column 4 — Legal:
+  Privacy Policy → /privacy
+  Terms of Service → /terms
+  Refund Policy → /refund
+
+Column 5 — Contact:
+  💬 WhatsApp: wa.me/8801865385348
+  📧 hello@sysmoai.com
+  📍 Dhaka, Bangladesh
+
+Bottom bar:
+  Left: "© 2026 SYSmoAI Private Limited"
+  Right: Payment icons — bKash · Nagad · Rocket · Bank Transfer
+
+═══════════════════════════════════════
+IMPORTANT RULES
+═══════════════════════════════════════
+- Do NOT delete any existing files
+- Do NOT break any existing routes
+- Do NOT touch /dashboard or admin files
+- Use Tailwind CSS only — no inline styles except for hex colors
+- All new pages must use the same dark theme (#0A0A0F background)
+- After ALL steps are done, run: npm run build
+- Report: "BUILD SUCCESS" or paste any errors
+
+After finishing, give me a summary:
+✅ Fixed: [list]
+❌ Could not fix: [list with reason]
+⚠️ Warnings: [list]

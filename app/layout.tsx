@@ -14,8 +14,28 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SYSmoAI — AI Tools & Systems for Bangladesh",
-  description: "Premium AI subscriptions and AI implementation services for students, freelancers, agencies, and businesses in Bangladesh.",
+  title: {
+    default: "SYSmoAI — AI Tools & Systems for Bangladesh",
+    template: "%s | SYSmoAI",
+  },
+  description:
+    "Premium AI subscriptions and AI implementation services for students, freelancers, agencies, and businesses in Bangladesh. bKash, Nagad, Rocket payments accepted.",
+  keywords: [
+    "AI tools Bangladesh",
+    "ChatGPT Bangladesh",
+    "AI subscription Bangladesh",
+    "SYSmoAI",
+    "AI implementation Bangladesh",
+    "bKash AI subscription",
+  ],
+  openGraph: {
+    title: "SYSmoAI — AI Tools & Systems for Bangladesh",
+    description: "Premium AI subscriptions and AI implementation services for Bangladesh.",
+    url: "https://sysmoai.com",
+    siteName: "SYSmoAI",
+    locale: "en_US",
+    type: "website",
+  },
 };
 
 export default function RootLayout({

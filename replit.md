@@ -10,16 +10,27 @@ SYSmoAI is a full-featured e-commerce platform built with Next.js and Keystone C
 - **Styling**: Tailwind CSS v4 with SYSmoAI brand tokens
 - **Auth**: Custom stateless sessions (Iron-based), OAuth support, API key auth
 
-## Branding
-- **Brand pack**: Stored at `brand-pack/` (excluded from Tailwind scan via `.gitignore` + `@source not` directives)
-- **Logo React components**: `components/ui/sysmoai-logo.tsx` — `SYSmoAILogo` (3-layer hexagonal SVG) + `SYSmoAIWordmark`
-- **Logo SVG file**: `public/images/logo.svg` — horizontal lockup (icon + wordmark); served at `/images/logo.svg` (NOTE: `/logo.svg` is redirected by the country-code middleware to `/us/logo.svg` — use `/images/logo.svg` instead)
-- **Colors**: Primary `#030213`, Blue palette `#1E3A8A`/`#2563EB`/`#3B82F6`/`#60A5FA`, Destructive `#d4183d`, Brand surface `#0A0B0F`
-- **CSS tokens**: Applied in `app/globals.css` — brand blue vars (`--brand-blue-900` through `--brand-blue-400`, `--brand-surface`), font (`--font-sans: Inter`), all mapped in `@theme inline`
-- **Font**: Inter via Google Fonts (`@import url(...)` at top of `app/globals.css`); applied to `body` via `font-family: var(--font-sans)`
-- **Dashboard logo**: `features/dashboard/components/Logo.tsx` uses `SYSmoAILogo`
-- **Storefront navbar logo**: `features/storefront/modules/layout/components/logo/index.tsx` — shows `<img src="/images/logo.svg">` when store has no name configured; shows store name + SVG icon otherwise
-- **Country-code middleware**: `proxy.ts` at root is the real Next.js middleware; it intercepts all routes and prepends country code. Static assets must be under paths excluded by the matcher regex (e.g. `/images/`, `/assets/`, `/_next/`, `/api/`). The matcher: `/((?!api|_next/static|_next/image|favicon.svg|images|assets|png|svg|jpg|...).*)`
+## Branding & Theme
+- **Dark theme**: `app/globals.css` sets `--background: #0A0A0F`, `--foreground: #F8FAFC`, `--card: #13131A`, `--border: #1E1E2E`, `--primary: #6366F1`
+- **Dashboard isolation**: `app/dashboard/globals.css` overrides root CSS vars back to white for the dashboard (child CSS loads after root, wins via cascade). Safe to darken root CSS.
+- **Brand pack**: Stored at `brand-pack/` (excluded from Tailwind scan)
+- **Logo SVG file**: `public/images/logo.svg` — horizontal lockup; served at `/images/logo.svg` (NOTE: `/logo.svg` → redirected to `/us/logo.svg` by middleware; use `/images/logo.svg`)
+- **Colors**: BG `#0A0A0F`, surface `#13131A`, border `#1E1E2E`, primary `#6366F1`, WhatsApp `#25D366`, muted `#94A3B8`
+- **Font**: Inter + Hind Siliguri via Google Fonts in `app/globals.css`
+- **Storefront nav**: Rebuilt — logo left, center nav links (Home/Shop/Services/About/Contact), right side (WhatsApp pill, Account, Cart, mobile hamburger). Dark bg `#0A0A0F`.
+- **Country-code middleware**: `proxy.ts` at root — prepends country code to all routes. Static assets must be under `/images/`, `/assets/`, etc.
+
+## Storefront Pages
+All pages at `app/(storefront)/[countryCode]/(main)/` with shared Nav+Footer from MainLayout:
+- `/` → Homepage: Hero, Who We Help (7 cards), How It Works (2-col), Featured Products, CTA
+- `/store` → Product listing
+- `/services` → Service tiers (Quick Win, Sprint, Retainer) + FAQ
+- `/about` → Founder story + company info
+- `/contact` → WhatsApp CTA + contact form (client component `ContactForm.tsx`)
+- `/privacy` → Privacy policy
+- `/terms` → Terms of service
+- `app/not-found.tsx` → 404 page
+- `app/sitemap.ts` → XML sitemap (sysmoai.com URLs)
 
 ## Key Directories
 - `app/` — Next.js App Router pages (dashboard, storefront, API routes)
