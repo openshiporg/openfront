@@ -30,22 +30,46 @@ export async function HomePage(props: {
     ? await getCollectionsListByRegion(0, 3, region.id)
     : { collections: [] }
 
-  if (!collections || !region) {
-    return null
-  }
-
   return (
     <>
-      <Hero
-        title={store?.homepageTitle}
-        description={store?.homepageDescription}
-        logoColor={store?.logoColor}
-      />
-      <div className="py-12">
-        <ul className="flex flex-col gap-x-6">
-          <FeaturedProducts collections={collections} region={region} />
-        </ul>
-      </div>
+      <section className="w-full bg-[#0A0A0F] py-24 px-6 flex flex-col items-center justify-center text-center">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white leading-tight max-w-4xl">
+          AI Tools &amp; Systems for Bangladesh
+        </h1>
+        <p className="mt-6 text-lg sm:text-xl text-gray-300 max-w-2xl">
+          Premium AI subscriptions. AI implementation services. Built for students, freelancers, agencies, and businesses.
+        </p>
+        <div className="mt-10 flex flex-col sm:flex-row items-center gap-4">
+          <a
+            href="/us"
+            className="px-8 py-4 rounded-full bg-[#6366F1] text-white font-semibold text-sm hover:bg-[#4f51d6] transition-colors duration-200"
+          >
+            Browse Shop
+          </a>
+          <a
+            href="https://wa.me/8801865385348"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-8 py-4 rounded-full bg-[#25D366] text-white font-semibold text-sm hover:bg-[#20b85a] transition-colors duration-200"
+          >
+            WhatsApp Us
+          </a>
+        </div>
+      </section>
+      {region && (
+        <>
+          <Hero
+            title={store?.homepageTitle}
+            description={store?.homepageDescription}
+            logoColor={store?.logoColor}
+          />
+          <div className="py-12">
+            <ul className="flex flex-col gap-x-6">
+              <FeaturedProducts collections={collections} region={region} />
+            </ul>
+          </div>
+        </>
+      )}
     </>
   )
 }
