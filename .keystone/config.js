@@ -8538,7 +8538,7 @@ async function sendOrderConfirmationEmail(order, baseUrl) {
     console.warn("No email address found for order", order.id);
     return;
   }
-  const countryCode = order.shippingAddress?.country?.iso2?.toLowerCase() || "us";
+  const countryCode = order.shippingAddress?.country?.iso2?.toLowerCase() || "bd";
   const frontendUrl = baseUrl || getBaseUrlForEmails();
   const orderUrl = order.secretKey ? `${frontendUrl}/${countryCode}/order/confirmed/${order.id}?secretKey=${order.secretKey}` : `${frontendUrl}/${countryCode}/order/confirmed/${order.id}`;
   try {
@@ -8602,7 +8602,7 @@ async function sendOrderFulfillmentEmail(order, fulfillment, baseUrl) {
     console.warn("No email address found for order", order.id);
     return;
   }
-  const countryCode = order.shippingAddress?.country?.iso2?.toLowerCase() || "us";
+  const countryCode = order.shippingAddress?.country?.iso2?.toLowerCase() || "bd";
   const frontendUrl = baseUrl || getBaseUrlForEmails();
   const orderUrl = order.secretKey ? `${frontendUrl}/${countryCode}/order/confirmed/${order.id}?secretKey=${order.secretKey}` : `${frontendUrl}/${countryCode}/order/confirmed/${order.id}`;
   try {

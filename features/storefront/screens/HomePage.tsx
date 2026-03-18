@@ -44,7 +44,7 @@ export async function HomePage(props: {
 
         <div className="mt-10 flex flex-col sm:flex-row items-center gap-4">
           <a
-            href="/us/store"
+            href="/bd/store"
             className="px-6 py-3 bg-[#6366F1] text-white font-semibold rounded-lg hover:bg-[#4F46E5] transition-colors duration-200"
           >
             Browse AI Tools →
@@ -146,7 +146,7 @@ export async function HomePage(props: {
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <a
-            href="/us/store"
+            href="/bd/store"
             className="px-8 py-4 bg-white text-[#312E81] font-bold rounded-lg hover:bg-white/90 transition-colors"
           >
             Shop AI Tools

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
 import { openfrontClient } from "@/features/storefront/lib/config";
 
-const DEFAULT_REGION = process.env.NEXT_PUBLIC_DEFAULT_REGION || "us";
+const DEFAULT_REGION = process.env.NEXT_PUBLIC_DEFAULT_REGION || "bd";
 
 const regionMapCache = {
   regionMap: new Map<string, any>(),
@@ -49,12 +49,12 @@ async function getRegionMap(request: NextRequest) {
           });
         });
       } else {
-        regionMapCache.regionMap.set("us", { countries: [{ iso2: "US" }] });
+        regionMapCache.regionMap.set("bd", { countries: [{ iso2: "BD" }] });
       }
     } catch (error) {
       console.error("Error fetching regions:", error);
       if (!regionMapCache.regionMap.size) {
-        regionMapCache.regionMap.set("us", { countries: [{ iso2: "US" }] });
+        regionMapCache.regionMap.set("bd", { countries: [{ iso2: "BD" }] });
       }
     }
 
