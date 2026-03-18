@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import { PHONE_DISPLAY } from "@/lib/constants/contact"
 
 export const metadata: Metadata = {
   title: "Privacy Policy | SYSmoAI",
@@ -35,7 +36,7 @@ export default function PrivacyPage() {
           },
           {
             title: "Contact Us",
-            body: "For any privacy questions or concerns, contact us at hello@sysmoai.com or via WhatsApp at +880 1865-385348.",
+            body: `For any privacy questions or concerns, contact us at hello@sysmoai.com or via WhatsApp at ${PHONE_DISPLAY}.`,
           },
         ].map(({ title, body }) => (
           <section key={title} className="mb-10">
