@@ -1,0 +1,138 @@
+URGENT FIX — Replace wrong WhatsApp number across entire codebase.
+
+The number 8801865385348 is wrong everywhere on this website.
+The ONLY correct number is: 8801711638693
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1 — Show me every file with the wrong number
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Run this and show me the output before touching anything:
+
+grep -rn "8801865385348\|8801865348\|01865385348\|01865-385348" . \
+  --include="*.tsx" --include="*.ts" --include="*.jsx" \
+  --include="*.js" --include="*.json" --include="*.mdx" \
+  --include="*.md" --include="*.css" --include="*.env*"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2 — Create a constants file FIRST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Create the file: src/lib/constants/contact.ts
+
+with this exact content:
+
+/**
+ * SYSmoAI — Official Contact Constants
+ * 
+ * CANONICAL SOURCE: Notion CEOA Instructions
+ * OWNER: Emon Hossain (CEO)
+ * 
+ * ⚠️ NEVER hardcode phone numbers in components.
+ * ⚠️ ALWAYS import from this file.
+ * ⚠️ Change the number here → updates everywhere.
+ */
+
+// ─── Phone ────────────────────────────────────────
+export const PHONE_RAW = "8801711638693"
+export const PHONE_DISPLAY = "+880 1711-638693"
+export const PHONE_LOCAL = "01711-638693"
+
+// ─── WhatsApp Base ────────────────────────────────
+const WA_BASE = `https://wa.me/${PHONE_RAW}`
+
+// ─── WhatsApp Links (context-specific) ───────────
+export const WA = {
+  general:     `${WA_BASE}?text=Hi%20SYSmoAI%2C%20I%20need%20help`,
+  navbar:      `${WA_BASE}?text=Hi%20SYSmoAI`,
+  floating:    `${WA_BASE}?text=Hi%20SYSmoAI%2C%20I%20need%20help`,
+  hero:        `${WA_BASE}?text=Hi%20SYSmoAI%2C%20I%20want%20to%20learn%20more`,
+  services:    `${WA_BASE}?text=Hi%20SYSmoAI%2C%20I%20want%20to%20know%20about%20your%20services`,
+  fcommerce:   `${WA_BASE}?text=Hi%20SYSmoAI%2C%20I%20have%20an%20F-commerce%20business`,
+  agencies:    `${WA_BASE}?text=Hi%20SYSmoAI%2C%20I%20run%20a%20digital%20agency`,
+  freelancer:  `${WA_BASE}?text=Hi%20SYSmoAI%2C%20I%20am%20a%20freelancer`,
+  student:     `${WA_BASE}?text=Hi%20SYSmoAI%2C%20I%20am%20a%20student`,
+  coaching:    `${WA_BASE}?text=Hi%20SYSmoAI%2C%20I%20run%20a%20coaching%20business`,
+  accounting:  `${WA_BASE}?text=Hi%20SYSmoAI%2C%20I%20run%20an%20accounting%20firm`,
+  clinics:     `${WA_BASE}?text=Hi%20SYSmoAI%2C%20I%20run%20a%20clinic`,
+  trading:     `${WA_BASE}?text=Hi%20SYSmoAI%2C%20I%20run%20a%20trading%20business`,
+  quickwin:    `${WA_BASE}?text=Hi%20SYSmoAI%2C%20I%20want%20to%20book%20a%20Quick%20Win`,
+  sprint:      `${WA_BASE}?text=Hi%20SYSmoAI%2C%20I%20want%20to%20book%20a%20Sprint`,
+  retainer:    `${WA_BASE}?text=Hi%20SYSmoAI%2C%20I%20want%20to%20book%20a%20Retainer`,
+  payment:     `${WA_BASE}?text=Hi%20SYSmoAI%2C%20I%20have%20made%20a%20payment`,
+  contact:     `${WA_BASE}?text=Hi%20SYSmoAI%2C%20I%20want%20to%20get%20in%20touch`,
+}
+
+// ─── Payment Numbers (same as phone) ─────────────
+export const PAYMENT = {
+  bkash:    PHONE_LOCAL,
+  nagad:    PHONE_LOCAL,
+  rocket:   PHONE_LOCAL,
+  bank:     "Contact us on WhatsApp for bank details",
+}
+
+// ─── Email ────────────────────────────────────────
+export const EMAIL = {
+  hello:    "hello@sysmoai.com",
+  support:  "support@sysmoai.com",
+  billing:  "billing@sysmoai.com",
+  accounts: "accounts@sysmoai.com",
+  privacy:  "privacy@sysmoai.com",
+}
+
+// ─── Company ──────────────────────────────────────
+export const COMPANY = {
+  name:        "SYSmoAI",
+  fullName:    "SYSmoAI Private Limited",
+  tagline:     "The AI Platform Built for Bangladesh",
+  location:    "Dhaka, Bangladesh",
+  website:     "https://sysmoai.com",
+  founded:     "2026",
+  founder:     "Emon Hossain",
+  founderTitle: "Founder & CEO",
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3 — Update every component to use constants
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+For each file found in Step 1:
+1. Add import at the top: 
+   import { WA, PHONE_DISPLAY, PAYMENT, EMAIL } from "@/lib/constants/contact"
+2. Replace ALL hardcoded "8801865385348" links with the 
+   appropriate WA.xxx constant
+3. Replace ALL "8801865385348" text with PHONE_DISPLAY or PHONE_LOCAL
+
+Files to update for certain (update all of these):
+- The Navbar/Header component (WhatsApp button)
+- The Footer component (WhatsApp link + payment numbers)
+- The WhatsApp floating button component
+- The Homepage page.tsx (hero button + CTA section)
+- The Contact page (main button + all links)
+- The Services page (all CTA buttons)
+- Any other page that has a WhatsApp link
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 4 — Verify: zero wrong numbers remain
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Run:
+grep -rn "8801865385348\|8801865348\|01865385348" . \
+  --include="*.tsx" --include="*.ts" --include="*.jsx" \
+  --include="*.js" --include="*.json"
+
+Expected result: NO output (zero matches).
+If any match remains → fix it before continuing.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 5 — Build and confirm
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Run: npm run build
+
+Report:
+✅ Constants file created: src/lib/constants/contact.ts
+✅ Files updated: [list every file changed]
+✅ Wrong number 8801865385348 — REMOVED from all files
+✅ Correct number 8801711638693 — applied via constants
+✅ Build status: SUCCESS or FAILED [show error if failed]

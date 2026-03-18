@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import { WA, EMAIL, PHONE_DISPLAY } from "@/lib/constants/contact"
 import ContactForm from "./ContactForm"
 
 export const metadata: Metadata = {
@@ -21,7 +22,7 @@ export default function ContactPage() {
       {/* WhatsApp CTA */}
       <section className="px-6 pb-16 flex justify-center">
         <a
-          href="https://wa.me/8801865385348?text=Hi%20SYSmoAI%2C%20I%20need%20help"
+          href={WA.contact}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-3 bg-[#25D366] text-white font-bold text-lg px-10 py-5 rounded-xl hover:bg-[#20b85a] transition-colors"
@@ -38,8 +39,8 @@ export default function ContactPage() {
       <section className="px-6 pb-16 max-w-[700px] mx-auto">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
-            { icon: "📧", label: "Email", value: "hello@sysmoai.com", href: "mailto:hello@sysmoai.com" },
-            { icon: "🎧", label: "Support", value: "support@sysmoai.com", href: "mailto:support@sysmoai.com" },
+            { icon: "📧", label: "Email", value: EMAIL.hello, href: `mailto:${EMAIL.hello}` },
+            { icon: "🎧", label: "Support", value: EMAIL.support, href: `mailto:${EMAIL.support}` },
             { icon: "📍", label: "Location", value: "Dhaka, Bangladesh", href: null },
           ].map(({ icon, label, value, href }) => (
             <div key={label} className="bg-[#13131A] border border-[#1E1E2E] rounded-xl p-5 text-center">

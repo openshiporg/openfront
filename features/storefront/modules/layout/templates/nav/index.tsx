@@ -1,10 +1,11 @@
-import { Suspense } from 'react';
+import { Suspense } from 'react'
 
-import { listRegions } from '@/features/storefront/lib/data/regions';
+import { listRegions } from '@/features/storefront/lib/data/regions'
+import { WA } from '@/lib/constants/contact'
 
-import LocalizedClientLink from '@/features/storefront/modules/common/components/localized-client-link';
-import CartButton from '@/features/storefront/modules/layout/components/cart-button';
-import SideMenu from '@/features/storefront/modules/layout/components/side-menu';
+import LocalizedClientLink from '@/features/storefront/modules/common/components/localized-client-link'
+import CartButton from '@/features/storefront/modules/layout/components/cart-button'
+import SideMenu from '@/features/storefront/modules/layout/components/side-menu'
 
 const NAV_LINKS = [
   { label: 'Home', href: '/' },
@@ -12,10 +13,10 @@ const NAV_LINKS = [
   { label: 'Services', href: '/services' },
   { label: 'About', href: '/about' },
   { label: 'Contact', href: '/contact' },
-];
+]
 
 export default async function Nav() {
-  const { regions } = await listRegions();
+  const { regions } = await listRegions()
 
   return (
     <div className="sticky top-0 inset-x-0 z-50">
@@ -47,7 +48,7 @@ export default async function Nav() {
           {/* Right: WhatsApp + Account + Cart + mobile hamburger */}
           <div className="flex items-center gap-4 flex-shrink-0">
             <a
-              href="https://wa.me/8801865385348?text=Hi%20SYSmoAI"
+              href={WA.navbar}
               target="_blank"
               rel="noopener noreferrer"
               className="hidden sm:flex items-center gap-1.5 bg-[#25D366] text-white text-xs font-semibold px-3 py-1.5 rounded-full hover:bg-[#20b85a] transition-colors"
@@ -90,5 +91,5 @@ export default async function Nav() {
         </nav>
       </header>
     </div>
-  );
+  )
 }

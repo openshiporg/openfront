@@ -1,17 +1,18 @@
 "use client"
 
-import { usePathname } from "next/navigation";
+import { usePathname } from "next/navigation"
+import { WA } from "@/lib/constants/contact"
 
 export default function WhatsAppButton() {
-  const pathname = usePathname();
+  const pathname = usePathname()
 
   if (pathname?.startsWith("/dashboard")) {
-    return null;
+    return null
   }
 
   return (
     <a
-      href="https://wa.me/8801865385348?text=Hi%20SYSmoAI%2C%20I%20need%20help"
+      href={WA.floating}
       target="_blank"
       rel="noopener noreferrer"
       className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-[#25D366] text-white px-4 py-3 rounded-full shadow-lg hover:bg-[#20b85a] transition-all duration-200 font-semibold text-sm"
@@ -23,5 +24,5 @@ export default function WhatsAppButton() {
       </svg>
       WhatsApp
     </a>
-  );
+  )
 }

@@ -1,4 +1,5 @@
 import LocalizedClientLink from "@/features/storefront/modules/common/components/localized-client-link"
+import { WA, PHONE_DISPLAY, EMAIL } from "@/lib/constants/contact"
 
 export default async function Footer() {
   return (
@@ -45,15 +46,9 @@ export default async function Footer() {
           <div className="flex flex-col gap-3">
             <span className="text-xs font-semibold text-white uppercase tracking-widest">Company</span>
             <ul className="flex flex-col gap-2 text-sm text-white/50">
-              <li>
-                <a href="/about" className="hover:text-white transition-colors">About</a>
-              </li>
-              <li>
-                <a href="/services" className="hover:text-white transition-colors">Services</a>
-              </li>
-              <li>
-                <a href="/contact" className="hover:text-white transition-colors">Contact</a>
-              </li>
+              <li><a href="/about" className="hover:text-white transition-colors">About</a></li>
+              <li><a href="/services" className="hover:text-white transition-colors">Services</a></li>
+              <li><a href="/contact" className="hover:text-white transition-colors">Contact</a></li>
             </ul>
           </div>
 
@@ -61,15 +56,9 @@ export default async function Footer() {
           <div className="flex flex-col gap-3">
             <span className="text-xs font-semibold text-white uppercase tracking-widest">Legal</span>
             <ul className="flex flex-col gap-2 text-sm text-white/50">
-              <li>
-                <a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a>
-              </li>
-              <li>
-                <a href="/terms" className="hover:text-white transition-colors">Terms of Service</a>
-              </li>
-              <li>
-                <a href="/terms" className="hover:text-white transition-colors">Refund Policy</a>
-              </li>
+              <li><a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a></li>
+              <li><a href="/terms" className="hover:text-white transition-colors">Terms of Service</a></li>
+              <li><a href="/terms" className="hover:text-white transition-colors">Refund Policy</a></li>
             </ul>
           </div>
 
@@ -79,7 +68,7 @@ export default async function Footer() {
             <ul className="flex flex-col gap-2 text-sm text-white/50">
               <li>
                 <a
-                  href="https://wa.me/8801865385348"
+                  href={WA.general}
                   target="_blank"
                   rel="noreferrer"
                   className="hover:text-[#25D366] transition-colors flex items-center gap-1.5"
@@ -88,8 +77,8 @@ export default async function Footer() {
                 </a>
               </li>
               <li>
-                <a href="mailto:hello@sysmoai.com" className="hover:text-white transition-colors">
-                  📧 hello@sysmoai.com
+                <a href={`mailto:${EMAIL.hello}`} className="hover:text-white transition-colors">
+                  📧 {EMAIL.hello}
                 </a>
               </li>
               <li className="flex items-center gap-1.5">
@@ -113,5 +102,5 @@ export default async function Footer() {
         </div>
       </div>
     </footer>
-  );
+  )
 }

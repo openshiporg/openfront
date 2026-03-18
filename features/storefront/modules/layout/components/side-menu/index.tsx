@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react";
+import { useState } from "react"
 import {
   Sheet,
   SheetContent,
@@ -8,10 +8,11 @@ import {
   SheetTitle,
   SheetDescription,
   SheetTrigger,
-} from "@/components/ui/sheet";
+} from "@/components/ui/sheet"
 import LocalizedClientLink from "@/features/storefront/modules/common/components/localized-client-link"
 import CountrySelect from "../country-select"
 import type { StoreRegion } from "@/features/storefront/types/storefront"
+import { WA } from "@/lib/constants/contact"
 
 const NAV_ITEMS = [
   { label: 'Home', href: '/' },
@@ -19,10 +20,10 @@ const NAV_ITEMS = [
   { label: 'Services', href: '/services' },
   { label: 'About', href: '/about' },
   { label: 'Contact', href: '/contact' },
-];
+]
 
 const SideMenu = ({ regions }: { regions: StoreRegion[] | null }) => {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false)
 
   return (
     <div className="h-full" suppressHydrationWarning>
@@ -68,7 +69,7 @@ const SideMenu = ({ regions }: { regions: StoreRegion[] | null }) => {
                 ))}
                 <li>
                   <a
-                    href="https://wa.me/8801865385348?text=Hi%20SYSmoAI"
+                    href={WA.general}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 text-xl font-medium text-[#25D366] py-3 border-b border-white/5 hover:opacity-80 transition-opacity"
@@ -98,7 +99,7 @@ const SideMenu = ({ regions }: { regions: StoreRegion[] | null }) => {
         </Sheet>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default SideMenu;
+export default SideMenu

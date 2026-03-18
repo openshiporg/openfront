@@ -1,11 +1,10 @@
 import { Metadata } from "next"
+import { WA } from "@/lib/constants/contact"
 
 export const metadata: Metadata = {
   title: "AI Implementation Services | SYSmoAI",
   description: "We build AI-powered operating systems for your business. Quick Win, Sprint, and Retainer service tiers for Bangladesh businesses.",
 }
-
-const WA_LINK = "https://wa.me/8801865385348?text=Hi%20SYSmoAI%2C%20I%20need%20a%20service"
 
 const SERVICES = [
   {
@@ -15,6 +14,7 @@ const SERVICES = [
     bestFor: "Freelancers, small businesses",
     features: ["Diagnose top problem", "Build targeted AI fix", "Full handover in 3 days", "Full refund guarantee"],
     highlight: false,
+    waKey: "quickwin" as const,
   },
   {
     tier: "Sprint",
@@ -23,6 +23,7 @@ const SERVICES = [
     bestFor: "Agencies, growing businesses",
     features: ["Complete AI workflow", "Custom integrations", "Team training session", "14-day delivery"],
     highlight: true,
+    waKey: "sprint" as const,
   },
   {
     tier: "Retainer",
@@ -31,6 +32,7 @@ const SERVICES = [
     bestFor: "Established businesses",
     features: ["Monthly AI operations", "Continuous improvements", "Priority WhatsApp support", "Monthly reporting"],
     highlight: false,
+    waKey: "retainer" as const,
   },
 ]
 
@@ -62,7 +64,7 @@ export default function ServicesPage() {
           We build AI-powered operating systems for your business.
         </p>
         <a
-          href={WA_LINK}
+          href={WA.services}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 bg-[#25D366] text-white font-bold px-8 py-4 rounded-lg hover:bg-[#20b85a] transition-colors"
@@ -75,7 +77,7 @@ export default function ServicesPage() {
       <section className="px-6 py-16 max-w-[1200px] mx-auto">
         <h2 className="text-2xl font-bold text-center mb-12">Choose Your Service</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {SERVICES.map(({ tier, tagline, price, bestFor, features, highlight }) => (
+          {SERVICES.map(({ tier, tagline, price, bestFor, features, highlight, waKey }) => (
             <div
               key={tier}
               className={`rounded-2xl p-8 border flex flex-col gap-4 ${
@@ -101,7 +103,7 @@ export default function ServicesPage() {
                 ))}
               </ul>
               <a
-                href={WA_LINK}
+                href={WA[waKey]}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`mt-auto text-center py-3 rounded-lg font-semibold transition-colors ${
@@ -149,9 +151,9 @@ export default function ServicesPage() {
       {/* CTA */}
       <section className="px-6 py-16 bg-[#312E81] text-center">
         <h2 className="text-2xl font-bold mb-4">Ready to get started?</h2>
-        <p className="text-white/70 mb-8">Message us on WhatsApp and we'll respond within 2 hours.</p>
+        <p className="text-white/70 mb-8">Message us on WhatsApp and we&apos;ll respond within 2 hours.</p>
         <a
-          href={WA_LINK}
+          href={WA.services}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 bg-[#25D366] text-white font-bold px-8 py-4 rounded-lg hover:bg-[#20b85a] transition-colors"

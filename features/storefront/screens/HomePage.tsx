@@ -2,6 +2,7 @@ import FeaturedProducts from "@/features/storefront/modules/home/components/feat
 import { getCollectionsListByRegion } from "@/features/storefront/lib/data/collections"
 import { getRegion } from "@/features/storefront/lib/data/regions"
 import type { StoreCollection, StoreRegion } from "@/features/storefront/types/storefront"
+import { WA } from "@/lib/constants/contact"
 
 const WHO_WE_HELP = [
   { emoji: "🎓", name: "Students", desc: "Access world-class AI tools at student-friendly prices" },
@@ -11,7 +12,7 @@ const WHO_WE_HELP = [
   { emoji: "🏪", name: "Business", desc: "Automate operations and scale with intelligent systems" },
   { emoji: "📦", name: "F-commerce", desc: "AI for product listing, customer service, and logistics" },
   { emoji: "🔬", name: "Researchers", desc: "Summarise, analyse and generate research content faster" },
-];
+]
 
 export async function HomePage(props: {
   params: Promise<{ countryCode: string }>
@@ -49,7 +50,7 @@ export async function HomePage(props: {
             Browse AI Tools →
           </a>
           <a
-            href="https://wa.me/8801865385348?text=Hi%20SYSmoAI"
+            href={WA.hero}
             target="_blank"
             rel="noopener noreferrer"
             className="px-6 py-3 bg-[#25D366] text-white font-semibold rounded-lg hover:bg-[#20b85a] transition-colors duration-200"
@@ -151,7 +152,7 @@ export async function HomePage(props: {
             Shop AI Tools
           </a>
           <a
-            href="https://wa.me/8801865385348?text=Hi%20SYSmoAI"
+            href={WA.services}
             target="_blank"
             rel="noopener noreferrer"
             className="px-8 py-4 bg-[#25D366] text-white font-bold rounded-lg hover:bg-[#20b85a] transition-colors"
