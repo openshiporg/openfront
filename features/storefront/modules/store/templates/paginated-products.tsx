@@ -82,24 +82,50 @@ export default async function PaginatedProducts({
 
   return (
     <>
-      <ul
-        className="grid grid-cols-2 w-full md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-6"
-        data-testid="products-list"
-      >
-        {products.map((p: any) => {
-          return (
-            <li key={p.id}>
-              <ProductPreview productPreview={p as any} region={region as any} />
-            </li>
-          )
-        })}
-      </ul>
-      {totalPages > 1 && (
-        <Pagination
-          data-testid="product-pagination"
-          page={page}
-          totalPages={totalPages}
-        />
+      {products.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-24 text-center col-span-full">
+          <div className="text-7xl mb-6">🛒</div>
+          <h3 className="text-2xl font-bold text-white mb-3">
+            Products Coming Soon
+          </h3>
+          <p className="text-slate-400 max-w-md mb-2 leading-relaxed">
+            We are adding our full AI tools catalog shortly.
+          </p>
+          <p className="text-slate-500 text-sm mb-8">
+            Need a specific tool right now? Message us — we can help you get access today.
+          </p>
+          <a href="https://wa.me/8801711638693?text=Hi%20SYSmoAI%2C%20I%20need%20an%20AI%20tool"
+             target="_blank"
+             rel="noopener noreferrer"
+             className="inline-flex items-center gap-2 
+                        bg-emerald-600 hover:bg-emerald-500 
+                        text-white font-semibold px-8 py-4 
+                        rounded-xl text-lg transition-colors">
+            💬 Ask on WhatsApp
+          </a>
+        </div>
+      ) : (
+        <>
+          <ul
+            className="grid grid-cols-2 w-full md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-6"
+            data-testid="products-list"
+          >
+            {products.map((p: any) => {
+              return (
+                <li key={p.id}>
+                  <ProductPreview productPreview={p as any} region={region as any} />
+                </li>
+              )
+            })}
+          </ul>
+          {totalPages > 1 && (
+            <Pagination
+              data-testid="product-pagination"
+              page={page}
+              totalPages={totalPages}
+            />
+          )}
+        </>
       )}
     </>
   )

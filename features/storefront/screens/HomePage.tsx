@@ -42,26 +42,36 @@ export async function HomePage(props: {
           AI implementation services for agencies, businesses and F-commerce.
         </p>
 
-        <div className="mt-10 flex flex-col sm:flex-row items-center gap-4">
-          <a
-            href="/bd/store"
-            className="px-6 py-3 bg-[#6366F1] text-white font-semibold rounded-lg hover:bg-[#4F46E5] transition-colors duration-200"
-          >
-            Browse AI Tools →
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-8">
+          <a href="/bd/store" 
+             className="inline-flex items-center gap-2 
+                        bg-indigo-600 hover:bg-indigo-500 
+                        text-white font-semibold px-8 py-4 
+                        rounded-xl text-lg transition-colors 
+                        shadow-lg shadow-indigo-500/20">
+            Browse AI Tools
+            <span aria-hidden="true">→</span>
           </a>
           <a
             href={WA.hero}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-6 py-3 bg-[#25D366] text-white font-semibold rounded-lg hover:bg-[#20b85a] transition-colors duration-200"
+            className="inline-flex items-center gap-2 
+                       bg-emerald-600 hover:bg-emerald-500 
+                       text-white font-semibold px-8 py-4 
+                       rounded-xl text-lg transition-colors"
           >
             💬 WhatsApp Us
           </a>
         </div>
 
-        <p className="mt-8 text-sm text-[#94A3B8]">
-          ⭐⭐⭐⭐⭐&nbsp;&nbsp;Trusted by 1,000+ customers
-        </p>
+        <div className="flex flex-wrap items-center justify-center gap-6 mt-8 text-slate-500 text-sm">
+          <span>🇧🇩 Built for Bangladesh</span>
+          <span>·</span>
+          <span>🔒 Secure bKash & Nagad payments</span>
+          <span>·</span>
+          <span>⚡ Same-day delivery</span>
+        </div>
       </section>
 
       {/* ── Section 2: Who We Help ── */}

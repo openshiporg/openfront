@@ -24,7 +24,7 @@ export default function AboutPage() {
       <section className="px-6 py-16 max-w-[800px] mx-auto">
         <div className="bg-[#13131A] border border-[#1E1E2E] rounded-2xl p-10">
           <div className="flex flex-col sm:flex-row gap-8 items-start">
-            <div className="w-20 h-20 rounded-full bg-[#312E81] flex items-center justify-center text-3xl flex-shrink-0">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0 shadow-lg">
               E
             </div>
             <div>
@@ -75,7 +75,7 @@ export default function AboutPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             {[
               { label: "Company", value: "SYSmoAI Private Limited" },
-              { label: "Founded", value: "2024" },
+              { label: "Founded", value: "2026" },
               { label: "Location", value: "Dhaka, Bangladesh" },
               { label: "Email", value: "hello@sysmoai.com" },
               { label: "WhatsApp", value: PHONE_DISPLAY },

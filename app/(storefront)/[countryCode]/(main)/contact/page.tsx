@@ -54,6 +54,24 @@ export default function ContactPage() {
             </div>
           ))}
         </div>
+
+        {/* Phone / WhatsApp */}
+        <div className="flex items-start gap-4 p-4 rounded-xl bg-[#13131A] border border-[#1E1E2E] mt-4">
+          <span className="text-2xl">📞</span>
+          <div>
+            <p className="text-slate-400 text-sm mb-1">
+              Phone &amp; WhatsApp
+            </p>
+            <p className="text-white font-semibold text-lg">
+              {PHONE_DISPLAY}
+            </p>
+            <a href={WA.contact}
+               target="_blank"
+               className="text-emerald-400 text-sm hover:underline">
+              Open in WhatsApp →
+            </a>
+          </div>
+        </div>
       </section>
 
       {/* Contact Form */}
