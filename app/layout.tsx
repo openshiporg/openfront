@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Impossible Tees",
-  description: "Shop our unique collection",
+  title: "SYSmoAI — AI Tools & Systems for Bangladesh",
+  description: "Premium AI subscriptions and AI implementation services for students, freelancers, agencies, and businesses in Bangladesh.",
 };
 
 export default function RootLayout({

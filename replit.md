@@ -11,7 +11,7 @@ SYSmoAI is a full-featured e-commerce platform built with Next.js and Keystone C
 - **Auth**: Custom stateless sessions (Iron-based), OAuth support, API key auth
 
 ## Branding
-- **Brand pack**: Extracted from `sysmoai/Sysmoaifinalbrandpack` GitHub repo into `brand-pack/`
+- **Brand pack**: Extracted from `sysmoai/SYSmoAIfinalbrandpack` GitHub repo into `brand-pack/`
 - **Logo**: `components/ui/sysmoai-logo.tsx` — `SYSmoAILogo` (3-layer hexagonal SVG) + `SYSmoAIWordmark`
 - **Colors**: Primary `#030213`, Blue palette `#1E3A8A`/`#2563EB`/`#3B82F6`, Destructive `#d4183d`
 - **CSS tokens**: Applied in `app/globals.css` (storefront) and `app/dashboard/globals.css` (dashboard)

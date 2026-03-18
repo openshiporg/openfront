@@ -85,30 +85,32 @@ export default async function Footer() {
               <span className="text-[0.8125rem] leading-[1.375rem] font-medium text-foreground">SYSmoAI</span>
               <ul className="grid grid-cols-1 gap-y-2 text-muted-foreground text-[0.8125rem] leading-[1.375rem] font-normal">
                 <li>
-                  <a
-                    href="https://sysmoai.com"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:text-foreground">
-                    Website
+                  <a href="/" className="hover:text-foreground">
+                    Home
+                  </a>
+                </li>
+                <li>
+                  <a href="/us" className="hover:text-foreground">
+                    Shop
+                  </a>
+                </li>
+                <li>
+                  <a href="/services" className="hover:text-foreground">
+                    Services
+                  </a>
+                </li>
+                <li>
+                  <a href="/contact" className="hover:text-foreground">
+                    Contact
                   </a>
                 </li>
                 <li>
                   <a
-                    href="https://sysmoai.com/docs"
+                    href="https://wa.me/8801865385348"
                     target="_blank"
                     rel="noreferrer"
                     className="hover:text-foreground">
-                    Documentation
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="https://sysmoai.com/support"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:text-foreground">
-                    Support
+                    WhatsApp
                   </a>
                 </li>
               </ul>
