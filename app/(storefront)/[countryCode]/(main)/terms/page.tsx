@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import { PHONE_DISPLAY } from "@/lib/constants/contact"
 
 export const metadata: Metadata = {
   title: "Terms of Service | SYSmoAI",
@@ -39,7 +40,7 @@ export default function TermsPage() {
           },
           {
             title: "Contact",
-            body: "For any questions about these terms, contact us at hello@sysmoai.com or via WhatsApp at +880 1865-385348.",
+            body: `For any questions about these terms, contact us at hello@sysmoai.com or via WhatsApp at ${PHONE_DISPLAY}.`,
           },
         ].map(({ title, body }) => (
           <section key={title} className="mb-10">

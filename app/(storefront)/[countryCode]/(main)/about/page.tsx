@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import { PHONE_DISPLAY } from "@/lib/constants/contact"
 
 export const metadata: Metadata = {
   title: "About Us | SYSmoAI",
@@ -77,7 +78,7 @@ export default function AboutPage() {
               { label: "Founded", value: "2024" },
               { label: "Location", value: "Dhaka, Bangladesh" },
               { label: "Email", value: "hello@sysmoai.com" },
-              { label: "WhatsApp", value: "+880 1865-385348" },
+              { label: "WhatsApp", value: PHONE_DISPLAY },
               { label: "Languages", value: "Bangla, English" },
             ].map(({ label, value }) => (
               <div key={label} className="flex flex-col gap-1">
