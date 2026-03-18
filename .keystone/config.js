@@ -3406,7 +3406,7 @@ var getCustomerOrder_default = getCustomerOrder;
 // features/keystone/mutations/getCustomerOrders.ts
 async function getCustomerOrders(root, { limit = 10, offset = 0 }, context) {
   if (!context.session?.itemId) {
-    throw new Error("Not authenticated");
+    return null;
   }
   const sudoContext = context.sudo();
   const orders = await sudoContext.query.Order.findMany({

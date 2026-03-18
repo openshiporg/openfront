@@ -1,6 +1,6 @@
 async function getCustomerOrders(root, { limit = 10, offset = 0 }, context) {
   if (!context.session?.itemId) {
-    throw new Error('Not authenticated');
+    return null;
   }
 
   const sudoContext = context.sudo();

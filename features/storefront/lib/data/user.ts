@@ -113,57 +113,64 @@ export async function authenticate({ email, password }: { email: string, passwor
 
 export const getUserWithOrders = cache(async function () {
   const headers = await getAuthHeaders();
-  const { authenticatedItem, orders } = await openfrontClient.request(
-    gql`
-      query GetUserAndOrders {
-        authenticatedItem {
-          ... on User {
-            id
-            email
-            firstName
-            lastName
-            phone
-            billingAddress {
-              firstName
-              lastName
-              company
-              address1
-              address2
-              city
-              province
-              postalCode
-              country {
-                id
-                iso2
-              }
-              phone
-            }
-            addresses {
+  try {
+    const { authenticatedItem, orders } = await openfrontClient.request(
+      gql`
+        query GetUserAndOrders {
+          authenticatedItem {
+            ... on User {
               id
+              email
               firstName
               lastName
-              company
-              address1
-              address2
-              city
-              province
-              postalCode
-              country {
-                id
-                iso2
-              }
               phone
+              billingAddress {
+                firstName
+                lastName
+                company
+                address1
+                address2
+                city
+                province
+                postalCode
+                country {
+                  id
+                  iso2
+                }
+                phone
+              }
+              addresses {
+                id
+                firstName
+                lastName
+                company
+                address1
+                address2
+                city
+                province
+                postalCode
+                country {
+                  id
+                  iso2
+                }
+                phone
+              }
             }
           }
+          orders: getCustomerOrders
         }
-        orders: getCustomerOrders
-      }
-    `,
-    {},
-    headers
-  );
+      `,
+      {},
+      headers
+    );
 
-  return { ...authenticatedItem, orders };
+    return { ...authenticatedItem, orders };
+  } catch (e: any) {
+    if (e?.message && !e.message.includes('Not authenticated')) {
+      console.error('[getUserWithOrders] Unexpected error:', e.message);
+    }
+    return null;
+  }
 });
 
 export async function createCustomer(data: CreateCustomerData) {
