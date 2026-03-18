@@ -11,12 +11,15 @@ SYSmoAI is a full-featured e-commerce platform built with Next.js and Keystone C
 - **Auth**: Custom stateless sessions (Iron-based), OAuth support, API key auth
 
 ## Branding
-- **Brand pack**: Extracted from `sysmoai/SYSmoAIfinalbrandpack` GitHub repo into `brand-pack/`
-- **Logo**: `components/ui/sysmoai-logo.tsx` — `SYSmoAILogo` (3-layer hexagonal SVG) + `SYSmoAIWordmark`
-- **Colors**: Primary `#030213`, Blue palette `#1E3A8A`/`#2563EB`/`#3B82F6`, Destructive `#d4183d`
-- **CSS tokens**: Applied in `app/globals.css` (storefront) and `app/dashboard/globals.css` (dashboard)
+- **Brand pack**: Stored at `brand-pack/` (excluded from Tailwind scan via `.gitignore` + `@source not` directives)
+- **Logo React components**: `components/ui/sysmoai-logo.tsx` — `SYSmoAILogo` (3-layer hexagonal SVG) + `SYSmoAIWordmark`
+- **Logo SVG file**: `public/images/logo.svg` — horizontal lockup (icon + wordmark); served at `/images/logo.svg` (NOTE: `/logo.svg` is redirected by the country-code middleware to `/us/logo.svg` — use `/images/logo.svg` instead)
+- **Colors**: Primary `#030213`, Blue palette `#1E3A8A`/`#2563EB`/`#3B82F6`/`#60A5FA`, Destructive `#d4183d`, Brand surface `#0A0B0F`
+- **CSS tokens**: Applied in `app/globals.css` — brand blue vars (`--brand-blue-900` through `--brand-blue-400`, `--brand-surface`), font (`--font-sans: Inter`), all mapped in `@theme inline`
+- **Font**: Inter via Google Fonts (`@import url(...)` at top of `app/globals.css`); applied to `body` via `font-family: var(--font-sans)`
 - **Dashboard logo**: `features/dashboard/components/Logo.tsx` uses `SYSmoAILogo`
-- **Storefront logo**: `features/storefront/modules/layout/components/logo/index.tsx` uses `SYSmoAILogo` as default
+- **Storefront navbar logo**: `features/storefront/modules/layout/components/logo/index.tsx` — shows `<img src="/images/logo.svg">` when store has no name configured; shows store name + SVG icon otherwise
+- **Country-code middleware**: `proxy.ts` at root is the real Next.js middleware; it intercepts all routes and prepends country code. Static assets must be under paths excluded by the matcher regex (e.g. `/images/`, `/assets/`, `/_next/`, `/api/`). The matcher: `/((?!api|_next/static|_next/image|favicon.svg|images|assets|png|svg|jpg|...).*)`
 
 ## Key Directories
 - `app/` — Next.js App Router pages (dashboard, storefront, API routes)

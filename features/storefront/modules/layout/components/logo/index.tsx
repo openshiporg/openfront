@@ -24,13 +24,10 @@ export default async function Logo() {
     return (
       <LocalizedClientLink
         href="/"
-        className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+        className="flex items-center hover:opacity-80 transition-opacity cursor-pointer"
         data-testid="nav-store-link"
       >
-        <div className="size-5 sm:size-6">
-          <SYSmoAILogo size={24} variant="brand-light" />
-        </div>
-        <SYSmoAIWordmark size={16} color="#030213" />
+        <img src="/images/logo.svg" alt="SYSmoAI" width="120" height="32" />
       </LocalizedClientLink>
     );
   }

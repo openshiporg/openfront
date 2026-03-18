@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 @source not "../.local/**";
 @source not "../brand-pack/**";
@@ -7,6 +8,16 @@
 
 :root {
   --font-size: 16px;
+  --font-sans: 'Inter', 'SF Pro Display', -apple-system, 'Segoe UI', system-ui, sans-serif;
+
+  /* SYSmoAI brand blues */
+  --brand-blue-900: #1E3A8A;
+  --brand-blue-800: #1E40AF;
+  --brand-blue-600: #2563EB;
+  --brand-blue-500: #3B82F6;
+  --brand-blue-400: #60A5FA;
+  --brand-surface: #0A0B0F;
+
   --background: #ffffff;
   --foreground: oklch(0.145 0 0);
   --card: #ffffff;
@@ -122,6 +133,17 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* SYSmoAI brand blue utilities */
+  --color-brand-blue-900: var(--brand-blue-900);
+  --color-brand-blue-800: var(--brand-blue-800);
+  --color-brand-blue-600: var(--brand-blue-600);
+  --color-brand-blue-500: var(--brand-blue-500);
+  --color-brand-blue-400: var(--brand-blue-400);
+  --color-brand-surface: var(--brand-surface);
+
+  /* Font family */
+  --font-family-sans: var(--font-sans);
 }
 
 @layer base {
@@ -134,5 +156,6 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-size: var(--font-size);
+    font-family: var(--font-sans);
   }
 }
