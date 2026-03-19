@@ -1,0 +1,623 @@
+You are fixing the SYSmoAI website running at /bd route.
+Country code is "bd". All internal links use /bd/ prefix.
+
+Work through ALL fixes in order. Do not skip any.
+After every fix, confirm the file changed.
+At the end, run npm run build and confirm success.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 0 — FIND ALL KEY FILES FIRST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Before touching anything, run these and show me the output:
+
+# Find the navbar/header component
+find . -type f \( -name "*.tsx" -o -name "*.jsx" \) | \
+  xargs grep -l "nav\|navbar\|header\|Header\|Nav" 2>/dev/null | \
+  grep -v node_modules | grep -v ".next" | head -20
+
+# Find the footer component  
+find . -type f \( -name "*.tsx" -o -name "*.jsx" \) | \
+  xargs grep -l "footer\|Footer" 2>/dev/null | \
+  grep -v node_modules | grep -v ".next" | head -20
+
+# Find the homepage
+find . -type f -name "page.tsx" | \
+  grep -v node_modules | grep -v ".next" | head -20
+
+# Check for logo files in public folder
+find ./public -type f | grep -iE "logo|sysmo" 2>/dev/null
+ls public/ 2>/dev/null
+
+# Check for logo in src/assets or src/images
+find ./src -type f | grep -iE "logo|sysmo" 2>/dev/null
+
+# Find "Powered By SYS mo AI" exact location
+grep -rn "Powered By\|SYS mo AI\|SYSmoAI" . \
+  --include="*.tsx" --include="*.ts" \
+  --include="*.jsx" --include="*.js" | \
+  grep -v node_modules | grep -v ".next"
+
+Show me all output before proceeding.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 1 — NAVBAR: Add brand name + logo
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Open the main navbar/header component found in Step 0.
+
+FIND the section where nav links start. It currently begins 
+directly with links (Home, Shop, etc.) and has NO brand name 
+on the left.
+
+ADD this as the very first element inside the navbar container,
+BEFORE all nav links, on the LEFT side:
+
+--- If a logo image file exists in /public/ ---
+<a 
+  href="/bd" 
+  className="flex items-center gap-2 mr-6 flex-shrink-0"
+>
+  <img 
+    src="/[LOGO_FILENAME]" 
+    alt="SYSmoAI" 
+    className="h-8 w-auto"
+  />
+</a>
+
+--- If NO logo file exists (use styled text) ---
+<a 
+  href="/bd" 
+  className="flex items-center mr-6 flex-shrink-0 group"
+>
+  <span className="text-xl font-bold tracking-tight 
+                   text-white group-hover:text-indigo-300 
+                   transition-colors whitespace-nowrap">
+    SYSmo<span className="text-indigo-400">AI</span>
+  </span>
+</a>
+
+ALSO add the brand name to the MOBILE header 
+(the bar visible before the hamburger opens):
+Same logo/text on the left of the mobile top bar.
+
+RESULT: "SYSmoAI" is the first visible element in the 
+header on both desktop and mobile.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 2 — NAVBAR: Fix broken mobile menu
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The hamburger menu shows empty bullet points.
+This is a recurring bug — previous attempts did not fix it.
+
+Find the mobile menu. It likely renders children from a 
+navigation data array, where each item has text 
+that is not rendering.
+
+Try this approach:
+
+1. Find what renders inside the mobile menu list items.
+   Look for patterns like:
+   - <NavItem /> or <MobileNavItem />
+   - items.map(item => <li>...)
+   - A navigation config array (navItems, menuItems, links)
+
+2. If items come from a data array, find that array and 
+   ensure each item has: { label: "string", href: "/path" }
+
+3. If components are used — check if they accept and 
+   render a label/title prop
+
+4. REGARDLESS of root cause — override the mobile menu 
+   content entirely with this hardcoded working version:
+
+In the mobile menu dropdown/drawer component, replace 
+the entire content with:
+
+<nav className="flex flex-col">
+  {[
+    { label: "Home",     href: "/bd" },
+    { label: "Shop",     href: "/bd/store" },
+    { label: "Services", href: "/bd/services" },
+    { label: "About",    href: "/bd/about" },
+    { label: "Contact",  href: "/bd/contact" },
+  ].map((item) => (
+    <a
+      key={item.href}
+      href={item.href}
+      className="flex items-center px-6 py-4 text-white 
+                 text-base font-medium border-b 
+                 border-[#1E1E2E] hover:bg-[#13131A] 
+                 hover:text-indigo-400 transition-colors"
+    >
+      {item.label}
+    </a>
+  ))}
+  <div className="p-5">
+    <a
+      href="https://wa.me/8801711638693?text=Hi%20SYSmoAI"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center justify-center gap-2 
+                 w-full bg-emerald-600 hover:bg-emerald-500 
+                 text-white font-bold py-3.5 px-6 
+                 rounded-xl transition-colors text-base"
+    >
+      💬 WhatsApp Us
+    </a>
+  </div>
+</nav>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 3 — FOOTER: Fix brand name + copyright text
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Open the footer component found in Step 0.
+
+FIX 3A — Footer Column 1: Add brand name
+The first column has description text but no company name.
+Add this ABOVE the existing description text in column 1:
+
+<div className="mb-5">
+  <a href="/bd" className="inline-block">
+    <span className="text-2xl font-bold text-white 
+                     tracking-tight">
+      SYSmo<span className="text-indigo-400">AI</span>
+    </span>
+  </a>
+  <p className="text-slate-500 text-xs mt-1 
+                uppercase tracking-widest font-medium">
+    Private Limited
+  </p>
+</div>
+
+If a logo file exists in /public/ → use:
+<img src="/[LOGO_FILENAME]" alt="SYSmoAI" 
+     className="h-8 w-auto mb-4" />
+
+FIX 3B — Footer bottom bar: Fix "Powered By SYS mo AI"
+Find the footer bottom bar. It currently shows:
+"Powered By SYS mo AI" (wrong)
+
+Replace the ENTIRE bottom bar content with:
+
+<div className="flex flex-col md:flex-row items-center 
+     justify-between gap-3 pt-8 mt-8 
+     border-t border-[#1E1E2E]">
+  <p className="text-slate-500 text-sm">
+    © 2026 SYSmoAI Private Limited. 
+    All rights reserved.
+  </p>
+  <p className="text-slate-600 text-sm">
+    Made in Bangladesh 🇧🇩
+  </p>
+</div>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 4 — HOMEPAGE: Fix hero section completely
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Open the homepage: 
+src/app/[countryCode]/(main)/page.tsx (or similar)
+
+The hero currently has plain text and an unstyled 
+"Browse AI Tools →" text link.
+
+Replace the ENTIRE hero section (from hero start to the 
+trust bar) with:
+
+<section className="relative min-h-[85vh] flex flex-col 
+     items-center justify-center text-center px-4 
+     pt-24 pb-16 overflow-hidden">
+  
+  {/* Background glow */}
+  <div className="absolute inset-0 -z-10 overflow-hidden">
+    <div className="absolute top-1/4 left-1/2 -translate-x-1/2 
+         w-[600px] h-[600px] bg-indigo-600/10 rounded-full 
+         blur-3xl" />
+  </div>
+
+  {/* Badge */}
+  <div className="inline-flex items-center gap-2 
+       bg-indigo-950/80 border border-indigo-800/50 
+       text-indigo-300 text-sm font-medium px-4 py-2 
+       rounded-full mb-8">
+    🇧🇩 Bangladesh's AI Platform
+  </div>
+
+  {/* Headline */}
+  <h1 className="text-4xl md:text-6xl lg:text-7xl 
+       font-bold text-white leading-tight 
+       tracking-tight max-w-4xl mb-6">
+    The AI Platform
+    <br />
+    <span className="bg-gradient-to-r from-indigo-400 
+         to-emerald-400 bg-clip-text text-transparent">
+      Built for Bangladesh.
+    </span>
+  </h1>
+
+  {/* Subheadline */}
+  <p className="text-lg md:text-xl text-slate-400 
+       max-w-2xl mx-auto mb-10 leading-relaxed">
+    Premium AI tool subscriptions for students, freelancers 
+    and researchers. AI implementation services for agencies, 
+    businesses and F-commerce. Pay with bKash or Nagad.
+  </p>
+
+  {/* CTA Buttons */}
+  <div className="flex flex-col sm:flex-row gap-4 
+       justify-center items-center mb-12">
+    <a 
+      href="/bd/store"
+      className="inline-flex items-center gap-2 
+                 bg-indigo-600 hover:bg-indigo-500 
+                 text-white font-semibold px-8 py-4 
+                 rounded-xl text-lg transition-all 
+                 shadow-lg shadow-indigo-500/25 
+                 hover:shadow-indigo-500/40 
+                 hover:-translate-y-0.5"
+    >
+      Browse AI Tools →
+    </a>
+    <a 
+      href="https://wa.me/8801711638693?text=Hi%20SYSmoAI%2C%20I%20want%20to%20learn%20more"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-2 
+                 bg-emerald-600 hover:bg-emerald-500 
+                 text-white font-semibold px-8 py-4 
+                 rounded-xl text-lg transition-all 
+                 shadow-lg shadow-emerald-500/25 
+                 hover:shadow-emerald-500/40 
+                 hover:-translate-y-0.5"
+    >
+      💬 Talk to an Expert
+    </a>
+  </div>
+
+  {/* Trust bar */}
+  <div className="flex flex-wrap items-center 
+       justify-center gap-x-8 gap-y-3 
+       text-slate-500 text-sm">
+    <span className="flex items-center gap-2">
+      <span className="text-emerald-400">⚡</span>
+      Same-day delivery
+    </span>
+    <span className="hidden sm:block text-slate-700">·</span>
+    <span className="flex items-center gap-2">
+      <span className="text-emerald-400">🔒</span>
+      Secure bKash & Nagad
+    </span>
+    <span className="hidden sm:block text-slate-700">·</span>
+    <span className="flex items-center gap-2">
+      <span className="text-emerald-400">🇧🇩</span>
+      Bangladesh-first pricing
+    </span>
+  </div>
+
+</section>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 5 — HOMEPAGE: Add links to "Who We Help" cards
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The "Who We Help" section has 7 cards but none link anywhere.
+Find each card and wrap it in an anchor tag OR add a link:
+
+Students     → /bd/store (shop)
+Job Seekers  → /bd/store (shop)  
+Freelancers  → /bd/store (shop)
+Agencies     → /bd/services
+Business     → /bd/services
+F-commerce   → /bd/services
+Researchers  → /bd/store (shop)
+
+Add to EACH card:
+className: "cursor-pointer hover:border-indigo-500 
+            hover:bg-[#13131A] transition-all group"
+
+Add at bottom of each card:
+<span className="text-indigo-400 text-sm mt-3 
+                 group-hover:underline">
+  Learn more →
+</span>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 6 — HOMEPAGE: Fix final CTA section buttons
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+At the bottom of the homepage there is a "Ready to start?" 
+section with "Shop AI Tools" and "💬 Get a Service" 
+as plain-looking links.
+
+Make both into proper buttons:
+
+<div className="flex flex-col sm:flex-row gap-4 
+     justify-center items-center mt-8">
+  <a 
+    href="/bd/store"
+    className="inline-flex items-center gap-2 
+               bg-white text-gray-900 font-bold 
+               px-8 py-4 rounded-xl text-lg 
+               hover:bg-slate-100 transition-colors"
+  >
+    🛒 Shop AI Tools
+  </a>
+  <a 
+    href="https://wa.me/8801711638693?text=Hi%20SYSmoAI%2C%20I%20want%20to%20know%20about%20your%20services"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="inline-flex items-center gap-2 
+               bg-emerald-600 hover:bg-emerald-500 
+               text-white font-bold px-8 py-4 
+               rounded-xl text-lg transition-colors"
+  >
+    💬 Get a Service
+  </a>
+</div>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 7 — STORE PAGE: Add empty state
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Open the store/products page.
+Find where products are rendered (map over products array).
+After "All products" heading, add an empty state 
+that shows when products.length === 0:
+
+<div className="flex flex-col items-center justify-center 
+     py-32 text-center">
+  <div className="w-24 h-24 bg-[#13131A] border 
+       border-[#1E1E2E] rounded-2xl flex items-center 
+       justify-center text-5xl mb-8">
+    🛒
+  </div>
+  <h3 className="text-2xl font-bold text-white mb-3">
+    Full Catalog Coming Soon
+  </h3>
+  <p className="text-slate-400 max-w-md mb-2 
+               leading-relaxed">
+    We are adding 50+ premium AI tools and bundles.
+  </p>
+  <p className="text-slate-500 text-sm mb-10">
+    Need a specific tool right now? We can help 
+    you get access today.
+  </p>
+  <a 
+    href="https://wa.me/8801711638693?text=Hi%20SYSmoAI%2C%20I%20need%20an%20AI%20tool"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="inline-flex items-center gap-2 
+               bg-emerald-600 hover:bg-emerald-500 
+               text-white font-semibold px-8 py-4 
+               rounded-xl text-lg transition-colors"
+  >
+    💬 Ask on WhatsApp
+  </a>
+</div>
+
+Also add a hero section ABOVE the product grid:
+
+<div className="py-12 px-4 text-center border-b 
+     border-[#1E1E2E]">
+  <h1 className="text-3xl md:text-4xl font-bold 
+                 text-white mb-3">
+    AI Tools for Bangladesh
+  </h1>
+  <p className="text-slate-400 text-lg max-w-xl mx-auto">
+    Premium AI subscriptions — curated, priced in BDT, 
+    delivered same day.
+  </p>
+</div>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 8 — ABOUT PAGE: Fix broken "E" avatar
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Open the about page:
+src/app/[countryCode]/(main)/about/page.tsx
+
+Find the founder section. There is an element that shows 
+a single unstyled letter "E" floating alone before 
+"Emon Hossain".
+
+This is a broken avatar component (likely an <Avatar> or 
+<img> element failing to load).
+
+Find that element and replace it with:
+
+<div className="flex items-center gap-5 mb-8">
+  <div className="w-16 h-16 rounded-2xl 
+       bg-gradient-to-br from-indigo-500 to-indigo-700 
+       flex items-center justify-center text-white 
+       text-2xl font-bold flex-shrink-0 shadow-lg 
+       shadow-indigo-500/30">
+    E
+  </div>
+  <div>
+    <h2 className="text-xl font-bold text-white">
+      Emon Hossain
+    </h2>
+    <p className="text-indigo-400 text-sm font-medium">
+      Founder & CEO, SYSmoAI Private Limited
+    </p>
+    <p className="text-slate-500 text-sm mt-0.5">
+      Dhaka, Bangladesh
+    </p>
+  </div>
+</div>
+
+Remove the previous standalone "E" element and the old 
+"## Emon Hossain" heading if they are still separate.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 9 — SERVICES PAGE: Fix "How It Works" layout
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The services page "How It Works" section shows all steps 
+on one line: "01 WhatsApp Us 02 Diagnose 03 Build..."
+
+Find that section and replace with a proper grid:
+
+<section className="py-16 px-4">
+  <h2 className="text-2xl font-bold text-white 
+                 text-center mb-12">
+    How It Works
+  </h2>
+  <div className="grid grid-cols-1 md:grid-cols-4 
+       gap-8 max-w-4xl mx-auto">
+    {[
+      { step: "01", title: "WhatsApp Us", 
+        desc: "Message us your business challenge or goal." },
+      { step: "02", title: "Diagnose", 
+        desc: "We map the right AI solution for your situation." },
+      { step: "03", title: "Build", 
+        desc: "Our team builds and tests your AI system." },
+      { step: "04", title: "Handover", 
+        desc: "Full documentation, training, and support." },
+    ].map((item) => (
+      <div key={item.step} 
+           className="flex flex-col items-center 
+                      text-center">
+        <div className="w-12 h-12 rounded-full 
+             bg-indigo-600/20 border border-indigo-600/40 
+             flex items-center justify-center 
+             text-indigo-400 font-bold text-lg mb-4">
+          {item.step}
+        </div>
+        <h3 className="text-white font-semibold 
+                       mb-2">{item.title}</h3>
+        <p className="text-slate-400 text-sm 
+                      leading-relaxed">{item.desc}</p>
+      </div>
+    ))}
+  </div>
+</section>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 10 — SERVICES PAGE: Add industry cards
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The services page has no industry navigation.
+Add this section AFTER the 3 service tier cards:
+
+<section className="py-16 px-4 border-t border-[#1E1E2E]">
+  <div className="max-w-5xl mx-auto text-center">
+    <h2 className="text-2xl font-bold text-white mb-3">
+      We Work With These Industries
+    </h2>
+    <p className="text-slate-400 mb-10">
+      Every industry page shows exactly what we build 
+      for that business type.
+    </p>
+    <div className="grid grid-cols-2 md:grid-cols-3 
+         gap-4">
+      {[
+        { icon: "📦", name: "F-commerce",  
+          sub: "Order & inventory systems" },
+        { icon: "🏢", name: "Digital Agencies",  
+          sub: "Client portals & SOPs" },
+        { icon: "🎓", name: "Coaching & Education",  
+          sub: "Enrollment & CRM" },
+        { icon: "🧾", name: "Accounting Firms",  
+          sub: "Client files & deadlines" },
+        { icon: "🏥", name: "Clinics",  
+          sub: "Appointments & follow-up" },
+        { icon: "🏭", name: "Trading & Distribution",  
+          sub: "Inventory & reporting" },
+      ].map((item) => (
+        <a 
+          key={item.name}
+          href="https://wa.me/8801711638693?text=Hi%20SYSmoAI%2C%20I%20want%20to%20know%20more%20about%20your%20services"
+          target="_blank"
+          className="flex flex-col items-center 
+                     text-center p-6 bg-[#13131A] 
+                     border border-[#1E1E2E] rounded-xl 
+                     hover:border-indigo-500/50 
+                     hover:bg-[#1a1a2e] transition-all 
+                     group cursor-pointer"
+        >
+          <span className="text-3xl mb-3">{item.icon}</span>
+          <p className="text-white font-semibold text-sm 
+                        mb-1">{item.name}</p>
+          <p className="text-slate-500 text-xs 
+                        leading-relaxed">{item.sub}</p>
+        </a>
+      ))}
+    </div>
+  </div>
+</section>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FIX 11 — GLOBAL: Final sweep for all wrong text
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Run these grep commands and fix every match found:
+
+# Wrong brand spacing
+grep -rn "SYS mo AI" . \
+  --include="*.tsx" --include="*.ts" \
+  --include="*.jsx" --include="*.js" \
+  --include="*.json" --include="*.env*" | \
+  grep -v node_modules | grep -v ".next"
+→ Replace ALL: "SYS mo AI" with "SYSmoAI"
+
+# Old wrong phone number  
+grep -rn "1865-385348\|1865385348\|8801865" . \
+  --include="*.tsx" --include="*.ts" \
+  --include="*.jsx" --include="*.js" | \
+  grep -v node_modules | grep -v ".next"
+→ Replace ALL with correct: 01711-638693 / 8801711638693
+
+# Wrong founded year
+grep -rn "Founded 2024\|founded.*2024" . \
+  --include="*.tsx" --include="*.jsx" | \
+  grep -v node_modules
+→ Replace: "2024" → "2026"
+
+# Dhaka, Bangladesh. (trailing period)
+grep -rn "Dhaka, Bangladesh\." . \
+  --include="*.tsx" --include="*.jsx" | \
+  grep -v node_modules
+→ Replace: "Dhaka, Bangladesh." → "Dhaka, Bangladesh"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FINAL BUILD & VERIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Run: npm run build
+   Must succeed. If errors, fix them and rebuild.
+
+2. Verify zero remaining issues:
+
+grep -rn "SYS mo AI" . \
+  --include="*.tsx" --include="*.ts" \
+  --include="*.jsx" --include="*.js" | \
+  grep -v node_modules
+→ Must return ZERO results
+
+grep -rn "1865-385348\|1865385348" . \
+  --include="*.tsx" --include="*.ts" \
+  --include="*.jsx" --include="*.js" | \
+  grep -v node_modules
+→ Must return ZERO results
+
+3. Report in this exact format:
+
+✅ FIX 1  — Navbar brand name:   [filename]
+✅ FIX 2  — Mobile menu:         [filename]
+✅ FIX 3A — Footer brand name:   [filename]
+✅ FIX 3B — Footer copyright:    [filename]
+✅ FIX 4  — Hero section:        [filename]
+✅ FIX 5  — Who We Help links:   [filename]
+✅ FIX 6  — Final CTA buttons:   [filename]
+✅ FIX 7  — Store empty state:   [filename]
+✅ FIX 8  — About avatar:        [filename]
+✅ FIX 9  — Services How Works:  [filename]
+✅ FIX 10 — Services industries: [filename]
+✅ FIX 11 — Global text sweep:   [files]
+✅ BUILD:  SUCCESS
+
+⚠️ Anything that could NOT be fixed: [reason]

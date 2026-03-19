@@ -11,7 +11,14 @@ export default async function Footer() {
 
           {/* Column 1 — Brand */}
           <div className="col-span-2 md:col-span-1 flex flex-col gap-4">
-            <img src="/images/logo.svg" alt="SYSmoAI" width="110" height="28" />
+            <div className="mb-2">
+              <a href="/" className="inline-block">
+                <img src="/images/logo.svg" alt="SYSmoAI" width="110" height="28" className="mb-2" />
+                <p className="text-slate-500 text-xs mt-1 uppercase tracking-widest font-medium">
+                  Private Limited
+                </p>
+              </a>
+            </div>
             <p className="text-sm text-white/50 leading-relaxed max-w-xs">
               AI Tools &amp; Systems for Bangladesh
             </p>
@@ -89,15 +96,20 @@ export default async function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-12 pt-6 border-t border-[#1E1E2E] flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-white/30" suppressHydrationWarning>
-            © {new Date().getFullYear()} SYSmoAI Private Limited
-          </p>
-          <div className="flex items-center gap-3 text-xs text-white/40">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3 pt-8 mt-8 border-t border-[#1E1E2E]">
+          <div className="flex items-center gap-3 text-xs text-white/40 order-2 md:order-1">
             <span className="px-2 py-1 border border-white/10 rounded text-[10px]">bKash</span>
             <span className="px-2 py-1 border border-white/10 rounded text-[10px]">Nagad</span>
             <span className="px-2 py-1 border border-white/10 rounded text-[10px]">Rocket</span>
             <span className="px-2 py-1 border border-white/10 rounded text-[10px]">Bank Transfer</span>
+          </div>
+          <div className="flex flex-col md:flex-row items-center gap-4 order-1 md:order-2">
+            <p className="text-slate-500 text-sm">
+              © 2026 SYSmoAI Private Limited. All rights reserved.
+            </p>
+            <p className="text-slate-600 text-sm">
+              Made in Bangladesh 🇧🇩
+            </p>
           </div>
         </div>
       </div>

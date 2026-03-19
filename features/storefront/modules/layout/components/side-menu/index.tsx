@@ -53,48 +53,47 @@ const SideMenu = ({ regions }: { regions: StoreRegion[] | null }) => {
               </SheetDescription>
             </SheetHeader>
 
-            <div className="flex flex-col justify-between flex-1 py-8 overflow-y-auto">
-              <ul className="flex flex-col gap-2">
-                {NAV_ITEMS.map(({ label, href }) => (
-                  <li key={href}>
-                    <LocalizedClientLink
-                      href={href}
-                      className="flex items-center text-xl font-medium text-white/80 hover:text-[#6366F1] py-3 border-b border-white/5 transition-colors cursor-pointer"
-                      data-testid={`${label.toLowerCase()}-link`}
-                      onClick={() => setOpen(false)}
-                    >
-                      {label}
-                    </LocalizedClientLink>
-                  </li>
+            <nav className="flex flex-col flex-1 justify-between">
+              <div className="flex flex-col">
+                {[
+                  { label: "Home", href: "/" },
+                  { label: "Shop", href: "/store" },
+                  { label: "Services", href: "/services" },
+                  { label: "About", href: "/about" },
+                  { label: "Contact", href: "/contact" },
+                ].map((item) => (
+                  <LocalizedClientLink
+                    key={item.href}
+                    href={item.href}
+                    className="flex items-center px-6 py-4 text-white text-base font-medium border-b border-[#1E1E2E] hover:bg-[#13131A] hover:text-indigo-400 transition-colors"
+                    onClick={() => setOpen(false)}
+                  >
+                    {item.label}
+                  </LocalizedClientLink>
                 ))}
-                <li>
+              </div>
+              <div className="flex flex-col gap-y-4 pt-6 border-t border-[#1E1E2E]">
+                {regions && (
+                  <div className="px-6">
+                    <CountrySelect regions={regions} />
+                  </div>
+                )}
+                <div className="p-5">
                   <a
                     href={WA.general}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-xl font-medium text-[#25D366] py-3 border-b border-white/5 hover:opacity-80 transition-opacity"
+                    className="flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-6 rounded-xl transition-colors text-base"
                     onClick={() => setOpen(false)}
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
-                      <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.523 5.851L0 24l6.335-1.498A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.006-1.373l-.36-.213-3.732.882.936-3.618-.235-.372A9.818 9.818 0 1112 21.818z" />
-                    </svg>
-                    WhatsApp
+                    💬 WhatsApp Us
                   </a>
-                </li>
-              </ul>
-
-              <div className="flex flex-col gap-y-4 mt-auto pt-6">
-                {regions && (
-                  <div className="flex justify-between">
-                    <CountrySelect regions={regions} />
-                  </div>
-                )}
-                <p className="text-xs text-white/30" suppressHydrationWarning>
+                </div>
+                <p className="text-xs text-white/30 px-6" suppressHydrationWarning>
                   © {new Date().getFullYear()} SYSmoAI Private Limited. All rights reserved.
                 </p>
               </div>
-            </div>
+            </nav>
           </SheetContent>
         </Sheet>
       </div>
