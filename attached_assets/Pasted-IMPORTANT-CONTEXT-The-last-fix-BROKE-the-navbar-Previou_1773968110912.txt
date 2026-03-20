@@ -1,0 +1,725 @@
+IMPORTANT CONTEXT:
+The last fix BROKE the navbar. Previously it showed navigation 
+links (Home, Shop, Services, About, Contact). Now the navbar 
+shows only empty bullet points — all link text is gone.
+Fix this FIRST before anything else.
+
+Files already known:
+- Navbar: features/storefront/modules/layout/templates/nav/index.tsx
+- Footer: features/storefront/modules/layout/templates/footer/index.tsx
+- Side menu: features/storefront/modules/layout/components/side-menu/index.tsx
+- Homepage: features/storefront/screens/HomePage.tsx
+- About: find with → grep -rn "Emon Hossain" . --include="*.tsx" -l
+- Services: find with → grep -rn "Quick Win" . --include="*.tsx" -l
+- Store: find with → grep -rn "All products" . --include="*.tsx" -l
+
+Work through ALL sections in order without stopping.
+Run npm run build at the very end.
+Report every file changed.
+
+══════════════════════════════════════════════
+FIX R1 — CRITICAL REGRESSION: Rebuild navbar completely
+══════════════════════════════════════════════
+
+Open: features/storefront/modules/layout/templates/nav/index.tsx
+
+Read the full file. The previous fix added a brand name but 
+broke all the nav link text — they now render as empty bullets.
+
+REWRITE the entire navbar component with this 
+self-contained version. Do NOT rely on any external 
+nav data arrays or nav item components for the links.
+Use hardcoded links:
+
+"use client"
+import { useState } from "react"
+
+export default function Nav() {
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  return (
+    <>
+      <header className="fixed top-0 left-0 right-0 z-40 
+           bg-[#0A0A0F]/90 backdrop-blur-md 
+           border-b border-[#1E1E2E]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 
+             lg:px-8">
+          <div className="flex items-center justify-between 
+               h-16">
+
+            {/* Brand */}
+            <a href="/bd" 
+               className="flex items-center flex-shrink-0 
+                          group">
+              <span className="text-xl font-bold 
+                               tracking-tight text-white 
+                               group-hover:text-indigo-300 
+                               transition-colors">
+                SYSmo
+                <span className="text-indigo-400">AI</span>
+              </span>
+            </a>
+
+            {/* Desktop Nav */}
+            <nav className="hidden md:flex items-center 
+                 gap-1">
+              {[
+                { label: "Home",     href: "/bd" },
+                { label: "Shop",     href: "/bd/store" },
+                { label: "Services", href: "/bd/services" },
+                { label: "About",    href: "/bd/about" },
+                { label: "Contact",  href: "/bd/contact" },
+              ].map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className="px-4 py-2 text-slate-300 
+                             hover:text-white text-sm 
+                             font-medium rounded-lg 
+                             hover:bg-white/5 
+                             transition-colors"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+
+            {/* Desktop Right: WhatsApp + Account + Cart */}
+            <div className="hidden md:flex items-center 
+                 gap-3">
+              <a
+                href="https://wa.me/8801711638693?text=Hi%20SYSmoAI"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 
+                           bg-emerald-600 hover:bg-emerald-500 
+                           text-white text-sm font-semibold 
+                           px-4 py-2 rounded-lg 
+                           transition-colors"
+              >
+                💬 WhatsApp
+              </a>
+              <a href="/account"
+                 className="text-slate-400 hover:text-white 
+                            text-sm transition-colors">
+                Account
+              </a>
+              <a href="/cart"
+                 className="text-slate-400 hover:text-white 
+                            text-sm transition-colors">
+                Cart
+              </a>
+            </div>
+
+            {/* Mobile: WhatsApp + Hamburger */}
+            <div className="flex md:hidden items-center gap-2">
+              <a
+                href="https://wa.me/8801711638693?text=Hi%20SYSmoAI"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 
+                           bg-emerald-600 hover:bg-emerald-500 
+                           text-white text-xs font-semibold 
+                           px-3 py-2 rounded-lg transition-colors"
+              >
+                💬
+              </a>
+              <button
+                onClick={() => setMobileOpen(true)}
+                className="p-2 text-slate-400 
+                           hover:text-white transition-colors"
+                aria-label="Open menu"
+              >
+                <svg width="20" height="20" fill="none" 
+                     viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" 
+                        strokeLinejoin="round" strokeWidth={2} 
+                        d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </header>
+
+      {/* Spacer for fixed header */}
+      <div className="h-16" />
+
+      {/* Mobile Drawer */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50">
+          <div
+            className="absolute inset-0 bg-black/60 
+                       backdrop-blur-sm"
+            onClick={() => setMobileOpen(false)}
+          />
+          <div className="absolute top-0 left-0 h-full 
+               w-[280px] bg-[#0A0A0F] border-r 
+               border-[#1E1E2E] flex flex-col 
+               shadow-2xl">
+
+            {/* Drawer Header */}
+            <div className="flex items-center 
+                 justify-between px-6 py-4 
+                 border-b border-[#1E1E2E]">
+              <a href="/bd">
+                <span className="text-lg font-bold text-white">
+                  SYSmo
+                  <span className="text-indigo-400">AI</span>
+                </span>
+              </a>
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="text-slate-400 hover:text-white 
+                           p-1 text-xl transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Drawer Links */}
+            <nav className="flex flex-col flex-1 py-2 
+                 overflow-y-auto">
+              {[
+                { label: "Home",     href: "/bd" },
+                { label: "Shop",     href: "/bd/store" },
+                { label: "Services", href: "/bd/services" },
+                { label: "About",    href: "/bd/about" },
+                { label: "Contact",  href: "/bd/contact" },
+              ].map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center px-6 py-4 
+                             text-white text-base font-medium 
+                             border-b border-[#1E1E2E] 
+                             hover:bg-[#13131A] 
+                             hover:text-indigo-400 
+                             transition-colors"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+
+            {/* Drawer Footer */}
+            <div className="p-5 border-t border-[#1E1E2E]">
+              <a
+                href="https://wa.me/8801711638693?text=Hi%20SYSmoAI"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center 
+                           gap-2 w-full bg-emerald-600 
+                           hover:bg-emerald-500 text-white 
+                           font-bold py-3.5 rounded-xl 
+                           transition-colors"
+              >
+                💬 WhatsApp Us
+              </a>
+            </div>
+
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+After rewriting: verify the file saves without TypeScript errors.
+
+══════════════════════════════════════════════
+FIX R2 — FOOTER: Fix brand name spacing + remove 
+         duplicate bottom bar
+══════════════════════════════════════════════
+
+Open: features/storefront/modules/layout/templates/footer/index.tsx
+
+PROBLEM 1: Footer shows "SYSmo AI" with a wrong space.
+Find the brand name text in column 1.
+Fix it so it reads:
+  SYSmo + AI (with indigo color on AI, NO space between them)
+
+The correct JSX:
+<span className="text-2xl font-bold text-white 
+                 tracking-tight">
+  SYSmo
+  <span className="text-indigo-400">AI</span>
+</span>
+
+Make sure there is NO space character between 
+"SYSmo" and the <span> tag.
+
+PROBLEM 2: Footer has TWO bottom bars.
+Both "Made in Bangladesh 🇧🇩" and "Powered By SYS mo AI" 
+exist at the same time.
+
+Find ALL elements containing:
+  - "Powered By"
+  - "SYS mo AI" or "SYSmo AI"
+  - "Made in Bangladesh"
+
+DELETE all of them.
+
+Add ONE clean bottom bar at the very end of footer:
+
+<div className="border-t border-[#1E1E2E] mt-10 pt-8 
+     flex flex-col sm:flex-row items-center 
+     justify-between gap-3">
+  <p className="text-slate-500 text-sm">
+    © 2026 SYSmoAI Private Limited. 
+    All rights reserved.
+  </p>
+  <p className="text-slate-600 text-sm">
+    Made in Bangladesh 🇧🇩
+  </p>
+</div>
+
+══════════════════════════════════════════════
+FIX A4 — HOMEPAGE: Fix "Browse AI Tools" button
+══════════════════════════════════════════════
+
+Open: features/storefront/screens/HomePage.tsx
+
+In the hero section, find "Browse AI Tools →".
+It renders as a plain text link.
+
+Replace with:
+<a
+  href="/bd/store"
+  className="inline-flex items-center gap-2 
+             bg-indigo-600 hover:bg-indigo-500 
+             text-white font-semibold px-8 py-4 
+             rounded-xl text-lg transition-all 
+             shadow-lg shadow-indigo-500/25 
+             hover:shadow-indigo-500/40 
+             hover:-translate-y-0.5"
+>
+  Browse AI Tools →
+</a>
+
+Make sure both hero buttons sit in a flex wrapper:
+<div className="flex flex-col sm:flex-row gap-4 
+     justify-center items-center">
+  [Browse AI Tools button here]
+  [Talk to an Expert button here]
+</div>
+
+══════════════════════════════════════════════
+FIX A5 — STORE PAGE: Add hero + empty state
+══════════════════════════════════════════════
+
+Run: grep -rn "All products" . --include="*.tsx" -l | \
+     grep -v node_modules
+Open that file.
+
+ADD a store hero section at the top of the page 
+(before the sort/filter bar):
+
+<div className="py-16 px-4 text-center border-b 
+     border-[#1E1E2E] bg-gradient-to-b 
+     from-[#0d0d1a] to-[#0A0A0F]">
+  <div className="inline-flex items-center gap-2 
+       bg-indigo-950/80 border border-indigo-800/50 
+       text-indigo-300 text-xs font-medium 
+       px-3 py-1.5 rounded-full mb-5">
+    🛒 AI Tools for Bangladesh
+  </div>
+  <h1 className="text-3xl md:text-4xl font-bold 
+                 text-white mb-4">
+    Browse AI Tools
+  </h1>
+  <p className="text-slate-400 text-lg max-w-xl 
+               mx-auto">
+    Premium AI subscriptions — priced in BDT, 
+    paid via bKash or Nagad, delivered same day.
+  </p>
+</div>
+
+ALSO find where products are rendered in a grid/list.
+When no products exist, show this empty state:
+
+<div className="col-span-full flex flex-col items-center 
+     justify-center py-32 text-center px-4">
+  <div className="w-24 h-24 bg-[#13131A] border 
+       border-[#1E1E2E] rounded-2xl flex items-center 
+       justify-center text-5xl mb-8">
+    🤖
+  </div>
+  <h3 className="text-2xl font-bold text-white mb-3">
+    Full Catalog Coming Soon
+  </h3>
+  <p className="text-slate-400 max-w-md mb-2 
+               leading-relaxed">
+    We are loading ChatGPT Plus, Claude AI, Grammarly Pro, 
+    Midjourney, Notion AI and 50+ more tools.
+  </p>
+  <p className="text-slate-500 text-sm mb-10">
+    Need a tool right now? Message us — 
+    we will get you access today.
+  </p>
+  <a
+    href="https://wa.me/8801711638693?text=Hi%20SYSmoAI%2C%20I%20need%20an%20AI%20tool"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="inline-flex items-center gap-2 
+               bg-emerald-600 hover:bg-emerald-500 
+               text-white font-semibold px-8 py-4 
+               rounded-xl text-lg transition-colors"
+  >
+    💬 Ask on WhatsApp
+  </a>
+</div>
+
+══════════════════════════════════════════════
+FIX A6 — ABOUT PAGE: Fix broken "E" avatar
+══════════════════════════════════════════════
+
+Run: grep -rn "Emon Hossain" . --include="*.tsx" -l | \
+     grep -v node_modules
+Open that file.
+
+Find the element that shows the lone letter "E" 
+before the founder name. It is a broken avatar.
+
+Replace the ENTIRE founder block 
+(the E element + the h2/heading for Emon Hossain) 
+with this single unified block:
+
+<div className="flex items-center gap-5 mb-10 p-6 
+     bg-[#13131A] border border-[#1E1E2E] 
+     rounded-2xl">
+  <div className="w-16 h-16 rounded-2xl flex-shrink-0
+       bg-gradient-to-br from-indigo-500 to-indigo-700 
+       flex items-center justify-center text-white 
+       text-2xl font-bold 
+       shadow-lg shadow-indigo-500/30">
+    E
+  </div>
+  <div>
+    <h2 className="text-xl font-bold text-white mb-0.5">
+      Emon Hossain
+    </h2>
+    <p className="text-indigo-400 text-sm font-medium">
+      Founder & CEO
+    </p>
+    <p className="text-slate-500 text-sm">
+      SYSmoAI Private Limited · Dhaka, Bangladesh
+    </p>
+  </div>
+</div>
+
+Remove any remaining separate "E" character or 
+"## Emon Hossain" heading that still exists after 
+adding the above block.
+
+══════════════════════════════════════════════
+FIX A7 — SERVICES: Fix "How It Works" layout
+══════════════════════════════════════════════
+
+Run: grep -rn "Quick Win" . --include="*.tsx" -l | \
+     grep -v node_modules
+Open the services page file.
+
+Find the "How It Works" section. It currently 
+shows all steps on one line.
+
+Replace the ENTIRE "How It Works" section with:
+
+<section className="py-20 px-4 border-t border-[#1E1E2E]">
+  <div className="max-w-5xl mx-auto">
+    <h2 className="text-3xl font-bold text-white 
+                   text-center mb-4">
+      How It Works
+    </h2>
+    <p className="text-slate-400 text-center mb-16 
+                  max-w-xl mx-auto">
+      From first message to working AI system 
+      in 14 days or less.
+    </p>
+    <div className="grid grid-cols-1 sm:grid-cols-2 
+         md:grid-cols-4 gap-8">
+      {[
+        { step:"01", icon:"💬", title:"WhatsApp Us",
+          desc:"Tell us your problem. We respond in 2 hours." },
+        { step:"02", icon:"🔍", title:"Free Diagnosis",
+          desc:"We map the exact solution for your situation." },
+        { step:"03", icon:"🏗️", title:"We Build It",
+          desc:"Full system built and tested by our team." },
+        { step:"04", icon:"✅", title:"Handover",
+          desc:"Docs, training, and 30 days of support." },
+      ].map((item) => (
+        <div key={item.step} 
+             className="flex flex-col items-center 
+                        text-center">
+          <div className="w-14 h-14 rounded-2xl 
+               bg-indigo-600/15 border border-indigo-600/30 
+               flex items-center justify-center 
+               text-2xl mb-5">
+            {item.icon}
+          </div>
+          <span className="text-indigo-400 text-xs 
+                           font-bold tracking-widest 
+                           uppercase mb-2">
+            Step {item.step}
+          </span>
+          <h3 className="text-white font-bold text-lg 
+                         mb-2">{item.title}</h3>
+          <p className="text-slate-400 text-sm 
+                        leading-relaxed">{item.desc}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+══════════════════════════════════════════════
+FIX A8 — SERVICES: Add industry cards section
+══════════════════════════════════════════════
+
+In the same services page file, add this NEW section 
+BETWEEN the 3 service tier cards and the How It Works 
+section you just fixed above:
+
+<section className="py-20 px-4 border-t border-[#1E1E2E]">
+  <div className="max-w-5xl mx-auto text-center">
+    <h2 className="text-3xl font-bold text-white mb-4">
+      Industries We Serve
+    </h2>
+    <p className="text-slate-400 mb-12 max-w-xl mx-auto">
+      We have built AI systems for these specific 
+      industries in Bangladesh.
+    </p>
+    <div className="grid grid-cols-2 md:grid-cols-3 
+         gap-4 text-left">
+      {[
+        { icon:"📦", name:"F-commerce",
+          pain:"Orders lost in Messenger daily",
+          msg:"I+have+an+F-commerce+business" },
+        { icon:"🏢", name:"Digital Agencies",
+          pain:"Delivering manually, margins shrinking",
+          msg:"I+run+a+digital+agency" },
+        { icon:"🎓", name:"Coaching & Education",
+          pain:"Leads not followed up, losing students",
+          msg:"I+run+a+coaching+business" },
+        { icon:"🧾", name:"Accounting Firms",
+          pain:"Deadlines missed, client files scattered",
+          msg:"I+run+an+accounting+firm" },
+        { icon:"🏥", name:"Clinics",
+          pain:"Patients not followed up, revenue leaking",
+          msg:"I+run+a+clinic" },
+        { icon:"🏭", name:"Trading & Distribution",
+          pain:"Stock in Excel, reporting takes 3 days",
+          msg:"I+run+a+trading+business" },
+      ].map((item) => (
+        <a
+          key={item.name}
+          href={`https://wa.me/8801711638693?text=Hi+SYSmoAI,+${item.msg}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex flex-col p-6 bg-[#13131A] 
+                     border border-[#1E1E2E] rounded-2xl 
+                     hover:border-indigo-500/50 
+                     hover:bg-[#0d0d1a] transition-all 
+                     group"
+        >
+          <span className="text-3xl mb-4">{item.icon}</span>
+          <h3 className="text-white font-bold mb-2 
+                         group-hover:text-indigo-300 
+                         transition-colors">
+            {item.name}
+          </h3>
+          <p className="text-slate-500 text-sm 
+                        leading-relaxed flex-1">
+            {item.pain}
+          </p>
+          <span className="text-indigo-400 text-sm mt-4 
+                           font-medium 
+                           group-hover:underline">
+            Get this fixed →
+          </span>
+        </a>
+      ))}
+    </div>
+  </div>
+</section>
+
+══════════════════════════════════════════════
+FIX B1 — SEO: Add metadata to all pages
+══════════════════════════════════════════════
+
+Find the root layout file:
+grep -rn "RootLayout\|metadata" src/app/layout.tsx 2>/dev/null
+or: find src/app -name "layout.tsx" | head -5
+
+In the root layout, add/replace the metadata export:
+
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  metadataBase: new URL("https://sysmoai.com"),
+  title: {
+    default: "SYSmoAI — AI Tools & Systems for Bangladesh",
+    template: "%s | SYSmoAI",
+  },
+  description: "Premium AI tool subscriptions and AI systems for Bangladesh. ChatGPT Plus, Claude AI, Grammarly Pro — pay with bKash, Nagad or Rocket. AI implementation services for agencies, F-commerce and businesses.",
+  keywords: ["AI tools Bangladesh","ChatGPT Bangladesh","bKash AI payment","SYSmoAI","AI services Dhaka","Claude AI Bangladesh","Grammarly Bangladesh"],
+  openGraph: {
+    type: "website",
+    locale: "en_BD",
+    url: "https://sysmoai.com",
+    siteName: "SYSmoAI",
+    title: "SYSmoAI — AI Tools & Systems for Bangladesh",
+    description: "AI subscriptions and AI implementation services for Bangladesh. Pay with bKash, Nagad, Rocket.",
+  },
+  robots: { index: true, follow: true },
+}
+
+Also add page-specific metadata exports to each page:
+
+Homepage page file → export const metadata = {
+  title: "SYSmoAI — AI Platform for Bangladesh",
+  description: "Premium AI subscriptions and AI systems for Bangladesh businesses, students, freelancers. Pay with bKash or Nagad.",
+}
+
+Services page file → export const metadata = {
+  title: "AI Implementation Services",
+  description: "We build AI operating systems for Bangladesh businesses. Quick Win ৳7,500 · Sprint ৳35,000 · Retainer ৳20,000/month.",
+}
+
+About page file → export const metadata = {
+  title: "About SYSmoAI",  
+  description: "SYSmoAI is Bangladesh's AI platform, founded by Emon Hossain in Dhaka. AI tools and AI systems for every Bangladesh business.",
+}
+
+Contact page file → export const metadata = {
+  title: "Contact SYSmoAI",
+  description: "Contact SYSmoAI on WhatsApp: +880 1711-638693. We respond within 2 hours.",
+}
+
+Store page file → export const metadata = {
+  title: "Shop AI Tools",
+  description: "Browse AI tool subscriptions — ChatGPT Plus, Claude AI, Grammarly Pro, Midjourney. Priced in BDT, pay with bKash.",
+}
+
+══════════════════════════════════════════════
+FIX B2 — Create sitemap + robots files
+══════════════════════════════════════════════
+
+Create file: src/app/sitemap.ts
+
+import { MetadataRoute } from "next"
+export default function sitemap(): MetadataRoute.Sitemap {
+  const base = "https://sysmoai.com"
+  const d = new Date("2026-03-18")
+  return [
+    { url: base,                  lastModified: d, priority: 1.0, changeFrequency: "weekly" },
+    { url: `${base}/bd/store`,    lastModified: d, priority: 0.9, changeFrequency: "daily" },
+    { url: `${base}/bd/services`, lastModified: d, priority: 0.9, changeFrequency: "weekly" },
+    { url: `${base}/bd/about`,    lastModified: d, priority: 0.7, changeFrequency: "monthly" },
+    { url: `${base}/bd/contact`,  lastModified: d, priority: 0.8, changeFrequency: "monthly" },
+    { url: `${base}/privacy`,     lastModified: d, priority: 0.3, changeFrequency: "yearly" },
+    { url: `${base}/terms`,       lastModified: d, priority: 0.3, changeFrequency: "yearly" },
+    { url: `${base}/refund`,      lastModified: d, priority: 0.3, changeFrequency: "yearly" },
+  ]
+}
+
+Create file: src/app/robots.ts
+
+import { MetadataRoute } from "next"
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: { userAgent: "*", allow: "/", disallow: ["/dashboard/", "/api/"] },
+    sitemap: "https://sysmoai.com/sitemap.xml",
+  }
+}
+
+══════════════════════════════════════════════
+FIX B3 — Create proper 404 page
+══════════════════════════════════════════════
+
+Create file: src/app/not-found.tsx
+
+export default function NotFound() {
+  return (
+    <div className="min-h-screen bg-[#0A0A0F] flex 
+         flex-col items-center justify-center 
+         text-center px-4">
+      <div className="text-8xl font-black text-transparent 
+           bg-clip-text bg-gradient-to-r 
+           from-indigo-400 to-slate-600 mb-6">
+        404
+      </div>
+      <h1 className="text-2xl font-bold text-white mb-3">
+        Page Not Found
+      </h1>
+      <p className="text-slate-400 max-w-md mb-10 
+                    leading-relaxed">
+        This page does not exist or has moved. 
+        Try the links below or message us on WhatsApp.
+      </p>
+      <div className="flex flex-col sm:flex-row gap-4 mb-10">
+        <a href="/bd"
+           className="inline-flex items-center gap-2 
+                      bg-indigo-600 hover:bg-indigo-500 
+                      text-white font-semibold px-6 py-3 
+                      rounded-xl transition-colors">
+          ← Go Home
+        </a>
+        <a href="/bd/store"
+           className="inline-flex items-center gap-2 
+                      bg-[#13131A] border border-[#1E1E2E] 
+                      hover:border-indigo-500/50 
+                      text-white font-semibold px-6 py-3 
+                      rounded-xl transition-colors">
+          Browse Shop
+        </a>
+        <a href="https://wa.me/8801711638693"
+           target="_blank" rel="noopener noreferrer"
+           className="inline-flex items-center gap-2 
+                      bg-emerald-600 hover:bg-emerald-500 
+                      text-white font-semibold px-6 py-3 
+                      rounded-xl transition-colors">
+          💬 WhatsApp Us
+        </a>
+      </div>
+      <p className="text-slate-700 text-sm">
+        © 2026 SYSmoAI Private Limited
+      </p>
+    </div>
+  )
+}
+
+══════════════════════════════════════════════
+FINAL VERIFICATION
+══════════════════════════════════════════════
+
+1. Run: npm run build — must succeed with zero errors.
+
+2. Run these checks — all must return ZERO results:
+
+grep -rn "SYS mo AI\|SYSmo AI\|Powered By" . \
+  --include="*.tsx" --include="*.ts" | \
+  grep -v node_modules | grep -v ".next"
+
+3. Report in this exact format:
+
+REGRESSIONS FIXED:
+✅ R1 Navbar rebuilt:           nav/index.tsx
+✅ R2 Footer spacing + bar:     footer/index.tsx
+
+REMAINING BUGS FIXED:
+✅ A4 Hero button:              HomePage.tsx
+✅ A5 Store hero + empty state: [filename]
+✅ A6 About avatar:             [filename]
+✅ A7 Services How Works:       [filename]
+✅ A8 Services industries:      [filename]
+
+NEW FEATURES:
+✅ B1 SEO metadata:             [files changed]
+✅ B2 Sitemap + robots:         sitemap.ts, robots.ts
+✅ B3 404 page:                 not-found.tsx
+
+BUILD: ✅ SUCCESS
+❌ Could not complete: [anything with reason]

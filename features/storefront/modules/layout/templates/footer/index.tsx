@@ -100,21 +100,13 @@ export default async function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-3 pt-8 mt-8 border-t border-[#1E1E2E]">
-          <div className="flex items-center gap-3 text-xs text-white/40 order-2 md:order-1">
-            <span className="px-2 py-1 border border-white/10 rounded text-[10px]">bKash</span>
-            <span className="px-2 py-1 border border-white/10 rounded text-[10px]">Nagad</span>
-            <span className="px-2 py-1 border border-white/10 rounded text-[10px]">Rocket</span>
-            <span className="px-2 py-1 border border-white/10 rounded text-[10px]">Bank Transfer</span>
-          </div>
-          <div className="flex flex-col md:flex-row items-center gap-4 order-1 md:order-2">
-            <p className="text-slate-500 text-sm">
-              © 2026 SYSmoAI Private Limited. All rights reserved.
-            </p>
-            <p className="text-slate-600 text-sm">
-              Made in Bangladesh 🇧🇩
-            </p>
-          </div>
+        <div className="border-t border-[#1E1E2E] mt-10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-slate-500 text-sm">
+            © 2026 SYSmoAI Private Limited. All rights reserved.
+          </p>
+          <p className="text-slate-600 text-sm">
+            Made in Bangladesh 🇧🇩
+          </p>
         </div>
       </div>
     </footer>
