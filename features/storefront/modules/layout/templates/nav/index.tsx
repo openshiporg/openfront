@@ -23,14 +23,19 @@ export default async function Nav() {
       <header className="h-16 border-b bg-[#0A0A0F] border-[#1E1E2E]">
         <nav className="max-w-[1440px] mx-auto px-6 flex items-center justify-between w-full h-full gap-6">
 
-          {/* Left: Logo */}
-          <LocalizedClientLink
-            href="/"
-            className="flex-shrink-0 hover:opacity-80 transition-opacity"
-            data-testid="nav-store-link"
-          >
-            <img src="/images/logo.svg" alt="SYSmoAI" width="120" height="32" />
-          </LocalizedClientLink>
+          {/* Left: Logo + Brand Name */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <LocalizedClientLink
+              href="/"
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity group"
+              data-testid="nav-store-link"
+            >
+              <img src="/images/logo.svg" alt="SYSmoAI" width="120" height="32" />
+              <span className="text-lg font-bold tracking-tight text-white group-hover:text-indigo-300 transition-colors hidden sm:block">
+                SYSmo<span className="text-indigo-400">AI</span>
+              </span>
+            </LocalizedClientLink>
+          </div>
 
           {/* Center: Desktop nav links */}
           <div className="hidden lg:flex items-center gap-8 flex-1 justify-center">

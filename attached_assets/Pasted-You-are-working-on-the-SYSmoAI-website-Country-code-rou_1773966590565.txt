@@ -1,0 +1,220 @@
+You are working on the SYSmoAI website.
+Country code route: /bd
+Key files already known:
+- Navbar: features/storefront/modules/layout/templates/nav/index.tsx
+- Footer: features/storefront/modules/layout/templates/footer/index.tsx
+- Homepage: features/storefront/screens/HomePage.tsx
+- Side menu: features/storefront/modules/layout/components/side-menu/index.tsx
+- About: src/app/[countryCode]/(main)/about/page.tsx (or similar)
+- Services: src/app/[countryCode]/(main)/services/page.tsx (or similar)
+- Store: features/storefront/screens/StorePage.tsx (or similar)
+
+Work through ALL sections in order.
+Do NOT stop between sections.
+Report every file changed.
+Run npm run build at the end.
+
+═══════════════════════════════════════════
+PART A — FIX REMAINING BUGS (8 issues)
+═══════════════════════════════════════════
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+A1 — NAVBAR: Add brand name (CRITICAL)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Open: features/storefront/modules/layout/templates/nav/index.tsx
+
+The navbar currently shows only navigation links with 
+NO company name or logo visible.
+The Replit agent previously said "Already has logo ✓" 
+— this is WRONG. The live site shows no brand name.
+
+Read the file. Find the outermost nav container.
+Find where the nav links begin.
+
+BEFORE the first nav link, on the LEFT side, add:
+
+<a
+  href="/bd"
+  className="flex items-center flex-shrink-0 mr-8 
+             group"
+>
+  <span className="text-xl font-bold tracking-tight 
+                   text-white 
+                   group-hover:text-indigo-300 
+                   transition-colors">
+    SYSmo
+    <span className="text-indigo-400">AI</span>
+  </span>
+</a>
+
+Also check if a logo image exists:
+find ./public -type f | grep -iE "logo|sysmo"
+
+If a logo file EXISTS → use:
+<a href="/bd" className="flex items-center mr-8">
+  <img src="/[FILENAME]" alt="SYSmoAI" 
+       className="h-8 w-auto" />
+</a>
+
+Verify: the brand name/logo is the LEFTMOST element 
+in the desktop navbar.
+Also add it to the mobile nav top bar 
+(the bar visible before hamburger opens).
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+A2 — MOBILE MENU: Fix broken menu (CRITICAL)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Open: features/storefront/modules/layout/components/
+      side-menu/index.tsx
+
+The mobile menu still shows empty bullet points.
+Previous fix attempt did not work.
+
+Read the file completely. Find what is rendering 
+the empty list items. Common causes:
+- Component rendering without text
+- Data array with missing label field
+- CSS hiding the text
+
+REPLACE the entire content of the mobile dropdown 
+with this self-contained working version.
+Do NOT use any external components or data arrays.
+Use only plain HTML/JSX:
+
+export default function SideMenu({ 
+  isOpen, 
+  onClose 
+}: { 
+  isOpen: boolean
+  onClose: () => void 
+}) {
+  if (!isOpen) return null
+  
+  return (
+    <div className="fixed inset-0 z-50">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/60 
+                   backdrop-blur-sm"
+        onClick={onClose}
+      />
+      {/* Drawer */}
+      <div className="absolute top-0 left-0 h-full 
+           w-[280px] bg-[#0A0A0F] border-r 
+           border-[#1E1E2E] flex flex-col">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between 
+             px-6 py-4 border-b border-[#1E1E2E]">
+          <a href="/bd" className="flex items-center">
+            <span className="text-lg font-bold 
+                             text-white">
+              SYSmo
+              <span className="text-indigo-400">AI</span>
+            </span>
+          </a>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-white 
+                       p-1 transition-colors"
+            aria-label="Close menu"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Nav Links */}
+        <nav className="flex flex-col flex-1 py-2">
+          {[
+            { label: "Home",     href: "/bd" },
+            { label: "Shop",     href: "/bd/store" },
+            { label: "Services", href: "/bd/services" },
+            { label: "About",    href: "/bd/about" },
+            { label: "Contact",  href: "/bd/contact" },
+          ].map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              onClick={onClose}
+              className="flex items-center px-6 py-4 
+                         text-white text-base font-medium 
+                         border-b border-[#1E1E2E] 
+                         hover:bg-[#13131A] 
+                         hover:text-indigo-400 
+                         transition-colors"
+            >
+              {item.label}
+            </a>
+          ))}
+        </nav>
+
+        {/* WhatsApp CTA */}
+        <div className="p-5 border-t border-[#1E1E2E]">
+          <a
+            href="https://wa.me/8801711638693?text=Hi%20SYSmoAI"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center 
+                       gap-2 w-full bg-emerald-600 
+                       hover:bg-emerald-500 text-white 
+                       font-bold py-3.5 rounded-xl 
+                       transition-colors text-base"
+          >
+            💬 WhatsApp Us
+          </a>
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
+If the component has a different interface/props, 
+adapt the props but keep all the internal content 
+exactly as written above.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+A3 — FOOTER: Fix duplicate bottom bar + brand name
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Open: features/storefront/modules/layout/templates/
+      footer/index.tsx
+
+PROBLEM 1 — Column 1 shows "Private Limited" floating alone.
+"SYSmoAI" was never added before it.
+
+Find the text "Private Limited" in the footer.
+It is likely inside a <p> or <span> tag.
+ADD immediately BEFORE that element:
+
+<a href="/bd" className="inline-block mb-1">
+  <span className="text-2xl font-bold text-white 
+                   tracking-tight">
+    SYSmo
+    <span className="text-indigo-400">AI</span>
+  </span>
+</a>
+
+So the column 1 top reads:
+SYSmoAI        ← new (you are adding this)
+Private Limited ← already there
+AI Tools & Systems for Bangladesh ← already there
+
+PROBLEM 2 — Two bottom bars now exist.
+The old "Powered By SYS mo AI" is still there AND 
+"Made in Bangladesh 🇧🇩" was added separately.
+
+Find ALL elements in the footer that contain:
+- "Powered By"
+- "SYS mo AI"  
+- "Made in Bangladesh"
+- The copyright text
+
+DELETE all of them.
+
+Then add ONE single bottom bar at the very end 
+of the footer, after all columns:
+
+<div

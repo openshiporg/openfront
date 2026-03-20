@@ -12,9 +12,13 @@ export default async function Footer() {
           {/* Column 1 — Brand */}
           <div className="col-span-2 md:col-span-1 flex flex-col gap-4">
             <div className="mb-2">
-              <a href="/" className="inline-block">
-                <img src="/images/logo.svg" alt="SYSmoAI" width="110" height="28" className="mb-2" />
-                <p className="text-slate-500 text-xs mt-1 uppercase tracking-widest font-medium">
+              <a href="/bd" className="inline-block">
+                <div className="mb-3">
+                  <span className="text-2xl font-bold text-white tracking-tight">
+                    SYSmo<span className="text-indigo-400">AI</span>
+                  </span>
+                </div>
+                <p className="text-slate-500 text-xs uppercase tracking-widest font-medium">
                   Private Limited
                 </p>
               </a>
