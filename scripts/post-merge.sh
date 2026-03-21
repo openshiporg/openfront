@@ -3,4 +3,4 @@ set -e
 
 npm install --legacy-peer-deps
 
-npx prisma migrate deploy
+npm run migrate
