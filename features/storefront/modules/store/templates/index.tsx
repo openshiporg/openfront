@@ -22,7 +22,7 @@ const StoreTemplate = ({
     <div data-testid="category-container">
       {/* Store Hero */}
       <div className="py-16 px-4 text-center border-b border-[#1E1E2E] bg-gradient-to-b from-[#0d0d1a] to-[#0A0A0F]">
-        <div className="inline-flex items-center gap-2 bg-indigo-950/80 border border-indigo-800/50 text-indigo-300 text-xs font-medium px-3 py-1.5 rounded-full mb-5">
+        <div className="inline-flex items-center gap-2 bg-[#1E3A8A]/40 border border-[#2563EB]/30 text-[#60A5FA] text-xs font-medium px-3 py-1.5 rounded-full mb-5">
           🛒 AI Tools for Bangladesh
         </div>
         <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">

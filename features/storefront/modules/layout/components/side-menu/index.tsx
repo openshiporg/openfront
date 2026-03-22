@@ -3,6 +3,36 @@
 import { useState } from "react"
 import { WA } from "@/lib/constants/contact"
 
+const BrandMark = ({ size = 28 }: { size?: number }) => {
+  const sw = size <= 24 ? 3 : 2.5
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M25 34 L50 24 L75 34 L75 54 L50 64 L25 54 Z" fill="#1E3A8A" fillOpacity={0.3} stroke="#2563EB" strokeOpacity={0.6} strokeWidth={sw} strokeLinejoin="round" />
+      <path d="M30 49 L50 40 L70 49 L70 64 L50 73 L30 64 Z" fill="#2563EB" fillOpacity={0.5} stroke="#3B82F6" strokeOpacity={0.8} strokeWidth={sw} strokeLinejoin="round" />
+      <path d="M40 61 L50 56 L60 61 L60 71 L50 76 L40 71 Z" fill="#3B82F6" fillOpacity={1}   stroke="#60A5FA" strokeOpacity={1}   strokeWidth={sw} strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+const BrandWordmark = ({ size = 18 }: { size?: number }) => (
+  <span
+    style={{
+      fontSize: size,
+      lineHeight: 1,
+      fontFamily: "'Inter', -apple-system, system-ui, sans-serif",
+      color: "#ffffff",
+      display: "inline-flex",
+      alignItems: "baseline",
+      whiteSpace: "nowrap",
+      letterSpacing: `${-size * 0.015}px`,
+    }}
+  >
+    <span style={{ fontWeight: 700, letterSpacing: "-0.02em" }}>SYS</span>
+    <span style={{ fontWeight: 400, letterSpacing: "-0.04em", opacity: 0.65 }}>mo</span>
+    <span style={{ fontWeight: 700, letterSpacing: "0.02em" }}>AI</span>
+  </span>
+)
+
 const SideMenu = ({ regions }: { regions: any[] | null }) => {
   const [isOpen, setIsOpen] = useState(false)
 
@@ -34,10 +64,9 @@ const SideMenu = ({ regions }: { regions: any[] | null }) => {
             
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#1E1E2E]">
-              <a href="/bd" className="flex items-center">
-                <span className="text-lg font-bold text-white">
-                  SYSmo<span className="text-indigo-400">AI</span>
-                </span>
+              <a href="/bd" className="flex items-center gap-2">
+                <BrandMark size={28} />
+                <BrandWordmark size={18} />
               </a>
               <button
                 onClick={() => setIsOpen(false)}
@@ -61,7 +90,7 @@ const SideMenu = ({ regions }: { regions: any[] | null }) => {
                   key={item.href}
                   href={item.href}
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center px-6 py-4 text-white text-base font-medium border-b border-[#1E1E2E] hover:bg-[#13131A] hover:text-indigo-400 transition-colors"
+                  className="flex items-center px-6 py-4 text-white text-base font-medium border-b border-[#1E1E2E] hover:bg-[#13131A] hover:text-[#60A5FA] transition-colors"
                 >
                   {item.label}
                 </a>

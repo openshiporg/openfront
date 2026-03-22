@@ -30,13 +30,13 @@ export async function HomePage(props: {
       {/* ── Section 1: Hero ── */}
       <section className="relative min-h-[85vh] flex flex-col items-center justify-center text-center px-4 pt-24 pb-16 overflow-hidden">
         
-        {/* Background glow */}
+        {/* Background glow — brand blue */}
         <div className="absolute inset-0 -z-10 overflow-hidden">
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-3xl" />
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[#2563EB]/10 rounded-full blur-3xl" />
         </div>
 
         {/* Badge */}
-        <div className="inline-flex items-center gap-2 bg-indigo-950/80 border border-indigo-800/50 text-indigo-300 text-sm font-medium px-4 py-2 rounded-full mb-8">
+        <div className="inline-flex items-center gap-2 bg-[#1E3A8A]/40 border border-[#2563EB]/30 text-[#60A5FA] text-sm font-medium px-4 py-2 rounded-full mb-8">
           🇧🇩 Bangladesh's AI Platform
         </div>
 
@@ -44,7 +44,7 @@ export async function HomePage(props: {
         <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight tracking-tight max-w-4xl mb-6">
           The AI Platform
           <br />
-          <span className="bg-gradient-to-r from-indigo-400 to-emerald-400 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-[#60A5FA] to-emerald-400 bg-clip-text text-transparent">
             Built for Bangladesh.
           </span>
         </h1>
@@ -58,7 +58,7 @@ export async function HomePage(props: {
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
           <a 
             href="/bd/store"
-            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-8 py-4 rounded-xl text-lg transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:-translate-y-0.5"
+            className="inline-flex items-center gap-2 bg-[#2563EB] hover:bg-blue-500 text-white font-semibold px-8 py-4 rounded-xl text-lg transition-all shadow-lg shadow-[#2563EB]/25 hover:shadow-[#2563EB]/40 hover:-translate-y-0.5"
           >
             Browse AI Tools →
           </a>
@@ -81,7 +81,7 @@ export async function HomePage(props: {
           <span className="hidden sm:block text-slate-700">·</span>
           <span className="flex items-center gap-2">
             <span className="text-emerald-400">🔒</span>
-            Secure bKash & Nagad
+            Secure bKash &amp; Nagad
           </span>
           <span className="hidden sm:block text-slate-700">·</span>
           <span className="flex items-center gap-2">
@@ -102,12 +102,12 @@ export async function HomePage(props: {
               <a
                 key={name}
                 href={href}
-                className="bg-[#13131A] border border-[#1E1E2E] rounded-xl p-5 flex flex-col gap-2 hover:border-indigo-500 hover:bg-[#13131A] transition-all group cursor-pointer"
+                className="bg-[#13131A] border border-[#1E1E2E] rounded-xl p-5 flex flex-col gap-2 hover:border-[#2563EB] hover:bg-[#13131A] transition-all group cursor-pointer"
               >
                 <span className="text-3xl">{emoji}</span>
                 <span className="font-semibold text-white">{name}</span>
                 <span className="text-xs text-[#94A3B8] leading-relaxed">{desc}</span>
-                <span className="text-indigo-400 text-sm mt-3 group-hover:underline">
+                <span className="text-[#60A5FA] text-sm mt-3 group-hover:underline">
                   Learn more →
                 </span>
               </a>
@@ -124,14 +124,14 @@ export async function HomePage(props: {
 
             {/* For the Shop */}
             <div className="flex flex-col gap-6">
-              <h3 className="text-lg font-semibold text-[#6366F1] uppercase tracking-wide">For the Shop</h3>
+              <h3 className="text-lg font-semibold text-[#2563EB] uppercase tracking-wide">For the Shop</h3>
               {[
                 { step: "01", title: "Browse AI tools by category", desc: "Find the right AI subscription from our curated collection." },
                 { step: "02", title: "Pay with bKash / Nagad / Card", desc: "Fast, secure payments with the methods you already use." },
                 { step: "03", title: "Get instant access", desc: "Your credentials are delivered immediately after payment." },
               ].map(({ step, title, desc }) => (
                 <div key={step} className="flex gap-4">
-                  <span className="text-2xl font-bold text-[#6366F1]/40 w-10 flex-shrink-0">{step}</span>
+                  <span className="text-2xl font-bold text-[#2563EB]/40 w-10 flex-shrink-0">{step}</span>
                   <div>
                     <p className="font-semibold text-white">{title}</p>
                     <p className="text-sm text-[#94A3B8] mt-1">{desc}</p>
@@ -171,8 +171,8 @@ export async function HomePage(props: {
         </section>
       )}
 
-      {/* ── Section 4: Final CTA ── */}
-      <section className="bg-[#312E81] px-6 py-20 text-center">
+      {/* ── Section 4: Final CTA — brand System Blue ── */}
+      <section className="bg-[#1E3A8A] px-6 py-20 text-center">
         <h2 className="text-3xl font-bold text-white mb-4">
           Ready to start? Two ways to work with us.
         </h2>

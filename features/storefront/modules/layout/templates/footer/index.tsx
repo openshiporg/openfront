@@ -1,6 +1,14 @@
 import LocalizedClientLink from "@/features/storefront/modules/common/components/localized-client-link"
 import { WA, PHONE_DISPLAY, EMAIL } from "@/lib/constants/contact"
 
+const BrandMark = ({ size = 28 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M25 34 L50 24 L75 34 L75 54 L50 64 L25 54 Z" fill="#1E3A8A" fillOpacity={0.3} stroke="#2563EB" strokeOpacity={0.6} strokeWidth={2.5} strokeLinejoin="round" />
+    <path d="M30 49 L50 40 L70 49 L70 64 L50 73 L30 64 Z" fill="#2563EB" fillOpacity={0.5} stroke="#3B82F6" strokeOpacity={0.8} strokeWidth={2.5} strokeLinejoin="round" />
+    <path d="M40 61 L50 56 L60 61 L60 71 L50 76 L40 71 Z" fill="#3B82F6" fillOpacity={1}   stroke="#60A5FA" strokeOpacity={1}   strokeWidth={2.5} strokeLinejoin="round" />
+  </svg>
+)
+
 export default async function Footer() {
   return (
     <footer className="border-t border-[#1E1E2E] bg-[#0A0A0F] w-full">
@@ -13,9 +21,23 @@ export default async function Footer() {
           <div className="col-span-2 md:col-span-1 flex flex-col gap-4">
             <div className="mb-2">
               <a href="/bd" className="inline-block">
-                <div className="mb-3">
-                  <span className="text-2xl font-bold text-white tracking-tight">
-                    SYSmo<span className="text-indigo-400">AI</span>
+                <div className="flex items-center gap-2.5 mb-3">
+                  <BrandMark size={28} />
+                  <span
+                    style={{
+                      fontSize: 22,
+                      lineHeight: 1,
+                      fontFamily: "'Inter', -apple-system, system-ui, sans-serif",
+                      color: "#ffffff",
+                      display: "inline-flex",
+                      alignItems: "baseline",
+                      whiteSpace: "nowrap",
+                      letterSpacing: "-0.33px",
+                    }}
+                  >
+                    <span style={{ fontWeight: 700, letterSpacing: "-0.02em" }}>SYS</span>
+                    <span style={{ fontWeight: 400, letterSpacing: "-0.04em", opacity: 0.65 }}>mo</span>
+                    <span style={{ fontWeight: 700, letterSpacing: "0.02em" }}>AI</span>
                   </span>
                 </div>
                 <p className="text-slate-500 text-xs uppercase tracking-widest font-medium">
