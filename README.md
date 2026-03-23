@@ -1,4 +1,5 @@
-# Openfront
+![openfront-ecommerce](https://github.com/user-attachments/assets/c54fc071-35a0-464c-8ccc-c5e9421ff0ff)
+
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fopenshiporg%2Fopenfront&env=SESSION_SECRET&products=%5B%7B%22type%22%3A%22integration%22%2C%22protocol%22%3A%22storage%22%2C%22group%22%3A%22postgres%22%7D%5D)
 
@@ -19,7 +20,7 @@ Openfront is a comprehensive e-commerce platform that provides everything you ne
 
 [Watch full demo on YouTube →](https://youtu.be/jz0ZZmtBHgo)
 
-[Learn more →](https://openship.org/openfront-ecommerce)
+[Learn more →](https://openship.org/products/openfront-ecommerce)
 
 [Documentation →](https://docs.openship.org/docs/openfront/ecommerce/)
 
