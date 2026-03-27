@@ -148,19 +148,16 @@ const PendingPriceForm = ({ region, initialPrice, onSave, onCancel }) => {
           </div>
         </div>
       </div>
-      <div className="flex justify-end gap-2 p-4 border-t bg-muted/40">
+      <div className="flex items-center justify-end gap-2 p-4 border-t bg-muted/40">
         <PopoverClose asChild>
           <Button size="sm" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
         </PopoverClose>
         <PopoverClose asChild>
-          <BadgeButton
-            onClick={handleSave}
-            className="font-medium border rounded-lg text-xs items-center"
-          >
-            Set for New Variant
-          </BadgeButton>
+          <Button size="sm" onClick={handleSave}>
+            Set Price
+          </Button>
         </PopoverClose>
       </div>
     </div>
