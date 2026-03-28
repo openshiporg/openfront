@@ -20,7 +20,7 @@ export async function createProductVariant(data: {
   originCountry?: string;
   midCode?: string;
   productId: string;
-  optionValueIds: string[];
+  optionValueIds?: string[];
   prices?: Array<{
     amount: number;
     compareAmount?: number;
@@ -95,9 +95,13 @@ export async function createProductVariant(data: {
       originCountry: data.originCountry || "",
       midCode: data.midCode || "",
       product: { connect: { id: data.productId } },
-      productOptionValues: {
-        connect: data.optionValueIds.map((id: string) => ({ id })),
-      },
+      ...(data.optionValueIds && data.optionValueIds.length > 0
+        ? {
+            productOptionValues: {
+              connect: data.optionValueIds.map((id: string) => ({ id })),
+            },
+          }
+        : {}),
       prices: { create: prices },
     },
   });

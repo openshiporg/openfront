@@ -604,7 +604,7 @@ export function VariantsTab({ product: initialProduct }: VariantsTab2Props) {
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="h-auto mx-auto flex w-full bg-muted/40 border p-1 max-w-xl">
+        <TabsList className="h-auto flex w-full bg-muted/40 border p-1 max-w-xl justify-start">
           <TabsTrigger
             value="options"
             className="group flex-1 flex-col p-3 text-xs data-[state=active]:shadow-none data-[state=active]:border"

@@ -87,7 +87,10 @@ function DeleteButton({ list, value, onError }: { list: any; value: Record<strin
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+          <AlertDialogAction
+            onClick={handleDelete}
+            className="!bg-none !bg-destructive !text-white hover:!bg-destructive/90 !border-0 !shadow-none !ring-0"
+          >
             Delete
           </AlertDialogAction>
         </AlertDialogFooter>

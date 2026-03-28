@@ -512,3 +512,54 @@ export async function getRegions() {
     };
   }
 }
+
+export async function generateUniqueProductHandle(input: string) {
+  const slugify = (value: string) =>
+    value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+  const baseHandle = slugify(input || '');
+
+  if (!baseHandle) {
+    return {
+      success: true,
+      data: { handle: '' },
+    };
+  }
+
+  let handle = baseHandle;
+  let counter = 1;
+
+  while (true) {
+    const query = `
+      query CheckProductHandle($handle: String!) {
+        products(where: { handle: { equals: $handle } }, take: 1) {
+          id
+        }
+      }
+    `;
+
+    const response = await keystoneClient(query, { handle });
+
+    if (!response.success) {
+      return {
+        success: false,
+        error: response.error || 'Failed to check product handle',
+        data: { handle: baseHandle },
+      };
+    }
+
+    if ((response.data.products || []).length === 0) {
+      return {
+        success: true,
+        data: { handle },
+      };
+    }
+
+    handle = `${baseHandle}-${counter}`;
+    counter += 1;
+  }
+}

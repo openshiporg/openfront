@@ -8,43 +8,69 @@
 
 import React, { useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { Save, ArrowLeft, AlertTriangle, Loader2, Check, X, Package, Image, Box, Tag, Building } from 'lucide-react'
+import { AlertTriangle, Check, Package, Image, Box, Tag, Building } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { PageBreadcrumbs } from '../../../dashboard/components/PageBreadcrumbs'
 import { Fields } from '../../../dashboard/components/Fields'
 import { useCreateItem } from '../../../dashboard/utils/useCreateItem'
 import { enhanceFields } from '../../../dashboard/utils/enhanceFields'
+import { serializeValueToOperationItem } from '../../../dashboard/utils/useHasChanges'
+import { createItemAction } from '../../../dashboard/actions/item-actions'
 import { VariantsTab } from '../components/VariantsTab'
+import { createProductVariant } from '../actions/variants'
+import { generateUniqueProductHandle } from '../actions'
+import { useRegions } from '../hooks/useProductData'
 
 interface ProductCreatePageClientProps {
   listKey: string
   list: any
 }
 
-// Cancel Button Component (matches dashboard ItemPage pattern)
-function CancelButton({ 
-  onCancel,
-  isDesktop = true 
-}: { 
-  onCancel: () => void;
-  isDesktop?: boolean;
-}) {
-  return (
-    <Button variant="outline" size="sm" className="sm:text-sm text-xs" onClick={onCancel}>
-      <X className="size-3 shrink-0" />
-      {isDesktop ? (
-        'Cancel'
-      ) : (
-        <span className="hidden sm:inline">Cancel</span>
-      )}
-    </Button>
-  )
+type VariantMode = 'default' | 'multiple'
+type ProductStatus = 'draft' | 'proposed' | 'published' | 'rejected'
+
+type DefaultVariantState = {
+  title: string
+  sku: string
+  inventoryQuantity: string
+  manageInventory: boolean
+  allowBackorder: boolean
+  prices: Array<{
+    regionCode: string
+    currencyCode: string
+    amount: string
+    compareAmount: string
+  }>
+}
+
+type CreateDialogState = {
+  status: ProductStatus
+  handle: string
+}
+
+const NO_DIVISION_CURRENCIES = ['jpy', 'krw', 'vnd']
+
+function toStorageAmount(displayAmount: string, currencyCode: string) {
+  const numericAmount = parseFloat(displayAmount)
+  if (Number.isNaN(numericAmount)) return null
+
+  const isNoDivision = NO_DIVISION_CURRENCIES.includes(currencyCode.toLowerCase())
+  return isNoDivision ? Math.round(numericAmount) : Math.round(numericAmount * 100)
 }
 
 export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClientProps) {
@@ -57,6 +83,7 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
   
   // Use the create item hook with enhanced fields
   const createItem = useCreateItem(list, enhancedFields)
+  const { regions, loading: regionsLoading, error: regionsError } = useRegions()
 
   // Tab configuration following the same pattern as ProductItemPageClient
   const tabs = [
@@ -101,22 +128,187 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
 
   // Tab state
   const [activeTab, setActiveTab] = useState('general')
+  const [variantMode, setVariantMode] = useState<VariantMode>('default')
+  const [defaultVariant, setDefaultVariant] = useState<DefaultVariantState>({
+    title: 'Default Title',
+    sku: '',
+    inventoryQuantity: '100',
+    manageInventory: false,
+    allowBackorder: false,
+    prices: [],
+  })
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
+  const [createDialogError, setCreateDialogError] = useState<string | null>(null)
+  const [createDialogState, setCreateDialogState] = useState<CreateDialogState>({
+    status: 'draft',
+    handle: '',
+  })
+
+  const getStringFieldValue = (value: unknown): string => {
+    if (typeof value === 'string') return value
+    if (value && typeof value === 'object') {
+      const record = value as Record<string, unknown>
+      if (typeof record.value === 'string') return record.value
+      if (record.value && typeof record.value === 'object') {
+        const nested = record.value as Record<string, unknown>
+        if (typeof nested.value === 'string') return nested.value
+      }
+      if (record.inner && typeof record.inner === 'object') {
+        const inner = record.inner as Record<string, unknown>
+        if (typeof inner.value === 'string') return inner.value
+      }
+    }
+    return ''
+  }
+
+  const getCurrentCreateValues = useCallback(() => {
+    const currentValue = (createItem?.props.value || {}) as Record<string, unknown>
+
+    const currentTitle = getStringFieldValue(currentValue.title)
+    const currentHandle = getStringFieldValue(currentValue.handle)
+    const currentStatus = (getStringFieldValue(currentValue.status) || 'draft') as ProductStatus
+
+    return {
+      currentValue,
+      currentTitle,
+      currentHandle,
+      currentStatus,
+    }
+  }, [createItem])
+
+  const prepareCreateDialog = useCallback(async () => {
+    if (!createItem) return
+
+    const { currentTitle, currentHandle, currentStatus } = getCurrentCreateValues()
+    let resolvedHandle = currentHandle.trim()
+
+    if (!resolvedHandle && currentTitle.trim()) {
+      const handleResponse = await generateUniqueProductHandle(currentTitle)
+      if (handleResponse.success) {
+        resolvedHandle = handleResponse.data.handle
+      }
+    }
+
+    setCreateDialogState({
+      status: currentStatus || 'draft',
+      handle: resolvedHandle,
+    })
+    setCreateDialogError(null)
+    setIsCreateDialogOpen(true)
+  }, [createItem, getCurrentCreateValues])
+
+  const handleHandleBlur = useCallback(async () => {
+    const { currentTitle } = getCurrentCreateValues()
+    const source = createDialogState.handle.trim() || currentTitle.trim()
+
+    if (!source) {
+      setCreateDialogState((prev) => ({ ...prev, handle: '' }))
+      return
+    }
+
+    const handleResponse = await generateUniqueProductHandle(source)
+
+    if (handleResponse.success) {
+      setCreateDialogState((prev) => ({ ...prev, handle: handleResponse.data.handle }))
+    }
+  }, [createDialogState.handle, getCurrentCreateValues])
 
   const handleSave = useCallback(async () => {
     if (!createItem) return
-    
-    const item = await createItem.create()
-    if (item?.id) {
-      router.push(`/dashboard/platform/products/${item.id}`)
-    } else {
-      console.error('No item.id in response:', item)
-    }
-  }, [createItem, router])
 
-  const handleCancel = useCallback(() => {
-    router.push('/dashboard/platform/products')
-  }, [router])
-  
+    if (createItem.props.invalidFields.size > 0) {
+      toast.error('Please complete the required product fields before creating it.')
+      setCreateDialogError('Please complete the required product fields before creating the product.')
+      return
+    }
+
+    setIsCreating(true)
+    setCreateDialogError(null)
+
+    try {
+      const { currentValue, currentTitle } = getCurrentCreateValues()
+      const handleSource = createDialogState.handle.trim() || currentTitle.trim()
+      const handleResponse = await generateUniqueProductHandle(handleSource)
+
+      if (!handleResponse.success) {
+        setCreateDialogError(handleResponse.error || 'Failed to generate a unique handle.')
+        setIsCreating(false)
+        return
+      }
+
+      const data = serializeValueToOperationItem('create', enhancedFields, currentValue)
+
+      data.status = createDialogState.status
+      if (handleResponse.data.handle) {
+        data.handle = handleResponse.data.handle
+      }
+      const selectedFields = `id ${list.labelField || ''}`
+      const result = await createItemAction(list.key, data, selectedFields)
+
+      if (result.errors && result.errors.length > 0) {
+        setCreateDialogError(result.errors[0]?.message || 'Failed to create product.')
+        setIsCreating(false)
+        return
+      }
+
+      const item = result.data?.item
+
+      if (!item?.id) {
+        setCreateDialogError('Product was created without a valid ID response.')
+        setIsCreating(false)
+        return
+      }
+
+      if (variantMode === 'default') {
+        const prices: Array<{
+          amount: number
+          compareAmount?: number
+          currencyCode: string
+          regionCode?: string
+        }> = []
+
+        defaultVariant.prices.forEach((price) => {
+          if (price.amount.trim() === '') return
+
+          const amount = toStorageAmount(price.amount, price.currencyCode)
+          const compareAmount = price.compareAmount.trim() !== ''
+            ? toStorageAmount(price.compareAmount, price.currencyCode)
+            : null
+
+          if (amount === null) return
+
+          prices.push({
+            amount,
+            compareAmount: compareAmount ?? undefined,
+            currencyCode: price.currencyCode,
+            regionCode: price.regionCode,
+          })
+        })
+
+        const defaultVariantResponse = await createProductVariant({
+          title: defaultVariant.title || 'Default Title',
+          sku: defaultVariant.sku,
+          inventoryQuantity: Number.parseInt(defaultVariant.inventoryQuantity || '0', 10) || 0,
+          manageInventory: defaultVariant.manageInventory,
+          allowBackorder: defaultVariant.allowBackorder,
+          productId: item.id,
+          optionValueIds: [],
+          prices,
+        })
+
+        if (!defaultVariantResponse.success) {
+          toast.error('Product created, but the default variant could not be created.')
+        }
+      }
+
+      router.push(`/dashboard/platform/products/${item.id}`)
+    } catch (error) {
+      setCreateDialogError(error instanceof Error ? error.message : 'Failed to create product.')
+    } finally {
+      setIsCreating(false)
+    }
+  }, [createItem, createDialogState, defaultVariant, enhancedFields, getCurrentCreateValues, list.key, list.labelField, router, variantMode])
 
   if (!list) {
     return (
@@ -191,6 +383,33 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
     }
   }, [enhancedFields])
 
+  const defaultVariantRegions = useMemo(() => {
+    return (regions || []).map((region: any) => ({
+      regionCode: region.code,
+      label: region.name,
+      currencyCode: (region.currency?.code || 'usd').toUpperCase(),
+      currencySymbol: region.currency?.symbolNative || region.currency?.symbol || '',
+    }))
+  }, [regions])
+
+  React.useEffect(() => {
+    if (variantMode !== 'default') return
+
+    setDefaultVariant((prev) => {
+      if (prev.prices.length > 0) return prev
+
+      return {
+        ...prev,
+        prices: defaultVariantRegions.map((region: any) => ({
+          regionCode: region.regionCode,
+          currencyCode: region.currencyCode,
+          amount: '',
+          compareAmount: '',
+        })),
+      }
+    })
+  }, [variantMode, defaultVariantRegions])
+
   // Get tab error count - check for invalid fields in each tab (same pattern as item page)
   const getTabErrorCount = useCallback((tabId: string) => {
     if (!createItem?.props?.invalidFields) return 0
@@ -236,8 +455,8 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
           <Button
             size="sm"
             className="sm:text-sm text-xs"
-            onClick={handleSave}
-            disabled={createItem.state === 'loading'}
+            onClick={prepareCreateDialog}
+            disabled={isCreating}
           >
             Create {list.singular}
             <Check className="ml-1 stroke-[1.5px]" width="8" height="8" />
@@ -356,7 +575,196 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
 
             {activeTab === 'variants' && (
               <div className="space-y-6">
-                <VariantsTab product={{}} />
+                <div className="space-y-4">
+                  <div>
+                    <h2 className="text-sm font-medium text-muted-foreground mb-3">Variant setup</h2>
+                    <div className="grid gap-3 sm:grid-cols-2 max-w-2xl">
+                      <button
+                        type="button"
+                        onClick={() => setVariantMode('default')}
+                        className={`rounded-xl border p-4 text-left transition ${
+                          variantMode === 'default'
+                            ? 'border-foreground bg-accent/40'
+                            : 'border-border bg-background hover:bg-accent/20'
+                        }`}
+                      >
+                        <div className="font-medium">Default variant</div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Best for simple products with one price, one SKU, and no options.
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setVariantMode('multiple')}
+                        className={`rounded-xl border p-4 text-left transition ${
+                          variantMode === 'multiple'
+                            ? 'border-foreground bg-accent/40'
+                            : 'border-border bg-background hover:bg-accent/20'
+                        }`}
+                      >
+                        <div className="font-medium">Multiple variants</div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Use options like size or color and manage generated variant combinations.
+                        </p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {variantMode === 'default' ? (
+                    <Card className="max-w-2xl">
+                      <CardContent className="p-6 space-y-6">
+                        <div>
+                          <h3 className="font-medium">Default variant</h3>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            This product will be created with a single default variant so pricing works immediately.
+                          </p>
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="default-variant-title">Variant title</Label>
+                            <Input
+                              id="default-variant-title"
+                              value={defaultVariant.title}
+                              onChange={(e) => setDefaultVariant((prev) => ({ ...prev, title: e.target.value }))}
+                              placeholder="Default Title"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="default-variant-sku">SKU</Label>
+                            <Input
+                              id="default-variant-sku"
+                              value={defaultVariant.sku}
+                              onChange={(e) => setDefaultVariant((prev) => ({ ...prev, sku: e.target.value }))}
+                              placeholder="SKU-001"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="default-variant-stock">Inventory quantity</Label>
+                            <Input
+                              id="default-variant-stock"
+                              type="number"
+                              min="0"
+                              value={defaultVariant.inventoryQuantity}
+                              onChange={(e) => setDefaultVariant((prev) => ({ ...prev, inventoryQuantity: e.target.value }))}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="flex items-center justify-between rounded-lg border p-4">
+                            <div>
+                              <div className="font-medium text-sm">Manage inventory</div>
+                              <p className="text-xs text-muted-foreground mt-1">Track stock for this default variant.</p>
+                            </div>
+                            <Switch
+                              checked={defaultVariant.manageInventory}
+                              onCheckedChange={(checked) => setDefaultVariant((prev) => ({ ...prev, manageInventory: checked }))}
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between rounded-lg border p-4">
+                            <div>
+                              <div className="font-medium text-sm">Allow backorders</div>
+                              <p className="text-xs text-muted-foreground mt-1">Allow purchases when inventory reaches zero.</p>
+                            </div>
+                            <Switch
+                              checked={defaultVariant.allowBackorder}
+                              onCheckedChange={(checked) => setDefaultVariant((prev) => ({ ...prev, allowBackorder: checked }))}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div>
+                            <h4 className="font-medium text-sm">Regional pricing</h4>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Set prices for the regions you want to sell in. Leave blank to add later.
+                            </p>
+                          </div>
+
+                          <div className="space-y-3">
+                            {regionsLoading ? (
+                              <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                                Loading regions…
+                              </div>
+                            ) : regionsError ? (
+                              <div className="rounded-lg border border-dashed p-4 text-sm text-destructive">
+                                Failed to load regions. You can still create the product and add pricing later.
+                              </div>
+                            ) : defaultVariant.prices.length > 0 ? defaultVariant.prices.map((price, index) => {
+                              const regionMeta = defaultVariantRegions.find((region: { regionCode: string; label: string; currencyCode: string; currencySymbol: string }) => region.regionCode === price.regionCode)
+
+                              return (
+                                <div key={`${price.regionCode}-${index}`} className="rounded-lg border p-4 space-y-3">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <div>
+                                      <div className="font-medium text-sm">{regionMeta?.label || price.regionCode}</div>
+                                      <div className="text-xs text-muted-foreground">{price.regionCode}</div>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {(regionMeta?.currencySymbol || '').trim()} {price.currencyCode}
+                                    </div>
+                                  </div>
+                                  <div className="grid gap-3 sm:grid-cols-2">
+                                    <div className="space-y-2">
+                                      <Label>Price</Label>
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={price.amount}
+                                        onChange={(e) => setDefaultVariant((prev) => ({
+                                          ...prev,
+                                          prices: prev.prices.map((entry, entryIndex) =>
+                                            entryIndex === index ? { ...entry, amount: e.target.value } : entry
+                                          ),
+                                        }))}
+                                        placeholder="0.00"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label>Compare at price</Label>
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={price.compareAmount}
+                                        onChange={(e) => setDefaultVariant((prev) => ({
+                                          ...prev,
+                                          prices: prev.prices.map((entry, entryIndex) =>
+                                            entryIndex === index ? { ...entry, compareAmount: e.target.value } : entry
+                                          ),
+                                        }))}
+                                        placeholder="Optional"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            }) : (
+                              <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                                No regions found yet. You can still create the product and add pricing later.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-4 max-w-2xl">
+                      <Alert>
+                        <AlertDescription>
+                          Multiple variants use your existing options-and-combinations flow. Create the product first, then continue managing options, variants, and pricing on the product page.
+                        </AlertDescription>
+                      </Alert>
+                      <VariantsTab product={{}} />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -374,6 +782,79 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
           </div>
         </div>
       </main>
+
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create</DialogTitle>
+            <DialogDescription>
+              Choose a status and confirm the handle before creating it.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="create-product-status">Status</Label>
+              <Select
+                value={createDialogState.status}
+                onValueChange={(value) => setCreateDialogState((prev) => ({ ...prev, status: value as ProductStatus }))}
+              >
+                <SelectTrigger id="create-product-status">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="proposed">Proposed</SelectItem>
+                  <SelectItem value="published">Published</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                New items default to draft unless you choose a different status here.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create-product-handle">Handle</Label>
+              <Input
+                id="create-product-handle"
+                value={createDialogState.handle}
+                onChange={(e) => setCreateDialogState((prev) => ({ ...prev, handle: e.target.value }))}
+                onBlur={handleHandleBlur}
+                placeholder="auto-generated-from-title"
+              />
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-muted-foreground">
+                  If left blank, we’ll generate a unique handle from the title.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleHandleBlur}
+                >
+                  Generate
+                </Button>
+              </div>
+            </div>
+
+            {createDialogError && (
+              <Alert variant="destructive">
+                <AlertDescription>{createDialogError}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)} disabled={isCreating}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleSave} disabled={isCreating}>
+              {isCreating ? 'Creating…' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
