@@ -12,6 +12,8 @@ import { useInvalidFields } from '../../../dashboard/utils/useInvalidFields'
 import { useHasChanges, serializeValueToOperationItem } from '../../../dashboard/utils/useHasChanges'
 import { enhanceFields } from '../../../dashboard/utils/enhanceFields'
 import { Button } from '@/components/ui/button'
+import { CardHeader,  CardContent } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -29,11 +31,19 @@ import {
   Trash2,
   RotateCcw,
   Loader2,
+  Package,
+  Image,
+  Box,
+  Building,
+  Tag,
+  Hash
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { updateItemAction, deleteItemAction } from '../../../dashboard/actions/item-actions'
 import { VariantsTab } from '../components/VariantsTab'
 import { MediaTab } from '../components/MediaTab'
+
+const Card = 'div'
 
 interface ProductItemPageClientProps {
   list: any
@@ -74,8 +84,9 @@ function DeleteButton({ list, value, onError }: { list: any; value: Record<strin
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive">
-          <Trash2 className="size-4" />
+        <Button variant="destructive" size="sm">
+          <Trash2 className="size-3.5" />
+          Delete
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
@@ -89,7 +100,7 @@ function DeleteButton({ list, value, onError }: { list: any; value: Record<strin
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleDelete}
-            className="!bg-none !bg-destructive !text-white hover:!bg-destructive/90 !border-0 !shadow-none !ring-0"
+            className="bg-destructive text-white hover:bg-destructive/90"
           >
             Delete
           </AlertDialogAction>
@@ -237,112 +248,193 @@ export function ProductItemPageClient({ list, item, itemId }: ProductItemPageCli
 
   return (
     <>
-      <PageBreadcrumbs 
-        items={breadcrumbItems} 
-        actions={
-          <div className="flex items-center gap-1">
-            {!list.hideDelete && <DeleteButton list={list} value={value} onError={setErrorDialogValue} />}
-            {hasChanges && (
-              <Button variant="ghost" size="sm" onClick={handleReset} className="text-muted-foreground">
-                <RotateCcw className="size-4" />
-              </Button>
-            )}
-            <Button
-              size="sm"
-              onClick={handleSave}
-              disabled={!hasChanges || loading}
-              className="ml-2"
-            >
-              {loading ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
-              <span className="ml-1.5">{loading ? 'Saving' : 'Save'}</span>
-            </Button>
-          </div>
-        }
-      />
-      
-      <main className="w-full max-w-5xl mx-auto px-4 md:px-6 py-8">
-        <div className="grid lg:grid-cols-[1fr_280px] gap-12">
-          {/* Main Content */}
-          <div className="space-y-12">
-            {/* General */}
-            {Object.keys(fieldsSplit.generalFields).length > 0 && (
-              <section>
-                <h2 className="text-sm font-medium text-muted-foreground mb-6">General</h2>
-                <Fields
-                  list={list}
-                  fields={fieldsSplit.generalFields}
-                  value={value}
-                  onChange={setValue}
-                  forceValidation={forceValidation}
-                  invalidFields={invalidFields}
-                  isRequireds={isRequireds}
-                />
-              </section>
-            )}
-
-            {/* Media */}
-            <section>
-              <h2 className="text-sm font-medium text-muted-foreground mb-6">Media</h2>
-              <MediaTab product={item} />
-            </section>
-
-            {/* Variants */}
-            <section>
-              <h2 className="text-sm font-medium text-muted-foreground mb-6">Variants</h2>
-              <VariantsTab product={item} />
-            </section>
-
-            {/* Pricing */}
-            {Object.keys(fieldsSplit.discountTaxFields).length > 0 && (
-              <section>
-                <h2 className="text-sm font-medium text-muted-foreground mb-6">Pricing & Discounts</h2>
-                <Fields
-                  list={list}
-                  fields={fieldsSplit.discountTaxFields}
-                  value={value}
-                  onChange={setValue}
-                  forceValidation={forceValidation}
-                  invalidFields={invalidFields}
-                  isRequireds={isRequireds}
-                />
-              </section>
-            )}
+      <div className="min-h-screen bg-muted/5 pb-20 font-sans selection:bg-indigo-500/30">
+        {/* Premium Glassmorphic Header */}
+        <div className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+          <PageBreadcrumbs 
+            items={breadcrumbItems} 
+            actions={
+              <div className="flex items-center gap-2">
+                {!list.hideDelete && <DeleteButton list={list} value={value} onError={setErrorDialogValue} />}
+                {hasChanges && (
+                  <Button variant="outline" size="sm" onClick={handleReset}>
+                    <RotateCcw className="size-3.5" />
+                    Reset
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={!hasChanges || loading || saveState === 'saving'}
+                >
+                  <Check className="size-3.5" />
+                  Save Changes
+                </Button>
+              </div>
+            }
+          />
+        </div>
+        
+        <main className="max-w-6xl p-4 md:p-6">
+          <div className="mb-8">
+            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+              {pageLabel}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage product details, media, variants, and settings.
+            </p>
           </div>
 
-          {/* Sidebar */}
-          <aside className="space-y-8 lg:sticky lg:top-24 lg:self-start">
-            {/* ID */}
-            <div>
-              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Product ID</h3>
-              <button
-                onClick={handleCopyId}
-                className="group flex items-center gap-2 w-full text-left"
-              >
-                <code className="text-xs font-mono text-muted-foreground truncate flex-1">
-                  {itemId}
-                </code>
-                <Copy className="size-3 text-muted-foreground/50 group-hover:text-foreground transition-colors" />
-              </button>
+          <div className="flex flex-col lg:flex-row gap-8 items-start">
+            {/* Main Content - Left Column */}
+            <div className="flex-1 w-full space-y-8">
+              
+              {/* General Info */}
+              {Object.keys(fieldsSplit.generalFields).length > 0 && (
+                <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+                  <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                    <div className="flex items-center gap-2">
+                      <Package className="size-4 opacity-70 text-muted-foreground" />
+                      <span className="font-medium uppercase text-xs tracking-wider text-muted-foreground">General Information</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <Fields
+                      list={list}
+                      fields={fieldsSplit.generalFields}
+                      value={value}
+                      onChange={setValue}
+                      forceValidation={forceValidation}
+                      invalidFields={invalidFields}
+                      isRequireds={isRequireds}
+                    />
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Media */}
+              <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+                <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                  <div className="flex items-center gap-2">
+                    <Image className="size-4 opacity-70 text-muted-foreground" />
+                    <span className="font-medium uppercase text-xs tracking-wider text-muted-foreground">Media Gallery</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <MediaTab product={item} />
+                </CardContent>
+              </Card>
+
+              {/* Variants configuration */}
+              <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+                <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                  <div className="flex items-center gap-2">
+                    <Box className="size-4 opacity-70 text-muted-foreground" />
+                    <span className="font-medium uppercase text-xs tracking-wider text-muted-foreground">Variants & Pricing</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <VariantsTab product={item} />
+                </CardContent>
+              </Card>
+
             </div>
 
-            {/* Status */}
-            {Object.keys(fieldsSplit.statusFields).length > 0 && (
-              <div>
-                <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Status</h3>
-                <Fields
-                  list={list}
-                  fields={fieldsSplit.statusFields}
-                  value={value}
-                  onChange={setValue}
-                  forceValidation={forceValidation}
-                  invalidFields={invalidFields}
-                  isRequireds={isRequireds}
-                />
-              </div>
-            )}
-          </aside>
-        </div>
-      </main>
+            {/* Sidebar - Right Column */}
+            <aside className="w-full lg:w-[320px] flex-shrink-0 space-y-6 lg:sticky lg:top-24">
+              
+              {/* Product ID */}
+              <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+                <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                  <div className="flex items-center gap-2">
+                    <Hash className="size-4 opacity-70 text-muted-foreground" />
+                    <span className="font-medium uppercase text-xs tracking-wider text-muted-foreground">Product Reference</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-5">
+                  <div className="space-y-4">
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Product ID</Label>
+                    <button
+                      onClick={handleCopyId}
+                      className="group flex items-center justify-between w-full rounded-md border border-border/40 p-3 bg-muted/10 transition-colors hover:bg-muted/30 hover:border-border/80"
+                    >
+                      <code className="text-xs font-mono text-muted-foreground truncate mr-2">
+                        {itemId}
+                      </code>
+                      <Copy className="size-3.5 text-muted-foreground/60 group-hover:text-indigo-600 transition-colors flex-shrink-0" />
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Status & Pricing Info */}
+              <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+                <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                  <div className="flex items-center gap-2">
+                    <Tag className="size-4 opacity-70 text-muted-foreground" />
+                    <span className="font-medium uppercase text-xs tracking-wider text-muted-foreground">Status & Display</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-5 space-y-5">
+                  {Object.keys(fieldsSplit.statusFields).length > 0 && (
+                    <div className="space-y-3">
+                      <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Product Status</Label>
+                      <div className="[&_label]:hidden">
+                        <Fields
+                          list={list}
+                          fields={fieldsSplit.statusFields}
+                          value={value}
+                          onChange={setValue}
+                          forceValidation={forceValidation}
+                          invalidFields={invalidFields}
+                          isRequireds={isRequireds}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {Object.keys(fieldsSplit.discountTaxFields).length > 0 && (
+                    <div className="space-y-3 pt-5 border-t border-border/40">
+                      <Fields
+                        list={list}
+                        fields={fieldsSplit.discountTaxFields}
+                        value={value}
+                        onChange={setValue}
+                        forceValidation={forceValidation}
+                        invalidFields={invalidFields}
+                        isRequireds={isRequireds}
+                      />
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Organization */}
+              {Object.keys(fieldsSplit.organizationFields).length > 0 && (
+                <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+                  <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                    <div className="flex items-center gap-2">
+                      <Building className="size-4 opacity-70 text-muted-foreground" />
+                      <span className="font-medium uppercase text-xs tracking-wider text-muted-foreground">Organization</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-5">
+                    <Fields
+                      list={list}
+                      fields={fieldsSplit.organizationFields}
+                      value={value}
+                      onChange={setValue}
+                      forceValidation={forceValidation}
+                      invalidFields={invalidFields}
+                      isRequireds={isRequireds}
+                    />
+                  </CardContent>
+                </Card>
+              )}
+            </aside>
+          </div>
+        </main>
+      </div>
 
       {errorDialogValue && (
         <AlertDialog open={true} onOpenChange={() => setErrorDialogValue(null)}>

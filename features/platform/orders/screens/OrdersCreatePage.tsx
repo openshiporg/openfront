@@ -3,12 +3,26 @@
 import React from "react";
 import Link from "next/link";
 import { PageBreadcrumbs } from "@/features/dashboard/components/PageBreadcrumbs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ArrowLeft, User, MapPin, Mail, Building, Phone, ShoppingBag } from "lucide-react";
+import { 
+  ArrowLeft, 
+  User, 
+  MapPin, 
+  Mail, 
+  Building, 
+  Phone, 
+  ShoppingBag, 
+  CreditCard, 
+  Truck, 
+  Package, 
+  Zap, 
+  Calculator,
+  Check
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CustomerSearchCombobox } from "../components/CustomerSearchCombobox";
@@ -18,6 +32,8 @@ import { AdminPaymentSelection } from "../components/AdminPaymentSelection";
 import { CreateItemDrawer } from "@/features/dashboard/views/relationship/client/components/CreateItemDrawer";
 import { getCustomer } from "../actions/customers";
 import { getRegionByCountry, getActiveCartPaymentProviders } from "../actions/regions";
+
+const Card = "div";
 
 type LineItem = {
   id: string;
@@ -346,9 +362,10 @@ export function OrdersCreatePage() {
             />
 
             {/* Order Summary */}
-            <Card className="bg-muted/10">
-              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b">
-                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+            <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground flex items-center gap-2">
+                  <Calculator className="size-3.5 opacity-70" />
                   Order Summary
                 </CardTitle>
               </CardHeader>
@@ -381,11 +398,12 @@ export function OrdersCreatePage() {
 
             {/* Payment Selection */}
             {cartId && availablePaymentMethods.length > 0 && (
-              <Card className="bg-muted/10">
-                <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b">
-                  <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
-                    Payment & Order Options
-                  </CardTitle>
+              <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+                <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground flex items-center gap-2">
+                  <Package className="size-3.5 opacity-70" />
+                  Payment & Order Options
+                </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
                   {/* Order Creation Mode */}
@@ -487,6 +505,7 @@ export function OrdersCreatePage() {
                         size="lg"
                         disabled={isCreatingOrder || !selectedPaymentMethod}
                       >
+                        <Check className="mr-1.5 size-4" />
                         {isCreatingOrder ? "Processing Payment..." : "Place Order"}
                       </Button>
                     )}
@@ -499,9 +518,10 @@ export function OrdersCreatePage() {
           {/* Right Column - Customer Info */}
           <div className="lg:col-span-4 space-y-6">
             {/* Customer Selection */}
-            <Card className="bg-muted/10">
-              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b">
-                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+            <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground flex items-center gap-2">
+                  <User className="size-3.5 opacity-70" />
                   Customer
                 </CardTitle>
               </CardHeader>
@@ -541,9 +561,10 @@ export function OrdersCreatePage() {
             </Card>
 
             {/* Shipping Address */}
-            <Card className="bg-muted/10">
-              <CardHeader className="flex flex-row items-center justify-between px-4 py-2 border-b">
-                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+            <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground flex items-center gap-2">
+                  <Truck className="size-3.5 opacity-70" />
                   Shipping Address
                 </CardTitle>
               </CardHeader>
@@ -607,9 +628,10 @@ export function OrdersCreatePage() {
             </Card>
 
             {/* Billing Address */}
-            <Card className="bg-muted/10">
-              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b">
-                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+            <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground flex items-center gap-2">
+                  <CreditCard className="size-3.5 opacity-70" />
                   Billing Address
                 </CardTitle>
               </CardHeader>
@@ -666,6 +688,7 @@ export function OrdersCreatePage() {
             )}
           </div>
         </div>
+        </div>
       </div>
 
       {/* Create Item Drawer */}
@@ -675,7 +698,6 @@ export function OrdersCreatePage() {
         onClose={handleDrawerClose}
         onCreate={handleItemCreated}
       />
-    </div>
     </>
   );
 } 

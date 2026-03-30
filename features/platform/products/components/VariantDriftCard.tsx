@@ -300,7 +300,7 @@ function PendingVariantCard({
                               </span>
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-80 p-0" align="end">
+                          <PopoverContent className="w-80 p-0 bg-card" align="end">
                             <PendingPriceForm
                               region={region}
                               initialPrice={existingPrice}
@@ -338,7 +338,7 @@ function PendingVariantCard({
                             {region.currency.symbol} ADD
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-80 p-0" align="end">
+                        <PopoverContent className="w-80 p-0 bg-card" align="end">
                           <PendingPriceForm
                             region={region}
                             onSave={(data) =>

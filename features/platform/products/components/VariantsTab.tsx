@@ -83,7 +83,7 @@ interface VariantsTab2Props {
 
 export function VariantsTab({ product: initialProduct }: VariantsTab2Props) {
   // All state hooks first
-  const [activeTab, setActiveTab] = useState("options");
+  const [activeTab, setActiveTab] = useState("variants");
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [isVariantsExpanded, setIsVariantsExpanded] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -604,25 +604,13 @@ export function VariantsTab({ product: initialProduct }: VariantsTab2Props) {
   return (
     <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="h-auto flex w-full bg-muted/40 border p-1 max-w-xl justify-start">
-          <TabsTrigger
-            value="options"
-            className="group flex-1 flex-col p-3 text-xs data-[state=active]:shadow-none data-[state=active]:border"
-          >
-            <Badge
-              className="mb-1.5 border rounded-full bg-background transition-opacity"
-              color={"zinc"}
-            >
-              {options.length}
-            </Badge>
-            Options
-          </TabsTrigger>
+        <TabsList className="flex items-center w-full h-auto bg-transparent border-b p-0 rounded-none gap-6 justify-start">
           <TabsTrigger
             value="variants"
-            className="group flex-1 flex-col p-3 text-xs data-[state=active]:shadow-none data-[state=active]:border"
+            className="group flex items-center justify-center gap-2 py-3 px-1 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-foreground text-muted-foreground bg-transparent data-[state=active]:shadow-none rounded-none"
           >
             <Badge
-              className="mb-1.5 border rounded-full bg-background transition-opacity"
+              className="border rounded-full transition-opacity"
               color={"zinc"}
             >
               {(currentProduct.productVariants || []).length}
@@ -630,16 +618,28 @@ export function VariantsTab({ product: initialProduct }: VariantsTab2Props) {
             Variants
           </TabsTrigger>
           <TabsTrigger
-            value="drift"
-            className="group flex-1 flex-col p-3 text-xs data-[state=active]:shadow-none data-[state=active]:border"
+            value="options"
+            className="group flex items-center justify-center gap-2 py-3 px-1 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-foreground text-muted-foreground bg-transparent data-[state=active]:shadow-none rounded-none"
           >
-            <div className="flex items-center gap-1 mb-1.5">
+            <Badge
+              className="border rounded-full transition-opacity"
+              color={"zinc"}
+            >
+              {options.length}
+            </Badge>
+            Options
+          </TabsTrigger>
+          <TabsTrigger
+            value="drift"
+            className="group flex items-center justify-center gap-2 py-3 px-1 text-sm font-medium data-[state=active]:border-b-2 data-[state=active]:border-indigo-600 data-[state=active]:text-foreground text-muted-foreground bg-transparent data-[state=active]:shadow-none rounded-none"
+          >
+            <div className="flex items-center gap-1">
               <span className="inline-flex items-center gap-x-1 rounded-lg bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700 ring-1 ring-inset ring-rose-600/20 dark:bg-rose-500/30 dark:text-rose-300 dark:ring-rose-400/20">
                 <ChevronDown className="-ml-0.5 size-3" aria-hidden={true} />
                 {variantsToDelete.length}
               </span>
               <Badge
-                className="border rounded-full bg-background transition-opacity"
+                className="border rounded-full transition-opacity"
                 color={unchangedVariants.length > 0 ? "zinc" : "zinc"}
               >
                 {unchangedVariants.length}
@@ -705,6 +705,7 @@ export function VariantsTab({ product: initialProduct }: VariantsTab2Props) {
                       key={variant.id}
                       variant={variant}
                       onUpdate={handleVariantUpdate}
+                      onDelete={() => {}}
                       showActions={true}
                       regions={regionsWithLocale}
                       onAddPrice={handleAddPrice}
@@ -748,8 +749,7 @@ export function VariantsTab({ product: initialProduct }: VariantsTab2Props) {
   );
 }
 
-
-export const VariantForm = ({ variant, onChange, onSave, onCancel }) => (
+export const VariantForm = ({ variant, onChange, onSave, onCancel }: any) => (
   <div className="flex flex-col">
     <div>
       <div className="p-4 border-b">

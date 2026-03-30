@@ -11,17 +11,23 @@ import {
   Mail,
   MapPin,
   Phone,
+  Calculator,
+  ShoppingBag,
   User,
   Building,
-  ShoppingBag,
+  CreditCard,
+  Truck,
+  History as HistoryIcon
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 
+
+const Card = "div";
 
 interface ExtendedOrder {
   id: string;
@@ -149,9 +155,10 @@ export function OrderPageClient({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-8 space-y-6">
             {/* Line Items Card */}
-            <Card className="bg-muted/10">
-              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b">
-                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+            <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground flex items-center gap-2">
+                  <ShoppingBag className="size-3.5 opacity-70" />
                   Line Items
                 </CardTitle>
               </CardHeader>
@@ -232,9 +239,10 @@ export function OrderPageClient({
             </Card>
 
             {/* Payment Card */}
-            <Card className="bg-muted/10">
-              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b">
-                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+            <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground flex items-center gap-2">
+                  <Calculator className="size-3.5 opacity-70" />
                   {order.paymentDetails?.[0]?.status === "captured"
                     ? "Payment Complete"
                     : "Payment Processing"}
@@ -268,9 +276,10 @@ export function OrderPageClient({
             </Card>
 
             {/* Activity Log Card */}
-            <Card className="overflow-hidden bg-muted/10">
-              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b">
-                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+            <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground flex items-center gap-2">
+                  <HistoryIcon className="size-3.5 opacity-70" />
                   Activity Log
                 </CardTitle>
                 <div className="flex items-center gap-2">
@@ -314,9 +323,10 @@ export function OrderPageClient({
 
           <div className="lg:col-span-4 space-y-6">
             {/* Customer Card */}
-            <Card className="bg-muted/10">
-              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b">
-                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+            <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground flex items-center gap-2">
+                  <User className="size-3.5 opacity-70" />
                   Customer
                 </CardTitle>
               </CardHeader>
@@ -344,9 +354,10 @@ export function OrderPageClient({
             </Card>
 
             {/* Contact Information Card */}
-            <Card className="bg-muted/10">
+            <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between px-4 py-2 border-b">
-                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground flex items-center gap-2">
+                  <Mail className="size-3.5 opacity-70" />
                   Contact Information
                 </CardTitle>
                 <Button
@@ -374,9 +385,10 @@ export function OrderPageClient({
             </Card>
 
             {/* Shipping Address Card */}
-            <Card className="bg-muted/10">
+            <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between px-4 py-2 border-b">
-                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground flex items-center gap-2">
+                  <Truck className="size-3.5 opacity-70" />
                   Shipping Address
                 </CardTitle>
                 {order.shippingAddress?.id && (
@@ -459,9 +471,10 @@ export function OrderPageClient({
             </Card>
 
             {/* Billing Address Card */}
-            <Card className="bg-muted/10">
-              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b">
-                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground">
+            <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground flex items-center gap-2">
+                  <CreditCard className="size-3.5 opacity-70" />
                   Billing Address
                 </CardTitle>
               </CardHeader>

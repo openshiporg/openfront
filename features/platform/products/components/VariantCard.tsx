@@ -218,7 +218,7 @@ export function VariantCard({
   showActions = true,
   regions = [],
   onAddPrice,
-  selectedFilters = [],
+  selectedFilters = [] as string[],
   onOptionFilter,
   productImages = [],
   renderOptionValue = (ov) => (
@@ -411,7 +411,7 @@ export function VariantCard({
                                 </span>
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-80 p-0 bg-white dark:bg-slate-950 border shadow-lg" align="end">
+                            <PopoverContent className="w-80 p-0 bg-card border shadow-lg" align="end">
                               <PriceForm
                                 region={region}
                                 initialPrice={existingPrice}
@@ -443,7 +443,7 @@ export function VariantCard({
                               {region.currency.symbol} ADD
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-80 p-0 bg-white dark:bg-slate-950 border shadow-lg" align="end">
+                          <PopoverContent className="w-80 p-0 bg-card border shadow-lg" align="end">
                             <PriceForm
                               region={region}
                               onSave={handlePriceUpdate}

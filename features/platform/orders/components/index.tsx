@@ -6,7 +6,6 @@ export { StatusTabs } from './StatusTabs';
 export { StatusBadge } from './StatusBadge';
 export { FulfillmentHistory } from './FulfillmentHistory';
 export { UnfulfilledItems } from './UnfulfilledItems';
-export { CartDialog } from './CartDialog';
 export { OrderCreateButton } from './OrderCreateButton';
 export { CustomerSearchCombobox } from './CustomerSearchCombobox';
 export { AddressSelectCombobox } from './AddressSelectCombobox';

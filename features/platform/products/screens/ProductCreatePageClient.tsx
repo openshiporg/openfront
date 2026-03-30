@@ -8,11 +8,11 @@
 
 import React, { useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, Check, Package, Image, Box, Tag, Building } from 'lucide-react'
+import { AlertTriangle, Check, Package, Image, Box, Tag, Building, Info } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Card, CardContent } from '@/components/ui/card'
+import { CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -35,6 +35,8 @@ import { VariantsTab } from '../components/VariantsTab'
 import { createProductVariant } from '../actions/variants'
 import { generateUniqueProductHandle } from '../actions'
 import { useRegions } from '../hooks/useProductData'
+
+const Card = 'div'
 
 interface ProductCreatePageClientProps {
   listKey: string
@@ -71,6 +73,23 @@ function toStorageAmount(displayAmount: string, currencyCode: string) {
 
   const isNoDivision = NO_DIVISION_CURRENCIES.includes(currencyCode.toLowerCase())
   return isNoDivision ? Math.round(numericAmount) : Math.round(numericAmount * 100)
+}
+
+function sanitizePriceInput(value: string, currencyCode: string) {
+  const cleaned = value.replace(',', '.').replace(/[^\d.]/g, '')
+  const isNoDivision = NO_DIVISION_CURRENCIES.includes(currencyCode.toLowerCase())
+
+  if (isNoDivision) {
+    return cleaned.replace(/\./g, '')
+  }
+
+  const firstDecimalIndex = cleaned.indexOf('.')
+  if (firstDecimalIndex === -1) return cleaned
+
+  const integerPart = cleaned.slice(0, firstDecimalIndex)
+  const decimalPart = cleaned.slice(firstDecimalIndex + 1).replace(/\./g, '').slice(0, 2)
+
+  return `${integerPart}.${decimalPart}`
 }
 
 export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClientProps) {
@@ -124,7 +143,9 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
   const MEDIA_FIELDS = new Set(['productImages'])
   const VARIANT_FIELDS = new Set(['productVariants'])
   const DISCOUNT_TAX_FIELDS = new Set(['discountable', 'discountConditions', 'discountRules', 'taxRates'])
-  const ORGANIZATION_FIELDS = new Set(['status', 'productCollections', 'productCategories', 'productTags'])
+  const STATUS_FIELDS = new Set(['status'])
+  const ORGANIZATION_FIELDS = new Set(['productCollections', 'productCategories', 'productTags'])
+  const HIDDEN_FIELDS = new Set(['metadata', 'externalId', 'shippingProfile', 'productType', 'productOptions'])
 
   // Tab state
   const [activeTab, setActiveTab] = useState('general')
@@ -144,6 +165,20 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
     status: 'draft',
     handle: '',
   })
+
+  const updateDefaultVariantPrice = useCallback((index: number, field: 'amount' | 'compareAmount', value: string, currencyCode: string) => {
+    const nextValue = sanitizePriceInput(value, currencyCode)
+
+    setDefaultVariant((prev) => ({
+      ...prev,
+      prices: prev.prices.map((entry, entryIndex) => {
+        if (entryIndex !== index) return entry
+        return field === 'amount'
+          ? { ...entry, amount: nextValue }
+          : { ...entry, compareAmount: nextValue }
+      }),
+    }))
+  }, [])
 
   const getStringFieldValue = (value: unknown): string => {
     if (typeof value === 'string') return value
@@ -348,6 +383,7 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
   const fieldsSplit = useMemo(() => {
     const sidebarFields: Record<string, any> = {}
     const generalFields: Record<string, any> = {}
+    const statusFields: Record<string, any> = {}
     const mediaFields: Record<string, any> = {}
     const variantFields: Record<string, any> = {}
     const discountTaxFields: Record<string, any> = {}
@@ -355,6 +391,8 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
     
     Object.entries(enhancedFields).forEach(([key, field]) => {
       const fieldPath = field.path
+
+      if (HIDDEN_FIELDS.has(fieldPath)) return
       
       // Distribute fields by tab
       if (GENERAL_FIELDS.has(fieldPath)) {
@@ -365,6 +403,8 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
         variantFields[key] = field
       } else if (DISCOUNT_TAX_FIELDS.has(fieldPath)) {
         discountTaxFields[key] = field
+      } else if (STATUS_FIELDS.has(fieldPath)) {
+        statusFields[key] = field
       } else if (ORGANIZATION_FIELDS.has(fieldPath)) {
         organizationFields[key] = field
       } else {
@@ -376,6 +416,7 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
     return { 
       sidebarFields, 
       generalFields, 
+      statusFields,
       mediaFields, 
       variantFields, 
       discountTaxFields, 
@@ -432,6 +473,9 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
       case 'organization':
         fieldsToCheck = fieldsSplit.organizationFields
         break
+      case 'status':
+        fieldsToCheck = fieldsSplit.statusFields
+        break
       default:
         return 0
     }
@@ -448,340 +492,358 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
 
   return (
     <>
-      {/* Platform Breadcrumbs */}
-      <PageBreadcrumbs 
-        items={breadcrumbItems} 
-        actions={
-          <Button
-            size="sm"
-            className="sm:text-sm text-xs"
-            onClick={prepareCreateDialog}
-            disabled={isCreating}
-          >
-            Create {list.singular}
-            <Check className="ml-1 stroke-[1.5px]" width="8" height="8" />
-          </Button>
-        }
-      />
+      <div className="min-h-screen bg-muted/5 pb-20 font-sans selection:bg-indigo-500/30">
+      {/* Premium Glassmorphic Header */}
+      <div className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+          <PageBreadcrumbs 
+            items={breadcrumbItems} 
+            actions={
+              <Button
+                size="sm"
+                onClick={prepareCreateDialog}
+                disabled={isCreating}
+              >
+                <Check className="mr-1.5 size-3.5" />
+                {isCreating ? 'Creating...' : `Create ${list.singular}`}
+              </Button>
+            }
+          />
+      </div>
       
-      <main className="w-full max-w-5xl p-4 md:p-6">
-        <div className="grid lg:grid-cols-[minmax(240px,2fr)_3fr] gap-6 gap-y-8 min-h-[calc(100vh-8rem)]">
-          {/* Sidebar */}
-          <aside className="lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7.5rem)] flex flex-col h-full">
-            <div className="space-y-6 flex-grow overflow-y-auto pb-2">
-              <div>
-                <h1
-                  className="text-lg font-semibold md:text-2xl"
-                  title={`Create ${list.singular}`}
-                >
-                  Create {list.singular}
-                </h1>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Add a new {list.singular.toLowerCase()} to {list.label.toLowerCase()}
-                </p>
-              </div>
+      <main className="max-w-6xl p-4 md:p-6">
+        <div className="mb-8">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Create {list.singular}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Add a new {list.singular.toLowerCase()} to your catalog.
+          </p>
+        </div>
 
-              {/* Sidebar Fields (if any) */}
-              {Object.keys(fieldsSplit.sidebarFields).length > 0 && (
-                <Fields {...createItem.props} fields={fieldsSplit.sidebarFields} view="createView" groups={list.groups} />
-              )}
-            </div>
+        {/* GraphQL errors */}
+        {(createItem.error?.networkError || createItem.error?.graphQLErrors?.length) && (
+          <Alert variant="destructive" className="mb-8">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              {createItem.error.networkError?.message || 
+               createItem.error.graphQLErrors?.[0]?.message ||
+               'An error occurred while creating the item'
+              }
+            </AlertDescription>
+          </Alert>
+        )}
 
-          </aside>
-
-
-          {/* Main content */}
-          <div className="space-y-6">
-            {/* GraphQL errors */}
-            {(createItem.error?.networkError || createItem.error?.graphQLErrors?.length) && (
-              <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  {createItem.error.networkError?.message || 
-                   createItem.error.graphQLErrors?.[0]?.message ||
-                   'An error occurred while creating the item'
-                  }
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Section Select Dropdown */}
-            <div className="mb-4">
-              <Label htmlFor="section-select" className="text-sm font-medium mb-2 block">
-                Product Section
-              </Label>
-              <Select value={activeTab} onValueChange={setActiveTab}>
-                <SelectTrigger
-                  id="section-select"
-                  className="h-auto ps-3 text-left [&>span]:flex [&>span]:items-center [&>span]:gap-3 [&>span_svg]:shrink-0"
-                >
-                  <SelectValue placeholder="Choose a section" />
-                </SelectTrigger>
-                <SelectContent className="[&_*[role=option]]:ps-3 [&_*[role=option]]:pe-8 [&_*[role=option]>span]:start-auto [&_*[role=option]>span]:end-2">
-                  {tabs.map((tab) => {
-                    const Icon = tab.icon
-                    const errorCount = getTabErrorCount(tab.id)
-                    const hasError = errorCount > 0
-
-                    return (
-                      <SelectItem key={tab.id} value={tab.id}>
-                        <span className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg border ${
-                            hasError 
-                              ? 'border-red-300 bg-red-50 dark:bg-red-950/30' 
-                              : 'border-blue-300 bg-blue-50 dark:bg-blue-950/30'
-                          }`}>
-                            <Icon className={`h-4 w-4 ${
-                              hasError ? 'text-red-600' : 'text-blue-600'
-                            }`} />
-                          </div>
-                          <span>
-                            <span className={`block font-medium ${
-                              hasError ? 'text-red-900 dark:text-red-100' : 'text-gray-900 dark:text-gray-100'
-                            }`}>
-                              {tab.label}
-                              {hasError && (
-                                <span className="ml-2 text-xs text-red-600 font-normal">
-                                  ({errorCount} ERROR{errorCount > 1 ? 'S' : ''})
-                                </span>
-                              )}
-                            </span>
-                            <span className={`text-muted-foreground mt-0.5 block text-xs ${
-                              hasError ? 'text-red-700 dark:text-red-300' : ''
-                            }`}>
-                              {tab.description}
-                            </span>
-                          </span>
-                        </span>
-                      </SelectItem>
-                    )
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Section Content */}
-            {activeTab === 'general' && Object.keys(fieldsSplit.generalFields).length > 0 && (
-              <div className="space-y-6">
-                <Fields {...createItem.props} fields={fieldsSplit.generalFields} view="createView" groups={list.groups} />
-              </div>
-            )}
-
-            {activeTab === 'media' && Object.keys(fieldsSplit.mediaFields).length > 0 && (
-              <div className="space-y-6">
-                <Fields {...createItem.props} fields={fieldsSplit.mediaFields} view="createView" groups={list.groups} />
-              </div>
-            )}
-
-            {activeTab === 'variants' && (
-              <div className="space-y-6">
-                <div className="space-y-4">
-                  <div>
-                    <h2 className="text-sm font-medium text-muted-foreground mb-3">Variant setup</h2>
-                    <div className="grid gap-3 sm:grid-cols-2 max-w-2xl">
-                      <button
-                        type="button"
-                        onClick={() => setVariantMode('default')}
-                        className={`rounded-xl border p-4 text-left transition ${
-                          variantMode === 'default'
-                            ? 'border-foreground bg-accent/40'
-                            : 'border-border bg-background hover:bg-accent/20'
-                        }`}
-                      >
-                        <div className="font-medium">Default variant</div>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Best for simple products with one price, one SKU, and no options.
-                        </p>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setVariantMode('multiple')}
-                        className={`rounded-xl border p-4 text-left transition ${
-                          variantMode === 'multiple'
-                            ? 'border-foreground bg-accent/40'
-                            : 'border-border bg-background hover:bg-accent/20'
-                        }`}
-                      >
-                        <div className="font-medium">Multiple variants</div>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Use options like size or color and manage generated variant combinations.
-                        </p>
-                      </button>
-                    </div>
+        <div className="flex flex-col lg:flex-row gap-8 items-start">
+          {/* Main Content - Left Column */}
+          <div className="flex-1 w-full space-y-8">
+            
+            {/* General Info */}
+            {Object.keys(fieldsSplit.generalFields).length > 0 && (
+              <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+                <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                  <div className="flex items-center gap-2">
+                    <Package className="size-4 opacity-70 text-muted-foreground" />
+                    <span className="font-medium uppercase text-xs tracking-wider text-muted-foreground">General Information</span>
                   </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <Fields {...createItem.props} fields={fieldsSplit.generalFields} view="createView" groups={list.groups} />
+                </CardContent>
+              </Card>
+            )}
 
+            {/* Media */}
+            {Object.keys(fieldsSplit.mediaFields).length > 0 && (
+              <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+                <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                  <div className="flex items-center gap-2">
+                    <Image className="size-4 opacity-70 text-muted-foreground" />
+                    <span className="font-medium uppercase text-xs tracking-wider text-muted-foreground">Media Gallery</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <Fields {...createItem.props} fields={fieldsSplit.mediaFields} view="createView" groups={list.groups} />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Variants configuration */}
+            <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                <div className="flex items-center gap-2">
+                  <Box className="size-4 opacity-70 text-muted-foreground" />
+                  <span className="font-medium uppercase text-xs tracking-wider text-muted-foreground">Variants & Pricing</span>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="p-6 border-b border-border/40 bg-muted/10">
+                  <div className="grid gap-4 sm:grid-cols-2 w-full">
+                    <button
+                      type="button"
+                      onClick={() => setVariantMode('default')}
+                      className={`rounded-xl border p-4 text-left transition-all ${
+                        variantMode === 'default'
+                          ? 'border-indigo-500 bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-sm'
+                          : 'border-border bg-background hover:bg-muted/50 hover:border-border/80'
+                      }`}
+                    >
+                      <div className="font-medium text-sm">Default Variant</div>
+                      <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                        Best for simple products with one price, one SKU, and no options.
+                      </p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setVariantMode('multiple')}
+                      className={`rounded-xl border p-4 text-left transition-all ${
+                        variantMode === 'multiple'
+                          ? 'border-indigo-500 bg-indigo-500/5 ring-1 ring-indigo-500/20 shadow-sm'
+                          : 'border-border bg-background hover:bg-muted/50 hover:border-border/80'
+                      }`}
+                    >
+                      <div className="font-medium text-sm">Multiple Variants</div>
+                      <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                        Use options like size or color and manage generated variant combinations.
+                      </p>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-6">
                   {variantMode === 'default' ? (
-                    <Card className="max-w-2xl">
-                      <CardContent className="p-6 space-y-6">
+                    <div className="space-y-8">
+                      <div className="grid gap-6 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="default-variant-title" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Variant title</Label>
+                          <Input
+                            id="default-variant-title"
+                            value={defaultVariant.title}
+                            onChange={(e) => setDefaultVariant((prev) => ({ ...prev, title: e.target.value }))}
+                            placeholder="Default Title"
+                            className="h-10 transition-colors focus-visible:ring-indigo-500"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="default-variant-sku" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">SKU</Label>
+                          <Input
+                            id="default-variant-sku"
+                            value={defaultVariant.sku}
+                            onChange={(e) => setDefaultVariant((prev) => ({ ...prev, sku: e.target.value }))}
+                            placeholder="SKU-001"
+                            className="h-10 transition-colors focus-visible:ring-indigo-500"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="default-variant-stock" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Inventory quantity</Label>
+                          <Input
+                            id="default-variant-stock"
+                            type="number"
+                            min="0"
+                            value={defaultVariant.inventoryQuantity}
+                            onChange={(e) => setDefaultVariant((prev) => ({ ...prev, inventoryQuantity: e.target.value }))}
+                            className="h-10 transition-colors focus-visible:ring-indigo-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="flex items-center justify-between rounded-xl bg-muted/30 p-4 ring-1 ring-foreground/5 transition-colors hover:bg-muted/40 dark:ring-white/10">
+                          <div>
+                            <div className="font-medium text-sm">Manage inventory</div>
+                            <p className="text-xs text-muted-foreground mt-1">Track stock for this default variant.</p>
+                          </div>
+                          <Switch
+                            checked={defaultVariant.manageInventory}
+                            onCheckedChange={(checked) => setDefaultVariant((prev) => ({ ...prev, manageInventory: checked }))}
+                            className="data-[state=checked]:bg-indigo-600"
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between rounded-xl bg-muted/30 p-4 ring-1 ring-foreground/5 transition-colors hover:bg-muted/40 dark:ring-white/10">
+                          <div>
+                            <div className="font-medium text-sm">Allow backorders</div>
+                            <p className="text-xs text-muted-foreground mt-1">Allow purchases when inventory reaches zero.</p>
+                          </div>
+                          <Switch
+                            checked={defaultVariant.allowBackorder}
+                            onCheckedChange={(checked) => setDefaultVariant((prev) => ({ ...prev, allowBackorder: checked }))}
+                            className="data-[state=checked]:bg-indigo-600"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 pt-4 border-t border-border/40">
                         <div>
-                          <h3 className="font-medium">Default variant</h3>
+                          <h4 className="font-medium text-sm">Regional pricing</h4>
                           <p className="text-sm text-muted-foreground mt-1">
-                            This product will be created with a single default variant so pricing works immediately.
+                            Set prices for the regions you want to sell in. Leave blank to add later.
                           </p>
                         </div>
 
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          <div className="space-y-2">
-                            <Label htmlFor="default-variant-title">Variant title</Label>
-                            <Input
-                              id="default-variant-title"
-                              value={defaultVariant.title}
-                              onChange={(e) => setDefaultVariant((prev) => ({ ...prev, title: e.target.value }))}
-                              placeholder="Default Title"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="default-variant-sku">SKU</Label>
-                            <Input
-                              id="default-variant-sku"
-                              value={defaultVariant.sku}
-                              onChange={(e) => setDefaultVariant((prev) => ({ ...prev, sku: e.target.value }))}
-                              placeholder="SKU-001"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="default-variant-stock">Inventory quantity</Label>
-                            <Input
-                              id="default-variant-stock"
-                              type="number"
-                              min="0"
-                              value={defaultVariant.inventoryQuantity}
-                              onChange={(e) => setDefaultVariant((prev) => ({ ...prev, inventoryQuantity: e.target.value }))}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          <div className="flex items-center justify-between rounded-lg border p-4">
-                            <div>
-                              <div className="font-medium text-sm">Manage inventory</div>
-                              <p className="text-xs text-muted-foreground mt-1">Track stock for this default variant.</p>
-                            </div>
-                            <Switch
-                              checked={defaultVariant.manageInventory}
-                              onCheckedChange={(checked) => setDefaultVariant((prev) => ({ ...prev, manageInventory: checked }))}
-                            />
-                          </div>
-
-                          <div className="flex items-center justify-between rounded-lg border p-4">
-                            <div>
-                              <div className="font-medium text-sm">Allow backorders</div>
-                              <p className="text-xs text-muted-foreground mt-1">Allow purchases when inventory reaches zero.</p>
-                            </div>
-                            <Switch
-                              checked={defaultVariant.allowBackorder}
-                              onCheckedChange={(checked) => setDefaultVariant((prev) => ({ ...prev, allowBackorder: checked }))}
-                            />
-                          </div>
-                        </div>
-
                         <div className="space-y-3">
-                          <div>
-                            <h4 className="font-medium text-sm">Regional pricing</h4>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Set prices for the regions you want to sell in. Leave blank to add later.
-                            </p>
-                          </div>
+                          {regionsLoading ? (
+                            <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
+                              Loading regions…
+                            </div>
+                          ) : regionsError ? (
+                            <div className="rounded-xl border border-dashed border-destructive/50 bg-destructive/5 p-6 text-center text-sm text-destructive">
+                              Failed to load regions. You can still create the product and add pricing later.
+                            </div>
+                          ) : defaultVariant.prices.length > 0 ? defaultVariant.prices.map((price, index) => {
+                            const regionMeta = defaultVariantRegions.find((region: { regionCode: string; label: string; currencyCode: string; currencySymbol: string }) => region.regionCode === price.regionCode)
+                            const currencySymbol = (regionMeta?.currencySymbol || '').trim() || price.currencyCode
+                            const isNoDivisionCurrency = NO_DIVISION_CURRENCIES.includes(price.currencyCode.toLowerCase())
 
-                          <div className="space-y-3">
-                            {regionsLoading ? (
-                              <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                                Loading regions…
-                              </div>
-                            ) : regionsError ? (
-                              <div className="rounded-lg border border-dashed p-4 text-sm text-destructive">
-                                Failed to load regions. You can still create the product and add pricing later.
-                              </div>
-                            ) : defaultVariant.prices.length > 0 ? defaultVariant.prices.map((price, index) => {
-                              const regionMeta = defaultVariantRegions.find((region: { regionCode: string; label: string; currencyCode: string; currencySymbol: string }) => region.regionCode === price.regionCode)
+                            return (
+                              <div key={`${price.regionCode}-${index}`} className="rounded-xl bg-muted/30 p-4 ring-1 ring-foreground/5 dark:ring-white/10">
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                  <div className="space-y-1">
+                                    <div className="font-medium text-sm">{regionMeta?.label || price.regionCode}</div>
+                                    <p className="text-xs text-muted-foreground">
+                                      Set the base and compare-at price for this region.
+                                    </p>
+                                  </div>
+                                  <div className="inline-flex items-center gap-2 rounded-md bg-gradient-to-b from-muted to-muted/70 px-2.5 py-1.5 text-xs ring-1 ring-foreground/5 dark:from-muted/70 dark:to-muted/30 dark:ring-white/10">
+                                    <span className="text-sm leading-none text-muted-foreground">{currencySymbol}</span>
+                                    <span className="font-semibold tabular-nums">{price.currencyCode}</span>
+                                  </div>
+                                </div>
 
-                              return (
-                                <div key={`${price.regionCode}-${index}`} className="rounded-lg border p-4 space-y-3">
-                                  <div className="flex items-center justify-between gap-3">
-                                    <div>
-                                      <div className="font-medium text-sm">{regionMeta?.label || price.regionCode}</div>
-                                      <div className="text-xs text-muted-foreground">{price.regionCode}</div>
-                                    </div>
-                                    <div className="text-xs text-muted-foreground">
-                                      {(regionMeta?.currencySymbol || '').trim()} {price.currencyCode}
+                                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                                  <div className="space-y-2">
+                                    <Label className="text-xs text-muted-foreground">Price</Label>
+                                    <div className="relative rounded-lg bg-background ring-1 ring-foreground/5 transition-[box-shadow] focus-within:ring-2 focus-within:ring-indigo-500/20 dark:ring-white/10 dark:focus-within:ring-indigo-500/30">
+                                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm font-medium text-muted-foreground">
+                                        {currencySymbol}
+                                      </div>
+                                      <Input
+                                        type="text"
+                                        inputMode={isNoDivisionCurrency ? 'numeric' : 'decimal'}
+                                        autoComplete="off"
+                                        value={price.amount}
+                                        onChange={(e) => updateDefaultVariantPrice(index, 'amount', e.target.value, price.currencyCode)}
+                                        placeholder={isNoDivisionCurrency ? '0' : '0.00'}
+                                        className="h-11 border-0 bg-transparent pl-9 pr-16 text-sm tabular-nums shadow-none focus-visible:border-transparent focus-visible:ring-0"
+                                      />
+                                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                                        <span className="rounded-md bg-gradient-to-b from-muted to-muted/70 px-2 py-1 text-[11px] font-medium text-muted-foreground ring-1 ring-foreground/5 dark:from-muted/70 dark:to-muted/30 dark:ring-white/10">
+                                          {price.currencyCode}
+                                        </span>
+                                      </div>
                                     </div>
                                   </div>
-                                  <div className="grid gap-3 sm:grid-cols-2">
-                                    <div className="space-y-2">
-                                      <Label>Price</Label>
+
+                                  <div className="space-y-2">
+                                    <Label className="text-xs text-muted-foreground">Compare-at price</Label>
+                                    <div className="relative rounded-lg bg-background ring-1 ring-foreground/5 transition-[box-shadow] focus-within:ring-2 focus-within:ring-indigo-500/20 dark:ring-white/10 dark:focus-within:ring-indigo-500/30">
+                                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm font-medium text-muted-foreground">
+                                        {currencySymbol}
+                                      </div>
                                       <Input
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        value={price.amount}
-                                        onChange={(e) => setDefaultVariant((prev) => ({
-                                          ...prev,
-                                          prices: prev.prices.map((entry, entryIndex) =>
-                                            entryIndex === index ? { ...entry, amount: e.target.value } : entry
-                                          ),
-                                        }))}
-                                        placeholder="0.00"
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label>Compare at price</Label>
-                                      <Input
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
+                                        type="text"
+                                        inputMode={isNoDivisionCurrency ? 'numeric' : 'decimal'}
+                                        autoComplete="off"
                                         value={price.compareAmount}
-                                        onChange={(e) => setDefaultVariant((prev) => ({
-                                          ...prev,
-                                          prices: prev.prices.map((entry, entryIndex) =>
-                                            entryIndex === index ? { ...entry, compareAmount: e.target.value } : entry
-                                          ),
-                                        }))}
+                                        onChange={(e) => updateDefaultVariantPrice(index, 'compareAmount', e.target.value, price.currencyCode)}
                                         placeholder="Optional"
+                                        className="h-11 border-0 bg-transparent pl-9 pr-16 text-sm tabular-nums shadow-none focus-visible:border-transparent focus-visible:ring-0"
                                       />
+                                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                                        <span className="rounded-md bg-gradient-to-b from-muted to-muted/70 px-2 py-1 text-[11px] font-medium text-muted-foreground ring-1 ring-foreground/5 dark:from-muted/70 dark:to-muted/30 dark:ring-white/10">
+                                          {price.currencyCode}
+                                        </span>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
-                              )
-                            }) : (
-                              <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                                No regions found yet. You can still create the product and add pricing later.
                               </div>
-                            )}
-                          </div>
+                            )
+                          }) : (
+                            <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
+                              No regions found yet. You can still create the product and add pricing later.
+                            </div>
+                          )}
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
                   ) : (
-                    <div className="space-y-4 max-w-2xl">
-                      <Alert>
+                    <div className="pt-2">
+                      <Alert className="mb-6 bg-indigo-500/5 text-indigo-700 border-indigo-500/20 dark:text-indigo-400">
+                        <Info className="size-4" />
                         <AlertDescription>
                           Multiple variants use your existing options-and-combinations flow. Create the product first, then continue managing options, variants, and pricing on the product page.
                         </AlertDescription>
                       </Alert>
-                      <VariantsTab product={{}} />
+                      <div className="border border-border/40 rounded-xl bg-background overflow-hidden p-6">
+                        <VariantsTab product={{}} />
+                      </div>
                     </div>
                   )}
                 </div>
-              </div>
-            )}
+              </CardContent>
+            </Card>
 
-            {activeTab === 'discounts' && Object.keys(fieldsSplit.discountTaxFields).length > 0 && (
-              <div className="space-y-6">
-                <Fields {...createItem.props} fields={fieldsSplit.discountTaxFields} view="createView" groups={list.groups} />
-              </div>
-            )}
-
-            {activeTab === 'organization' && Object.keys(fieldsSplit.organizationFields).length > 0 && (
-              <div className="space-y-6">
-                <Fields {...createItem.props} fields={fieldsSplit.organizationFields} view="createView" groups={list.groups} />
-              </div>
-            )}
           </div>
+
+          {/* Sidebar - Right Column */}
+          <aside className="w-full lg:w-[320px] flex-shrink-0 space-y-6 lg:sticky lg:top-24">
+            
+            {/* Status & Pricing Info */}
+            <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                <div className="flex items-center gap-2">
+                  <Tag className="size-4 opacity-70 text-muted-foreground" />
+                  <span className="font-medium uppercase text-xs tracking-wider text-muted-foreground">Status & Display</span>
+                </div>
+              </CardHeader>
+              <CardContent className="p-5 space-y-5">
+                {Object.keys(fieldsSplit.statusFields).length > 0 && (
+                  <div className="space-y-3">
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Product Status</Label>
+                    <div className="[&_label]:hidden">
+                      <Fields {...createItem.props} fields={fieldsSplit.statusFields} view="createView" groups={list.groups} />
+                    </div>
+                  </div>
+                )}
+
+                {Object.keys(fieldsSplit.discountTaxFields).length > 0 && (
+                  <div className="space-y-3 pt-5 border-t border-border/40">
+                    <Fields {...createItem.props} fields={fieldsSplit.discountTaxFields} view="createView" groups={list.groups} />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Organization */}
+            {Object.keys(fieldsSplit.organizationFields).length > 0 && (
+              <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+                <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
+                  <div className="flex items-center gap-2">
+                    <Building className="size-4 opacity-70 text-muted-foreground" />
+                    <span className="font-medium uppercase text-xs tracking-wider text-muted-foreground">Organization</span>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-5">
+                  <Fields {...createItem.props} fields={fieldsSplit.organizationFields} view="createView" groups={list.groups} />
+                </CardContent>
+              </Card>
+            )}
+
+            {Object.keys(fieldsSplit.sidebarFields).length > 0 && (
+              <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
+                <CardContent className="p-5">
+                  <Fields {...createItem.props} fields={fieldsSplit.sidebarFields} view="createView" groups={list.groups} />
+                </CardContent>
+              </Card>
+            )}
+
+          </aside>
         </div>
       </main>
+    </div>
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
@@ -850,6 +912,7 @@ export function ProductCreatePageClient({ listKey, list }: ProductCreatePageClie
               Cancel
             </Button>
             <Button type="button" onClick={handleSave} disabled={isCreating}>
+              <Check className="mr-1.5 size-3.5" />
               {isCreating ? 'Creating…' : 'Create'}
             </Button>
           </DialogFooter>
