@@ -1,83 +1,79 @@
-# SYSmoAI - E-Commerce Platform
+# SYSmoAI — B2B AI Systems Platform
 
 ## Overview
-SYSmoAI is a full-featured e-commerce platform built with Next.js and Keystone CMS, migrated from Openfront and branded with the SYSmoAI design system. It includes a storefront, admin dashboard, order management, payments (Stripe/PayPal), OAuth, API keys, webhooks, and more.
+SYSmoAI is a Bangladesh-focused B2B AI systems company website built with Next.js (App Router). **NO shop, cart, or product catalog** — pure services/lead-gen site targeting business owners in Bangladesh.
+
+## Brand
+- **Company**: SYSmoAI Private Limited
+- **Tagline**: AI-powered operating systems for Bangladesh businesses
+- **Founder**: Emon Hossain (Founder & CEO)
+- **Address**: Flat 12-1/C, Swapno Nagar, Pallabi, Dhaka-1216
+- **Phone**: +880 1711-638693 (all WA links: `8801711638693`)
+- **Email**: accounts@sysmoai.com (all email aliases point here)
+- **Colors**: #000000 bg · #0A0A0F dark bg · #1E3A8A System Blue · #2563EB Motion Blue · #60A5FA AI Core · #25D366 WhatsApp green
 
 ## Architecture
-- **Framework**: Next.js 16 (App Router + Pages Router hybrid)
-- **CMS/Backend**: Keystone 6 with GraphQL API
-- **Database**: PostgreSQL (Replit Helium)
-- **Styling**: Tailwind CSS v4 with SYSmoAI brand tokens
-- **Auth**: Custom stateless sessions (Iron-based), OAuth support, API key auth
+- **Framework**: Next.js 16 (App Router)
+- **Backend**: Keystone 6 + PostgreSQL (kept for infra, not linked from frontend)
+- **Styling**: Tailwind CSS v4 (custom brand colors)
+- **Package Manager**: npm with `--legacy-peer-deps`
+- **TypeScript**: `typescript.ignoreBuildErrors: true` in next.config.ts
+- **Routing**: Country-code middleware routes all traffic to `/bd/[page]`
 
-## Branding & Theme
-- **Dark theme**: `app/globals.css` sets `--background: #0A0A0F`, `--foreground: #F8FAFC`, `--card: #13131A`, `--border: #1E1E2E`, `--primary: #6366F1`
-- **Dashboard isolation**: `app/dashboard/globals.css` overrides root CSS vars back to white for the dashboard (child CSS loads after root, wins via cascade). Safe to darken root CSS.
-- **Brand pack**: Stored at `brand-pack/` (excluded from Tailwind scan)
-- **Logo SVG file**: `public/images/logo.svg` — horizontal lockup; served at `/images/logo.svg` (NOTE: `/logo.svg` → redirected to `/us/logo.svg` by middleware; use `/images/logo.svg`)
-- **Colors**: BG `#0A0A0F`, surface `#13131A`, border `#1E1E2E`, primary `#6366F1`, WhatsApp `#25D366`, muted `#94A3B8`
-- **Font**: Inter + Hind Siliguri via Google Fonts in `app/globals.css`
-- **Storefront nav**: Rebuilt — logo left, center nav links (Home/Shop/Services/About/Contact), right side (WhatsApp pill, Account, Cart, mobile hamburger). Dark bg `#0A0A0F`.
-- **Country-code middleware**: `proxy.ts` at root — prepends country code to all routes. Static assets must be under `/images/`, `/assets/`, etc.
+## Page Structure
+All pages live at `app/(storefront)/[countryCode]/(main)/`:
 
-## Storefront Pages
-All pages at `app/(storefront)/[countryCode]/(main)/` with shared Nav+Footer from MainLayout:
-- `/` → Homepage: Hero, Who We Help (7 cards), How It Works (2-col), Featured Products, CTA
-- `/store` → Product listing
-- `/services` → Service tiers (Quick Win, Sprint, Retainer) + FAQ
-- `/about` → Founder story + company info
-- `/contact` → WhatsApp CTA + contact form (client component `ContactForm.tsx`)
-- `/privacy` → Privacy policy
-- `/terms` → Terms of service
-- `app/not-found.tsx` → 404 page
-- `app/sitemap.ts` → XML sitemap (sysmoai.com URLs)
+| Route | File | Description |
+|-------|------|-------------|
+| `/bd` | `page.tsx` → `features/storefront/screens/HomePage.tsx` | 8-section B2B homepage |
+| `/bd/services` | `services/page.tsx` | Service tiers + industries grid + FAQ |
+| `/bd/services/agencies` | `services/agencies/page.tsx` | Agencies industry page |
+| `/bd/services/ecommerce` | `services/ecommerce/page.tsx` | E-commerce industry page |
+| `/bd/services/coaching` | `services/coaching/page.tsx` | Coaching industry page |
+| `/bd/services/accounting` | `services/accounting/page.tsx` | Accounting industry page |
+| `/bd/services/clinics` | `services/clinics/page.tsx` | Clinics industry page |
+| `/bd/services/trading` | `services/trading/page.tsx` | Trading industry page |
+| `/bd/about` | `about/page.tsx` | About + founder story |
+| `/bd/contact` | `contact/page.tsx` | Contact + ContactForm.tsx |
+| `/bd/privacy` | `privacy/page.tsx` | Privacy policy |
+| `/bd/terms` | `terms/page.tsx` | Terms of service |
+| `/bd/refund` | `refund/page.tsx` | Refund policy |
+| `/bd/cookie-policy` | `cookie-policy/page.tsx` | Cookie policy |
 
-## Key Directories
-- `app/` — Next.js App Router pages (dashboard, storefront, API routes)
-- `pages/api/graphql.ts` — Keystone GraphQL API endpoint
-- `features/keystone/` — Keystone models, mutations, queries, access control
-- `features/storefront/` — Storefront-specific logic and modules
-- `features/dashboard/` — Admin dashboard components
-- `features/platform/` — Platform-level features (API keys, apps, onboarding)
-- `migrations/` — Prisma migration files (21 applied)
-- `components/ui/` — Shared UI components (shadcn/ui + SYSmoAI brand)
-- `brand-pack/` — SYSmoAI brand assets (reference only, excluded from Tailwind scan)
-- `lib/` — Utility functions
+## Key Files
+- `lib/constants/contact.ts` — **CANONICAL** phone, email, WA links, address
+- `features/storefront/modules/layout/templates/nav/index.tsx` — B2B nav (no shop)
+- `features/storefront/modules/layout/templates/footer/index.tsx` — 5-column footer
+- `features/storefront/screens/MainLayout.tsx` — wraps all pages + FloatingWhatsApp + CookieConsent
+- `features/storefront/components/FloatingWhatsApp.tsx` — floating WA button
+- `features/storefront/components/CookieConsent.tsx` — cookie consent banner
+- `app/sitemap.ts` — all 14 routes listed
+- `app/robots.ts` — search-engine optimised robots rules
 
-## Running the App
-- **Dev**: `npm run dev` (runs Keystone build, migrations, then Next.js on port 5000)
-- **Build**: `npm run build`
-- **Start**: `npm run start` (port 5000, all hosts)
+## Services & Pricing
+| Service | Price | Duration |
+|---------|-------|----------|
+| AI Profit Audit | ৳7,500–12,000 | 1–2 days |
+| Implementation Sprint | ৳25,000–50,000 | 5 working days |
+| Monthly Retainer | ৳8,000–15,000/mo | Ongoing |
 
-## Environment Variables Required
-### Required
-- `DATABASE_URL` — PostgreSQL connection string (Replit Helium)
-- `SESSION_SECRET` — At least 32 chars, used for session encryption
+## Global Components
+- **FloatingWhatsApp**: Fixed bottom-right WA bubble on all pages
+- **CookieConsent**: Bottom banner with Accept/Reject, persists in localStorage
+- **Nav**: B2B links (Home, Services, Industries, About, Contact) + WhatsApp CTA
+- **Footer**: 5 columns (Brand, Services, Industries, Company, Contact)
 
-### Optional (payment/media/email)
-- `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_KEY`, `STRIPE_WEBHOOK_SECRET`
-- `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`, `PAYPAL_API_URL`
-- `NEXT_PUBLIC_PAYPAL_CLIENT_ID`, `NEXT_PUBLIC_PAYPAL_SANDBOX`
-- `S3_BUCKET_NAME`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_ENDPOINT`
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_STORE_LINK`
-- `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `OPENROUTER_MAX_TOKENS`
-- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_KEY`, `CLOUDINARY_SECRET`
-- `NEXT_PUBLIC_BACKEND_URL`, `NEXT_PUBLIC_DEFAULT_REGION`
-- `PUBLIC_SIGNUPS_ALLOWED`, `HIDE_OPENFRONT_BRANDING`
+## DO NOT
+- Add shop, cart, checkout, or product catalog links
+- Target students, general public, or freelancers
+- Make revenue guarantees or fake testimonials
+- Use indigo colors (use blues only: #2563EB, #60A5FA, #1E3A8A)
+- Hardcode phone number — always import from `lib/constants/contact.ts`
 
-## Replit Configuration
-- Port: **5000** (webview)
-- Workflow: `npm run dev`
-- Package manager: npm
-- Node version: >=20.0.0
-
-## Important CSS Notes
-- `app/globals.css` uses `@source not` directives to exclude `.local`, `brand-pack`, and `node_modules` from Tailwind's scanner (prevents Figma skill doc examples from leaking into compiled CSS)
-- `next.config.ts` has `allowedDevOrigins: ['*.replit.dev', ...]` for Replit iframe compatibility
-- `turbopack: {}` is set to silence the "no turbopack config" notice
-
-## Notes
-- Keystone overrides Next.js version to 14.x internally (via package overrides) while the storefront uses Next.js 16
-- `typescript.ignoreBuildErrors: true` is set in next.config.ts as a workaround for Keystone view type divergence
-- Database migrations run automatically on dev startup
-- The `openfrontClient` class in `features/storefront/lib/config.ts` is an internal GraphQL client (not user-visible, kept as-is for stability)
+## SEO
+- All pages have `metadata` export with title, description, canonical URL, and OpenGraph
+- Industry pages have FAQPage schema (JSON-LD)
+- Homepage has LocalBusiness schema
+- Services page has Service schema
+- `app/sitemap.ts` lists all 14 routes
+- `app/robots.ts` allows indexing, disallows /api /dashboard /account /cart /checkout

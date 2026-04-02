@@ -1,9 +1,10 @@
 import { Metadata } from "next"
-import { PHONE_DISPLAY } from "@/lib/constants/contact"
+import { EMAIL, PHONE_DISPLAY } from "@/lib/constants/contact"
 
 export const metadata: Metadata = {
   title: "Privacy Policy | SYSmoAI",
   description: "SYSmoAI Privacy Policy — how we collect, use, and protect your data.",
+  alternates: { canonical: "https://sysmoai.com/privacy" },
 }
 
 export default function PrivacyPage() {
@@ -14,30 +15,12 @@ export default function PrivacyPage() {
         <p className="text-[#94A3B8] mb-12 text-sm">Last updated: March 2026</p>
 
         {[
-          {
-            title: "What We Collect",
-            body: "We collect information you provide when you create an account, place an order, or contact us — including your name, email address, phone number, and payment information. We also collect basic usage data such as pages visited and browser type to improve our services.",
-          },
-          {
-            title: "How We Use It",
-            body: "Your information is used to process orders, deliver services, send order confirmations, respond to enquiries, and improve our platform. We do not sell your data to third parties. We may send promotional emails if you have opted in, and you can unsubscribe at any time.",
-          },
-          {
-            title: "Payment Data",
-            body: "Payment transactions through bKash, Nagad, Rocket, or card are processed by third-party payment providers. SYSmoAI does not store your full payment credentials. We only retain transaction reference numbers for order verification.",
-          },
-          {
-            title: "Your Rights",
-            body: "You have the right to access, correct, or delete your personal data at any time. To exercise these rights, email us at hello@sysmoai.com. We will respond within 7 working days.",
-          },
-          {
-            title: "Cookies",
-            body: "We use essential cookies to keep you logged in and to remember your cart. We do not use third-party advertising cookies. You can disable cookies in your browser settings, though some features may not function correctly.",
-          },
-          {
-            title: "Contact Us",
-            body: `For any privacy questions or concerns, contact us at hello@sysmoai.com or via WhatsApp at ${PHONE_DISPLAY}.`,
-          },
+          { title: "What We Collect", body: "We collect information you provide when you contact us or use our services — including your name, email address, WhatsApp number, and business details. We also collect basic usage data such as pages visited and browser type to improve our services." },
+          { title: "How We Use It", body: "Your information is used to deliver our services, respond to enquiries, and communicate project scope and updates. We do not sell your data to third parties. We do not use advertising networks." },
+          { title: "WhatsApp Data", body: "When you contact us via WhatsApp, your messages are processed by Meta (WhatsApp). We use WhatsApp solely for business communication. We do not store WhatsApp conversation data outside of the WhatsApp platform." },
+          { title: "Your Rights", body: `You have the right to access, correct, or delete your personal data at any time. Email us at ${EMAIL.accounts} and we will respond within 7 working days.` },
+          { title: "Cookies", body: "We use essential cookies only — to maintain basic site functionality. We do not use third-party advertising cookies. You can manage cookie preferences via our Cookie Policy page." },
+          { title: "Contact", body: `For any privacy questions, email ${EMAIL.accounts} or WhatsApp us at ${PHONE_DISPLAY}.` },
         ].map(({ title, body }) => (
           <section key={title} className="mb-10">
             <h2 className="text-xl font-semibold mb-3">{title}</h2>

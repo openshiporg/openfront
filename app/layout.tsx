@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import WhatsAppButton from "@/components/ui/whatsapp-button";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,26 +14,32 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "SYSmoAI — AI Tools & Systems for Bangladesh",
+    default: "SYSmoAI — AI Systems for Bangladesh Businesses",
     template: "%s | SYSmoAI",
   },
   description:
-    "Premium AI subscriptions and AI implementation services for students, freelancers, agencies, and businesses in Bangladesh. bKash, Nagad, Rocket payments accepted.",
+    "SYSmoAI builds AI-powered operating systems for Bangladesh businesses. AI Profit Audit, Implementation Sprint, and Monthly Retainer. Bangla support. bKash, Nagad accepted.",
   keywords: [
-    "AI tools Bangladesh",
-    "ChatGPT Bangladesh",
-    "AI subscription Bangladesh",
-    "SYSmoAI",
+    "AI systems Bangladesh",
     "AI implementation Bangladesh",
-    "bKash AI subscription",
+    "SYSmoAI",
+    "business automation Bangladesh",
+    "Notion Bangladesh",
+    "AI workflow Bangladesh",
+    "bKash AI",
+    "B2B AI Bangladesh",
   ],
   openGraph: {
-    title: "SYSmoAI — AI Tools & Systems for Bangladesh",
-    description: "Premium AI subscriptions and AI implementation services for Bangladesh.",
+    title: "SYSmoAI — AI Systems for Bangladesh Businesses",
+    description: "We build AI-powered operating systems for Bangladesh businesses.",
     url: "https://sysmoai.com",
     siteName: "SYSmoAI",
     locale: "en_US",
     type: "website",
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 
@@ -52,7 +57,6 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background font-sans`}
       >
         <main>{children}</main>
-        <WhatsAppButton />
       </body>
     </html>
   );
