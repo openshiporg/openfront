@@ -42,33 +42,29 @@ export default async function Footer() {
             <span className="text-xs font-semibold text-white uppercase tracking-widest">Services</span>
             <ul className="flex flex-col gap-2 text-sm text-white/50">
               <li><a href="/bd/services" className="hover:text-white transition-colors">All Services</a></li>
-              <li><a href="/bd/services#audit" className="hover:text-white transition-colors">AI Profit Audit</a></li>
-              <li><a href="/bd/services#sprint" className="hover:text-white transition-colors">Implementation Sprint</a></li>
-              <li><a href="/bd/services#retainer" className="hover:text-white transition-colors">Monthly Retainer</a></li>
+              <li><a href="/bd/services/nemoclaw" className="hover:text-white transition-colors">NemoClaw AI Agents</a></li>
+              <li><a href="/bd/services/openclaw" className="hover:text-white transition-colors">OpenClaw Local AI</a></li>
+              <li><a href="/bd/services/notion-os" className="hover:text-white transition-colors">Notion AI OS</a></li>
+              <li><a href="/bd/services/international" className="hover:text-white transition-colors">International (USD)</a></li>
             </ul>
           </div>
 
-          {/* Column 3 — Industries */}
-          <div className="flex flex-col gap-3">
-            <span className="text-xs font-semibold text-white uppercase tracking-widest">Industries</span>
-            <ul className="flex flex-col gap-2 text-sm text-white/50">
-              <li><a href="/bd/industries" className="hover:text-white transition-colors">All Industries</a></li>
-              <li><a href="/bd/services/agencies" className="hover:text-white transition-colors">Agencies</a></li>
-              <li><a href="/bd/services/ecommerce" className="hover:text-white transition-colors">E-commerce</a></li>
-              <li><a href="/bd/services/coaching" className="hover:text-white transition-colors">Coaching</a></li>
-              <li><a href="/bd/services/accounting" className="hover:text-white transition-colors">Accounting</a></li>
-              <li><a href="/bd/services/clinics" className="hover:text-white transition-colors">Clinics</a></li>
-              <li><a href="/bd/services/trading" className="hover:text-white transition-colors">Trading</a></li>
-            </ul>
-          </div>
-
-          {/* Column 4 — Company */}
+          {/* Column 3 — Company */}
           <div className="flex flex-col gap-3">
             <span className="text-xs font-semibold text-white uppercase tracking-widest">Company</span>
             <ul className="flex flex-col gap-2 text-sm text-white/50">
               <li><a href="/bd/about" className="hover:text-white transition-colors">About</a></li>
+              <li><a href="/bd/proof" className="hover:text-white transition-colors">Proof</a></li>
               <li><a href="/bd/blog" className="hover:text-white transition-colors">Blog</a></li>
-              <li><a href="/bd/contact" className="hover:text-white transition-colors">Contact</a></li>
+              <li><a href="/bd/faq" className="hover:text-white transition-colors">FAQ</a></li>
+              <li><a href="/bd/industries" className="hover:text-white transition-colors">Industries</a></li>
+            </ul>
+          </div>
+
+          {/* Column 4 — Legal */}
+          <div className="flex flex-col gap-3">
+            <span className="text-xs font-semibold text-white uppercase tracking-widest">Legal</span>
+            <ul className="flex flex-col gap-2 text-sm text-white/50">
               <li><a href="/bd/privacy" className="hover:text-white transition-colors">Privacy Policy</a></li>
               <li><a href="/bd/terms" className="hover:text-white transition-colors">Terms of Service</a></li>
               <li><a href="/bd/refund" className="hover:text-white transition-colors">Refund Policy</a></li>
@@ -85,7 +81,7 @@ export default async function Footer() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="text-[#25D366]">
                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.523 5.851L0 24l6.335-1.498A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.006-1.373l-.36-.213-3.732.882.936-3.618-.235-.372A9.818 9.818 0 1112 21.818z" />
                   </svg>
-                  WhatsApp
+                  WhatsApp +880 1711-638693
                 </a>
               </li>
               <li>
@@ -94,7 +90,7 @@ export default async function Footer() {
                 </a>
               </li>
               <li className="text-white/30 text-xs leading-relaxed">
-                {COMPANY.address}
+                Dhaka, Bangladesh
               </li>
             </ul>
           </div>

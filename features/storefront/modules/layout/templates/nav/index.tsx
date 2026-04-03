@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 
 const BrandMark = ({ size = 32 }: { size?: number }) => {
   const sw = size <= 24 ? 3 : size <= 48 ? 2.5 : 2
@@ -31,17 +31,51 @@ const BrandWordmark = ({ size = 20 }: { size?: number }) => (
   </span>
 )
 
-const NAV_LINKS = [
+const SERVICE_LINKS = [
+  { label: "All Services", href: "/bd/services", desc: "Overview of everything we offer" },
+  { label: "NemoClaw AI Agents", href: "/bd/services/nemoclaw", desc: "Claude-powered agents for your business" },
+  { label: "OpenClaw Local AI", href: "/bd/services/openclaw", desc: "AI that runs on your own machine" },
+  { label: "Notion AI OS", href: "/bd/services/notion-os", desc: "Complete business operating system" },
+  { label: "International (USD)", href: "/bd/services/international", desc: "Worldwide clients, USD pricing" },
+]
+
+const TOP_LINKS = [
+  { label: "Industries", href: "/bd/industries" },
+  { label: "Proof", href: "/bd/proof" },
+  { label: "About", href: "/bd/about" },
+  { label: "FAQ", href: "/bd/faq" },
+  { label: "Blog", href: "/bd/blog" },
+]
+
+const MOBILE_LINKS = [
   { label: "Home", href: "/bd" },
   { label: "Services", href: "/bd/services" },
+  { label: "NemoClaw AI Agents", href: "/bd/services/nemoclaw" },
+  { label: "OpenClaw Local AI", href: "/bd/services/openclaw" },
+  { label: "Notion AI OS", href: "/bd/services/notion-os" },
+  { label: "International (USD)", href: "/bd/services/international" },
   { label: "Industries", href: "/bd/industries" },
+  { label: "Proof", href: "/bd/proof" },
   { label: "About", href: "/bd/about" },
+  { label: "FAQ", href: "/bd/faq" },
   { label: "Blog", href: "/bd/blog" },
   { label: "Contact", href: "/bd/contact" },
 ]
 
 export default function Nav() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [servicesOpen, setServicesOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setServicesOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   return (
     <>
@@ -57,7 +91,45 @@ export default function Nav() {
 
             {/* Desktop Nav */}
             <nav className="hidden md:flex items-center gap-1">
-              {NAV_LINKS.map((item) => (
+
+              {/* Services Mega Dropdown */}
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setServicesOpen((v) => !v)}
+                  className="flex items-center gap-1 px-4 py-2 text-slate-300 hover:text-white text-sm font-medium rounded-lg hover:bg-white/5 transition-colors"
+                >
+                  Services
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    className={`transition-transform duration-200 ${servicesOpen ? "rotate-180" : ""}`}
+                  >
+                    <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+
+                {servicesOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-72 bg-[#0D0D1A] border border-[#1E1E2E] rounded-2xl shadow-2xl overflow-hidden">
+                    <div className="p-2">
+                      {SERVICE_LINKS.map((item) => (
+                        <a
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setServicesOpen(false)}
+                          className="flex flex-col px-4 py-3 rounded-xl hover:bg-[#111118] transition-colors group"
+                        >
+                          <span className="text-sm font-medium text-white group-hover:text-blue-400 transition-colors">{item.label}</span>
+                          <span className="text-xs text-[#8888AA] mt-0.5">{item.desc}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {TOP_LINKS.map((item) => (
                 <a
                   key={item.href}
                   href={item.href}
@@ -68,8 +140,14 @@ export default function Nav() {
               ))}
             </nav>
 
-            {/* Desktop Right: WhatsApp CTA */}
-            <div className="hidden md:flex items-center gap-3">
+            {/* Desktop Right: Contact CTA + WhatsApp */}
+            <div className="hidden md:flex items-center gap-2">
+              <a
+                href="/bd/contact"
+                className="px-4 py-2 text-slate-300 hover:text-white text-sm font-medium rounded-lg hover:bg-white/5 transition-colors"
+              >
+                Contact
+              </a>
               <a
                 href="https://wa.me/8801711638693?text=Hi%20SYSmoAI%2C%20I%20need%20help"
                 target="_blank"
@@ -128,12 +206,12 @@ export default function Nav() {
               <button onClick={() => setMobileOpen(false)} className="text-slate-400 hover:text-white p-1 text-xl transition-colors">✕</button>
             </div>
             <nav className="flex flex-col flex-1 py-2 overflow-y-auto">
-              {NAV_LINKS.map((item) => (
+              {MOBILE_LINKS.map((item) => (
                 <a
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
-                  className="flex items-center px-6 py-4 text-white text-base font-medium border-b border-[#1E1E2E] hover:bg-[#13131A] hover:text-[#60A5FA] transition-colors"
+                  className="flex items-center px-6 py-3.5 text-white text-sm font-medium border-b border-[#1E1E2E] hover:bg-[#13131A] hover:text-[#60A5FA] transition-colors"
                 >
                   {item.label}
                 </a>
