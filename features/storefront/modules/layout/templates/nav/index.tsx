@@ -34,8 +34,9 @@ const BrandWordmark = ({ size = 20 }: { size?: number }) => (
 const NAV_LINKS = [
   { label: "Home", href: "/bd" },
   { label: "Services", href: "/bd/services" },
-  { label: "Industries", href: "/bd/services#industries" },
+  { label: "Industries", href: "/bd/industries" },
   { label: "About", href: "/bd/about" },
+  { label: "Blog", href: "/bd/blog" },
   { label: "Contact", href: "/bd/contact" },
 ]
 

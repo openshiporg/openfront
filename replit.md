@@ -33,6 +33,8 @@ All pages live at `app/(storefront)/[countryCode]/(main)/`:
 | `/bd/services/accounting` | `services/accounting/page.tsx` | Accounting industry page |
 | `/bd/services/clinics` | `services/clinics/page.tsx` | Clinics industry page |
 | `/bd/services/trading` | `services/trading/page.tsx` | Trading industry page |
+| `/bd/industries` | `industries/page.tsx` | All industries overview page |
+| `/bd/blog` | `blog/page.tsx` | Blog with article previews |
 | `/bd/about` | `about/page.tsx` | About + founder story |
 | `/bd/contact` | `contact/page.tsx` | Contact + ContactForm.tsx |
 | `/bd/privacy` | `privacy/page.tsx` | Privacy policy |
@@ -60,7 +62,7 @@ All pages live at `app/(storefront)/[countryCode]/(main)/`:
 ## Global Components
 - **FloatingWhatsApp**: Fixed bottom-right WA bubble on all pages
 - **CookieConsent**: Bottom banner with Accept/Reject, persists in localStorage
-- **Nav**: B2B links (Home, Services, Industries, About, Contact) + WhatsApp CTA
+- **Nav**: B2B links (Home, Services, Industries, About, Blog, Contact) + WhatsApp CTA
 - **Footer**: 5 columns (Brand, Services, Industries, Company, Contact)
 
 ## DO NOT

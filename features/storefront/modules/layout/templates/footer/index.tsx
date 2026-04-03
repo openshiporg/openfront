@@ -52,6 +52,7 @@ export default async function Footer() {
           <div className="flex flex-col gap-3">
             <span className="text-xs font-semibold text-white uppercase tracking-widest">Industries</span>
             <ul className="flex flex-col gap-2 text-sm text-white/50">
+              <li><a href="/bd/industries" className="hover:text-white transition-colors">All Industries</a></li>
               <li><a href="/bd/services/agencies" className="hover:text-white transition-colors">Agencies</a></li>
               <li><a href="/bd/services/ecommerce" className="hover:text-white transition-colors">E-commerce</a></li>
               <li><a href="/bd/services/coaching" className="hover:text-white transition-colors">Coaching</a></li>
@@ -66,6 +67,7 @@ export default async function Footer() {
             <span className="text-xs font-semibold text-white uppercase tracking-widest">Company</span>
             <ul className="flex flex-col gap-2 text-sm text-white/50">
               <li><a href="/bd/about" className="hover:text-white transition-colors">About</a></li>
+              <li><a href="/bd/blog" className="hover:text-white transition-colors">Blog</a></li>
               <li><a href="/bd/contact" className="hover:text-white transition-colors">Contact</a></li>
               <li><a href="/bd/privacy" className="hover:text-white transition-colors">Privacy Policy</a></li>
               <li><a href="/bd/terms" className="hover:text-white transition-colors">Terms of Service</a></li>

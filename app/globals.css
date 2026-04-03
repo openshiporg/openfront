@@ -10,6 +10,16 @@
   --font-size: 16px;
   --font-sans: 'Inter', 'SF Pro Display', -apple-system, 'Segoe UI', system-ui, sans-serif;
 
+  /* SYSmoAI tokens */
+  --sysmoai-primary: #0057FF;
+  --sysmoai-primary-dark: #0041CC;
+  --sysmoai-dark: #0A0A0F;
+  --sysmoai-surface: #111118;
+  --sysmoai-text: #E8E8F0;
+  --sysmoai-muted: #8888AA;
+  --sysmoai-border: #1E1E2E;
+  --sysmoai-whatsapp: #25D366;
+
   /* SYSmoAI brand blues */
   --brand-blue-900: #1E3A8A;
   --brand-blue-800: #1E40AF;
@@ -141,6 +151,16 @@
   --color-brand-blue-500: var(--brand-blue-500);
   --color-brand-blue-400: var(--brand-blue-400);
   --color-brand-surface: var(--brand-surface);
+
+  /* SYSmoAI color utilities */
+  --color-sysmoai-primary: var(--sysmoai-primary);
+  --color-sysmoai-primary-dark: var(--sysmoai-primary-dark);
+  --color-sysmoai-dark: var(--sysmoai-dark);
+  --color-sysmoai-surface: var(--sysmoai-surface);
+  --color-sysmoai-text: var(--sysmoai-text);
+  --color-sysmoai-muted: var(--sysmoai-muted);
+  --color-sysmoai-border: var(--sysmoai-border);
+  --color-sysmoai-whatsapp: var(--sysmoai-whatsapp);
 
   /* Font family */
   --font-family-sans: var(--font-sans);
