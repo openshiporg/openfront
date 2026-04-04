@@ -1,39 +1,29 @@
 import { cn } from "@/lib/utils";
-import { Space_Grotesk } from "next/font/google";
-import { LogoIcon } from "./LogoIcon";
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  display: "swap",
-  adjustFontFallback: false,
-});
+import { SYSmoAILogo, SYSmoAIWordmark } from "@/components/ui/sysmoai-logo";
 
 interface LogoProps {
   className?: string;
   textClassName?: string;
   iconClassName?: string;
+  variant?: "mono-black" | "mono-white" | "brand-dark" | "brand-light";
+  size?: number;
 }
 
 export const Logo = ({
   className,
-  textClassName,
-  iconClassName,
+  variant = "brand-dark",
+  size = 28,
 }: LogoProps) => {
+  const wordColor = variant === "mono-black" || variant === "brand-light"
+    ? "#000000"
+    : "#FFFFFF";
+
   return (
-    <div className={cn(spaceGrotesk.className, className)}>
-      <div className="flex items-center gap-2 text-zinc-700 dark:text-white">
-        <LogoIcon className={cn("size-5", iconClassName)} suffix="-full" />
-        <h1
-          className={cn(
-            textClassName,
-            "mb-1 text-xl font-semibold tracking-tight"
-          )}
-        >
-          open<span className="font-normal">front</span>
-        </h1>
-      </div>
+    <div className={cn("inline-flex items-center gap-2", className)}>
+      <SYSmoAILogo size={size} variant={variant} />
+      <SYSmoAIWordmark size={Math.round(size * 0.57)} color={wordColor} />
     </div>
   );
 };
 
-export { LogoIcon };
+export { SYSmoAILogo as LogoIcon };

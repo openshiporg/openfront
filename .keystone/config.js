@@ -3406,7 +3406,7 @@ var getCustomerOrder_default = getCustomerOrder;
 // features/keystone/mutations/getCustomerOrders.ts
 async function getCustomerOrders(root, { limit = 10, offset = 0 }, context) {
   if (!context.session?.itemId) {
-    throw new Error("Not authenticated");
+    return null;
   }
   const sudoContext = context.sudo();
   const orders = await sudoContext.query.Order.findMany({
@@ -8538,7 +8538,7 @@ async function sendOrderConfirmationEmail(order, baseUrl) {
     console.warn("No email address found for order", order.id);
     return;
   }
-  const countryCode = order.shippingAddress?.country?.iso2?.toLowerCase() || "us";
+  const countryCode = order.shippingAddress?.country?.iso2?.toLowerCase() || "bd";
   const frontendUrl = baseUrl || getBaseUrlForEmails();
   const orderUrl = order.secretKey ? `${frontendUrl}/${countryCode}/order/confirmed/${order.id}?secretKey=${order.secretKey}` : `${frontendUrl}/${countryCode}/order/confirmed/${order.id}`;
   try {
@@ -8602,7 +8602,7 @@ async function sendOrderFulfillmentEmail(order, fulfillment, baseUrl) {
     console.warn("No email address found for order", order.id);
     return;
   }
-  const countryCode = order.shippingAddress?.country?.iso2?.toLowerCase() || "us";
+  const countryCode = order.shippingAddress?.country?.iso2?.toLowerCase() || "bd";
   const frontendUrl = baseUrl || getBaseUrlForEmails();
   const orderUrl = order.secretKey ? `${frontendUrl}/${countryCode}/order/confirmed/${order.id}?secretKey=${order.secretKey}` : `${frontendUrl}/${countryCode}/order/confirmed/${order.id}`;
   try {
@@ -14633,7 +14633,7 @@ var Store = (0, import_core81.list)({
   },
   fields: {
     name: (0, import_fields81.text)({
-      defaultValue: "Openfront Store",
+      defaultValue: "SYSmoAI",
       validation: {
         isRequired: true
       }
@@ -14645,10 +14645,10 @@ var Store = (0, import_core81.list)({
       }
     }),
     homepageTitle: (0, import_fields81.text)({
-      defaultValue: "Openfront Next.js Starter"
+      defaultValue: "SYSmoAI Store"
     }),
     homepageDescription: (0, import_fields81.text)({
-      defaultValue: "A performant frontend e-commerce starter template with Next.js 15 and Openfront."
+      defaultValue: "A performant frontend e-commerce platform powered by SYSmoAI."
     }),
     logoIcon: (0, import_fields81.text)({
       defaultValue: '<svg width="24" height="24" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><g clipPath="url(#clip0_238_1296)"><path fillRule="evenodd" clipRule="evenodd" d="M100 0H0L100 100H0L100 200H200L100 100H200L100 0Z" fill="currentColor" /></g><defs><clipPath id="clip0_238_1296"><rect width="200" height="200" fill="white" /></clipPath></defs></svg>'

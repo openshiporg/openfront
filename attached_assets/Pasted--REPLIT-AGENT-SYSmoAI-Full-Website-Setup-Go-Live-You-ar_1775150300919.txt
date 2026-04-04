@@ -1,0 +1,604 @@
+> **REPLIT AGENT — SYSmoAI Full Website Setup & Go-Live**
+> 
+
+> 
+> 
+
+> You are setting up the production website for SYSmoAI at [sysmoai.com](http://sysmoai.com). Follow every step completely and in order. Do not skip any step.
+> 
+
+> 
+> 
+
+> ---
+> 
+
+> 
+> 
+
+> **STEP 1 — Pull latest code from GitHub**
+> 
+
+> Pull the latest code from `https://github.com/sysmoai/openfront` into this Replit project. Overwrite all local files with the GitHub version. Resolve any conflicts by keeping the GitHub version.
+> 
+
+> 
+> 
+
+> ---
+> 
+
+> 
+> 
+
+> **STEP 2 — Install all dependencies**
+> 
+
+> Run `npm install` (or `pnpm install` / `yarn install` — use whatever the project uses). Make sure all packages are installed correctly and there are no errors.
+> 
+
+> 
+> 
+
+> ---
+> 
+
+> 
+> 
+
+> **STEP 3 — Critical contact fix — global search and replace**
+> 
+
+> Search the ENTIRE codebase for the old phone number and replace all instances:
+> 
+
+> - Search for: `01865-385348` → Replace with: `01711-638693`
+> 
+
+> - Search for: `1865385348` → Replace with: `1711638693`
+> 
+
+> - Search for: `8801865385348` → Replace with: `8801711638693`
+> 
+
+> - Search for any WhatsApp link containing `1865` → Replace with the canonical link: `https://wa.me/8801711638693?text=Hi%20SYSmoAI%2C%20I%20need%20help`
+> 
+
+> - After replacing, verify no instance of `1865` or `385348` remains anywhere in the codebase.
+> 
+
+> 
+> 
+
+> ---
+> 
+
+> 
+> 
+
+> **STEP 4 — Apply brand pack**
+> 
+
+> The brand pack is already cloned in the project at the path from `github.com/sysmoai/Sysmoaifinalbrandpack`. Apply all brand tokens:
+> 
+
+> - Primary colors from brand pack (replace any old indigo/emerald defaults)
+> 
+
+> - Fonts from brand pack
+> 
+
+> - Logo (light and dark variants) placed correctly in header and footer
+> 
+
+> - Favicon updated to SYSmoAI favicon
+> 
+
+> 
+> 
+
+> ---
+> 
+
+> 
+> 
+
+> **STEP 5 — Build the full website with all pages**
+> 
+
+> 
+> 
+
+> Build every page listed below. Use the canonical content and structure for each. The website is B2B services only — NO shop, NO cart, NO student content.
+> 
+
+> 
+> 
+
+> **Canonical contact for all pages:**
+> 
+
+> - Phone: +880 1711-638693
+> 
+
+> - WhatsApp CTA: `https://wa.me/8801711638693?text=Hi%20SYSmoAI%2C%20I%20need%20help`
+> 
+
+> - Email: [accounts@sysmoai.com](mailto:accounts@sysmoai.com)
+> 
+
+> 
+> 
+
+> **CTA rule for every page:** WhatsApp button must appear in: sticky header, floating bottom-right button (mobile + desktop), and at least once in the main content section.
+> 
+
+> 
+> 
+
+> ---
+> 
+
+> 
+> 
+
+> **PAGE: / (Homepage)**
+> 
+
+> Build 8 sections in this order:
+> 
+
+> 1. **Hero** — H1: "We install AI-powered operating systems for Bangladesh businesses." | Subheadline: "Notion-based delivery · automation · AI workflows. Built fast. Maintained monthly." | CTA Primary: "Start on WhatsApp" → canonical WhatsApp link | CTA Secondary: "View Services" → /services
+> 
+
+> 2. **Who We Help** — 6 industry cards: Agencies / E-commerce / Coaching / Accounting / Clinics / Trading — each card links to its industry page
+> 
+
+> 3. **How It Works** — 4 steps: (1) WhatsApp us your bottleneck (2) We diagnose with a structured audit (3) We build the system on your existing tools (4) Your team runs it. We maintain it monthly.
+> 
+
+> 4. **Service Ladder** — 3 cards: AI Profit Audit (৳7,500–12,000 · 1–2 days) / Implementation Sprint (৳25,000–50,000 · 5 working days) / Monthly Retainer (৳8,000–15,000/mo)
+> 
+
+> 5. **Proof Block** — Show: "Delivered ৳1 Lakh+ in value for first client. They paid ৳7,500." — keep it minimal, no fabricated stats
+> 
+
+> 6. **Trust Strip** — 5 trust signals: Bangla support ✓ · bKash/Nagad payment ✓ · WhatsApp reply within 24 hrs ✓ · Scope locked in writing ✓ · Full refund if audit delivers no insights ✓
+> 
+
+> 7. **FAQ** — 5 questions (see below in FAQ section)
+> 
+
+> 8. **Final CTA** — Headline: "Ready to stop running your business on WhatsApp and spreadsheets?" + WhatsApp button + contact form anchor
+> 
+
+> 
+> 
+
+> **PAGE: /services**
+> 
+
+> - 3-tier offer cards (Audit → Sprint → Retainer) with full details
+> 
+
+> - Industry grid (6 cards linking to industry pages)
+> 
+
+> - FAQ with schema markup
+> 
+
+> - WhatsApp CTA repeated every major section
+> 
+
+> 
+> 
+
+> **PAGES: /services/agencies | /services/ecommerce | /services/coaching | /services/accounting | /services/clinics | /services/trading**
+> 
+
+> Each industry page must follow this structure:
+> 
+
+> 1. Hero with: industry pain in plain language + WhatsApp CTA above the fold
+> 
+
+> 2. Problem list (5–7 specific pains for that industry)
+> 
+
+> 3. Cost of inaction (time/money lost — no fake numbers, frame it as "typically" or "commonly")
+> 
+
+> 4. What SYSmoAI installs (3–6 system modules for that industry)
+> 
+
+> 5. Package recommendation (Audit → Sprint → Retainer with outcomes)
+> 
+
+> 6. FAQ (5 questions, with FAQPage schema)
+> 
+
+> 7. WhatsApp CTA + secondary contact form
+> 
+
+> 
+> 
+
+> Industry-specific pains:
+> 
+
+> - **Agencies:** Client delivery chaos, manual reporting, project visibility missing, onboarding inconsistent → Install: client portal + project pipeline + SOP wiki + reporting automation
+> 
+
+> - **E-commerce:** Orders lost in inbox, COD leakage, stock confusion, returns overload → Install: order OS + inventory system + complaint/returns workflow + daily reporting
+> 
+
+> - **Coaching:** Leads not followed up, manual onboarding, content delivery messy, payment tracking weak → Install: CRM + onboarding OS + content delivery system + follow-up automation
+> 
+
+> - **Accounting:** Client files scattered, deadline chaos, billing/receivables unclear, compliance reminders manual → Install: client file OS + deadline calendar + billing tracker + secure comms workflow
+> 
+
+> - **Clinics:** Appointment leakage, paper billing, staff accountability unclear → Install: appointment + follow-up OS + staff task system + billing tracker
+> 
+
+> - **Trading:** Stock tracked in Excel, supplier/customer comms scattered, sales can't see inventory → Install: inventory + stock movement OS + supplier/customer OS + weekly reporting dashboard
+> 
+
+> 
+> 
+
+> **PAGE: /about**
+> 
+
+> - Founder story: Why Emon Hossain built SYSmoAI
+> 
+
+> - What we do (systems + automation + AI workflows)
+> 
+
+> - What we don't do (no tool selling, no generic training, no hype)
+> 
+
+> - Operating principles: human-in-the-loop, BD-native, proof-led
+> 
+
+> - WhatsApp CTA
+> 
+
+> 
+> 
+
+> **PAGE: /contact**
+> 
+
+> - WhatsApp button (primary — large, prominent)
+> 
+
+> - Short intake form: Name · Business type · Biggest bottleneck (dropdown) · WhatsApp number
+> 
+
+> - Response time: "We reply within 24 hours"
+> 
+
+> - Address: Flat 12-1/C, Swapno Nagar, Pallabi, Dhaka-1216
+> 
+
+> - Email: [accounts@sysmoai.com](mailto:accounts@sysmoai.com)
+> 
+
+> 
+> 
+
+> **PAGES: /privacy | /terms | /refund | /cookie-policy**
+> 
+
+> - Use any existing legal page content already in the project
+> 
+
+> - Show "Last updated: March 2026" on each
+> 
+
+> - Clean, readable format with plain-language summaries
+> 
+
+> 
+> 
+
+> ---
+> 
+
+> 
+> 
+
+> **STEP 6 — Technical SEO for every page**
+> 
+
+> Every page must have:
+> 
+
+> - Unique `<title>` tag: e.g. "AI Systems for Agencies | SYSmoAI"
+> 
+
+> - Unique `<meta name="description">` (max 155 chars)
+> 
+
+> - Canonical tag: `<link rel="canonical" href="https://sysmoai.com/[route]">`
+> 
+
+> - Open Graph tags: og:title, og:description, og:url, og:type
+> 
+
+> 
+> 
+
+> Homepage LocalBusiness schema (JSON-LD):
+> 
+
+> `json
+> 
+
+> {
+> 
+
+> "@context": "https://schema.org",
+> 
+
+> "@type": "LocalBusiness",
+> 
+
+> "name": "SYSmoAI",
+> 
+
+> "url": "https://sysmoai.com",
+> 
+
+> "telephone": "+8801711638693",
+> 
+
+> "email": "[accounts@sysmoai.com](mailto:accounts@sysmoai.com)",
+> 
+
+> "address": {
+> 
+
+> "@type": "PostalAddress",
+> 
+
+> "streetAddress": "Flat 12-1/C, Swapno Nagar, Pallabi",
+> 
+
+> "addressLocality": "Dhaka",
+> 
+
+> "postalCode": "1216",
+> 
+
+> "addressCountry": "BD"
+> 
+
+> }
+> 
+
+> }
+> 
+
+> `
+> 
+
+> 
+> 
+
+> Service pages: Add `Service` schema. Industry pages: Add `FAQPage` schema.
+> 
+
+> 
+> 
+
+> **sitemap.xml** — auto-generate including all routes:
+> 
+
+> /, /services, /services/agencies, /services/ecommerce, /services/coaching, /services/accounting, /services/clinics, /services/trading, /about, /contact, /privacy, /terms, /refund, /cookie-policy
+> 
+
+> 
+> 
+
+> **robots.txt:**
+> 
+
+> `
+> 
+
+> User-agent: *
+> 
+
+> Allow: /
+> 
+
+> Sitemap: https://sysmoai.com/sitemap.xml
+> 
+
+> `
+> 
+
+> 
+> 
+
+> ---
+> 
+
+> 
+> 
+
+> **STEP 7 — Cookie consent**
+> 
+
+> Add a cookie consent banner that:
+> 
+
+> - Appears on first visit
+> 
+
+> - Blocks all non-essential trackers until consent is given
+> 
+
+> - Has "Accept" and "Reject" options
+> 
+
+> - Stores consent in localStorage
+> 
+
+> 
+> 
+
+> ---
+> 
+
+> 
+> 
+
+> **STEP 8 — WhatsApp floating button**
+> 
+
+> Add a floating WhatsApp button on every page:
+> 
+
+> - Position: bottom-right, fixed
+> 
+
+> - Shows on both mobile and desktop
+> 
+
+> - Link: `https://wa.me/8801711638693?text=Hi%20SYSmoAI%2C%20I%20need%20help`
+> 
+
+> - Use the official WhatsApp green color (#25D366)
+> 
+
+> - Include WhatsApp icon (SVG preferred)
+> 
+
+> 
+> 
+
+> ---
+> 
+
+> 
+> 
+
+> **STEP 9 — Performance**
+> 
+
+> - All images: WebP format, compressed, with descriptive alt text
+> 
+
+> - Lazy load all images below the fold
+> 
+
+> - No render-blocking scripts
+> 
+
+> - Test that the site loads fast on mobile (simulate slow 4G)
+> 
+
+> 
+> 
+
+> ---
+> 
+
+> 
+> 
+
+> **STEP 10 — Build and deploy**
+> 
+
+> - Run the production build: `npm run build`
+> 
+
+> - Fix any build errors completely — do not leave warnings
+> 
+
+> - Deploy to the live Replit environment
+> 
+
+> - Make sure the app is accessible at the public Replit URL
+> 
+
+> - Verify all routes return 200 (not 404)
+> 
+
+> - Verify the WhatsApp floating button appears on every page
+> 
+
+> - Verify no instance of the old number `01865-385348` appears anywhere in the rendered pages
+> 
+
+> 
+> 
+
+> ---
+> 
+
+> 
+> 
+
+> **DO NOT:**
+> 
+
+> - Add a shop, cart, checkout, or product catalog
+> 
+
+> - Use the old phone number 01865-385348 anywhere
+> 
+
+> - Mix AIPS content ([aipremiumshop.com](http://aipremiumshop.com)) with [sysmoai.com](http://sysmoai.com)
+> 
+
+> - Make revenue guarantees or fabricated statistics
+> 
+
+> - Add a /blog page (not in scope for this build)
+> 
+
+> - Target students or general freelancers in any copy
+> 
+
+> 
+> 
+
+> **Report back:** When complete, list every page built, confirm the old number is removed, and give the live Replit URL.
+> 
+
+---
+
+## Short Future Prompt — "Pull from GitHub and Update"
+
+Every time Codex updates the GitHub repo and you want Replit to reflect it, just paste this into Replit Agent:
+
+---
+
+> **Pull latest from GitHub and update live site.**
+> 
+
+> 
+> 
+
+> 1. Pull the latest code from `https://github.com/sysmoai/openfront` — overwrite all local files with the GitHub version.
+> 
+
+> 2. Run `npm install` to update any new dependencies.
+> 
+
+> 3. Run `npm run build` — fix any errors before continuing.
+> 
+
+> 4. Deploy the updated build to the live environment.
+> 
+
+> 5. Confirm all pages are live and the site is accessible at the public URL.
+> 
+
+> 6. Report what changed and confirm the site is working.
+>

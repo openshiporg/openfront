@@ -1,55 +1,239 @@
-import { Suspense } from 'react';
+"use client"
+import { useState, useRef, useEffect } from "react"
 
-import { listRegions } from '@/features/storefront/lib/data/regions';
+const BrandMark = ({ size = 32 }: { size?: number }) => {
+  const sw = size <= 24 ? 3 : size <= 48 ? 2.5 : 2
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M25 34 L50 24 L75 34 L75 54 L50 64 L25 54 Z" fill="#1E3A8A" fillOpacity={0.3} stroke="#2563EB" strokeOpacity={0.6} strokeWidth={sw} strokeLinejoin="round" />
+      <path d="M30 49 L50 40 L70 49 L70 64 L50 73 L30 64 Z" fill="#2563EB" fillOpacity={0.5} stroke="#3B82F6" strokeOpacity={0.8} strokeWidth={sw} strokeLinejoin="round" />
+      <path d="M40 61 L50 56 L60 61 L60 71 L50 76 L40 71 Z" fill="#3B82F6" fillOpacity={1}   stroke="#60A5FA" strokeOpacity={1}   strokeWidth={sw} strokeLinejoin="round" />
+    </svg>
+  )
+}
 
-import LocalizedClientLink from '@/features/storefront/modules/common/components/localized-client-link';
-import CartButton from '@/features/storefront/modules/layout/components/cart-button';
-import SideMenu from '@/features/storefront/modules/layout/components/side-menu';
-import Logo from '@/features/storefront/modules/layout/components/logo';
+const BrandWordmark = ({ size = 20 }: { size?: number }) => (
+  <span
+    style={{
+      fontSize: size,
+      lineHeight: 1,
+      fontFamily: "'Inter', -apple-system, system-ui, sans-serif",
+      color: "#ffffff",
+      display: "inline-flex",
+      alignItems: "baseline",
+      whiteSpace: "nowrap",
+      letterSpacing: `${-size * 0.015}px`,
+    }}
+  >
+    <span style={{ fontWeight: 700, letterSpacing: "-0.02em" }}>SYS</span>
+    <span style={{ fontWeight: 400, letterSpacing: "-0.04em", opacity: 0.65 }}>mo</span>
+    <span style={{ fontWeight: 700, letterSpacing: "0.02em" }}>AI</span>
+  </span>
+)
 
-export default async function Nav() {
-  const { regions } = await listRegions();
+const SERVICE_LINKS = [
+  { label: "All Services", href: "/bd/services", desc: "Overview of everything we offer" },
+  { label: "NemoClaw AI Agents", href: "/bd/services/nemoclaw", desc: "Claude-powered agents for your business" },
+  { label: "OpenClaw Local AI", href: "/bd/services/openclaw", desc: "AI that runs on your own machine" },
+  { label: "Notion AI OS", href: "/bd/services/notion-os", desc: "Complete business operating system" },
+  { label: "International (USD)", href: "/bd/services/international", desc: "Worldwide clients, USD pricing" },
+]
+
+const TOP_LINKS = [
+  { label: "Industries", href: "/bd/industries" },
+  { label: "Proof", href: "/bd/proof" },
+  { label: "About", href: "/bd/about" },
+  { label: "FAQ", href: "/bd/faq" },
+  { label: "Blog", href: "/bd/blog" },
+]
+
+const MOBILE_LINKS = [
+  { label: "Home", href: "/bd" },
+  { label: "Services", href: "/bd/services" },
+  { label: "NemoClaw AI Agents", href: "/bd/services/nemoclaw" },
+  { label: "OpenClaw Local AI", href: "/bd/services/openclaw" },
+  { label: "Notion AI OS", href: "/bd/services/notion-os" },
+  { label: "International (USD)", href: "/bd/services/international" },
+  { label: "Industries", href: "/bd/industries" },
+  { label: "Proof", href: "/bd/proof" },
+  { label: "About", href: "/bd/about" },
+  { label: "FAQ", href: "/bd/faq" },
+  { label: "Blog", href: "/bd/blog" },
+  { label: "Contact", href: "/bd/contact" },
+]
+
+export default function Nav() {
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [servicesOpen, setServicesOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setServicesOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   return (
-    <div className="sticky top-0 inset-x-0 z-50 group">
-      <header className="relative h-16 mx-auto border-b duration-200 bg-background border-border">
-        <nav className="max-w-[1440px] mx-auto px-6 text-muted-foreground flex items-center justify-between w-full h-full text-xs leading-5 font-normal">
-          <div className="flex-1 basis-0 h-full flex items-center">
-            <div className="h-full">
-              <SideMenu regions={regions} />
-            </div>
-          </div>
+    <>
+      <header className="fixed top-0 left-0 right-0 z-40 bg-[#0A0A0F]/90 backdrop-blur-md border-b border-[#1E1E2E]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
 
-          <div className="flex items-center h-full">
-            <Logo />
-          </div>
+            {/* Brand */}
+            <a href="/bd" className="flex items-center gap-2.5 flex-shrink-0 group">
+              <BrandMark size={32} />
+              <BrandWordmark size={20} />
+            </a>
 
-          <div className="flex items-center gap-x-6 h-full flex-1 basis-0 justify-end">
-            <div className="hidden lg:flex items-center gap-x-6 h-full">
-              <LocalizedClientLink
-                className="hover:text-foreground cursor-pointer"
-                href="/account"
-                data-testid="nav-account-link"
-              >
-                Account
-              </LocalizedClientLink>
-            </div>
-            <Suspense
-              fallback={
-                <LocalizedClientLink
-                  className="hover:text-foreground flex gap-2 cursor-pointer"
-                  href="/cart"
-                  data-testid="nav-cart-link"
+            {/* Desktop Nav */}
+            <nav className="hidden md:flex items-center gap-1">
+
+              {/* Services Mega Dropdown */}
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setServicesOpen((v) => !v)}
+                  className="flex items-center gap-1 px-4 py-2 text-slate-300 hover:text-white text-sm font-medium rounded-lg hover:bg-white/5 transition-colors"
                 >
-                  Cart (0)
-                </LocalizedClientLink>
-              }
-            >
-              <CartButton />
-            </Suspense>
+                  Services
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    className={`transition-transform duration-200 ${servicesOpen ? "rotate-180" : ""}`}
+                  >
+                    <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+
+                {servicesOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-72 bg-[#0D0D1A] border border-[#1E1E2E] rounded-2xl shadow-2xl overflow-hidden">
+                    <div className="p-2">
+                      {SERVICE_LINKS.map((item) => (
+                        <a
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setServicesOpen(false)}
+                          className="flex flex-col px-4 py-3 rounded-xl hover:bg-[#111118] transition-colors group"
+                        >
+                          <span className="text-sm font-medium text-white group-hover:text-blue-400 transition-colors">{item.label}</span>
+                          <span className="text-xs text-[#8888AA] mt-0.5">{item.desc}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {TOP_LINKS.map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className="px-4 py-2 text-slate-300 hover:text-white text-sm font-medium rounded-lg hover:bg-white/5 transition-colors"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+
+            {/* Desktop Right: Contact CTA + WhatsApp */}
+            <div className="hidden md:flex items-center gap-2">
+              <a
+                href="/bd/contact"
+                className="px-4 py-2 text-slate-300 hover:text-white text-sm font-medium rounded-lg hover:bg-white/5 transition-colors"
+              >
+                Contact
+              </a>
+              <a
+                href="https://wa.me/8801711638693?text=Hi%20SYSmoAI%2C%20I%20need%20help"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 bg-[#25D366] hover:bg-[#20b85a] text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.523 5.851L0 24l6.335-1.498A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.006-1.373l-.36-.213-3.732.882.936-3.618-.235-.372A9.818 9.818 0 1112 21.818z" />
+                </svg>
+                WhatsApp Us
+              </a>
+            </div>
+
+            {/* Mobile: WA + Hamburger */}
+            <div className="flex md:hidden items-center gap-2">
+              <a
+                href="https://wa.me/8801711638693?text=Hi%20SYSmoAI%2C%20I%20need%20help"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 bg-[#25D366] hover:bg-[#20b85a] text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.523 5.851L0 24l6.335-1.498A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.006-1.373l-.36-.213-3.732.882.936-3.618-.235-.372A9.818 9.818 0 1112 21.818z" />
+                </svg>
+              </a>
+              <button
+                onClick={() => setMobileOpen(true)}
+                className="p-2 text-slate-400 hover:text-white transition-colors"
+                aria-label="Open menu"
+              >
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+            </div>
+
           </div>
-        </nav>
+        </div>
       </header>
-    </div>
-  );
+
+      {/* Spacer */}
+      <div className="h-16" />
+
+      {/* Mobile Drawer */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          <div className="absolute top-0 left-0 h-full w-[280px] bg-[#0A0A0F] border-r border-[#1E1E2E] flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#1E1E2E]">
+              <a href="/bd" className="flex items-center gap-2">
+                <BrandMark size={28} />
+                <BrandWordmark size={18} />
+              </a>
+              <button onClick={() => setMobileOpen(false)} className="text-slate-400 hover:text-white p-1 text-xl transition-colors">✕</button>
+            </div>
+            <nav className="flex flex-col flex-1 py-2 overflow-y-auto">
+              {MOBILE_LINKS.map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center px-6 py-3.5 text-white text-sm font-medium border-b border-[#1E1E2E] hover:bg-[#13131A] hover:text-[#60A5FA] transition-colors"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+            <div className="p-5 border-t border-[#1E1E2E]">
+              <a
+                href="https://wa.me/8801711638693?text=Hi%20SYSmoAI%2C%20I%20need%20help"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full bg-[#25D366] hover:bg-[#20b85a] text-white font-bold py-3.5 rounded-xl transition-colors"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.118 1.523 5.851L0 24l6.335-1.498A11.955 11.955 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.006-1.373l-.36-.213-3.732.882.936-3.618-.235-.372A9.818 9.818 0 1112 21.818z" />
+                </svg>
+                WhatsApp Us
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
 }

@@ -1,0 +1,363 @@
+Fix all 13 issues below in order. Do not stop between fixes.
+The site is running on /bd route (country code = "bd").
+Report every file changed after all fixes are done.
+
+══════════════════════════════════════════
+FIX 1 — Add SYSmoAI brand name to navbar (CRITICAL)
+══════════════════════════════════════════
+
+The navbar has no logo and no company name — 
+a visitor cannot tell what site they are on.
+
+Step 1: Check if any logo file exists:
+  ls public/ | grep -i logo
+  ls public/ | grep -i sysmoai
+  ls src/assets/ 2>/dev/null | grep -i logo
+
+Step 2A — If a logo file EXISTS (e.g. logo.svg, logo.png):
+  Find the navbar component.
+  On the far LEFT (before all nav links), add:
+  <a href="/" className="flex items-center mr-8 flex-shrink-0">
+    <img 
+      src="/[logo-filename]" 
+      alt="SYSmoAI" 
+      className="h-8 w-auto"
+    />
+  </a>
+
+Step 2B — If NO logo file exists:
+  Find the navbar component.
+  On the far LEFT (before all nav links), add:
+  <a href="/" className="flex items-center mr-8 flex-shrink-0">
+    <span className="text-xl font-bold text-white 
+                     tracking-tight whitespace-nowrap">
+      SYSmo<span className="text-indigo-400">AI</span>
+    </span>
+  </a>
+
+The brand name must be the FIRST thing visible in the navbar
+on both desktop and mobile views.
+
+══════════════════════════════════════════
+FIX 2 — Fix broken mobile menu (CRITICAL)
+══════════════════════════════════════════
+
+The hamburger menu shows empty bullet points — no text.
+
+Find the mobile navigation menu component 
+(likely contains "mobile", "drawer", or "hamburger" in filename 
+or is inside the main nav component).
+
+The list items are rendering blank. 
+Rebuild the mobile menu content completely:
+
+Replace whatever is inside the mobile menu <ul> or <nav> with:
+
+<div className="flex flex-col divide-y divide-[#1E1E2E]">
+  <a href="/bd" 
+     className="px-6 py-4 text-white font-medium 
+                hover:text-indigo-400 hover:bg-[#13131A] 
+                transition-colors">
+    Home
+  </a>
+  <a href="/bd/store" 
+     className="px-6 py-4 text-white font-medium 
+                hover:text-indigo-400 hover:bg-[#13131A] 
+                transition-colors">
+    Shop
+  </a>
+  <a href="/bd/services" 
+     className="px-6 py-4 text-white font-medium 
+                hover:text-indigo-400 hover:bg-[#13131A] 
+                transition-colors">
+    Services
+  </a>
+  <a href="/bd/about" 
+     className="px-6 py-4 text-white font-medium 
+                hover:text-indigo-400 hover:bg-[#13131A] 
+                transition-colors">
+    About
+  </a>
+  <a href="/bd/contact" 
+     className="px-6 py-4 text-white font-medium 
+                hover:text-indigo-400 hover:bg-[#13131A] 
+                transition-colors">
+    Contact
+  </a>
+  <div className="p-4">
+    <a href="https://wa.me/8801711638693?text=Hi%20SYSmoAI"
+       target="_blank"
+       rel="noopener noreferrer"
+       className="flex items-center justify-center gap-2 
+                  w-full bg-emerald-600 hover:bg-emerald-500 
+                  text-white font-semibold py-3 px-6 
+                  rounded-xl transition-colors">
+      💬 WhatsApp Us
+    </a>
+  </div>
+</div>
+
+══════════════════════════════════════════
+FIX 3 — Fix wrong phone number on About page (CRITICAL)
+══════════════════════════════════════════
+
+The About page still shows "+880 1865-385348" in the 
+Company Information section — the old wrong number.
+
+Find the about page file:
+  src/app/[countryCode]/(main)/about/page.tsx
+  or similar path
+
+Find and replace:
+  Old: "+880 1865-385348"  → New: "+880 1711-638693"
+  Old: "01865-385348"      → New: "01711-638693"
+  Old: "8801865385348"     → New: "8801711638693"
+
+Also update the WhatsApp href on that page if it uses 
+the old number.
+
+══════════════════════════════════════════
+FIX 4 — Fix "Powered By SYS mo AI" in footer
+══════════════════════════════════════════
+
+Run: grep -rn "Powered By SYS mo AI\|SYS mo AI" . \
+  --include="*.tsx" --include="*.ts" \
+  --include="*.jsx" --include="*.js"
+
+Replace:
+  "Powered By SYS mo AI" → "© 2026 SYSmoAI Private Limited"
+  "SYS mo AI"            → "SYSmoAI"
+
+Fix in every file that contains it.
+
+══════════════════════════════════════════
+FIX 5 — Add SYSmoAI brand name to footer
+══════════════════════════════════════════
+
+Find the footer component.
+The first column shows description text 
+("AI Tools & Systems for Bangladesh") 
+but has no company name above it.
+
+Add this at the very top of footer column 1,
+BEFORE the description text:
+
+<div className="mb-4">
+  <a href="/" className="inline-block">
+    <span className="text-2xl font-bold text-white 
+                     tracking-tight">
+      SYSmo<span className="text-indigo-400">AI</span>
+    </span>
+  </a>
+  <p className="text-slate-500 text-xs mt-1 font-medium 
+                tracking-widest uppercase">
+    Private Limited
+  </p>
+</div>
+
+If a logo file exists in /public/ → use the logo image 
+instead, height h-8.
+
+Also fix the bottom bar text:
+Find: "Powered By SYS mo AI" or "SYS mo AI"
+Replace with: "© 2026 SYSmoAI Private Limited · 
+               Made in Bangladesh 🇧🇩"
+
+══════════════════════════════════════════
+FIX 6 — Fix About page: avatar + year + number
+══════════════════════════════════════════
+
+Open: src/app/[countryCode]/(main)/about/page.tsx
+
+FIX 6A — Broken avatar (letter "E" floating alone):
+Find the founder section. There is a broken avatar 
+showing a single unstyled letter "E".
+Find that element and wrap it properly:
+
+Replace the broken avatar element with:
+<div className="w-16 h-16 rounded-full bg-gradient-to-br 
+     from-indigo-500 to-indigo-700 flex items-center 
+     justify-center text-white text-2xl font-bold 
+     flex-shrink-0 shadow-lg">
+  E
+</div>
+
+FIX 6B — Wrong year:
+Find: "Founded 2024"
+Replace with: "Founded 2026"
+
+FIX 6C — Wrong number (already fixed above in Fix 3, 
+but double-check here too):
+"WhatsApp +880 1865-385348" → "+880 1711-638693"
+
+══════════════════════════════════════════
+FIX 7 — Remove fake trust claim from homepage
+══════════════════════════════════════════
+
+Find the homepage file:
+  src/app/[countryCode]/(main)/page.tsx
+
+Find this exact text:
+  "⭐⭐⭐⭐⭐  Trusted by 1,000+ customers"
+  or: "Trusted by 1,000+ customers"
+  or: "1,000+ customers"
+
+Remove it completely.
+
+Replace with this honest, provable trust signal:
+<div className="flex flex-wrap items-center justify-center 
+     gap-6 mt-8 text-slate-500 text-sm">
+  <span>🇧🇩 Built for Bangladesh</span>
+  <span>·</span>
+  <span>🔒 Secure bKash & Nagad payments</span>
+  <span>·</span>
+  <span>⚡ Same-day delivery</span>
+</div>
+
+══════════════════════════════════════════
+FIX 8 — Fix "Browse AI Tools" button on homepage
+══════════════════════════════════════════
+
+Find the homepage hero section.
+There is a "Browse AI Tools →" that renders as plain text.
+
+Make it a proper styled button:
+<a href="/bd/store" 
+   className="inline-flex items-center gap-2 
+              bg-indigo-600 hover:bg-indigo-500 
+              text-white font-semibold px-8 py-4 
+              rounded-xl text-lg transition-colors 
+              shadow-lg shadow-indigo-500/20">
+  Browse AI Tools
+  <span aria-hidden="true">→</span>
+</a>
+
+Make sure both hero buttons are in a flex row:
+<div className="flex flex-col sm:flex-row gap-4 
+     justify-center items-center mt-8">
+  [Browse AI Tools button]
+  [WhatsApp Us button]
+</div>
+
+══════════════════════════════════════════
+FIX 9 — Fix empty store page
+══════════════════════════════════════════
+
+Find the store/products page.
+When the product list is empty, it shows nothing after 
+"All products".
+
+Find where products are rendered (likely a map over 
+products array). Add an empty state when array is empty:
+
+{products.length === 0 && (
+  <div className="flex flex-col items-center justify-center 
+       py-24 text-center col-span-full">
+    <div className="text-7xl mb-6">🛒</div>
+    <h3 className="text-2xl font-bold text-white mb-3">
+      Products Coming Soon
+    </h3>
+    <p className="text-slate-400 max-w-md mb-2 leading-relaxed">
+      We are adding our full AI tools catalog shortly.
+    </p>
+    <p className="text-slate-500 text-sm mb-8">
+      Need a specific tool right now? Message us — 
+      we can help you get access today.
+    </p>
+    <a href="https://wa.me/8801711638693?text=Hi%20SYSmoAI%2C%20I%20need%20an%20AI%20tool"
+       target="_blank"
+       rel="noopener noreferrer"
+       className="inline-flex items-center gap-2 
+                  bg-emerald-600 hover:bg-emerald-500 
+                  text-white font-semibold px-8 py-4 
+                  rounded-xl text-lg transition-colors">
+      💬 Ask on WhatsApp
+    </a>
+  </div>
+)}
+
+══════════════════════════════════════════
+FIX 10 — Add phone number to contact page
+══════════════════════════════════════════
+
+Find the contact page.
+It shows email and support email but no phone number.
+
+Find the contact details section and add:
+<div className="flex items-start gap-4 p-4 
+     rounded-xl bg-[#13131A] border border-[#1E1E2E]">
+  <span className="text-2xl">📞</span>
+  <div>
+    <p className="text-slate-400 text-sm mb-1">
+      Phone & WhatsApp
+    </p>
+    <p className="text-white font-semibold text-lg">
+      +880 1711-638693
+    </p>
+    <a href="https://wa.me/8801711638693"
+       target="_blank"
+       className="text-emerald-400 text-sm hover:underline">
+      Open in WhatsApp →
+    </a>
+  </div>
+</div>
+
+══════════════════════════════════════════
+FIX 11 — Fix admin dashboard brand name
+══════════════════════════════════════════
+
+The /dashboard login page shows "SYS mo AI" (wrong).
+
+Run: grep -rn "SYS mo AI" . \
+  --include="*.tsx" --include="*.ts" \
+  --include="*.jsx" --include="*.js" \
+  --include="*.json" --include="*.env*"
+
+Replace every instance: "SYS mo AI" → "SYSmoAI"
+
+Check these locations specifically:
+- Any admin/login component
+- medusa-config.js or medusa-config.ts
+- Any .env file with STORE_NAME or COMPANY_NAME variable
+- next.config.js or next.config.ts
+
+══════════════════════════════════════════
+FINAL VERIFICATION
+══════════════════════════════════════════
+
+After all 11 fixes complete, run:
+
+1. npm run build
+   → Must succeed with no errors
+
+2. grep -rn "SYS mo AI" . \
+     --include="*.tsx" --include="*.ts" \
+     --include="*.jsx" --include="*.js"
+   → Must return ZERO results
+
+3. grep -rn "1865-385348\|1865385348" . \
+     --include="*.tsx" --include="*.ts" \
+     --include="*.jsx" --include="*.js"
+   → Must return ZERO results
+
+4. grep -rn "Trusted by 1,000" . \
+     --include="*.tsx" --include="*.jsx"
+   → Must return ZERO results
+
+5. grep -rn "Founded 2024" . \
+     --include="*.tsx" --include="*.jsx"
+   → Must return ZERO results
+
+Report format:
+✅ Fix 1 (Logo/brand in navbar): [file changed]
+✅ Fix 2 (Mobile menu): [file changed]
+✅ Fix 3 (Wrong number on about): [file changed]
+✅ Fix 4 (Footer SYS mo AI): [file changed]
+✅ Fix 5 (Footer brand name): [file changed]
+✅ Fix 6 (About page avatar+year): [file changed]
+✅ Fix 7 (Fake trust claim removed): [file changed]
+✅ Fix 8 (Hero button styled): [file changed]
+✅ Fix 9 (Store empty state): [file changed]
+✅ Fix 10 (Contact phone added): [file changed]
+✅ Fix 11 (Admin brand name): [file changed]
+✅ Build status: SUCCESS

@@ -148,16 +148,19 @@ export function Sidebar({ adminMeta, user, onOpenDialog }: SidebarProps) {
           <SidebarGroupLabel>Platform</SidebarGroupLabel>
           <SidebarMenu className="group-has-[[data-collapsible=icon]]/sidebar-wrapper:hidden gap-0">
             {/* Standalone Items in Expanded Mode */}
-            {standaloneItemsWithBasePath.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild isActive={isLinkActive(item.href)}>
-                  <Link href={item.href} onClick={() => setOpenMobile(false)}>
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.title}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+            {standaloneItemsWithBasePath.map((item) => {
+              const ItemIcon = item.icon
+              return (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton asChild isActive={isLinkActive(item.href)}>
+                    <Link href={item.href} onClick={() => setOpenMobile(false)}>
+                      {ItemIcon && <ItemIcon className="h-4 w-4" />}
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )
+            })}
 
             {/* Platform Groups */}
             {platformItems.map((platformItem) => (
@@ -205,15 +208,18 @@ export function Sidebar({ adminMeta, user, onOpenDialog }: SidebarProps) {
           {/* Platform Items - Icon Mode */}
           <SidebarMenu className="hidden group-has-[[data-collapsible=icon]]/sidebar-wrapper:block">
             {/* Standalone Items in Icon Mode */}
-            {standaloneItemsWithBasePath.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild isActive={isLinkActive(item.href)}>
-                  <Link href={item.href} onClick={() => setOpenMobile(false)}>
-                    <item.icon className="h-4 w-4" />
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+            {standaloneItemsWithBasePath.map((item) => {
+              const ItemIcon = item.icon
+              return (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton asChild isActive={isLinkActive(item.href)}>
+                    <Link href={item.href} onClick={() => setOpenMobile(false)}>
+                      {ItemIcon && <ItemIcon className="h-4 w-4" />}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )
+            })}
             
             {/* Grouped Items in Icon Mode */}
             {platformItems.map((platformItem) => (
@@ -358,7 +364,7 @@ export function Sidebar({ adminMeta, user, onOpenDialog }: SidebarProps) {
           <OnboardingCards
             steps={[{
               href: '#onboarding',
-              title: 'Welcome to Openfront',
+              title: 'Welcome to SYSmoAI',
               description: 'Your store is empty. Click get started to configure your store with products, categories, and regions.',
             }]}
             onboardingStatus={user?.onboardingStatus}

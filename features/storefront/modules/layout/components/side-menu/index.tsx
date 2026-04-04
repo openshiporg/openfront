@@ -1,91 +1,118 @@
 "use client"
 
-import dynamic from 'next/dynamic'
-import { useState } from "react";
+import { useState } from "react"
+import { WA } from "@/lib/constants/contact"
 
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-
-import LocalizedClientLink from "@/features/storefront/modules/common/components/localized-client-link"
-import CountrySelect from "../country-select"
-import type { StoreRegion } from "@/features/storefront/types/storefront"
-
-const SideMenuItems = {
-  Home: "/",
-  Store: "/store",
-  Account: "/account",
-  Cart: "/cart",
+const BrandMark = ({ size = 28 }: { size?: number }) => {
+  const sw = size <= 24 ? 3 : 2.5
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M25 34 L50 24 L75 34 L75 54 L50 64 L25 54 Z" fill="#1E3A8A" fillOpacity={0.3} stroke="#2563EB" strokeOpacity={0.6} strokeWidth={sw} strokeLinejoin="round" />
+      <path d="M30 49 L50 40 L70 49 L70 64 L50 73 L30 64 Z" fill="#2563EB" fillOpacity={0.5} stroke="#3B82F6" strokeOpacity={0.8} strokeWidth={sw} strokeLinejoin="round" />
+      <path d="M40 61 L50 56 L60 61 L60 71 L50 76 L40 71 Z" fill="#3B82F6" fillOpacity={1}   stroke="#60A5FA" strokeOpacity={1}   strokeWidth={sw} strokeLinejoin="round" />
+    </svg>
+  )
 }
 
-const SideMenu = ({ regions }: { regions: StoreRegion[] | null }) => {
-  const [open, setOpen] = useState(false);
+const BrandWordmark = ({ size = 18 }: { size?: number }) => (
+  <span
+    style={{
+      fontSize: size,
+      lineHeight: 1,
+      fontFamily: "'Inter', -apple-system, system-ui, sans-serif",
+      color: "#ffffff",
+      display: "inline-flex",
+      alignItems: "baseline",
+      whiteSpace: "nowrap",
+      letterSpacing: `${-size * 0.015}px`,
+    }}
+  >
+    <span style={{ fontWeight: 700, letterSpacing: "-0.02em" }}>SYS</span>
+    <span style={{ fontWeight: 400, letterSpacing: "-0.04em", opacity: 0.65 }}>mo</span>
+    <span style={{ fontWeight: 700, letterSpacing: "0.02em" }}>AI</span>
+  </span>
+)
+
+const SideMenu = ({ regions }: { regions: any[] | null }) => {
+  const [isOpen, setIsOpen] = useState(false)
 
   return (
-    // TODO: Remove suppressHydrationWarning when React 19.2.0 useId bug is fixed upstream
-    // Known issue: https://github.com/radix-ui/primitives/issues/3700
-    // Radix UI generates different IDs on server vs client in React 19.2.0 (Next.js 16+)
-    <div className="h-full" suppressHydrationWarning>
-      <div className="flex items-center h-full">
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <button
-              data-testid="nav-menu-button"
-              className="relative h-full flex items-center transition-all ease-out duration-200 focus:outline-none hover:text-foreground cursor-pointer"
-              suppressHydrationWarning
-            >
-              Menu
-            </button>
-          </SheetTrigger>
-          <SheetContent
-            side="left"
-            className="w-full sm:max-w-md border-0 bg-background/95 backdrop-blur-md flex flex-col h-full"
-            data-testid="nav-menu-popup"
-          >
-            <SheetHeader>
-              <SheetTitle className="text-xl font-bold">Menu</SheetTitle>
-              <SheetDescription>
-                Browse our store and find what you need
-              </SheetDescription>
-            </SheetHeader>
+    <div className="h-full">
+      {/* Hamburger Button */}
+      <button
+        data-testid="nav-menu-button"
+        onClick={() => setIsOpen(true)}
+        className="flex flex-col gap-1.5 p-2 hover:opacity-70 transition-opacity cursor-pointer focus:outline-none"
+        aria-label="Open menu"
+      >
+        <span className="block w-5 h-0.5 bg-white" />
+        <span className="block w-5 h-0.5 bg-white" />
+        <span className="block w-5 h-0.5 bg-white" />
+      </button>
 
-            <div className="flex flex-col justify-between flex-1 py-6 overflow-y-auto">
-              <ul className="flex flex-col gap-6 items-start justify-start">
-                {Object.entries(SideMenuItems).map(([name, href]) => {
-                  return (
-                    <li key={name}>
-                      <LocalizedClientLink
-                        href={href}
-                        className="text-2xl leading-10 hover:text-muted-foreground cursor-pointer"
-                        data-testid={`${name.toLowerCase()}-link`}
-                        onClick={() => setOpen(false)}
-                      >
-                        {name}
-                      </LocalizedClientLink>
-                    </li>
-                  )
-                })}
-              </ul>
-
-              <div className="flex flex-col gap-y-6 mt-auto pt-6">
-                {regions && (
-                  <div className="flex justify-between">
-                    <CountrySelect regions={regions} />
-                  </div>
-                )}
-                <p className="flex justify-between text-[0.8125rem] leading-5 font-normal text-muted-foreground" suppressHydrationWarning>
-                  © {new Date().getFullYear()} Openfront. All rights reserved.
-                </p>
-              </div>
+      {/* Mobile Menu Drawer */}
+      {isOpen && (
+        <div className="fixed inset-0 z-50">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setIsOpen(false)}
+          />
+          
+          {/* Drawer */}
+          <div className="absolute top-0 left-0 h-full w-[280px] bg-[#0A0A0F] border-r border-[#1E1E2E] flex flex-col">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#1E1E2E]">
+              <a href="/bd" className="flex items-center gap-2">
+                <BrandMark size={28} />
+                <BrandWordmark size={18} />
+              </a>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-slate-400 hover:text-white p-1 transition-colors"
+                aria-label="Close menu"
+              >
+                ✕
+              </button>
             </div>
-          </SheetContent>
-        </Sheet>
-      </div>
+
+            {/* Nav Links */}
+            <nav className="flex flex-col flex-1 py-2">
+              {[
+                { label: "Home", href: "/bd" },
+                { label: "Shop", href: "/bd/store" },
+                { label: "Services", href: "/bd/services" },
+                { label: "About", href: "/bd/about" },
+                { label: "Contact", href: "/bd/contact" },
+              ].map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center px-6 py-4 text-white text-base font-medium border-b border-[#1E1E2E] hover:bg-[#13131A] hover:text-[#60A5FA] transition-colors"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+
+            {/* WhatsApp CTA */}
+            <div className="p-5 border-t border-[#1E1E2E]">
+              <a
+                href={WA.general}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl transition-colors text-base"
+                onClick={() => setIsOpen(false)}
+              >
+                💬 WhatsApp Us
+              </a>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   )
 }

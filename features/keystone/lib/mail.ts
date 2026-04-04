@@ -327,7 +327,7 @@ export async function sendOrderConfirmationEmail(order: any, baseUrl?: string): 
     return;
   }
 
-  const countryCode = order.shippingAddress?.country?.iso2?.toLowerCase() || 'us';
+  const countryCode = order.shippingAddress?.country?.iso2?.toLowerCase() || 'bd';
   
   // Use provided baseUrl or fall back to utility function
   const frontendUrl = baseUrl || getBaseUrlForEmails();
@@ -407,7 +407,7 @@ export async function sendOrderFulfillmentEmail(order: any, fulfillment: any, ba
     return;
   }
 
-  const countryCode = order.shippingAddress?.country?.iso2?.toLowerCase() || 'us';
+  const countryCode = order.shippingAddress?.country?.iso2?.toLowerCase() || 'bd';
   
   // Use provided baseUrl or fall back to utility function
   const frontendUrl = baseUrl || getBaseUrlForEmails();

@@ -8,7 +8,13 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '10mb',
     },
   },
-  // Workaround since we diverged from Keystone reltionship and document views
+  allowedDevOrigins: [
+    '*.replit.dev',
+    '*.kirk.replit.dev',
+    '*.replit.app',
+  ],
+  turbopack: { root: "." },
+  // Workaround since we diverged from Keystone relationship and document views
   typescript: {
     ignoreBuildErrors: true,
   },

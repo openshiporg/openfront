@@ -1,0 +1,262 @@
+PHASE A — AUDIT CURRENT STATE (Do NOT skip)
+=============================================
+
+1. List every page route that currently exists:
+   find app -name "page.tsx" | grep -v node_modules | sort
+
+2. Check which of these pages are MISSING:
+   - app/(storefront)/[countryCode]/(main)/services/nemoclaw/page.tsx
+   - app/(storefront)/[countryCode]/(main)/services/openclaw/page.tsx
+   - app/(storefront)/[countryCode]/(main)/services/notion-os/page.tsx
+   - app/(storefront)/[countryCode]/(main)/services/international/page.tsx
+   - app/(storefront)/[countryCode]/(main)/faq/page.tsx
+   - app/(storefront)/[countryCode]/(main)/proof/page.tsx
+
+   For each: ls [path] 2>/dev/null || echo "MISSING: [path]"
+
+3. Check header/nav for mega menu:
+   find components -iname "*nav*" -o -iname "*header*" | head -10
+   cat [header file] | head -80
+
+4. Check if cookie consent exists:
+   find components -iname "*cookie*" -o -iname "*consent*" | head -5
+
+5. Check old phone number isn't anywhere:
+   grep -rn "01865\|385348" app/ components/ lib/ | grep -v node_modules
+
+6. Check for placeholder/broken content:
+   grep -rn "lorem ipsum\|example\.com\|\[insert\|\[TODO\|\[placeholder" app/ components/ | grep -v node_modules
+
+Report EXACTLY what exists and what is missing before proceeding.
+
+=============================================
+PHASE B — CREATE MISSING SERVICE PAGES
+=============================================
+
+All pages go in: app/(storefront)/[countryCode]/(main)/
+
+Brand tokens (already in CSS):
+- Primary: #0057FF / sysmoai-primary
+- Dark bg: #0A0A0F / sysmoai-dark
+- Surface: #111118 / sysmoai-surface
+- Text: #E8E8F0 / sysmoai-text
+- Muted: #8888AA / sysmoai-muted
+- Border: #1E1E2E / sysmoai-border
+- WhatsApp CTA: wa.me/8801711638693
+
+--- B1: /services/nemoclaw/page.tsx ---
+
+NemoClaw = AI agent implementation service using Anthropic Claude (MCP + tool use)
+
+Content:
+- Hero: "NemoClaw — AI Agents That Actually Work For Your Business"
+- Subtitle: "We build and deploy Claude-powered AI agents that handle real business tasks — customer support, data processing, report generation, workflow automation."
+- What NemoClaw Does section (4 cards):
+  1. Custom AI Agent Design — We design agents specific to your business processes
+  2. MCP Integration — Connect agents to your existing tools (Notion, WhatsApp, Google Workspace)
+  3. Human-in-the-Loop — Every critical action requires your approval before execution
+  4. Monitoring & Iteration — We track agent performance and improve weekly
+- How It Works: Audit → Design → Build → Test → Deploy → Monitor
+- Pricing: "Implementation starts at BDT 60,000. Monthly monitoring from BDT 15,000/mo."
+- CTA: WhatsApp link with message "Hi SYSmoAI, I want to learn about NemoClaw AI agents"
+- Metadata: title "NemoClaw — AI Agent Implementation | SYSmoAI", description about AI agents for BD businesses
+
+--- B2: /services/openclaw/page.tsx ---
+
+OpenClaw = Local AI execution setup (runs on client's own hardware for privacy)
+
+Content:
+- Hero: "OpenClaw — AI That Runs On Your Own Machine"
+- Subtitle: "For businesses that need AI power without sending data to the cloud. We set up local AI execution on your hardware — private, fast, no API costs."
+- Why OpenClaw section:
+  1. Data Privacy — Your business data never leaves your machine
+  2. No API Costs — Run AI locally, no per-token billing
+  3. Offline Capable — Works without internet after setup
+  4. Full Control — You own the model, the data, and the output
+- Best For: Accounting firms, law firms, healthcare, any business with sensitive client data
+- What We Set Up: Local model installation, Notion integration, custom prompts, team training
+- Pricing: "Setup starts at BDT 40,000. Includes training and 30-day support."
+- CTA: WhatsApp link with message "Hi SYSmoAI, I want to learn about OpenClaw local AI"
+- Metadata: title "OpenClaw — Local AI Setup | SYSmoAI"
+
+--- B3: /services/notion-os/page.tsx ---
+
+Notion OS = Complete business operating system built in Notion
+
+Content:
+- Hero: "Notion AI OS — Your Business Operating System"
+- Subtitle: "We build complete operating systems in Notion — CRM, project management, SOPs, dashboards, team wikis — all connected, all automated."
+- What You Get section (6 items):
+  1. CRM & Sales Pipeline — Track every lead, deal, and customer
+  2. Project Delivery System — From brief to delivery, nothing falls through
+  3. SOP Wiki — Every process documented and searchable
+  4. Financial Dashboard — Revenue, expenses, profit at a glance
+  5. Team Task System — Clear ownership, deadlines, accountability
+  6. AI Integration — Notion AI + custom automations built in
+- Our Process: Audit current tools → Design OS architecture → Build in Notion → Train team → Monthly support
+- Pricing: "Full OS build from BDT 50,000. Monthly maintenance from BDT 15,000/mo."
+- CTA: WhatsApp link with message "Hi SYSmoAI, I need a Notion OS for my business"
+- Metadata: title "Notion AI OS — Business Operating System | SYSmoAI"
+
+--- B4: /services/international/page.tsx ---
+
+International services page for non-BD clients (USD pricing)
+
+Content:
+- Hero: "SYSmoAI for International Businesses"
+- Subtitle: "Everything we build for Bangladesh businesses — now available worldwide. Same systems, same quality, USD pricing."
+- Services Available Internationally:
+  1. AI Profit Audit — $200–400 (3–5 days)
+  2. Implementation Sprint — $500–1,500 (2–4 weeks)
+  3. Monthly Retainer — $250–750/month
+  4. NemoClaw AI Agents — Custom quote
+  5. Notion OS Build — Custom quote
+- How We Work Remotely: WhatsApp/Zoom calls, async Notion workspace, weekly progress reports
+- Payment: Wise, Payoneer, or international bank transfer
+- CTA: WhatsApp link with message "Hi SYSmoAI, I am an international client interested in your services"
+- Metadata: title "International AI Services — USD Pricing | SYSmoAI"
+
+--- B5: /faq/page.tsx ---
+
+Full FAQ page with FAQPage JSON-LD schema for SEO
+
+Content — at least 12 Q&As:
+1. What does SYSmoAI do? — We build AI-powered operating systems for businesses using Notion, automation tools, and custom AI workflows.
+2. Who is SYSmoAI for? — Agencies, ecommerce, coaching, accounting, clinics, trading businesses in Bangladesh. Also international clients.
+3. How much does it cost? — AI Profit Audit starts at BDT 15,000. Implementation Sprint from BDT 40,000. Monthly retainer from BDT 20,000/mo.
+4. What is NemoClaw? — Our AI agent implementation service using Claude. We build agents that handle real tasks in your business.
+5. What is OpenClaw? — Local AI setup that runs on your own machine. For businesses that need privacy.
+6. What is a Notion OS? — A complete business operating system built in Notion — CRM, projects, SOPs, dashboards, all connected.
+7. Do you work with international clients? — Yes. USD pricing available. We work remotely via WhatsApp and Zoom.
+8. How long does implementation take? — AI Profit Audit: 3–5 days. Implementation Sprint: 2–4 weeks. Results from week 1.
+9. Do you offer refunds? — Yes. Full refund if audit deliverable is not received within 5 business days.
+10. What tools do you use? — Notion, Claude AI, n8n, Make, WhatsApp Business, Google Workspace.
+11. Can you work with my existing systems? — Yes. We audit first, then build around what already works.
+12. How do I start? — WhatsApp us at +880 1711-638693. We will ask about your business and recommend next steps.
+
+Add FAQPage JSON-LD schema in <script type="application/ld+json"> in the page head.
+CTA: WhatsApp link
+Metadata: title "FAQ — SYSmoAI AI Services", description about common questions
+
+--- B6: /proof/page.tsx ---
+
+Case study / proof page — Hayder Voice OS project
+
+Content:
+- Hero: "Proof — Real Results, Not Promises"
+- Subtitle: "We show our work. Here is what we have actually built and delivered."
+- Case Study 1: Hayder Voice OS
+  - Client: Voice content creator in Bangladesh
+  - Challenge: No website, no content system, no SEO strategy
+  - What We Built: Full website + Notion Content OS + SEO strategy
+  - Result: First paid SYSmoAI client delivery. Website live, content pipeline operational.
+  - Tag: "Client Delivery"
+- Case Study 2: SYSmoAI CEO OS
+  - Project: Internal operating system
+  - What It Is: 500+ page Notion workspace running all SYSmoAI businesses — finance, clients, CRM, legal, research
+  - Result: Live production system since 2024. Proof we use what we sell.
+  - Tag: "Internal System"
+- Note at bottom: "We are a new company. More case studies coming as we deliver more projects. We will never post fake testimonials or unverifiable claims."
+- CTA: WhatsApp link with message "Hi SYSmoAI, I want to see more of your work"
+- Metadata: title "Proof — Case Studies & Results | SYSmoAI"
+
+=============================================
+PHASE C — UPGRADE HEADER TO MEGA MENU
+=============================================
+
+The current header likely has basic links. Upgrade to a proper mega menu:
+
+1. Find the header/nav component:
+   find components -iname "*nav*" -o -iname "*header*" | head -10
+
+2. Update with a dropdown mega menu structure:
+   - Services (dropdown):
+     - All Services → /services
+     - NemoClaw AI Agents → /services/nemoclaw
+     - OpenClaw Local AI → /services/openclaw
+     - Notion AI OS → /services/notion-os
+     - International (USD) → /services/international
+   - Industries → /industries
+   - Proof → /proof
+   - About → /about
+   - FAQ → /faq
+   - Blog → /blog
+   - Contact (CTA button style) → /contact
+
+3. Mobile: hamburger menu with all the same links, no dropdown needed, flat list
+
+4. Update footer with same links organized in columns:
+   Column 1 — Services: All Services, NemoClaw, OpenClaw, Notion OS, International
+   Column 2 — Company: About, Proof, Blog, FAQ
+   Column 3 — Legal: Privacy Policy, Terms of Service, Refund Policy
+   Column 4 — Contact: WhatsApp +880 1711-638693, Email hello@sysmoai.com, Dhaka, Bangladesh
+
+=============================================
+PHASE D — ADD COOKIE CONSENT BANNER
+=============================================
+
+Create a simple cookie consent banner component:
+
+1. Create components/ui/cookie-consent.tsx
+   - Small banner at bottom of screen
+   - Text: "We use cookies to improve your experience."
+   - Two buttons: "Accept" and "Decline"
+   - On accept: set localStorage flag, hide banner
+   - On decline: set flag, hide banner
+   - Only show if no flag is set
+   - Style: bg-sysmoai-surface, border-top border-sysmoai-border
+
+2. Add to storefront layout (same place as WhatsApp float)
+
+=============================================
+PHASE E — UPDATE SITEMAP WITH ALL NEW ROUTES
+=============================================
+
+Update app/sitemap.ts to include ALL pages:
+
+Routes to include:
+  /, /about, /services, /services/nemoclaw, /services/openclaw,
+  /services/notion-os, /services/international, /industries,
+  /contact, /blog, /faq, /proof, /privacy, /terms
+
+=============================================
+PHASE F — QUALITY CHECKS + BUILD
+=============================================
+
+1. Wrong phone number check (must return 0):
+   grep -rn "01865\|385348" app/ components/ lib/ | grep -v node_modules
+
+2. Placeholder check (must return 0):
+   grep -rn "lorem ipsum\|\[insert\|example\.com\|\[TODO" app/ components/ lib/ | grep -v node_modules
+
+3. Font import check (must return 0):
+   grep -rn "next/font/google" app/ components/ lib/ | grep -v node_modules
+
+4. Build:
+   npx next build
+
+5. Test ALL URLs return 200:
+   /bd  /bd/about  /bd/services  /bd/services/nemoclaw
+   /bd/services/openclaw  /bd/services/notion-os  /bd/services/international
+   /bd/industries  /bd/contact  /bd/blog  /bd/faq  /bd/proof
+   /robots.txt  /sitemap.xml
+
+=============================================
+PHASE G — COMMIT + PUSH + DEPLOY
+=============================================
+
+git add -A
+git commit -m "feat: add NemoClaw, OpenClaw, Notion OS, International, FAQ, Proof pages + mega menu + cookie consent + full sitemap"
+git push origin master
+
+Then redeploy.
+
+REPORT FORMAT:
+Phase A: [what existed / what was missing]
+Phase B: [6 pages created — list each]
+Phase C: [mega menu updated — desktop + mobile]
+Phase D: [cookie consent added]
+Phase E: [sitemap updated — total routes]
+Phase F: [build exit code + all URL test results]
+Phase G: [commit hash + push status]
+STILL MISSING: [anything that failed]
