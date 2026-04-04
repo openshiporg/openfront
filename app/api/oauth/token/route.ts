@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     // Refresh token grants don't need client credentials
     if (grantType === 'authorization_code') {
       // Verify client secret for authorization code flow
-      if (oauthApp.clientSecret !== clientSecret) {
+      if (oauthApp?.clientSecret !== clientSecret) {
         return NextResponse.json(
           { error: 'invalid_client', error_description: 'Invalid client credentials' },
           { status: 401 }
@@ -89,13 +89,14 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('OAuth token error:', error);
-    console.error('Full error details:', JSON.stringify(error, null, 2));
-    console.error('Stack trace:', error.stack);
-    console.error('Error name:', error.name);
-    console.error('Error constructor:', error.constructor.name);
+    const err = error as Error
+    console.error('OAuth token error:', err);
+    console.error('Full error details:', JSON.stringify(err, null, 2));
+    console.error('Stack trace:', err.stack);
+    console.error('Error name:', err.name);
+    console.error('Error constructor:', err.constructor?.name);
     return NextResponse.json(
-      { error: 'server_error', error_description: `${error.name}: ${error.message}` || 'Internal server error' },
+      { error: 'server_error', error_description: `${err.name}: ${err.message}` || 'Internal server error' },
       { status: 500 }
     );
   }

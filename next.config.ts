@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
     '*.kirk.replit.dev',
     '*.replit.app',
   ],
-  turbopack: {},
+  turbopack: { root: "." },
   // Workaround since we diverged from Keystone relationship and document views
   typescript: {
     ignoreBuildErrors: true,
