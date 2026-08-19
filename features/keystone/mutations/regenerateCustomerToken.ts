@@ -1,3 +1,8 @@
+import {
+  customerTokenDigest,
+  generateOpaqueToken,
+} from "../security/token-crypto";
+
 async function regenerateCustomerToken(root, args, context) {
   const userId = context.session?.itemId;
   
@@ -24,15 +29,14 @@ async function regenerateCustomerToken(root, args, context) {
       throw new Error('No active account found. Customer token can only be regenerated for users with active accounts.');
     }
 
-    // Generate new secure token
-    const crypto = require('crypto');
-    const newToken = 'ctok_' + crypto.randomBytes(32).toString('hex');
+    // Generate once, store only a keyed digest, and return the raw token once.
+    const newToken = generateOpaqueToken('ctok_');
 
     // Update user with new token
     await sudoContext.query.User.updateOne({
       where: { id: userId },
       data: {
-        customerToken: newToken,
+        customerToken: customerTokenDigest(newToken),
         tokenGeneratedAt: new Date().toISOString()
       }
     });

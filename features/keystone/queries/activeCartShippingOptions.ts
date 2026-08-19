@@ -1,4 +1,7 @@
+import { assertCartAccess } from "../security/cart-access";
+
 async function activeCartShippingOptions(root, { cartId }, context) {
+  await assertCartAccess(context, cartId);
   const sudoContext = context.sudo();
 
   // Get cart with region and shipping address

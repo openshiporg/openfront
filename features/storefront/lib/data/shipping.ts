@@ -2,6 +2,7 @@
 import { gql } from "graphql-request"
 import { openfrontClient } from "../config"
 import { cache } from "react"
+import { getAuthHeaders } from "./cookies"
 
 export const getCartShippingOptions = cache(async function (cartId: string) {
   const GET_SHIPPING_OPTIONS = gql`
@@ -18,6 +19,10 @@ export const getCartShippingOptions = cache(async function (cartId: string) {
     }
   `;
 
-  const { activeCartShippingOptions } = await openfrontClient.request(GET_SHIPPING_OPTIONS, { cartId });
+  const { activeCartShippingOptions } = await openfrontClient.request(
+    GET_SHIPPING_OPTIONS,
+    { cartId },
+    await getAuthHeaders()
+  );
   return activeCartShippingOptions;
 });

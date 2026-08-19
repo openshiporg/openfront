@@ -35,7 +35,20 @@ export async function executeAdapterFunction({ provider, functionName, args }) {
 }
 
 // Helper functions for common payment operations
-export async function createPayment({ provider, cart, amount, currency }) {
+type PaymentOperationArgs = {
+  provider: Record<string, any>;
+  paymentId: string;
+  amount: number;
+  currency: string;
+  idempotencyKey: string;
+};
+
+export async function createPayment({ provider, cart, amount, currency }: {
+  provider: Record<string, any>;
+  cart: Record<string, any>;
+  amount: number;
+  currency: string;
+}) {
   return executeAdapterFunction({
     provider,
     functionName: "createPaymentFunction",
@@ -43,19 +56,19 @@ export async function createPayment({ provider, cart, amount, currency }) {
   });
 }
 
-export async function capturePayment({ provider, paymentId, amount }) {
+export async function capturePayment({ provider, paymentId, amount, currency, idempotencyKey }: PaymentOperationArgs) {
   return executeAdapterFunction({
     provider,
     functionName: "capturePaymentFunction",
-    args: { paymentId, amount },
+    args: { paymentId, amount, currency, idempotencyKey },
   });
 }
 
-export async function refundPayment({ provider, paymentId, amount }) {
+export async function refundPayment({ provider, paymentId, amount, currency, idempotencyKey }: PaymentOperationArgs) {
   return executeAdapterFunction({
     provider,
     functionName: "refundPaymentFunction",
-    args: { paymentId, amount },
+    args: { paymentId, amount, currency, idempotencyKey },
   });
 }
 

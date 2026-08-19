@@ -13,9 +13,9 @@ export const AccountLineItem = list({
   access: {
     operation: {
       query: permissions.canManageOrders,
-      create: permissions.canManageOrders,
-      update: permissions.canManageOrders,
-      delete: permissions.canManageOrders,
+      create: () => false,
+      update: () => false,
+      delete: () => false,
     },
   },
   fields: {
@@ -30,6 +30,11 @@ export const AccountLineItem = list({
       ref: 'Order.accountLineItems',
       many: false,
       validation: { isRequired: true },
+    }),
+    orderKey: text({
+      isIndexed: 'unique',
+      db: { isNullable: true },
+      ui: { itemView: { fieldMode: 'read' }, createView: { fieldMode: 'hidden' } },
     }),
 
     region: relationship({
@@ -62,6 +67,7 @@ export const AccountLineItem = list({
       options: [
         { label: 'Unpaid', value: 'unpaid' },
         { label: 'Paid', value: 'paid' },
+        { label: 'Canceled', value: 'canceled' },
       ],
       defaultValue: 'unpaid',
       validation: { isRequired: true },

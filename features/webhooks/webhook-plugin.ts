@@ -1,4 +1,4 @@
-import { BaseListTypeInfo, KeystoneConfig, KeystoneContext } from '@keystone-6/core/types';
+import { BaseKeystoneTypeInfo, KeystoneConfig, KeystoneContext } from '@keystone-6/core/types';
 import crypto from 'crypto';
 import { webhookEnricherRegistry } from './enrichers';
 
@@ -12,50 +12,54 @@ type WebhookPayload = {
   context: KeystoneContext;
 };
 
-// Queue for batching webhooks
-let webhookQueue: WebhookPayload[] = [];
-let batchTimer: NodeJS.Timeout | null = null;
+const WEBHOOK_INTERNAL_LISTS = new Set(['WebhookEndpoint', 'WebhookEvent']);
 
-export function withWebhooks<TypeInfo extends BaseListTypeInfo>(
+export function isWebhookInternalList(listKey: string): boolean {
+  return WEBHOOK_INTERNAL_LISTS.has(listKey);
+}
+
+export function withWebhooks<TypeInfo extends BaseKeystoneTypeInfo>(
   config: KeystoneConfig<TypeInfo>
 ): KeystoneConfig<TypeInfo> {
   
   // Apply hooks to ALL lists automatically
   const enhancedLists = Object.fromEntries(
-    Object.entries(config.lists || {}).map(([listKey, listConfig]) => [
-      listKey,
-      {
-        ...listConfig,
-        hooks: {
-          ...listConfig.hooks,
-          afterOperation: async (args) => {
-            try {
-              // Call original hook if it exists
-              if (listConfig.hooks?.afterOperation) {
-                await listConfig.hooks.afterOperation(args);
+    Object.entries(config.lists || {}).map(([listKey, listConfig]) => {
+      if (isWebhookInternalList(listKey)) return [listKey, listConfig];
+
+      return [
+        listKey,
+        {
+          ...listConfig,
+          hooks: {
+            ...listConfig.hooks,
+            afterOperation: async (args: any) => {
+              // Preserve the original lifecycle contract; business hook failures
+              // are never swallowed by integration plumbing.
+              const originalAfterOperation = listConfig.hooks?.afterOperation as any;
+              if (typeof originalAfterOperation === 'function') {
+                await originalAfterOperation(args);
+              } else if (originalAfterOperation?.[args.operation]) {
+                await originalAfterOperation[args.operation](args);
               }
-            } catch (error) {
-              console.error(`Original hook failed for ${listKey}:`, error);
-              // Continue to webhooks even if original fails
-            }
-            
-            try {
-              // Trigger webhook for this operation
-              await queueWebhook({
-                listKey,
-                operation: args.operation,
-                item: args.item,
-                originalItem: args.originalItem,
-                context: args.context.sudo()
-              });
-            } catch (error) {
-              // Log but don't throw - webhooks shouldn't break operations
-              console.error(`Webhook failed for ${listKey}:`, error);
+
+              try {
+                // Delivery intent is persisted before the network request.
+                await triggerWebhook({
+                  listKey,
+                  operation: args.operation,
+                  item: args.item,
+                  originalItem: args.originalItem,
+                  context: args.context.sudo()
+                });
+              } catch (error) {
+                console.error(`Webhook enqueue failed for ${listKey}:`, error);
+              }
             }
           }
         }
-      }
-    ])
+      ];
+    })
   );
 
   return {
@@ -64,30 +68,11 @@ export function withWebhooks<TypeInfo extends BaseListTypeInfo>(
   };
 }
 
-async function queueWebhook(payload: WebhookPayload) {
-  webhookQueue.push(payload);
-  
-  // Batch webhooks every 100ms for performance
-  if (!batchTimer) {
-    batchTimer = setTimeout(processBatch, 100);
-  }
-}
-
-async function processBatch() {
-  const batch = [...webhookQueue];
-  webhookQueue = [];
-  batchTimer = null;
-
-  if (batch.length === 0) {
-    return;
-  }
-
-  for (const webhook of batch) {
-    await triggerWebhook(webhook);
-  }
-}
-
 async function triggerWebhook({ listKey, operation, item, originalItem, context }: WebhookPayload) {
+  // Defense in depth: internal delivery bookkeeping must never publish events,
+  // including through wildcard subscriptions or manual triggers.
+  if (isWebhookInternalList(listKey)) return;
+
   try {
     // Convert operation to standard webhook format
     const operationMap = {
@@ -135,24 +120,39 @@ async function triggerWebhook({ listKey, operation, item, originalItem, context 
   }
 }
 
-async function deliverWebhook(webhook: any, eventType: string, payload: any, context: KeystoneContext) {
+async function deliverWebhook(
+  webhook: any,
+  eventType: string,
+  payload: any,
+  context: KeystoneContext,
+  existingEvent?: any
+) {
+  let webhookEvent = existingEvent;
   try {
-    // Create WebhookEvent record for tracking
-    const webhookEvent = await context.query.WebhookEvent.createOne({
-      data: {
-        eventType,
-        resourceType: payload.listKey,
-        resourceId: payload.data?.id || 'unknown',
-        payload,
-        endpoint: { connect: { id: webhook.id } },
-        deliveryAttempts: 1,
-        nextAttempt: new Date(),
-      },
-      query: 'id'
+    if (!webhookEvent) {
+      webhookEvent = await context.query.WebhookEvent.createOne({
+        data: {
+          eventType,
+          resourceType: payload.listKey,
+          resourceId: payload.data?.id || 'unknown',
+          payload,
+          endpoint: { connect: { id: webhook.id } },
+          deliveryAttempts: 0,
+          nextAttempt: new Date(),
+        },
+        query: 'id deliveryAttempts'
+      });
+    }
+    await context.query.WebhookEvent.updateOne({
+      where: { id: webhookEvent.id },
+      data: { deliveryAttempts: (webhookEvent.deliveryAttempts || 0) + 1, lastAttempt: new Date() },
     });
 
     // Create signature for verification
-    const secret = webhook.secret || 'default-secret';
+    if (!webhook.secret) {
+      throw new Error('Webhook endpoint secret is required');
+    }
+    const secret = webhook.secret;
     const signature = crypto
       .createHmac('sha256', secret)
       .update(JSON.stringify(payload))
@@ -176,12 +176,13 @@ async function deliverWebhook(webhook: any, eventType: string, payload: any, con
 
     // Update WebhookEvent with delivery status
     if (response.ok) {
+      const responseBody = (await response.text()).slice(0, 64_000);
       await context.query.WebhookEvent.updateOne({
         where: { id: webhookEvent.id },
         data: {
           delivered: true,
           responseStatus: response.status,
-          responseBody: await response.text(),
+          responseBody,
           lastAttempt: new Date(),
         }
       });
@@ -203,7 +204,7 @@ async function deliverWebhook(webhook: any, eventType: string, payload: any, con
       }
 
     } else {
-      const errorText = await response.text();
+      const errorText = (await response.text()).slice(0, 64_000);
       throw new Error(`HTTP ${response.status}: ${errorText}`);
     }
 
@@ -215,11 +216,13 @@ async function deliverWebhook(webhook: any, eventType: string, payload: any, con
         where: { id: webhookEvent?.id },
         data: {
           delivered: false,
-          responseStatus: error.status || 0,
-          responseBody: error.message,
+          responseStatus: 0,
+          responseBody: error instanceof Error ? error.message : String(error),
           lastAttempt: new Date(),
           // Schedule retry (exponential backoff)
-          nextAttempt: new Date(Date.now() + Math.pow(2, 1) * 60000), // 2 minutes for first retry
+          nextAttempt: new Date(
+            Date.now() + Math.min(Math.pow(2, (webhookEvent?.deliveryAttempts || 0) + 1) * 60000, 24 * 60 * 60 * 1000)
+          ),
         }
       });
 
@@ -310,6 +313,62 @@ function getChangedFields(original: any, updated: any): Record<string, { from: a
   }
   
   return changes;
+}
+
+export async function deliverWebhookEventsById(
+  context: KeystoneContext,
+  eventIds: string[]
+) {
+  const uniqueEventIds = [...new Set(eventIds.filter(Boolean))];
+  for (const eventId of uniqueEventIds) {
+    const event = await context.sudo().query.WebhookEvent.findOne({
+      where: { id: eventId },
+      query: `
+        id eventType payload deliveryAttempts delivered
+        endpoint { id url secret failureCount }
+      `,
+    });
+    if (!event || event.delivered || !event.endpoint) continue;
+    await deliverWebhook(
+      event.endpoint,
+      event.eventType,
+      event.payload,
+      context.sudo(),
+      event
+    );
+  }
+  return uniqueEventIds.length;
+}
+
+export async function retryPendingWebhookDeliveries(
+  context: KeystoneContext,
+  limit = 25
+) {
+  const boundedLimit = Math.max(1, Math.min(limit, 100));
+  const events = await context.sudo().query.WebhookEvent.findMany({
+    where: {
+      delivered: { equals: false },
+      nextAttempt: { lte: new Date().toISOString() },
+    },
+    orderBy: { nextAttempt: 'asc' },
+    take: boundedLimit,
+    query: `
+      id eventType payload deliveryAttempts
+      endpoint { id url secret failureCount }
+    `,
+  });
+
+  for (const event of events) {
+    if (!event.endpoint) continue;
+    await deliverWebhook(
+      event.endpoint,
+      event.eventType,
+      event.payload,
+      context.sudo(),
+      event
+    );
+  }
+  return events.length;
 }
 
 // Export utility to manually trigger webhooks if needed

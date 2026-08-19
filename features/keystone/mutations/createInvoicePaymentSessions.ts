@@ -1,4 +1,8 @@
+import { assertInvoiceAccess } from "../security/invoice-access";
+import { isPaymentProviderConfigured } from "../utils/paymentProviderConfig";
+
 async function createInvoicePaymentSessions(root, { invoiceId }, context) {
+  await assertInvoiceAccess(context, invoiceId);
   const sudoContext = context.sudo();
 
   // Get invoice with payment provider info from region
@@ -53,7 +57,9 @@ async function createInvoicePaymentSessions(root, { invoiceId }, context) {
   const invoiceLineItem = invoiceLineItems[0]; // Get first line item for region info
   
   // Allow all installed payment providers for invoice payments (same as checkout)
-  const availableProviders = invoiceLineItem?.accountLineItem?.region?.paymentProviders?.filter(p => p.isInstalled) || [];
+  const availableProviders = invoiceLineItem?.accountLineItem?.region?.paymentProviders?.filter(
+    (provider: any) => provider.isInstalled && isPaymentProviderConfigured(provider.code || '')
+  ) || [];
   
   if (availableProviders.length === 0) {
     throw new Error("No payment providers are available for this region");
@@ -65,11 +71,15 @@ async function createInvoicePaymentSessions(root, { invoiceId }, context) {
   if (!paymentCollection) {
     paymentCollection = await sudoContext.db.PaymentCollection.createOne({
       data: {
-        invoice: { connect: { id: invoiceId } },
         description: "default",
         amount: invoice.totalAmount || 0,
       },
       query: "id"
+    });
+    await sudoContext.db.Invoice.updateOne({
+      where: { id: invoiceId },
+      data: { paymentCollection: { connect: { id: paymentCollection.id } } },
+      query: "id",
     });
   }
 
@@ -96,27 +106,9 @@ async function createInvoicePaymentSessions(root, { invoiceId }, context) {
     }
   }
 
-  // Return invoice with payment collection data from sudo context
-  const invoiceWithPaymentCollection = await sudoContext.query.Invoice.findOne({
-    where: { id: invoiceId },
-    query: `
-      id
-      paymentCollection {
-        id
-        paymentSessions {
-          id
-          isSelected
-          paymentProvider {
-            id
-            code
-          }
-          data
-        }
-      }
-    `
-  });
-
-  return invoiceWithPaymentCollection;
+  // Custom list-returning mutations must return the raw list item. Keystone's
+  // field resolvers load paymentCollection and paymentSessions from this ID.
+  return sudoContext.prisma.invoice.findUnique({ where: { id: invoiceId } });
 }
 
 export default createInvoicePaymentSessions;

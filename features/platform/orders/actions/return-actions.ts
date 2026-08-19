@@ -19,58 +19,42 @@ export interface CreateReturnData {
 
 export async function createReturnAction(data: CreateReturnData) {
   try {
-    // First, calculate refund amount if not provided
-    let { refundAmount } = data
-    
-    if (!refundAmount) {
-      // Query order line items to calculate refund amount
-      const orderQuery = `
-        query GetOrderLineItems($orderId: ID!) {
-          order(where: { id: $orderId }) {
+    const orderQuery = `
+      query GetOrderLineItems($orderId: ID!) {
+        order(where: { id: $orderId }) {
+          id
+          lineItems {
             id
-            lineItems {
-              id
-              title
-              quantity
-              sku
-              thumbnail
-              variantTitle
-              formattedUnitPrice
-              formattedTotal
-              variantData
-              moneyAmount {
-                amount
-                originalAmount
-                currency {
-                  code
-                }
-              }
-            }
+            quantity
+            moneyAmount { amount currency { code } }
           }
         }
-      `
-      
-      const orderResponse = await keystoneClient(orderQuery, { orderId: data.orderId })
-      
-      if (!orderResponse.success || !orderResponse.data?.order) {
-        return {
-          success: false,
-          error: 'Failed to fetch order data for refund calculation',
-          data: null
-        }
       }
-      
-      // Calculate refund based on return items
-      refundAmount = 0
-      for (const returnItem of data.returnItems) {
-        const lineItem = orderResponse.data.order.lineItems.find(
-          (li: any) => li.id === returnItem.lineItemId
-        )
-        if (lineItem && lineItem.moneyAmount) {
-          const unitPrice = lineItem.moneyAmount.amount || 0
-          refundAmount += unitPrice * returnItem.quantity
-        }
+    `
+    const orderResponse = await keystoneClient(orderQuery, { orderId: data.orderId })
+    if (!orderResponse.success || !orderResponse.data?.order) {
+      return { success: false, error: 'Failed to fetch order data for refund calculation', data: null }
+    }
+
+    let maximumRefund = 0
+    for (const returnItem of data.returnItems) {
+      const lineItem = orderResponse.data.order.lineItems.find(
+        (li: any) => li.id === returnItem.lineItemId
+      )
+      if (
+        !lineItem ||
+        !Number.isInteger(returnItem.quantity) ||
+        returnItem.quantity <= 0 ||
+        returnItem.quantity > lineItem.quantity
+      ) {
+        return { success: false, error: 'Invalid return quantity or order line item', data: null }
       }
+      maximumRefund += (lineItem.moneyAmount?.amount || 0) * returnItem.quantity
+    }
+
+    const refundAmount = data.refundAmount ?? maximumRefund
+    if (!Number.isInteger(refundAmount) || refundAmount < 0 || refundAmount > maximumRefund) {
+      return { success: false, error: 'Refund amount exceeds the selected order lines', data: null }
     }
 
     // Create the return
@@ -93,7 +77,15 @@ export async function createReturnAction(data: CreateReturnData) {
       status: 'requested',
       refundAmount,
       shippingData: data.shippingData,
-      metadata: data.metadata,
+      metadata: {
+        ...(data.metadata || {}),
+        orderLineItems: data.returnItems.map((item) => ({
+          orderLineItemId: item.lineItemId,
+          quantity: item.quantity,
+          returnReasonId: item.returnReasonId || null,
+          note: item.note || null,
+        })),
+      },
       noNotification: data.noNotification || false,
       order: { connect: { id: data.orderId } }
     }
@@ -117,44 +109,9 @@ export async function createReturnAction(data: CreateReturnData) {
       }
     }
 
-    // Create return items
-    const createReturnItemMutation = `
-      mutation CreateReturnItem($data: ReturnItemCreateInput!) {
-        returnItem: createReturnItem(data: $data) {
-          id
-          quantity
-          note
-        }
-      }
-    `
-
-    const returnItemPromises = data.returnItems.map(async (item) => {
-      const returnItemData = {
-        quantity: item.quantity,
-        isRequested: true,
-        requestedQuantity: item.quantity,
-        note: item.note,
-        return: { connect: { id: returnId } },
-        orderLineItem: { connect: { id: item.lineItemId } },
-        ...(item.returnReasonId && {
-          returnReason: { connect: { id: item.returnReasonId } }
-        })
-      }
-
-      return keystoneClient(createReturnItemMutation, { data: returnItemData })
-    })
-
-    const returnItemResults = await Promise.all(returnItemPromises)
-    
-    // Check if any return item creation failed
-    const failedItems = returnItemResults.filter(result => !result.success)
-    if (failedItems.length > 0) {
-      return {
-        success: false,
-        error: `Failed to create ${failedItems.length} return items`,
-        data: null
-      }
-    }
+    // Accepted order-line identities are preserved in Return.metadata until the
+    // legacy ReturnItem -> LineItem relation is migrated to OrderLineItem at a
+    // serialized schema gate.
 
     // Revalidate cache
     revalidatePath(`/dashboard/platform/orders/${data.orderId}`)
@@ -164,7 +121,7 @@ export async function createReturnAction(data: CreateReturnData) {
       success: true,
       data: {
         return: returnResponse.data.return,
-        returnItems: returnItemResults.map(r => r.data?.returnItem).filter(Boolean)
+        returnItems: data.returnItems
       },
       error: null
     }
@@ -177,6 +134,35 @@ export async function createReturnAction(data: CreateReturnData) {
       data: null
     }
   }
+}
+
+export async function processReturnRefundAction({
+  returnId,
+  paymentId,
+  idempotencyKey,
+}: {
+  returnId: string
+  paymentId: string
+  idempotencyKey: string
+}) {
+  const mutation = `
+    mutation ProcessReturnRefund($returnId: ID!, $paymentId: ID!, $idempotencyKey: String!) {
+      refund: processReturnRefund(
+        returnId: $returnId
+        paymentId: $paymentId
+        idempotencyKey: $idempotencyKey
+      ) {
+        id amount reason idempotencyKey
+        payment { id amount amountRefunded }
+      }
+    }
+  `
+  const response = await keystoneClient(mutation, { returnId, paymentId, idempotencyKey })
+  if (response.success) {
+    revalidatePath('/dashboard/platform/orders')
+    revalidatePath('/dashboard/platform/claims')
+  }
+  return response
 }
 
 export async function getReturnReasonsAction() {

@@ -1,4 +1,7 @@
+import { assertInvoiceAccess } from "../security/invoice-access";
+
 async function setInvoicePaymentSession(root, { invoiceId, providerId }, context) {
+  await assertInvoiceAccess(context, invoiceId);
   const sudoContext = context.sudo();
 
   // Get invoice with payment collection

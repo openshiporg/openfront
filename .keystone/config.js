@@ -35,102 +35,6 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// features/keystone/utils/currencyConversion.ts
-var currencyConversion_exports = {};
-__export(currencyConversion_exports, {
-  convertCurrency: () => convertCurrency,
-  default: () => currencyConversion_default,
-  formatCurrencyAmount: () => formatCurrencyAmount,
-  getCurrentExchangeRates: () => getCurrentExchangeRates,
-  getSupportedCurrencies: () => getSupportedCurrencies,
-  isConversionSupported: () => isConversionSupported,
-  updateExchangeRates: () => updateExchangeRates
-});
-async function convertCurrency(amount, fromCurrency, toCurrency) {
-  if (fromCurrency === toCurrency) {
-    return amount;
-  }
-  const from = fromCurrency.toUpperCase();
-  const to = toCurrency.toUpperCase();
-  try {
-    const rate = getConversionRate(from, to);
-    if (!rate) {
-      console.warn(`No conversion rate found for ${from} to ${to}, defaulting to 1:1`);
-      return amount;
-    }
-    const convertedAmount = Math.round(amount * rate);
-    console.log(`Currency conversion: ${amount} ${from} = ${convertedAmount} ${to} (rate: ${rate})`);
-    return convertedAmount;
-  } catch (error) {
-    console.error(`Error converting currency from ${from} to ${to}:`, error);
-    return amount;
-  }
-}
-function getConversionRate(fromCurrency, toCurrency) {
-  const rates = STATIC_EXCHANGE_RATES[fromCurrency];
-  if (!rates) {
-    return null;
-  }
-  return rates[toCurrency] || null;
-}
-function getSupportedCurrencies() {
-  return Object.keys(STATIC_EXCHANGE_RATES);
-}
-function isConversionSupported(fromCurrency, toCurrency) {
-  const from = fromCurrency.toUpperCase();
-  const to = toCurrency.toUpperCase();
-  return Boolean(STATIC_EXCHANGE_RATES[from]?.[to]);
-}
-function updateExchangeRates(rates) {
-  Object.assign(STATIC_EXCHANGE_RATES, rates);
-}
-function getCurrentExchangeRates() {
-  return { ...STATIC_EXCHANGE_RATES };
-}
-function formatCurrencyAmount(amount, currencyCode) {
-  const currency = currencyCode.toUpperCase();
-  const noDivisionCurrencies = ["JPY", "KRW", "VND"];
-  const divisor = noDivisionCurrencies.includes(currency) ? 1 : 100;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency
-  }).format(amount / divisor);
-}
-var STATIC_EXCHANGE_RATES, currencyConversion_default;
-var init_currencyConversion = __esm({
-  "features/keystone/utils/currencyConversion.ts"() {
-    "use strict";
-    STATIC_EXCHANGE_RATES = {
-      USD: {
-        EUR: 0.85,
-        GBP: 0.73,
-        CAD: 1.35,
-        AUD: 1.52,
-        JPY: 110,
-        USD: 1
-      },
-      EUR: {
-        USD: 1.18,
-        GBP: 0.86,
-        CAD: 1.59,
-        AUD: 1.79,
-        JPY: 129.5,
-        EUR: 1
-      },
-      GBP: {
-        USD: 1.37,
-        EUR: 1.16,
-        CAD: 1.85,
-        AUD: 2.08,
-        JPY: 150.6,
-        GBP: 1
-      }
-      // Add more currencies as needed
-    };
-    currencyConversion_default = convertCurrency;
-  }
-});
-
 // features/integrations/payment/stripe.ts
 var stripe_exports = {};
 __export(stripe_exports, {
@@ -148,33 +52,38 @@ async function createPaymentFunction({ cart, amount, currency }) {
     currency: currency.toLowerCase(),
     automatic_payment_methods: {
       enabled: true
-    }
-  });
+    },
+    metadata: cart?.id ? { cartId: cart.id } : void 0
+  }, cart?.id ? { idempotencyKey: `cart:${cart.id}:${amount}:${currency.toLowerCase()}` } : void 0);
   return {
     clientSecret: paymentIntent.client_secret,
     paymentIntentId: paymentIntent.id
   };
 }
-async function capturePaymentFunction({ paymentId, amount }) {
+async function capturePaymentFunction({ paymentId, amount, idempotencyKey }) {
   const stripe = getStripeClient();
-  const paymentIntent = await stripe.paymentIntents.capture(paymentId, {
-    ...amount ? { amount_to_capture: amount } : {}
-  });
+  const paymentIntent = await stripe.paymentIntents.capture(
+    paymentId,
+    { ...amount ? { amount_to_capture: amount } : {} },
+    idempotencyKey ? { idempotencyKey } : void 0
+  );
   return {
     status: paymentIntent.status,
     amount: paymentIntent.amount_received,
+    currency: paymentIntent.currency,
     data: paymentIntent
   };
 }
-async function refundPaymentFunction({ paymentId, amount }) {
+async function refundPaymentFunction({ paymentId, amount, idempotencyKey }) {
   const stripe = getStripeClient();
   const refund = await stripe.refunds.create({
     payment_intent: paymentId,
     ...amount ? { amount } : {}
-  });
+  }, idempotencyKey ? { idempotencyKey } : void 0);
   return {
     status: refund.status,
     amount: refund.amount,
+    currency: refund.currency,
     data: refund
   };
 }
@@ -183,7 +92,8 @@ async function getPaymentStatusFunction({ paymentId }) {
   const paymentIntent = await stripe.paymentIntents.retrieve(paymentId);
   return {
     status: paymentIntent.status,
-    amount: paymentIntent.amount,
+    amount: paymentIntent.amount_received || paymentIntent.amount,
+    currency: paymentIntent.currency,
     data: paymentIntent
   };
 }
@@ -197,8 +107,9 @@ async function handleWebhookFunction({ event, headers }) {
   }
   const stripe = getStripeClient();
   try {
+    if (!headers.__rawBody) throw new Error("Raw webhook body is required");
     const stripeEvent = stripe.webhooks.constructEvent(
-      JSON.stringify(event),
+      headers.__rawBody,
       headers["stripe-signature"],
       webhookSecret
     );
@@ -283,12 +194,14 @@ async function createPaymentFunction2({ cart, amount, currency }) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`
+        Authorization: `Bearer ${accessToken}`,
+        ...cart?.id ? { "PayPal-Request-Id": `cart-${cart.id}-${amount}-${currency.toUpperCase()}` } : {}
       },
       body: JSON.stringify({
-        intent: "AUTHORIZE",
+        intent: "CAPTURE",
         purchase_units: [
           {
+            custom_id: cart?.id,
             amount: {
               currency_code: currency.toUpperCase(),
               value: formatPayPalAmount(amount, currency)
@@ -307,7 +220,7 @@ async function createPaymentFunction2({ cart, amount, currency }) {
     status: order.status
   };
 }
-async function capturePaymentFunction2({ paymentId }) {
+async function capturePaymentFunction2({ paymentId, idempotencyKey }) {
   const accessToken = await getPayPalAccessToken();
   const baseUrl = getPayPalBaseUrl();
   const response = await fetch(
@@ -316,7 +229,8 @@ async function capturePaymentFunction2({ paymentId }) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`
+        Authorization: `Bearer ${accessToken}`,
+        ...idempotencyKey ? { "PayPal-Request-Id": idempotencyKey } : {}
       }
     }
   );
@@ -328,10 +242,11 @@ async function capturePaymentFunction2({ paymentId }) {
   return {
     status: capture.status,
     amount: parsePayPalAmount(capturedAmount.value, capturedAmount.currency_code),
+    currency: capturedAmount.currency_code,
     data: capture
   };
 }
-async function refundPaymentFunction2({ paymentId, amount = 0, currency = "USD" }) {
+async function refundPaymentFunction2({ paymentId, amount = 0, currency = "USD", idempotencyKey }) {
   const accessToken = await getPayPalAccessToken();
   const baseUrl = getPayPalBaseUrl();
   const response = await fetch(
@@ -340,7 +255,8 @@ async function refundPaymentFunction2({ paymentId, amount = 0, currency = "USD" 
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`
+        Authorization: `Bearer ${accessToken}`,
+        ...idempotencyKey ? { "PayPal-Request-Id": idempotencyKey } : {}
       },
       body: JSON.stringify({
         amount: {
@@ -357,6 +273,7 @@ async function refundPaymentFunction2({ paymentId, amount = 0, currency = "USD" 
   return {
     status: refund.status,
     amount: parsePayPalAmount(refund.amount.value, refund.amount.currency_code),
+    currency: refund.amount.currency_code,
     data: refund
   };
 }
@@ -380,6 +297,7 @@ async function getPaymentStatusFunction2({ paymentId }) {
   return {
     status: order.status,
     amount: parsePayPalAmount(orderAmount.value, orderAmount.currency_code),
+    currency: orderAmount.currency_code,
     data: order
   };
 }
@@ -471,13 +389,8 @@ __export(manual_exports, {
   handleWebhookFunction: () => handleWebhookFunction3,
   refundPaymentFunction: () => refundPaymentFunction3
 });
-async function handleWebhookFunction3({ event, headers }) {
-  return {
-    isValid: true,
-    event,
-    type: event.type,
-    resource: event.data
-  };
+async function handleWebhookFunction3() {
+  throw new Error("Manual payment providers do not accept webhook ingress");
 }
 async function createPaymentFunction3({ cart, amount, currency }) {
   return {
@@ -500,10 +413,11 @@ async function capturePaymentFunction3({ paymentId, amount = 0 }) {
     }
   };
 }
-async function refundPaymentFunction3({ paymentId, amount = 0 }) {
+async function refundPaymentFunction3({ paymentId, amount = 0, currency = "USD" }) {
   return {
     status: "refunded",
     amount,
+    currency,
     data: {
       status: "refunded",
       amount,
@@ -559,7 +473,8 @@ async function createLabelFunction({
   order,
   rateId,
   dimensions,
-  lineItems
+  lineItems,
+  idempotencyKey
 }) {
   if (!dimensions) {
     throw new Error("Dimensions are required to create a shipping label");
@@ -637,7 +552,8 @@ async function createLabelFunction({
     body: JSON.stringify({
       rate: rateId,
       label_file_type: "PDF",
-      async: false
+      async: false,
+      ...idempotencyKey ? { metadata: idempotencyKey } : {}
     })
   });
   const transaction = await transactionResponse.json();
@@ -823,7 +739,10 @@ async function cancelLabelFunction({ provider, labelId }) {
     if (!response.ok) {
       throw new Error(refund.message || "Failed to cancel label");
     }
-    return { success: true };
+    return {
+      success: refund.status !== "ERROR",
+      refundStatus: refund.status || "QUEUED"
+    };
   } catch (error) {
     return {
       success: false,
@@ -913,7 +832,8 @@ async function createLabelFunction2({
   order,
   rateId,
   dimensions,
-  lineItems
+  lineItems,
+  idempotencyKey
 }) {
   if (!dimensions) {
     throw new Error("Dimensions are required to create a shipping label");
@@ -935,6 +855,7 @@ async function createLabelFunction2({
   }
   const payload = {
     shipment: {
+      ...idempotencyKey ? { external_shipment_id: idempotencyKey } : {},
       // Use the serviceCode variable instead of rateId directly
       service_code: serviceCode,
       ship_to: {
@@ -1294,7 +1215,7 @@ async function createLabelFunction3({ provider, order, rate }) {
     "DHL": "https://www.dhl.com/en/express/tracking.html?AWB="
   };
   const trackingNumber = trackingFormats[rate.carrier] || carrierPrefix + Math.random().toString(36).substring(2, 10).toUpperCase();
-  const trackingUrl = baseTrackingUrls[rate.carrier] ? baseTrackingUrls[rate.carrier] + trackingNumber : "https://example.com/track";
+  const trackingUrl2 = baseTrackingUrls[rate.carrier] ? baseTrackingUrls[rate.carrier] + trackingNumber : "https://example.com/track";
   return {
     status: "SUCCESS",
     data: {
@@ -1303,7 +1224,7 @@ async function createLabelFunction3({ provider, order, rate }) {
     },
     rate,
     trackingNumber,
-    trackingUrl,
+    trackingUrl: trackingUrl2,
     labelUrl: `https://api.example.com/shipping/labels/${rate.carrier.toLowerCase()}/${trackingNumber}.pdf`
   };
 }
@@ -1380,6 +1301,102 @@ var init_shipping = __esm({
       shipengine: () => Promise.resolve().then(() => (init_shipengine(), shipengine_exports)),
       manual: () => Promise.resolve().then(() => (init_manual2(), manual_exports2))
     };
+  }
+});
+
+// features/keystone/utils/currencyConversion.ts
+var currencyConversion_exports = {};
+__export(currencyConversion_exports, {
+  convertCurrency: () => convertCurrency,
+  default: () => currencyConversion_default,
+  formatCurrencyAmount: () => formatCurrencyAmount2,
+  getCurrentExchangeRates: () => getCurrentExchangeRates,
+  getSupportedCurrencies: () => getSupportedCurrencies,
+  isConversionSupported: () => isConversionSupported,
+  updateExchangeRates: () => updateExchangeRates
+});
+async function convertCurrency(amount, fromCurrency, toCurrency) {
+  if (fromCurrency === toCurrency) {
+    return amount;
+  }
+  const from = fromCurrency.toUpperCase();
+  const to = toCurrency.toUpperCase();
+  try {
+    const rate = getConversionRate(from, to);
+    if (!rate) {
+      console.warn(`No conversion rate found for ${from} to ${to}, defaulting to 1:1`);
+      return amount;
+    }
+    const convertedAmount = Math.round(amount * rate);
+    console.log(`Currency conversion: ${amount} ${from} = ${convertedAmount} ${to} (rate: ${rate})`);
+    return convertedAmount;
+  } catch (error) {
+    console.error(`Error converting currency from ${from} to ${to}:`, error);
+    return amount;
+  }
+}
+function getConversionRate(fromCurrency, toCurrency) {
+  const rates = STATIC_EXCHANGE_RATES[fromCurrency];
+  if (!rates) {
+    return null;
+  }
+  return rates[toCurrency] || null;
+}
+function getSupportedCurrencies() {
+  return Object.keys(STATIC_EXCHANGE_RATES);
+}
+function isConversionSupported(fromCurrency, toCurrency) {
+  const from = fromCurrency.toUpperCase();
+  const to = toCurrency.toUpperCase();
+  return Boolean(STATIC_EXCHANGE_RATES[from]?.[to]);
+}
+function updateExchangeRates(rates) {
+  Object.assign(STATIC_EXCHANGE_RATES, rates);
+}
+function getCurrentExchangeRates() {
+  return { ...STATIC_EXCHANGE_RATES };
+}
+function formatCurrencyAmount2(amount, currencyCode) {
+  const currency = currencyCode.toUpperCase();
+  const noDivisionCurrencies = ["JPY", "KRW", "VND"];
+  const divisor = noDivisionCurrencies.includes(currency) ? 1 : 100;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency
+  }).format(amount / divisor);
+}
+var STATIC_EXCHANGE_RATES, currencyConversion_default;
+var init_currencyConversion = __esm({
+  "features/keystone/utils/currencyConversion.ts"() {
+    "use strict";
+    STATIC_EXCHANGE_RATES = {
+      USD: {
+        EUR: 0.85,
+        GBP: 0.73,
+        CAD: 1.35,
+        AUD: 1.52,
+        JPY: 110,
+        USD: 1
+      },
+      EUR: {
+        USD: 1.18,
+        GBP: 0.86,
+        CAD: 1.59,
+        AUD: 1.79,
+        JPY: 129.5,
+        EUR: 1
+      },
+      GBP: {
+        USD: 1.37,
+        EUR: 1.16,
+        CAD: 1.85,
+        AUD: 2.08,
+        JPY: 150.6,
+        GBP: 1
+      }
+      // Add more currencies as needed
+    };
+    currencyConversion_default = convertCurrency;
   }
 });
 
@@ -1540,11 +1557,283 @@ async function redirectToInit(root, { ids }, context) {
 }
 var redirectToInit_default = redirectToInit;
 
+// features/keystone/oauth/scopes.ts
+var SCOPE_TO_PERMISSIONS = {
+  // Products
+  "read_products": ["canReadProducts"],
+  "write_products": ["canReadProducts", "canManageProducts"],
+  // Orders
+  "read_orders": ["canReadOrders"],
+  "write_orders": ["canReadOrders", "canManageOrders"],
+  // Customers (maps to users in our system)
+  "read_customers": ["canReadUsers"],
+  "write_customers": ["canReadUsers", "canManageUsers"],
+  // Fulfillments
+  "read_fulfillments": ["canReadFulfillments"],
+  "write_fulfillments": ["canReadFulfillments", "canManageFulfillments"],
+  // Checkouts
+  "read_checkouts": ["canReadCheckouts"],
+  "write_checkouts": ["canReadCheckouts", "canManageCheckouts"],
+  // Discounts
+  "read_discounts": ["canReadDiscounts"],
+  "write_discounts": ["canReadDiscounts", "canManageDiscounts"],
+  // Gift Cards
+  "read_gift_cards": ["canReadGiftCards"],
+  "write_gift_cards": ["canReadGiftCards", "canManageGiftCards"],
+  // Returns
+  "read_returns": ["canReadReturns"],
+  "write_returns": ["canReadReturns", "canManageReturns"],
+  // Sales Channels
+  "read_sales_channels": ["canReadSalesChannels"],
+  "write_sales_channels": ["canReadSalesChannels", "canManageSalesChannels"],
+  // Payments
+  "read_payments": ["canReadPayments"],
+  "write_payments": ["canReadPayments", "canManagePayments"],
+  // Webhooks
+  "read_webhooks": ["canReadWebhooks"],
+  "write_webhooks": ["canReadWebhooks", "canManageWebhooks"],
+  // Apps
+  "read_apps": ["canReadApps"],
+  "write_apps": ["canReadApps", "canManageApps"]
+};
+var AVAILABLE_SCOPES = Object.keys(SCOPE_TO_PERMISSIONS);
+var DEFAULT_SCOPES = ["read_products", "read_orders"];
+
+// features/keystone/access.ts
+function isSignedIn({ session }) {
+  return !!session;
+}
+function hasOAuthPermission(session, permission) {
+  if (!session?.oauthScopes) return false;
+  const scopes = session.oauthScopes;
+  const grantedPermissions = /* @__PURE__ */ new Set();
+  scopes.forEach((scope) => {
+    const scopePermissions = SCOPE_TO_PERMISSIONS[scope];
+    if (scopePermissions) {
+      scopePermissions.forEach((p) => grantedPermissions.add(p));
+    }
+  });
+  return grantedPermissions.has(permission);
+}
+function hasApiKeyPermission(session, permission) {
+  if (!session?.apiKeyScopes) return false;
+  const scopes = session.apiKeyScopes;
+  const grantedPermissions = /* @__PURE__ */ new Set();
+  scopes.forEach((scope) => {
+    const scopePermissions = SCOPE_TO_PERMISSIONS[scope];
+    if (scopePermissions) {
+      scopePermissions.forEach((p) => grantedPermissions.add(p));
+    }
+  });
+  return grantedPermissions.has(permission);
+}
+var generatedPermissions = Object.fromEntries(
+  permissionsList.map((permission) => [
+    permission,
+    function({ session }) {
+      if (hasApiKeyPermission(session, permission)) {
+        return true;
+      }
+      if (hasOAuthPermission(session, permission)) {
+        return true;
+      }
+      const rolePermission = !!session?.data?.role?.[permission];
+      return rolePermission;
+    }
+  ])
+);
+var permissions = {
+  ...generatedPermissions
+};
+var rules = {
+  canManageOrders({ session }) {
+    if (!isSignedIn({ session })) {
+      return false;
+    }
+    if (permissions.canManageProducts({ session })) {
+      return true;
+    }
+  },
+  canManageProducts({ session }) {
+    if (!isSignedIn({ session })) {
+      return false;
+    }
+    if (permissions.canManageProducts({ session })) {
+      return true;
+    }
+  },
+  canManageOrderItems({ session }) {
+    if (!isSignedIn({ session })) {
+      return false;
+    }
+    if (permissions.canManageCart({ session })) {
+      return true;
+    }
+  },
+  canReadProducts({ session }) {
+    if (!isSignedIn({ session })) {
+      return false;
+    }
+    if (permissions.canManageProducts({ session })) {
+      return true;
+    }
+  },
+  canManageUsers({ session }) {
+    if (!isSignedIn({ session })) {
+      return false;
+    }
+    if (permissions.canManageUsers({ session })) {
+      return true;
+    }
+    return { id: { equals: session?.itemId } };
+  },
+  canManageKeys({ session }) {
+    if (!isSignedIn({ session })) {
+      return false;
+    }
+    if (permissions.canManageKeys({ session })) {
+      return true;
+    }
+    return { user: { id: { equals: session?.itemId } } };
+  }
+};
+
+// features/keystone/security/token-crypto.ts
+var import_node_crypto = __toESM(require("node:crypto"));
+var CART_PROOF_VERSION = "v1";
+var DEFAULT_CART_PROOF_TTL_SECONDS = 60 * 60 * 24 * 7;
+function requireSecret(purpose, explicitSecret) {
+  const secret = explicitSecret || process.env.CREDENTIAL_PEPPER || process.env.SESSION_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      `${purpose} requires CREDENTIAL_PEPPER or SESSION_SECRET with at least 32 characters`
+    );
+  }
+  return secret;
+}
+function generateOpaqueToken(prefix) {
+  return `${prefix}${import_node_crypto.default.randomBytes(32).toString("base64url")}`;
+}
+function digestCredential(value, purpose, explicitSecret) {
+  const secret = requireSecret(purpose, explicitSecret);
+  return import_node_crypto.default.createHmac("sha256", secret).update(`${purpose}\0${value}`, "utf8").digest("hex");
+}
+function verifyCredentialDigest(value, expectedDigest, purpose, explicitSecret) {
+  if (!value || !expectedDigest) return false;
+  const actual = Buffer.from(
+    digestCredential(value, purpose, explicitSecret),
+    "hex"
+  );
+  const expected = Buffer.from(expectedDigest, "hex");
+  return actual.length === expected.length && import_node_crypto.default.timingSafeEqual(actual, expected);
+}
+function createCartProof(cartId, options = {}) {
+  if (!cartId) throw new Error("Cart ID is required");
+  const expiresAt = options.expiresAt || Math.floor(Date.now() / 1e3) + DEFAULT_CART_PROOF_TTL_SECONDS;
+  const payload = `${CART_PROOF_VERSION}.${cartId}.${expiresAt}`;
+  const signature = digestCredential(payload, "cart-proof", options.secret);
+  return `${payload}.${signature}`;
+}
+function verifyCartProof(proof, cartId, options = {}) {
+  if (!proof || !cartId) return false;
+  const [version, proofCartId, expiresAtRaw, signature, ...extra] = proof.split(".");
+  if (extra.length || version !== CART_PROOF_VERSION || proofCartId !== cartId || !/^\d+$/.test(expiresAtRaw || "") || !/^[a-f0-9]{64}$/.test(signature || "")) {
+    return false;
+  }
+  const expiresAt = Number(expiresAtRaw);
+  const now = options.now || Math.floor(Date.now() / 1e3);
+  if (!Number.isSafeInteger(expiresAt) || expiresAt <= now) return false;
+  return verifyCredentialDigest(
+    `${version}.${proofCartId}.${expiresAt}`,
+    signature,
+    "cart-proof",
+    options.secret
+  );
+}
+function customerTokenDigest(token) {
+  return digestCredential(token, "customer-token");
+}
+function oauthTokenDigest(token) {
+  return digestCredential(token, "oauth-token");
+}
+function oauthClientSecretDigest(secret) {
+  return digestCredential(secret, "oauth-client-secret");
+}
+
+// features/keystone/security/cart-access.ts
+function headerValue(value) {
+  if (Array.isArray(value)) return value[0];
+  return typeof value === "string" ? value : void 0;
+}
+function cookieValue(cookieHeader, name) {
+  if (!cookieHeader) return void 0;
+  for (const part of cookieHeader.split(";")) {
+    const [key, ...value] = part.trim().split("=");
+    if (key === name) return decodeURIComponent(value.join("="));
+  }
+  return void 0;
+}
+function getCartProofFromContext(context) {
+  const headers = context?.req?.headers || {};
+  return headerValue(headers["x-openfront-cart-proof"]) || cookieValue(headerValue(headers.cookie), "_openfront_cart_id");
+}
+async function assertCartAccess(context, cartId, options = {}) {
+  if (!cartId) throw new Error("Cart ID is required");
+  const canManage = permissions.canManageOrders({ session: context.session });
+  const sessionUserId = context.session?.itemId;
+  const proof = getCartProofFromContext(context);
+  if (!canManage && !sessionUserId && !verifyCartProof(proof, cartId)) {
+    throw new Error("Cart not found");
+  }
+  const cart = await context.sudo().query.Cart.findOne({
+    where: { id: cartId },
+    query: "id user { id } order { id }"
+  });
+  if (!cart) throw new Error("Cart not found");
+  if (!canManage) {
+    const ownsCart = Boolean(sessionUserId && cart.user?.id === sessionUserId);
+    const ownsGuestProof = Boolean(!cart.user && verifyCartProof(proof, cartId));
+    if (!ownsCart && !ownsGuestProof) throw new Error("Cart not found");
+  }
+  if (!options.allowCompleted && cart.order?.id) {
+    throw new Error("Cart has already been completed");
+  }
+  return cart;
+}
+async function assertLineItemBelongsToCart(context, cartId, lineItemId) {
+  await assertCartAccess(context, cartId);
+  const lineItem = await context.sudo().query.LineItem.findOne({
+    where: { id: lineItemId },
+    query: "id cart { id }"
+  });
+  if (lineItem?.cart?.id !== cartId) throw new Error("Line item not found");
+}
+async function assertAddressAccess(context, addressId) {
+  const canManage = permissions.canManageOrders({ session: context.session });
+  const address = await context.sudo().query.Address.findOne({
+    where: { id: addressId },
+    query: "id user { id }"
+  });
+  if (!address || !canManage && (!context.session?.itemId || address.user?.id !== context.session.itemId)) {
+    throw new Error("Address not found");
+  }
+}
+async function assertPaymentSessionBelongsToCart(context, cartId, paymentSessionId) {
+  await assertCartAccess(context, cartId, { allowCompleted: true });
+  const cart = await context.sudo().query.Cart.findOne({
+    where: { id: cartId },
+    query: "id paymentCollection { paymentSessions { id } }"
+  });
+  if (!cart?.paymentCollection?.paymentSessions?.some(
+    (session) => session.id === paymentSessionId
+  )) {
+    throw new Error("Payment session not found");
+  }
+}
+
 // features/keystone/mutations/activeCart.ts
 async function activeCart(root, { cartId }, context) {
-  if (!cartId) {
-    throw new Error("Cart ID is required");
-  }
+  await assertCartAccess(context, cartId, { allowCompleted: true });
   const sudoContext = context.sudo();
   const cart = await sudoContext.query.Cart.findOne({
     where: { id: cartId },
@@ -1698,6 +1987,7 @@ var activeCart_default = activeCart;
 
 // features/keystone/mutations/updateActiveCart.ts
 async function updateActiveCart(root, { cartId, data }, context) {
+  await assertCartAccess(context, cartId);
   const sudoContext = context.sudo();
   const existingCart = await sudoContext.query.Cart.findOne({
     where: { id: cartId },
@@ -1715,8 +2005,51 @@ async function updateActiveCart(root, { cartId, data }, context) {
   if (!existingCart) {
     throw new Error("Cart not found");
   }
+  if (data?.region && existingCart.lineItems?.length) {
+    throw new Error("Region cannot change after items are added; start a new cart");
+  }
+  if (data) {
+    delete data.user;
+    delete data.order;
+    delete data.paymentCollection;
+    delete data.payment;
+    delete data.idempotencyKey;
+    if (data.metadata || data.context) {
+      throw new Error("Cart tax and commercial context are server-owned");
+    }
+    if (data.giftCards) {
+      throw new Error("Gift-card redemption is outside the bounded launch boundary");
+    }
+    if (data.email !== void 0 || data.region || data.shippingAddress || data.billingAddress || data.lineItems || data.discounts) {
+      data.paymentCollection = { disconnect: true };
+    }
+  }
+  for (const relation of [data?.shippingAddress, data?.billingAddress]) {
+    const addressId = relation?.connect?.id;
+    if (addressId) await assertAddressAccess(context, addressId);
+    if (relation?.connect && !addressId) throw new Error("Address ID is required");
+  }
+  const existingLineItemIds = [
+    ...data?.lineItems?.disconnect || [],
+    ...data?.lineItems?.delete || [],
+    ...(data?.lineItems?.update || []).map((entry) => entry.where)
+  ].map((entry) => entry?.id).filter(Boolean);
+  for (const lineItemId of existingLineItemIds) {
+    await assertLineItemBelongsToCart(context, cartId, lineItemId);
+  }
+  if (data?.lineItems?.connect || data?.lineItems?.set) {
+    throw new Error("Existing line items cannot be attached to a cart");
+  }
+  for (const entry of data?.lineItems?.update || []) {
+    if (entry.data?.quantity !== void 0 && (!Number.isInteger(entry.data.quantity) || entry.data.quantity <= 0)) {
+      throw new Error("Line item quantity must be a positive integer");
+    }
+  }
   if (data?.lineItems?.create?.length) {
     for (const newItem of data.lineItems.create) {
+      if (!newItem.productVariant?.connect?.id || !Number.isInteger(newItem.quantity) || newItem.quantity <= 0) {
+        throw new Error("A variant and positive integer quantity are required");
+      }
       const variantId = newItem.productVariant.connect.id;
       const existingLineItem = existingCart.lineItems?.find(
         (item) => item.productVariant.id === variantId
@@ -1749,13 +2082,11 @@ var updateActiveCart_default = updateActiveCart;
 
 // features/keystone/mutations/updateActiveCartLineItem.ts
 async function updateActiveCartLineItem(root, { cartId, lineId, quantity }, context) {
-  const sudoContext = context.sudo();
-  const cart = await sudoContext.query.Cart.findOne({
-    where: { id: cartId }
-  });
-  if (!cart) {
-    throw new Error("Cart not found");
+  if (!Number.isInteger(quantity) || quantity <= 0) {
+    throw new Error("Quantity must be a positive integer");
   }
+  await assertLineItemBelongsToCart(context, cartId, lineId);
+  const sudoContext = context.sudo();
   const updatedLineItem = await sudoContext.query.LineItem.updateOne({
     where: { id: lineId },
     data: { quantity }
@@ -1959,6 +2290,7 @@ var deleteActiveUserAddress_default = deleteActiveUserAddress;
 
 // features/keystone/mutations/addDiscountToActiveCart.ts
 async function addDiscountToActiveCart(root, { cartId, code }, context) {
+  await assertCartAccess(context, cartId);
   const sudoContext = context.sudo();
   const cart = await sudoContext.query.Cart.findOne({
     where: { id: cartId },
@@ -2088,7 +2420,8 @@ async function addDiscountToActiveCart(root, { cartId, code }, context) {
   const updatedCart = await sudoContext.db.Cart.updateOne({
     where: { id: cartId },
     data: {
-      discounts: discountUpdate
+      discounts: discountUpdate,
+      paymentCollection: { disconnect: true }
     }
   });
   return updatedCart;
@@ -2097,6 +2430,7 @@ var addDiscountToActiveCart_default = addDiscountToActiveCart;
 
 // features/keystone/mutations/removeDiscountFromActiveCart.ts
 async function removeDiscountFromActiveCart(root, { cartId, code }, context) {
+  await assertCartAccess(context, cartId);
   const sudoContext = context.sudo();
   const discount = await sudoContext.query.Discount.findOne({
     where: { code },
@@ -2110,14 +2444,47 @@ async function removeDiscountFromActiveCart(root, { cartId, code }, context) {
     data: {
       discounts: {
         disconnect: [{ id: discount.id }]
-      }
+      },
+      paymentCollection: { disconnect: true }
     }
   });
 }
 var removeDiscountFromActiveCart_default = removeDiscountFromActiveCart;
 
+// features/keystone/utils/paymentProviderConfig.ts
+function isPaymentProviderConfigured(code) {
+  if (code.startsWith("pp_stripe")) {
+    return Boolean(
+      (process.env.NEXT_PUBLIC_STRIPE_KEY || process.env.STRIPE_PUBLISHABLE_KEY) && process.env.STRIPE_SECRET_KEY
+    );
+  }
+  if (code.startsWith("pp_paypal")) {
+    return Boolean(
+      process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET
+    );
+  }
+  return code === "pp_system_default" || code.startsWith("pp_manual");
+}
+function getPublicPaymentProviderConfig(code) {
+  if (!isPaymentProviderConfigured(code)) return null;
+  if (code.startsWith("pp_stripe")) {
+    return {
+      provider: "stripe",
+      publishableKey: process.env.NEXT_PUBLIC_STRIPE_KEY || process.env.STRIPE_PUBLISHABLE_KEY || ""
+    };
+  }
+  if (code.startsWith("pp_paypal")) {
+    return {
+      provider: "paypal",
+      publishableKey: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || ""
+    };
+  }
+  return null;
+}
+
 // features/keystone/mutations/createActiveCartPaymentSessions.ts
 async function createActiveCartPaymentSessions(root, { cartId }, context) {
+  await assertCartAccess(context, cartId);
   const sudoContext = context.sudo();
   const cart = await sudoContext.query.Cart.findOne({
     where: { id: cartId },
@@ -2145,7 +2512,9 @@ async function createActiveCartPaymentSessions(root, { cartId }, context) {
   if (!cart) {
     throw new Error("Cart not found");
   }
-  const availableProviders = cart.region?.paymentProviders?.filter((p) => p.isInstalled) || [];
+  const availableProviders = cart.region?.paymentProviders?.filter(
+    (provider) => provider.isInstalled && isPaymentProviderConfigured(provider.code || "")
+  ) || [];
   let paymentCollection = cart.paymentCollection;
   if (!paymentCollection) {
     paymentCollection = await sudoContext.db.PaymentCollection.createOne({
@@ -2183,8 +2552,32 @@ async function createActiveCartPaymentSessions(root, { cartId }, context) {
 }
 var createActiveCartPaymentSessions_default = createActiveCartPaymentSessions;
 
+// features/keystone/mutations/createActiveCart.ts
+async function createActiveCart(_root, { regionId }, context) {
+  if (!regionId) throw new Error("Region ID is required");
+  const region2 = await context.query.Region.findOne({
+    where: { id: regionId },
+    query: "id"
+  });
+  if (!region2) throw new Error("Region not found");
+  const cart = await context.sudo().query.Cart.createOne({
+    data: {
+      type: "default",
+      region: { connect: { id: region2.id } },
+      ...context.session?.itemId ? { user: { connect: { id: context.session.itemId } } } : {}
+    },
+    query: "id region { id }"
+  });
+  return {
+    ...cart,
+    proof: createCartProof(cart.id)
+  };
+}
+var createActiveCart_default = createActiveCart;
+
 // features/keystone/mutations/setActiveCartPaymentSession.ts
 async function setActiveCartPaymentSession(root, { cartId, providerId }, context) {
+  await assertCartAccess(context, cartId);
   const sudoContext = context.sudo();
   const cart = await sudoContext.query.Cart.findOne({
     where: { id: cartId },
@@ -2229,8 +2622,602 @@ async function setActiveCartPaymentSession(root, { cartId, providerId }, context
 }
 var setActiveCartPaymentSession_default = setActiveCartPaymentSession;
 
+// import("../../integrations/payment/**/*.ts") in features/keystone/utils/paymentProviderAdapter.ts
+var globImport_integrations_payment_ts = __glob({
+  "../../integrations/payment/index.ts": () => Promise.resolve().then(() => (init_payment(), payment_exports)),
+  "../../integrations/payment/manual.ts": () => Promise.resolve().then(() => (init_manual(), manual_exports)),
+  "../../integrations/payment/paypal.ts": () => Promise.resolve().then(() => (init_paypal(), paypal_exports)),
+  "../../integrations/payment/stripe.ts": () => Promise.resolve().then(() => (init_stripe(), stripe_exports))
+});
+
+// features/keystone/utils/paymentProviderAdapter.ts
+async function executeAdapterFunction({ provider, functionName, args }) {
+  const functionPath = provider[functionName];
+  if (functionPath.startsWith("http")) {
+    const response = await fetch(functionPath, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider, ...args })
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP request failed: ${response.statusText}`);
+    }
+    return response.json();
+  }
+  const adapter = await globImport_integrations_payment_ts(`../../integrations/payment/${functionPath}.ts`);
+  const fn = adapter[functionName];
+  if (!fn) {
+    throw new Error(
+      `Function ${functionName} not found in adapter ${functionPath}`
+    );
+  }
+  try {
+    return await fn({ provider, ...args });
+  } catch (error) {
+    throw new Error(
+      `Error executing ${functionName} for provider ${functionPath}: ${error.message}`
+    );
+  }
+}
+async function createPayment({ provider, cart, amount, currency }) {
+  return executeAdapterFunction({
+    provider,
+    functionName: "createPaymentFunction",
+    args: { cart, amount, currency }
+  });
+}
+async function capturePayment({ provider, paymentId, amount, currency, idempotencyKey }) {
+  return executeAdapterFunction({
+    provider,
+    functionName: "capturePaymentFunction",
+    args: { paymentId, amount, currency, idempotencyKey }
+  });
+}
+async function refundPayment({ provider, paymentId, amount, currency, idempotencyKey }) {
+  return executeAdapterFunction({
+    provider,
+    functionName: "refundPaymentFunction",
+    args: { paymentId, amount, currency, idempotencyKey }
+  });
+}
+async function getPaymentStatus({ provider, paymentId }) {
+  return executeAdapterFunction({
+    provider,
+    functionName: "getPaymentStatusFunction",
+    args: { paymentId }
+  });
+}
+async function handleWebhook({ provider, event, headers }) {
+  return executeAdapterFunction({
+    provider,
+    functionName: "handleWebhookFunction",
+    args: { event, headers }
+  });
+}
+
+// features/keystone/utils/idempotency.ts
+var import_node_crypto2 = __toESM(require("node:crypto"));
+function normalize(value) {
+  if (value === null || value === void 0) return null;
+  if (typeof value === "string" || typeof value === "boolean") return value;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) throw new Error("Idempotency request contains a non-finite number");
+    return value;
+  }
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) return value.map(normalize);
+  if (typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => [key, normalize(entry)])
+    );
+  }
+  throw new Error(`Unsupported idempotency request value: ${typeof value}`);
+}
+function canonicalIdempotencyParams(params) {
+  return normalize(params);
+}
+function idempotencyFingerprint(params) {
+  return import_node_crypto2.default.createHash("sha256").update(JSON.stringify(canonicalIdempotencyParams(params))).digest("hex");
+}
+function storedFingerprint(requestParams) {
+  const params = requestParams && typeof requestParams === "object" ? { ...requestParams } : {};
+  const recorded = typeof params._fingerprint === "string" ? params._fingerprint : null;
+  delete params._fingerprint;
+  const calculated = idempotencyFingerprint(params);
+  if (recorded && recorded !== calculated) {
+    throw new Error("Stored idempotency request fingerprint is invalid");
+  }
+  return calculated;
+}
+function assertIdempotencyRequest(attempt, request) {
+  const method = request.requestMethod || "POST";
+  const expectedFingerprint = idempotencyFingerprint(request.requestParams);
+  if (attempt.requestMethod !== method || attempt.requestPath !== request.requestPath || storedFingerprint(attempt.requestParams) !== expectedFingerprint) {
+    throw new Error("Idempotency key was already used with a different request");
+  }
+}
+async function findIdempotencyAttempt(prisma, request) {
+  const key = request.key.trim();
+  if (!key) throw new Error("Idempotency key is required");
+  const existing = await prisma.idempotencyKey.findUnique({ where: { idempotencyKey: key } });
+  if (existing) assertIdempotencyRequest(existing, { ...request, key });
+  return existing;
+}
+async function getOrCreateIdempotencyAttempt(prisma, request) {
+  const key = request.key.trim();
+  if (!key) throw new Error("Idempotency key is required");
+  const normalizedParams = canonicalIdempotencyParams(request.requestParams);
+  const data = {
+    idempotencyKey: key,
+    requestMethod: request.requestMethod || "POST",
+    requestPath: request.requestPath,
+    requestParams: {
+      ...normalizedParams,
+      _fingerprint: idempotencyFingerprint(request.requestParams)
+    },
+    recoveryPoint: "started",
+    lockedAt: /* @__PURE__ */ new Date()
+  };
+  const existing = await findIdempotencyAttempt(prisma, { ...request, key });
+  if (existing) return { attempt: existing, replay: true };
+  try {
+    const attempt = await prisma.idempotencyKey.create({ data });
+    return { attempt, replay: false };
+  } catch (error) {
+    if (error?.code !== "P2002") throw error;
+    const raced = await prisma.idempotencyKey.findUnique({ where: { idempotencyKey: key } });
+    if (!raced) throw error;
+    assertIdempotencyRequest(raced, { ...request, key });
+    return { attempt: raced, replay: true };
+  }
+}
+
+// features/keystone/checkout/recovery.ts
+function checkoutKey(cartId) {
+  return `checkout:${cartId}`;
+}
+async function getOrCreateCheckoutAttempt(prisma, cartId, paymentSessionId) {
+  const idempotencyKey = checkoutKey(cartId);
+  const { attempt, replay } = await getOrCreateIdempotencyAttempt(prisma, {
+    key: idempotencyKey,
+    requestPath: "completeActiveCart",
+    requestParams: { cartId, paymentSessionId: paymentSessionId || null }
+  });
+  if (attempt.recoveryPoint === "completed") return attempt;
+  if (!replay) return attempt;
+  const acquired = await prisma.idempotencyKey.updateMany({
+    where: {
+      id: attempt.id,
+      OR: [
+        { lockedAt: null },
+        { lockedAt: { lt: new Date(Date.now() - 5 * 60 * 1e3) } }
+      ]
+    },
+    data: { lockedAt: /* @__PURE__ */ new Date() }
+  });
+  if (acquired.count !== 1) throw new Error("Checkout is already in progress");
+  return prisma.idempotencyKey.findUnique({ where: { id: attempt.id } });
+}
+async function updateCheckoutAttempt(prisma, id, recoveryPoint, responseBody, responseCode) {
+  await prisma.idempotencyKey.update({
+    where: { id },
+    data: {
+      recoveryPoint,
+      responseBody,
+      responseCode,
+      lockedAt: ["completed", "failed", "started"].includes(recoveryPoint) ? null : /* @__PURE__ */ new Date()
+    }
+  });
+}
+function aggregateLines(lines) {
+  const byVariant = /* @__PURE__ */ new Map();
+  for (const line of lines || []) {
+    if (!line.productVariant?.id || !Number.isInteger(line.quantity) || line.quantity <= 0) {
+      throw new Error("Cart contains an invalid inventory line");
+    }
+    const current = byVariant.get(line.productVariant.id);
+    byVariant.set(line.productVariant.id, {
+      variant: line.productVariant,
+      quantity: (current?.quantity || 0) + line.quantity
+    });
+  }
+  return [...byVariant.values()];
+}
+async function reserveCartInventory(prisma, lines, idempotencyKey, checkoutAttemptId) {
+  const reservations = aggregateLines(lines);
+  await prisma.$transaction(async (tx) => {
+    for (const { variant, quantity } of reservations) {
+      if (!variant.manageInventory) continue;
+      const result = await tx.productVariant.updateMany({
+        where: {
+          id: variant.id,
+          ...variant.allowBackorder ? {} : { inventoryQuantity: { gte: quantity } }
+        },
+        data: { inventoryQuantity: { decrement: quantity } }
+      });
+      if (result.count !== 1) {
+        throw new Error(`Insufficient stock for ${variant.title || variant.id}`);
+      }
+      await tx.stockMovement.create({
+        data: {
+          type: "REMOVE",
+          quantity,
+          reason: "checkout_reservation",
+          note: idempotencyKey,
+          variantId: variant.id
+        }
+      });
+    }
+    if (checkoutAttemptId) {
+      await tx.idempotencyKey.update({
+        where: { id: checkoutAttemptId },
+        data: { recoveryPoint: "stock_reserved", lockedAt: /* @__PURE__ */ new Date() }
+      });
+    }
+  });
+}
+async function reserveDiscountUsage(prisma, discounts, checkoutAttemptId) {
+  await prisma.$transaction(async (tx) => {
+    for (const discount of discounts) {
+      const current = await tx.discount.findUnique({
+        where: { id: discount.id },
+        select: {
+          usageCount: true,
+          usageLimit: true,
+          isDisabled: true,
+          startsAt: true,
+          endsAt: true
+        }
+      });
+      if (!current) throw new Error("Discount not found");
+      const now = /* @__PURE__ */ new Date();
+      if (current.isDisabled || current.startsAt > now || current.endsAt && current.endsAt <= now) {
+        throw new Error(`Discount ${discount.code || discount.id} is no longer active`);
+      }
+      if (current.usageLimit !== null && current.usageCount >= current.usageLimit) {
+        throw new Error(`Discount ${discount.code || discount.id} has reached its usage limit`);
+      }
+      const result = await tx.discount.updateMany({
+        where: {
+          id: discount.id,
+          usageCount: current.usageCount,
+          isDisabled: false,
+          startsAt: { lte: now },
+          OR: [{ endsAt: null }, { endsAt: { gt: now } }]
+        },
+        data: { usageCount: { increment: 1 } }
+      });
+      if (result.count !== 1) throw new Error("Discount usage changed; retry checkout");
+    }
+    if (checkoutAttemptId) {
+      await tx.idempotencyKey.update({
+        where: { id: checkoutAttemptId },
+        data: { recoveryPoint: "resources_reserved", lockedAt: /* @__PURE__ */ new Date() }
+      });
+    }
+  });
+}
+async function releaseCheckoutResources(prisma, lines, discounts, idempotencyKey, checkoutAttemptId, errorMessage) {
+  const reservations = aggregateLines(lines);
+  await prisma.$transaction(async (tx) => {
+    for (const discount of discounts || []) {
+      await tx.discount.updateMany({
+        where: { id: discount.id, usageCount: { gt: 0 } },
+        data: { usageCount: { decrement: 1 } }
+      });
+    }
+    for (const { variant, quantity } of reservations) {
+      if (!variant.manageInventory) continue;
+      await tx.productVariant.update({
+        where: { id: variant.id },
+        data: { inventoryQuantity: { increment: quantity } }
+      });
+      await tx.stockMovement.create({
+        data: {
+          type: "RECEIVE",
+          quantity,
+          reason: "checkout_release",
+          note: idempotencyKey,
+          variantId: variant.id
+        }
+      });
+    }
+    await tx.idempotencyKey.update({
+      where: { id: checkoutAttemptId },
+      data: {
+        recoveryPoint: "started",
+        responseBody: { error: errorMessage },
+        responseCode: 409,
+        lockedAt: null
+      }
+    });
+  });
+}
+
+// features/keystone/config/launch-policy.ts
+var developmentPolicy = {
+  legalEntityId: "development-merchant",
+  reportingCurrency: "USD",
+  supportedCountries: [],
+  supportedCurrencies: ["USD", "EUR", "GBP"],
+  supportedPaymentProviderCodes: [
+    "pp_stripe_stripe",
+    "pp_paypal_paypal",
+    "pp_system_default"
+  ],
+  prohibitedProductTagIds: [],
+  taxMode: "configured_rate",
+  retentionPolicyVersion: "development-only",
+  privacyPolicyVersion: "development-only",
+  accountingPolicyVersion: "development-only"
+};
+function parsePolicy() {
+  const raw = process.env.COMMERCE_LAUNCH_POLICY;
+  if (!raw) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("COMMERCE_LAUNCH_POLICY is required in production");
+    }
+    return developmentPolicy;
+  }
+  let value;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    throw new Error("COMMERCE_LAUNCH_POLICY must be valid JSON");
+  }
+  const requiredStrings = [
+    "legalEntityId",
+    "reportingCurrency",
+    "taxMode",
+    "retentionPolicyVersion",
+    "privacyPolicyVersion",
+    "accountingPolicyVersion"
+  ];
+  for (const key of requiredStrings) {
+    if (!value[key] || typeof value[key] !== "string") {
+      throw new Error(`COMMERCE_LAUNCH_POLICY.${key} is required`);
+    }
+  }
+  if (!Array.isArray(value.supportedCountries) || !value.supportedCountries.length) {
+    throw new Error("COMMERCE_LAUNCH_POLICY.supportedCountries must be non-empty");
+  }
+  if (!Array.isArray(value.supportedCurrencies) || !value.supportedCurrencies.length) {
+    throw new Error("COMMERCE_LAUNCH_POLICY.supportedCurrencies must be non-empty");
+  }
+  if (!Array.isArray(value.prohibitedProductTagIds)) {
+    throw new Error("COMMERCE_LAUNCH_POLICY.prohibitedProductTagIds must be an array");
+  }
+  if (!Array.isArray(value.supportedPaymentProviderCodes) || !value.supportedPaymentProviderCodes.length) {
+    throw new Error(
+      "COMMERCE_LAUNCH_POLICY.supportedPaymentProviderCodes must be non-empty"
+    );
+  }
+  if (!["configured_rate", "external_provider"].includes(value.taxMode)) {
+    throw new Error("COMMERCE_LAUNCH_POLICY.taxMode is invalid");
+  }
+  return {
+    ...value,
+    reportingCurrency: value.reportingCurrency.toUpperCase(),
+    supportedCountries: value.supportedCountries.map((code) => code.toLowerCase()),
+    supportedCurrencies: value.supportedCurrencies.map((code) => code.toUpperCase())
+  };
+}
+var commerceLaunchPolicy = parsePolicy();
+function assertCheckoutWithinLaunchPolicy(cart, providerCode) {
+  const country = cart.shippingAddress?.country?.iso2?.toLowerCase();
+  const currency = cart.region?.currency?.code?.toUpperCase();
+  if (!currency || !commerceLaunchPolicy.supportedCurrencies.includes(currency)) {
+    throw new Error("Cart currency is outside the supported launch boundary");
+  }
+  const prohibitedTags = new Set(commerceLaunchPolicy.prohibitedProductTagIds);
+  if (cart.lineItems?.some(
+    (line) => line.productVariant?.product?.productTags?.some((tag) => prohibitedTags.has(tag.id))
+  )) {
+    throw new Error("Cart contains a product outside the supported launch boundary");
+  }
+  if (commerceLaunchPolicy.supportedCountries.length && (!country || !commerceLaunchPolicy.supportedCountries.includes(country))) {
+    throw new Error("Shipping destination is outside the supported launch boundary");
+  }
+  if (providerCode && !commerceLaunchPolicy.supportedPaymentProviderCodes.includes(providerCode)) {
+    throw new Error("Payment provider is outside the supported launch boundary");
+  }
+  if (commerceLaunchPolicy.taxMode === "external_provider" && !cart.metadata?.taxTransaction) {
+    throw new Error("A committed external tax transaction is required");
+  }
+}
+
+// features/keystone/checkout/order-commit.ts
+var import_node_crypto3 = __toESM(require("node:crypto"));
+
+// features/webhooks/outbox.ts
+async function subscribedWebhookEndpointIds(context, eventType) {
+  const endpoints = await context.query.WebhookEndpoint.findMany({
+    where: { isActive: { equals: true } },
+    query: "id events"
+  });
+  return endpoints.filter(
+    (endpoint2) => Array.isArray(endpoint2.events) && (endpoint2.events.includes(eventType) || endpoint2.events.includes("*"))
+  ).map((endpoint2) => endpoint2.id);
+}
+async function enqueueWebhookOutbox(tx, endpointIds, eventType, resourceType, resourceId, data) {
+  const payload = {
+    event: eventType,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    listKey: resourceType,
+    operation: eventType.split(".").pop(),
+    data
+  };
+  const eventIds = [];
+  for (const endpointId of endpointIds) {
+    const event = await tx.webhookEvent.create({
+      data: {
+        eventType,
+        resourceType,
+        resourceId,
+        payload,
+        endpointId,
+        delivered: false,
+        deliveryAttempts: 0,
+        nextAttempt: /* @__PURE__ */ new Date()
+      },
+      select: { id: true }
+    });
+    eventIds.push(event.id);
+  }
+  return eventIds;
+}
+
+// features/keystone/checkout/order-commit.ts
+async function createOrderFromCartAtomically(cart, sudo) {
+  const prepared = [];
+  for (const line of cart.lineItems) {
+    const prices = await sudo.query.MoneyAmount.findMany({
+      where: {
+        productVariant: { id: { equals: line.productVariant.id } },
+        region: { id: { equals: cart.region.id } },
+        currency: { code: { equals: cart.region.currency.code } }
+      },
+      take: 1,
+      query: "id calculatedPrice { calculatedAmount originalAmount currencyCode }"
+    });
+    const price = prices[0]?.calculatedPrice;
+    if (!price) throw new Error(`No valid price for variant ${line.productVariant.id}`);
+    const thumbnail = line.productVariant.primaryImage ? line.productVariant.primaryImage.image?.url || line.productVariant.primaryImage.imagePath : line.productVariant.product.thumbnail;
+    prepared.push({ line, price, thumbnail });
+  }
+  const orderWebhookEndpointIds = await subscribedWebhookEndpointIds(
+    sudo,
+    "order.created"
+  );
+  const userId = cart.user?.id || cart.shippingAddress?.user?.id;
+  const secretKey = userId ? "" : import_node_crypto3.default.randomBytes(32).toString("hex");
+  const commercialSnapshot = {
+    legalEntityId: commerceLaunchPolicy.legalEntityId,
+    reportingCurrency: commerceLaunchPolicy.reportingCurrency,
+    accountingPolicyVersion: commerceLaunchPolicy.accountingPolicyVersion,
+    privacyPolicyVersion: commerceLaunchPolicy.privacyPolicyVersion,
+    retentionPolicyVersion: commerceLaunchPolicy.retentionPolicyVersion,
+    tax: {
+      mode: commerceLaunchPolicy.taxMode,
+      rate: cart.region.taxRate || 0,
+      regionId: cart.region.id,
+      destinationCountry: cart.shippingAddress?.country?.iso2 || null,
+      externalTransaction: cart.metadata?.taxTransaction || null
+    },
+    acceptedAt: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  const orderId = await sudo.prisma.$transaction(async (tx) => {
+    const existing = await tx.order.findFirst({ where: { cart: { id: cart.id } }, select: { id: true } });
+    if (existing) return existing.id;
+    const lineItemIds = [];
+    for (const { line, price, thumbnail } of prepared) {
+      const money = await tx.orderMoneyAmount.create({
+        data: {
+          amount: price.calculatedAmount,
+          originalAmount: price.originalAmount,
+          currencyId: cart.region.currency.id,
+          regionId: cart.region.id,
+          priceData: {
+            prices: line.productVariant.prices,
+            currencyCode: cart.region.currency.code,
+            regionId: cart.region.id,
+            taxRate: cart.region.taxRate
+          },
+          metadata: line.metadata
+        }
+      });
+      const item = await tx.orderLineItem.create({
+        data: {
+          quantity: line.quantity,
+          title: line.productVariant.product.title,
+          sku: line.productVariant.sku,
+          metadata: line.metadata,
+          productData: {
+            id: line.productVariant.product.id,
+            title: line.productVariant.product.title,
+            thumbnail,
+            description: line.productVariant.product.description,
+            metadata: line.productVariant.product.metadata
+          },
+          variantData: {
+            id: line.productVariant.id,
+            sku: line.productVariant.sku,
+            title: line.productVariant.title,
+            measurements: line.productVariant.measurements || []
+          },
+          variantTitle: line.productVariant.title,
+          formattedUnitPrice: line.unitPrice,
+          formattedTotal: line.total,
+          productVariantId: line.productVariant.id,
+          originalLineItemId: line.id,
+          moneyAmountId: money.id
+        }
+      });
+      lineItemIds.push(item.id);
+    }
+    const order = await tx.order.create({
+      data: {
+        cart: { connect: { id: cart.id } },
+        email: cart.email,
+        userId,
+        regionId: cart.region.id,
+        currencyId: cart.region.currency.id,
+        billingAddressId: cart.billingAddress.id,
+        shippingAddressId: cart.shippingAddress.id,
+        discounts: { connect: (cart.discounts || []).map((item) => ({ id: item.id })) },
+        shippingMethods: { connect: (cart.shippingMethods || []).map((item) => ({ id: item.id })) },
+        lineItems: { connect: lineItemIds.map((id) => ({ id })) },
+        status: "pending",
+        displayId: Math.floor(Date.now() / 1e3),
+        taxRate: cart.region.taxRate || 0,
+        metadata: { ...cart.metadata || {}, commercialSnapshot },
+        secretKey,
+        events: {
+          create: {
+            type: "ORDER_PLACED",
+            data: { cartId: cart.id, isGuestOrder: !userId }
+          }
+        }
+      }
+    });
+    await tx.cart.update({ where: { id: cart.id }, data: { orderId: order.id } });
+    await enqueueWebhookOutbox(
+      tx,
+      orderWebhookEndpointIds,
+      "order.created",
+      "Order",
+      order.id,
+      { id: order.id, cartId: cart.id, status: order.status }
+    );
+    if (cart.email) {
+      await tx.notification.create({
+        data: {
+          eventName: "ORDER_CONFIRMATION",
+          resourceType: "Order",
+          resourceId: order.id,
+          to: cart.email,
+          userId: userId || null,
+          data: { orderId: order.id, status: "pending_delivery" }
+        }
+      });
+    }
+    return order.id;
+  });
+  return sudo.query.Order.findOne({
+    where: { id: orderId },
+    query: `
+      id status displayId secretKey subtotal total shipping discount tax paymentDetails
+      shippingAddress { id firstName lastName company address1 address2 city province postalCode country { id iso2 } phone }
+    `
+  });
+}
+
 // features/keystone/mutations/completeActiveCart.ts
 async function completeActiveCart(root, { cartId, paymentSessionId }, context) {
+  await assertCartAccess(context, cartId, { allowCompleted: true });
+  if (paymentSessionId) {
+    await assertPaymentSessionBelongsToCart(context, cartId, paymentSessionId);
+  }
   const sudoContext = context.sudo();
   const user = context.session?.itemId;
   const cart = await sudoContext.query.Cart.findOne({
@@ -2239,12 +3226,23 @@ async function completeActiveCart(root, { cartId, paymentSessionId }, context) {
       id
       email
       rawTotal
+      metadata
+      order {
+        id
+        status
+        displayId
+        secretKey
+        payments { id }
+        account { id }
+        shippingAddress { country { iso2 } }
+      }
       user {
         id
         hasAccount
       }
       shippingAddress {
         id
+        country { iso2 }
         user {
           id
           hasAccount
@@ -2266,7 +3264,9 @@ async function completeActiveCart(root, { cartId, paymentSessionId }, context) {
       }
       discounts {
         id
+        code
       }
+      giftCards { id }
       shippingMethods {
         id
       }
@@ -2280,6 +3280,9 @@ async function completeActiveCart(root, { cartId, paymentSessionId }, context) {
           id
           sku
           title
+          inventoryQuantity
+          manageInventory
+          allowBackorder
           primaryImage {
             image {
               url
@@ -2290,6 +3293,7 @@ async function completeActiveCart(root, { cartId, paymentSessionId }, context) {
             id
             title
             thumbnail
+            productTags { id }
             description {
               document
             }
@@ -2326,6 +3330,9 @@ async function completeActiveCart(root, { cartId, paymentSessionId }, context) {
           paymentProvider {
             id
             code
+            capturePaymentFunction
+            getPaymentStatusFunction
+            credentials
           }
         }
       }
@@ -2334,13 +3341,113 @@ async function completeActiveCart(root, { cartId, paymentSessionId }, context) {
   if (!cart) {
     throw new Error("Cart not found");
   }
-  if (!paymentSessionId) {
-    return await handleAccountOrder(cart, user, sudoContext);
-  } else {
-    return await handlePaidOrder(cart, paymentSessionId, sudoContext);
+  if (cart.order?.id) {
+    const existingAttempt = await sudoContext.prisma.idempotencyKey.findUnique({
+      where: { idempotencyKey: checkoutKey(cartId) }
+    });
+    if (paymentSessionId && !cart.order.payments?.length) {
+      const selectedSession = cart.paymentCollection?.paymentSessions?.find(
+        (session) => session.id === paymentSessionId
+      );
+      const paymentResult = existingAttempt?.responseBody?.paymentResult;
+      if (!selectedSession || !paymentResult || existingAttempt.recoveryPoint !== "payment_confirmed") {
+        throw new Error("Checkout requires payment reconciliation");
+      }
+      await createPaymentRecord(paymentResult, selectedSession, cart.order, cart, sudoContext);
+    } else if (!paymentSessionId && !cart.order.account?.id) {
+      if (!user) throw new Error("Checkout requires account reconciliation");
+      const accounts = await sudoContext.query.Account.findMany({
+        where: {
+          user: { id: { equals: user } },
+          accountType: { equals: "business" },
+          status: { equals: "active" }
+        },
+        take: 1,
+        query: "id"
+      });
+      if (!accounts[0]) throw new Error("Checkout requires account reconciliation");
+      await addOrderToAccount(accounts[0].id, cart.order, sudoContext);
+    }
+    if (existingAttempt) {
+      await updateCheckoutAttempt(
+        sudoContext.prisma,
+        existingAttempt.id,
+        "completed",
+        { orderId: cart.order.id },
+        200
+      );
+    }
+    return sudoContext.query.Order.findOne({
+      where: { id: cart.order.id },
+      query: "id status displayId secretKey shippingAddress { country { iso2 } }"
+    });
+  }
+  assertCheckoutWithinLaunchPolicy(cart);
+  if (cart.giftCards?.length) {
+    throw new Error("Gift-card redemption is outside the bounded launch boundary");
+  }
+  const attempt = await getOrCreateCheckoutAttempt(
+    sudoContext.prisma,
+    cartId,
+    paymentSessionId
+  );
+  if (attempt.recoveryPoint === "completed" && attempt.responseBody?.orderId) {
+    return sudoContext.query.Order.findOne({
+      where: { id: attempt.responseBody.orderId },
+      query: "id status displayId secretKey shippingAddress { country { iso2 } }"
+    });
+  }
+  let inventoryReserved = attempt.recoveryPoint !== "started";
+  let discountsReserved = [
+    "resources_reserved",
+    "payment_unknown",
+    "order_created",
+    "payment_confirmed"
+  ].includes(attempt.recoveryPoint);
+  try {
+    if (!inventoryReserved) {
+      await reserveCartInventory(
+        sudoContext.prisma,
+        cart.lineItems,
+        checkoutKey(cartId),
+        attempt.id
+      );
+      inventoryReserved = true;
+      attempt.recoveryPoint = "stock_reserved";
+    }
+    if (!discountsReserved) {
+      await reserveDiscountUsage(
+        sudoContext.prisma,
+        cart.discounts || [],
+        attempt.id
+      );
+      discountsReserved = true;
+      attempt.recoveryPoint = "resources_reserved";
+    }
+    const order = !paymentSessionId ? await handleAccountOrder(cart, user, sudoContext, attempt) : await handlePaidOrder(cart, paymentSessionId, sudoContext, attempt);
+    await updateCheckoutAttempt(
+      sudoContext.prisma,
+      attempt.id,
+      "completed",
+      { orderId: order.id },
+      200
+    );
+    return order;
+  } catch (error) {
+    if (inventoryReserved && !["payment_unknown", "order_created", "payment_confirmed"].includes(attempt.recoveryPoint)) {
+      await releaseCheckoutResources(
+        sudoContext.prisma,
+        cart.lineItems,
+        discountsReserved ? cart.discounts || [] : [],
+        checkoutKey(cartId),
+        attempt.id,
+        error instanceof Error ? error.message : "Checkout failed"
+      );
+    }
+    throw error;
   }
 }
-async function handleAccountOrder(cart, user, sudoContext) {
+async function handleAccountOrder(cart, user, sudoContext, attempt) {
   if (!user) {
     throw new Error("Authentication required for account orders");
   }
@@ -2374,30 +3481,22 @@ async function handleAccountOrder(cart, user, sudoContext) {
   if (!activeAccount) {
     throw new Error(`No active business account found. Contact administrator to set up business account access.`);
   }
-  const convertCurrency2 = (await Promise.resolve().then(() => (init_currencyConversion(), currencyConversion_exports))).default;
-  const orderInAccountCurrency = await convertCurrency2(
-    cart.rawTotal,
-    cartCurrency,
-    activeAccount.currency.code
-  );
-  const accountWithBalance = await sudoContext.query.Account.findOne({
-    where: { id: activeAccount.id },
-    query: "availableCreditInAccountCurrency"
-  });
-  const availableCredit = accountWithBalance.availableCreditInAccountCurrency || 0;
-  if (orderInAccountCurrency > availableCredit) {
-    const { formatCurrencyAmount: formatCurrencyAmount3 } = await Promise.resolve().then(() => (init_currencyConversion(), currencyConversion_exports));
-    const availableCreditFormatted = formatCurrencyAmount3(availableCredit, activeAccount.currency.code);
-    const requiredCreditFormatted = formatCurrencyAmount3(orderInAccountCurrency, activeAccount.currency.code);
-    throw new Error(
-      `Insufficient credit. Available: ${availableCreditFormatted}, Required: ${requiredCreditFormatted}. Please contact billing to increase your credit limit or make a payment.`
-    );
+  if (cartCurrency !== activeAccount.currency.code) {
+    throw new Error("Cross-currency account orders are outside the supported launch boundary");
   }
-  const order = await createOrderFromCartData(cart, sudoContext);
+  const orderInAccountCurrency = cart.rawTotal;
+  const order = await createOrderFromCartAtomically(cart, sudoContext);
+  await updateCheckoutAttempt(
+    sudoContext.prisma,
+    attempt.id,
+    "order_created",
+    { orderId: order.id }
+  );
+  attempt.recoveryPoint = "order_created";
   await addOrderToAccount(activeAccount.id, order, sudoContext);
   return order;
 }
-async function handlePaidOrder(cart, paymentSessionId, sudoContext) {
+async function handlePaidOrder(cart, paymentSessionId, sudoContext, attempt) {
   const selectedSession = cart.paymentCollection?.paymentSessions?.find(
     (session) => session.id === paymentSessionId
   );
@@ -2410,141 +3509,88 @@ async function handlePaidOrder(cart, paymentSessionId, sudoContext) {
   if (!selectedSession.paymentProvider.code) {
     throw new Error("Payment provider code is missing");
   }
-  let paymentResult;
-  switch (selectedSession.paymentProvider.code) {
-    case "pp_stripe_stripe":
-      paymentResult = await captureStripePayment(selectedSession);
-      break;
-    case "pp_paypal_paypal":
-      paymentResult = await capturePayPalPayment(selectedSession);
-      break;
-    case "pp_system_default":
-      paymentResult = { status: "manual_pending", paymentIntentId: null };
-      break;
-    default:
-      throw new Error(`Unsupported payment provider: ${selectedSession.paymentProvider.code}`);
+  assertCheckoutWithinLaunchPolicy(cart, selectedSession.paymentProvider.code);
+  if (selectedSession.amount !== cart.rawTotal) {
+    throw new Error("Payment session amount no longer matches cart total");
   }
-  if (paymentResult.status !== "succeeded" && paymentResult.status !== "manual_pending") {
-    throw new Error(`Payment failed: ${paymentResult.error}`);
+  let paymentResult = attempt.responseBody?.paymentResult;
+  if (attempt.recoveryPoint !== "payment_confirmed" || !paymentResult) {
+    try {
+      paymentResult = await settlePaymentSession(selectedSession, cart);
+    } catch (error) {
+      await updateCheckoutAttempt(
+        sudoContext.prisma,
+        attempt.id,
+        "payment_unknown",
+        { error: error instanceof Error ? error.message : String(error) }
+      );
+      attempt.recoveryPoint = "payment_unknown";
+      throw error;
+    }
+    if (paymentResult.status !== "succeeded") {
+      await updateCheckoutAttempt(
+        sudoContext.prisma,
+        attempt.id,
+        "resources_reserved",
+        { paymentResult }
+      );
+      attempt.recoveryPoint = "resources_reserved";
+      throw new Error(`Payment failed: ${paymentResult.error || paymentResult.status}`);
+    }
+    await updateCheckoutAttempt(
+      sudoContext.prisma,
+      attempt.id,
+      "payment_confirmed",
+      { paymentResult }
+    );
+    attempt.recoveryPoint = "payment_confirmed";
+    attempt.responseBody = { paymentResult };
   }
-  const order = await createOrderFromCartData(cart, sudoContext);
-  await createPaymentRecord(paymentResult, order, cart, sudoContext);
+  const order = await createOrderFromCartAtomically(cart, sudoContext);
+  await createPaymentRecord(paymentResult, selectedSession, order, cart, sudoContext);
   return order;
 }
-async function captureStripePayment(session) {
-  const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-  if (!stripe) {
-    throw new Error("Stripe not configured");
+async function settlePaymentSession(session, cart) {
+  const provider = session.paymentProvider;
+  if (provider.code === "pp_system_default") {
+    throw new Error("Manual tender cannot complete storefront checkout");
   }
-  try {
-    const paymentIntentId = session.data.clientSecret?.split("_secret_")[0];
-    console.log("=== captureStripePayment Debug ===");
-    console.log("session.data:", session.data);
-    console.log("paymentIntentId:", paymentIntentId);
-    if (!paymentIntentId) {
-      throw new Error("Invalid Stripe payment intent");
-    }
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-    console.log("PaymentIntent status:", paymentIntent.status);
-    console.log("PaymentIntent amount:", paymentIntent.amount);
-    if (paymentIntent.status === "succeeded") {
-      return {
-        status: "succeeded",
-        paymentIntentId: paymentIntent.id,
-        error: null
-      };
-    } else if (paymentIntent.status === "requires_capture") {
-      const captured = await stripe.paymentIntents.capture(paymentIntentId);
-      return {
-        status: captured.status === "succeeded" ? "succeeded" : "failed",
-        paymentIntentId: captured.id,
-        error: captured.status !== "succeeded" ? "Payment capture failed" : null
-      };
-    } else {
-      return {
-        status: "failed",
-        paymentIntentId: paymentIntent.id,
-        error: `Payment status: ${paymentIntent.status}`
-      };
-    }
-  } catch (error) {
-    return {
-      status: "failed",
-      paymentIntentId: null,
-      error: error.message
-    };
-  }
-}
-async function capturePayPalPayment(session) {
-  if (!session.data.orderId) {
-    return {
-      status: "failed",
-      paymentIntentId: null,
-      error: "PayPal order ID not found"
-    };
-  }
-  try {
-    const authResponse = await fetch(`${process.env.PAYPAL_API_URL || "https://api.paypal.com"}/v1/oauth2/token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Authorization": `Basic ${Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString("base64")}`
-      },
-      body: "grant_type=client_credentials"
+  const paymentId = session.data?.paymentIntentId || session.data?.clientSecret?.split("_secret_")[0] || session.data?.orderId;
+  if (!paymentId) throw new Error("Payment provider reference is missing");
+  let result = await getPaymentStatus({ provider, paymentId });
+  const normalizedStatus = String(result.status || "").toLowerCase();
+  if (["requires_capture", "approved", "authorized"].includes(normalizedStatus)) {
+    result = await capturePayment({
+      provider,
+      paymentId,
+      amount: cart.rawTotal,
+      currency: cart.region.currency.code,
+      idempotencyKey: checkoutKey(cart.id)
     });
-    if (!authResponse.ok) {
-      throw new Error("PayPal authentication failed");
-    }
-    const authData = await authResponse.json();
-    const accessToken = authData.access_token;
-    const orderResponse = await fetch(`${process.env.PAYPAL_API_URL || "https://api.paypal.com"}/v2/checkout/orders/${session.data.orderId}`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json"
-      }
-    });
-    if (!orderResponse.ok) {
-      throw new Error(`PayPal order verification failed: ${orderResponse.status}`);
-    }
-    const orderData = await orderResponse.json();
-    console.log("=== capturePayPalPayment Debug ===");
-    console.log("PayPal Order ID:", session.data.orderId);
-    console.log("PayPal Order Status:", orderData.status);
-    console.log("PayPal Order Amount:", orderData.purchase_units?.[0]?.amount);
-    if (orderData.status === "COMPLETED" || orderData.status === "APPROVED") {
-      return {
-        status: "succeeded",
-        paymentIntentId: session.data.orderId,
-        error: null
-      };
-    } else {
-      return {
-        status: "failed",
-        paymentIntentId: session.data.orderId,
-        error: `PayPal order status: ${orderData.status}`
-      };
-    }
-  } catch (error) {
-    console.error("PayPal verification error:", error);
-    return {
-      status: "failed",
-      paymentIntentId: session.data.orderId,
-      error: error.message
-    };
   }
+  const finalStatus = String(result.status || "").toLowerCase();
+  const succeeded = ["succeeded", "completed", "captured"].includes(finalStatus);
+  const resultAmount = Number(result.amount);
+  const expectedCurrency = String(cart.region.currency.code).toUpperCase();
+  const resultCurrency = String(result.currency || expectedCurrency).toUpperCase();
+  if (!succeeded) {
+    return { status: "failed", paymentIntentId: paymentId, error: `Payment status: ${result.status}` };
+  }
+  if (!Number.isInteger(resultAmount) || resultAmount !== cart.rawTotal) {
+    throw new Error("Provider payment amount does not match cart total");
+  }
+  if (resultCurrency !== expectedCurrency) {
+    throw new Error("Provider payment currency does not match cart currency");
+  }
+  return {
+    status: "succeeded",
+    paymentIntentId: paymentId,
+    amount: resultAmount,
+    currency: resultCurrency,
+    data: result.data
+  };
 }
 async function addOrderToAccount(accountId, order, sudoContext) {
-  const account = await sudoContext.query.Account.findOne({
-    where: { id: accountId },
-    query: `
-      id
-      totalAmount
-      currency {
-        code
-      }
-    `
-  });
   const orderDetails = await sudoContext.query.Order.findOne({
     where: { id: order.id },
     query: `
@@ -2568,255 +3614,157 @@ async function addOrderToAccount(accountId, order, sudoContext) {
   });
   try {
     await sudoContext.prisma.$transaction(async (tx) => {
-      await sudoContext.query.AccountLineItem.createOne({
-        data: {
-          account: { connect: { id: accountId } },
-          order: { connect: { id: order.id } },
-          region: { connect: { id: orderDetails.region.id } },
-          description: `Order #${orderDetails.displayId} - ${orderDetails.lineItems?.length || 0} items`,
-          amount: orderDetails.rawTotal || 0,
-          orderDisplayId: String(orderDetails.displayId),
-          itemCount: orderDetails.lineItems?.length || 0,
-          paymentStatus: "unpaid"
-        }
+      const existing = await tx.accountLineItem.findUnique({
+        where: { orderKey: order.id },
+        select: { id: true, accountId: true }
       });
-      await sudoContext.query.Account.updateOne({
-        where: { id: accountId },
-        data: {
-          totalAmount: (account.totalAmount || 0) + (orderDetails.rawTotal || 0)
+      if (existing && existing.accountId !== accountId) {
+        throw new Error("Order is already posted to a different account");
+      }
+      if (!existing) {
+        const amount = orderDetails.rawTotal || 0;
+        const accountRows = await tx.$queryRaw`SELECT id, status, "totalAmount", "paidAmount", "creditLimit" FROM "Account" WHERE id = ${accountId} FOR UPDATE`;
+        const account = accountRows[0];
+        if (!account || account.status !== "active") {
+          throw new Error("Business account is not active");
         }
-      });
-      await sudoContext.query.Order.updateOne({
+        const availableCredit = account.creditLimit - ((account.totalAmount || 0) - (account.paidAmount || 0));
+        if (amount > availableCredit) throw new Error("Insufficient account credit");
+        await tx.account.update({
+          where: { id: accountId },
+          data: { totalAmount: { increment: amount } }
+        });
+        await tx.accountLineItem.create({
+          data: {
+            accountId,
+            orderId: order.id,
+            orderKey: order.id,
+            regionId: orderDetails.region.id,
+            description: `Order #${orderDetails.displayId} - ${orderDetails.lineItems?.length || 0} items`,
+            amount,
+            orderDisplayId: String(orderDetails.displayId),
+            itemCount: orderDetails.lineItems?.length || 0,
+            paymentStatus: "unpaid"
+          }
+        });
+      }
+      await tx.order.update({
         where: { id: order.id },
-        data: {
-          account: { connect: { id: accountId } }
-        }
+        data: { accountId }
       });
-    });
+    }, { isolationLevel: "Serializable" });
     console.log(`Order #${orderDetails.displayId} added to account ${accountId} for ${orderDetails.rawTotal} ${orderDetails.currency.code}`);
   } catch (error) {
     console.error("Error adding order to account:", error);
-    throw new Error(`Failed to add order to account: ${error.message}`);
+    throw new Error(
+      `Failed to add order to account: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 }
-async function createPaymentRecord(paymentResult, order, cart, sudoContext) {
-  const selectedSession = cart.paymentCollection?.paymentSessions?.[0];
-  await sudoContext.query.Payment.createOne({
-    data: {
-      status: paymentResult.status === "succeeded" ? "captured" : "pending",
-      amount: cart.rawTotal,
-      currencyCode: cart.region.currency.code,
-      data: {
-        ...selectedSession.data,
-        paymentIntentId: paymentResult.paymentIntentId
-      },
-      capturedAt: paymentResult.status === "succeeded" ? (/* @__PURE__ */ new Date()).toISOString() : null,
-      paymentCollection: { connect: { id: cart.paymentCollection.id } },
-      order: { connect: { id: order.id } },
-      user: order.user?.id ? { connect: { id: order.user.id } } : void 0
-    }
-  });
-}
-async function createOrderFromCartData(cart, sudoContext) {
-  const userId = cart.user?.id || cart.shippingAddress?.user?.id;
-  const hasAccount = cart.user?.hasAccount || cart.shippingAddress?.user?.hasAccount || false;
-  const secretKey = !userId ? require("crypto").randomBytes(32).toString("hex") : void 0;
-  const formatCurrency5 = (amount, currencyCode) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currencyCode
-    }).format(amount / 100);
-  };
-  const orderLineItems = [];
-  for (const lineItem of cart.lineItems) {
-    const prices = await sudoContext.query.MoneyAmount.findMany({
-      where: {
-        productVariant: { id: { equals: lineItem.productVariant.id } },
-        region: { id: { equals: cart.region.id } },
-        currency: { code: { equals: cart.region.currency.code } }
-      },
-      query: `
-        id
-        calculatedPrice {
-          calculatedAmount
-          originalAmount
-          currencyCode
-        }
-      `
+async function createPaymentRecord(paymentResult, selectedSession, order, cart, sudoContext) {
+  const paymentWebhookEndpointIds = await subscribedWebhookEndpointIds(
+    sudoContext,
+    "payment.captured"
+  );
+  await sudoContext.prisma.$transaction(async (tx) => {
+    const existing = await tx.payment.findFirst({
+      where: { orderId: order.id, paymentCollectionId: cart.paymentCollection.id }
     });
-    const price = prices[0]?.calculatedPrice;
-    if (!price) {
-      throw new Error(`No valid price found for variant ${lineItem.productVariant.id} in region ${cart.region.id}`);
-    }
-    const orderMoneyAmount = await sudoContext.query.OrderMoneyAmount.createOne({
+    if (existing) return;
+    const payment = await tx.payment.create({
       data: {
-        amount: price.calculatedAmount,
-        originalAmount: price.originalAmount,
-        currency: { connect: { id: cart.region.currency.id } },
-        region: { connect: { id: cart.region.id } },
-        priceData: {
-          prices: lineItem.productVariant.prices,
+        status: "captured",
+        amount: cart.rawTotal,
+        currencyCode: cart.region.currency.code,
+        data: {
+          ...selectedSession.data,
+          ...paymentResult.data,
+          paymentProviderId: selectedSession.paymentProvider.id,
+          paymentIntentId: paymentResult.paymentIntentId
+        },
+        metadata: { checkoutIdempotencyKey: checkoutKey(cart.id) },
+        idempotencyKey: checkoutKey(cart.id),
+        capturedAt: /* @__PURE__ */ new Date(),
+        paymentCollectionId: cart.paymentCollection.id,
+        orderId: order.id,
+        userId: cart.user?.id || cart.shippingAddress?.user?.id || null
+      }
+    });
+    await tx.capture.create({
+      data: {
+        amount: cart.rawTotal,
+        paymentId: payment.id,
+        metadata: {
+          paymentProviderId: selectedSession.paymentProvider.id,
+          paymentIntentId: paymentResult.paymentIntentId
+        },
+        createdBy: "checkout"
+      }
+    });
+    await tx.orderEvent.create({
+      data: {
+        orderId: order.id,
+        type: "PAYMENT_CAPTURED",
+        data: {
+          paymentId: payment.id,
+          amount: cart.rawTotal,
           currencyCode: cart.region.currency.code,
-          regionId: cart.region.id,
-          taxRate: cart.region.taxRate
-        },
-        metadata: lineItem.metadata
-      }
-    });
-    const thumbnail = lineItem.productVariant.primaryImage ? lineItem.productVariant.primaryImage.image?.url || lineItem.productVariant.primaryImage.imagePath : lineItem.productVariant.product.thumbnail;
-    const orderLineItem = await sudoContext.query.OrderLineItem.createOne({
-      data: {
-        quantity: lineItem.quantity,
-        title: lineItem.productVariant.product.title,
-        sku: lineItem.productVariant.sku,
-        metadata: lineItem.metadata,
-        productData: {
-          id: lineItem.productVariant.product.id,
-          title: lineItem.productVariant.product.title,
-          thumbnail,
-          description: lineItem.productVariant.product.description,
-          metadata: lineItem.productVariant.product.metadata
-        },
-        variantData: {
-          id: lineItem.productVariant.id,
-          sku: lineItem.productVariant.sku,
-          title: lineItem.productVariant.title,
-          measurements: lineItem.productVariant.measurements || []
-        },
-        variantTitle: lineItem.productVariant.title,
-        formattedUnitPrice: lineItem.unitPrice,
-        formattedTotal: lineItem.total,
-        productVariant: { connect: { id: lineItem.productVariant.id } },
-        originalLineItem: { connect: { id: lineItem.id } },
-        moneyAmount: { connect: { id: orderMoneyAmount.id } }
-      }
-    });
-    orderLineItems.push(orderLineItem);
-  }
-  const order = await sudoContext.query.Order.createOne({
-    data: {
-      cart: { connect: { id: cart.id } },
-      email: cart.email,
-      user: userId ? { connect: { id: userId } } : void 0,
-      region: { connect: { id: cart.region.id } },
-      currency: { connect: { code: cart.region.currency.code } },
-      billingAddress: { connect: { id: cart.billingAddress.id } },
-      shippingAddress: { connect: { id: cart.shippingAddress.id } },
-      discounts: { connect: cart.discounts.map((d) => ({ id: d.id })) },
-      shippingMethods: { connect: cart.shippingMethods.map((sm) => ({ id: sm.id })) },
-      lineItems: { connect: orderLineItems.map((li) => ({ id: li.id })) },
-      status: "pending",
-      displayId: Math.floor(Date.now() / 1e3),
-      taxRate: cart.region.taxRate || 0,
-      secretKey,
-      events: {
-        create: {
-          type: "ORDER_PLACED",
-          data: {
-            cartId: cart.id,
-            isGuestOrder: !hasAccount
-          }
+          source: "checkout"
         }
       }
-    }
+    });
+    await enqueueWebhookOutbox(
+      tx,
+      paymentWebhookEndpointIds,
+      "payment.captured",
+      "Payment",
+      payment.id,
+      { id: payment.id, orderId: order.id, amount: cart.rawTotal, currencyCode: cart.region.currency.code }
+    );
   });
-  await sudoContext.query.Cart.updateOne({
-    where: { id: cart.id },
-    data: {
-      order: { connect: { id: order.id } }
-    }
-  });
-  const createdOrder = await sudoContext.query.Order.findOne({
-    where: { id: order.id },
-    query: `
-      id
-      status
-      displayId
-      secretKey
-      subtotal
-      total
-      shipping
-      discount
-      tax
-      paymentDetails
-      shippingAddress {
-        id
-        firstName
-        lastName
-        company
-        address1
-        address2
-        city
-        province
-        postalCode
-        country {
-          id
-          iso2
-        }
-        phone
-      }
-    `
-  });
-  return createdOrder;
 }
 var completeActiveCart_default = completeActiveCart;
 
 // features/keystone/mutations/addActiveCartShippingMethod.ts
 async function addActiveCartShippingMethod(root, { cartId, shippingMethodId }, context) {
-  const sudoContext = context.sudo();
-  const cart = await sudoContext.query.Cart.findOne({
+  await assertCartAccess(context, cartId);
+  const sudo = context.sudo();
+  const cart = await sudo.query.Cart.findOne({
     where: { id: cartId },
-    query: `
-      id
-      region {
-        id
-      }
-      shippingMethods {
-        id
-      }
-    `
+    query: "id region { id }"
   });
-  if (!cart) {
-    throw new Error("Cart not found");
-  }
-  if (cart.shippingMethods?.length > 0) {
-    await Promise.all(
-      cart.shippingMethods.map(
-        (method) => sudoContext.db.ShippingMethod.deleteOne({
-          where: { id: method.id }
-        })
-      )
-    );
-  }
-  const shippingOption = await sudoContext.query.ShippingOption.findOne({
+  const option = await sudo.query.ShippingOption.findOne({
     where: { id: shippingMethodId },
-    query: `
-      id
-      amount
-      name
-    `
+    query: "id amount name region { id } adminOnly isReturn"
   });
-  if (!shippingOption) {
+  if (!cart || !option || option.region?.id !== cart.region?.id || option.adminOnly || option.isReturn) {
     throw new Error("Shipping option not found");
   }
-  await sudoContext.db.ShippingMethod.createOne({
-    data: {
-      cart: { connect: { id: cartId } },
-      shippingOption: { connect: { id: shippingOption.id } },
-      price: shippingOption.amount,
+  await sudo.prisma.$transaction(async (tx) => {
+    await tx.shippingMethod.deleteMany({ where: { cartId } });
+    await tx.shippingMethod.create({
       data: {
-        name: shippingOption.name
+        cartId,
+        shippingOptionId: option.id,
+        price: option.amount,
+        data: { name: option.name }
       }
-    }
+    });
+    await tx.cart.update({
+      where: { id: cartId },
+      data: { paymentCollectionId: null }
+    });
   });
-  return await sudoContext.db.Cart.findOne({
-    where: { id: cartId }
+  return sudo.query.Cart.findOne({
+    where: { id: cartId },
+    query: "id shippingMethods { id price data shippingOption { id name } }"
   });
 }
 var addActiveCartShippingMethod_default = addActiveCartShippingMethod;
 
 // features/keystone/queries/activeCartShippingOptions.ts
 async function activeCartShippingOptions(root, { cartId }, context) {
+  await assertCartAccess(context, cartId);
   const sudoContext = context.sudo();
   const cart = await sudoContext.query.Cart.findOne({
     where: { id: cartId },
@@ -2900,7 +3848,9 @@ async function activeCartPaymentProviders(root, { regionId }, context, info) {
       isInstalled
     `
   });
-  return providers;
+  return providers.filter(
+    (provider) => isPaymentProviderConfigured(provider.code || "")
+  );
 }
 var activeCartPaymentProviders_default = activeCartPaymentProviders;
 
@@ -2944,76 +3894,23 @@ async function activeCartRegion(root, { countryCode }, context) {
 }
 var activeCartRegion_default = activeCartRegion;
 
-// import("../../integrations/payment/**/*.ts") in features/keystone/utils/paymentProviderAdapter.ts
-var globImport_integrations_payment_ts = __glob({
-  "../../integrations/payment/index.ts": () => Promise.resolve().then(() => (init_payment(), payment_exports)),
-  "../../integrations/payment/manual.ts": () => Promise.resolve().then(() => (init_manual(), manual_exports)),
-  "../../integrations/payment/paypal.ts": () => Promise.resolve().then(() => (init_paypal(), paypal_exports)),
-  "../../integrations/payment/stripe.ts": () => Promise.resolve().then(() => (init_stripe(), stripe_exports))
-});
-
-// features/keystone/utils/paymentProviderAdapter.ts
-async function executeAdapterFunction({ provider, functionName, args }) {
-  const functionPath = provider[functionName];
-  if (functionPath.startsWith("http")) {
-    const response = await fetch(functionPath, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ provider, ...args })
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP request failed: ${response.statusText}`);
-    }
-    return response.json();
-  }
-  const adapter = await globImport_integrations_payment_ts(`../../integrations/payment/${functionPath}.ts`);
-  const fn = adapter[functionName];
-  if (!fn) {
-    throw new Error(
-      `Function ${functionName} not found in adapter ${functionPath}`
-    );
-  }
-  try {
-    return await fn({ provider, ...args });
-  } catch (error) {
-    throw new Error(
-      `Error executing ${functionName} for provider ${functionPath}: ${error.message}`
-    );
-  }
-}
-async function createPayment({ provider, cart, amount, currency }) {
-  return executeAdapterFunction({
-    provider,
-    functionName: "createPaymentFunction",
-    args: { cart, amount, currency }
-  });
-}
-async function capturePayment({ provider, paymentId, amount }) {
-  return executeAdapterFunction({
-    provider,
-    functionName: "capturePaymentFunction",
-    args: { paymentId, amount }
-  });
-}
-async function handleWebhook({ provider, event, headers }) {
-  return executeAdapterFunction({
-    provider,
-    functionName: "handleWebhookFunction",
-    args: { event, headers }
-  });
-}
-
 // features/keystone/mutations/initiatePaymentSession.ts
 async function initiatePaymentSession(root, { cartId, paymentProviderId }, context) {
+  await assertCartAccess(context, cartId);
   const sudoContext = context.sudo();
   const cart = await sudoContext.query.Cart.findOne({
     where: { id: cartId },
     query: `
       id
       rawTotal
+      metadata
+      shippingAddress { id country { iso2 } }
+      billingAddress { id }
+      lineItems { productVariant { product { productTags { id } } } }
       region {
         id
         taxRate
+        paymentProviders { id }
         currency {
           code
           noDivisionCurrency
@@ -3026,6 +3923,7 @@ async function initiatePaymentSession(root, { cartId, paymentProviderId }, conte
           id
           isSelected
           isInitiated
+          amount
           paymentProvider {
             id
             code
@@ -3037,6 +3935,9 @@ async function initiatePaymentSession(root, { cartId, paymentProviderId }, conte
   });
   if (!cart) {
     throw new Error("Cart not found");
+  }
+  if (!cart.shippingAddress?.id || !cart.billingAddress?.id || cart.rawTotal <= 0) {
+    throw new Error("A positive cart with billing and shipping addresses is required");
   }
   const provider = await sudoContext.query.PaymentProvider.findOne({
     where: { code: paymentProviderId },
@@ -3052,9 +3953,10 @@ async function initiatePaymentSession(root, { cartId, paymentProviderId }, conte
       credentials
     `
   });
-  if (!provider || !provider.isInstalled) {
-    throw new Error("Payment provider not found or not installed");
+  if (!provider || !provider.isInstalled || !isPaymentProviderConfigured(provider.code) || !cart.region.paymentProviders?.some((item) => item.id === provider.id)) {
+    throw new Error("Payment provider not found, installed, and configured for this region");
   }
+  assertCheckoutWithinLaunchPolicy(cart, provider.code);
   if (!cart.paymentCollection) {
     cart.paymentCollection = await sudoContext.query.PaymentCollection.createOne({
       data: {
@@ -3066,23 +3968,48 @@ async function initiatePaymentSession(root, { cartId, paymentProviderId }, conte
     });
   }
   const existingSession = cart.paymentCollection?.paymentSessions?.find(
-    (s) => s.paymentProvider.code === paymentProviderId && !s.isInitiated
+    (session) => session.paymentProvider.code === paymentProviderId
   );
-  if (existingSession) {
-    const otherSessions = cart.paymentCollection.paymentSessions.filter(
-      (s) => s.id !== existingSession.id && s.isSelected
-    );
-    for (const session of otherSessions) {
-      await sudoContext.query.PaymentSession.updateOne({
-        where: { id: session.id },
+  if (existingSession?.isInitiated && existingSession.amount === cart.rawTotal && existingSession.data && Object.keys(existingSession.data).length) {
+    await sudoContext.prisma.$transaction(async (tx) => {
+      await tx.paymentSession.updateMany({
+        where: { paymentCollectionId: cart.paymentCollection.id },
         data: { isSelected: false }
       });
-    }
-    await sudoContext.query.PaymentSession.updateOne({
-      where: { id: existingSession.id },
-      data: { isSelected: true }
+      await tx.paymentSession.update({
+        where: { id: existingSession.id },
+        data: { isSelected: true }
+      });
     });
-    return existingSession;
+    return { ...existingSession, isSelected: true };
+  }
+  if (existingSession) {
+    const sessionData = await createPayment({
+      provider,
+      cart,
+      amount: cart.rawTotal,
+      currency: cart.region.currency.code
+    });
+    await sudoContext.prisma.$transaction(async (tx) => {
+      await tx.paymentSession.updateMany({
+        where: { paymentCollectionId: cart.paymentCollection.id },
+        data: { isSelected: false }
+      });
+      await tx.paymentSession.update({
+        where: { id: existingSession.id },
+        data: {
+          isSelected: true,
+          isInitiated: true,
+          amount: cart.rawTotal,
+          data: sessionData
+        }
+      });
+      await tx.paymentCollection.update({
+        where: { id: cart.paymentCollection.id },
+        data: { amount: cart.rawTotal }
+      });
+    });
+    return { ...existingSession, amount: cart.rawTotal, data: sessionData, isInitiated: true };
   }
   try {
     const sessionData = await createPayment({
@@ -3091,30 +4018,25 @@ async function initiatePaymentSession(root, { cartId, paymentProviderId }, conte
       amount: cart.rawTotal,
       currency: cart.region.currency.code
     });
-    const existingSelectedSessions = cart.paymentCollection.paymentSessions?.filter(
-      (s) => s.isSelected
-    ) || [];
-    for (const session of existingSelectedSessions) {
-      await sudoContext.query.PaymentSession.updateOne({
-        where: { id: session.id },
+    const newSession = await sudoContext.prisma.$transaction(async (tx) => {
+      await tx.paymentSession.updateMany({
+        where: { paymentCollectionId: cart.paymentCollection.id },
         data: { isSelected: false }
       });
-    }
-    const newSession = await sudoContext.query.PaymentSession.createOne({
-      data: {
-        paymentCollection: { connect: { id: cart.paymentCollection.id } },
-        paymentProvider: { connect: { id: provider.id } },
-        amount: cart.rawTotal,
-        isSelected: true,
-        isInitiated: false,
-        data: sessionData
-      },
-      query: `
-        id
-        data
-        amount
-        isInitiated
-      `
+      await tx.paymentCollection.update({
+        where: { id: cart.paymentCollection.id },
+        data: { amount: cart.rawTotal }
+      });
+      return tx.paymentSession.create({
+        data: {
+          paymentCollectionId: cart.paymentCollection.id,
+          paymentProviderId: provider.id,
+          amount: cart.rawTotal,
+          isSelected: true,
+          isInitiated: true,
+          data: sessionData
+        }
+      });
     });
     return newSession;
   } catch (error) {
@@ -3124,131 +4046,336 @@ async function initiatePaymentSession(root, { cartId, paymentProviderId }, conte
 }
 var initiatePaymentSession_default = initiatePaymentSession;
 
+// features/keystone/orders/order-lifecycle.ts
+async function reconcileOrderFulfillmentStatus(tx, orderId, { reason, actorId = null, paymentRecovered = false }) {
+  const order = await tx.order.findUnique({
+    where: { id: orderId },
+    select: {
+      status: true,
+      lineItems: { select: { id: true, quantity: true } },
+      fulfillments: {
+        where: { canceledAt: null },
+        select: {
+          fulfillmentItems: { select: { lineItemId: true, quantity: true } }
+        }
+      }
+    }
+  });
+  if (!order) throw new Error("Order not found");
+  const fulfilledByLine = /* @__PURE__ */ new Map();
+  for (const fulfillment of order.fulfillments) {
+    for (const item of fulfillment.fulfillmentItems) {
+      if (!item.lineItemId) continue;
+      fulfilledByLine.set(
+        item.lineItemId,
+        (fulfilledByLine.get(item.lineItemId) || 0) + item.quantity
+      );
+    }
+  }
+  const fullyFulfilled = order.lineItems.length > 0 && order.lineItems.every(
+    (line) => (fulfilledByLine.get(line.id) || 0) >= line.quantity
+  );
+  let status = order.status;
+  if (!["canceled", "archived"].includes(order.status)) {
+    if (fullyFulfilled) {
+      status = "completed";
+    } else if (order.status === "completed" || paymentRecovered && order.status === "requires_action") {
+      status = "pending";
+    }
+  }
+  if (status !== order.status) {
+    await tx.order.update({ where: { id: orderId }, data: { status } });
+    await tx.orderEvent.create({
+      data: {
+        orderId,
+        type: "STATUS_CHANGE",
+        data: {
+          previousStatus: order.status,
+          newStatus: status,
+          reason,
+          projection: "active_fulfillment_quantities"
+        },
+        ...actorId ? { userId: actorId, createdById: actorId } : {}
+      }
+    });
+  }
+  return { previousStatus: order.status, status, fullyFulfilled };
+}
+
 // features/keystone/mutations/handlePaymentProviderWebhook.ts
+var NO_DIVISION_CURRENCIES2 = /* @__PURE__ */ new Set([
+  "JPY",
+  "KRW",
+  "VND",
+  "CLP",
+  "PYG",
+  "XAF",
+  "XOF",
+  "BIF",
+  "DJF",
+  "GNF",
+  "KMF",
+  "MGA",
+  "RWF",
+  "XPF",
+  "HTG",
+  "VUV",
+  "XAG",
+  "XDR",
+  "XAU"
+]);
+function assertProviderAmount(providerCode, resource, payment) {
+  const expectedCurrency = String(payment.currencyCode).toUpperCase();
+  if (providerCode.includes("stripe")) {
+    const amount = Number(resource.amount_received ?? resource.amount);
+    if (amount !== payment.amount || String(resource.currency).toUpperCase() !== expectedCurrency) {
+      throw new Error("Provider webhook amount or currency mismatch");
+    }
+    return;
+  }
+  if (providerCode.includes("paypal")) {
+    const evidence = resource.amount;
+    const divisor = NO_DIVISION_CURRENCIES2.has(expectedCurrency) ? 1 : 100;
+    if (!evidence || Number(evidence.value) !== payment.amount / divisor || String(evidence.currency_code).toUpperCase() !== expectedCurrency) {
+      throw new Error("Provider webhook amount or currency mismatch");
+    }
+  }
+}
+function normalizedHeaders(headers) {
+  return Object.fromEntries(
+    Object.entries(headers || {}).map(([key, value]) => [
+      key.toLowerCase(),
+      Array.isArray(value) ? String(value[0] || "") : String(value || "")
+    ])
+  );
+}
 async function handlePaymentProviderWebhook(root, { providerId, event, headers }, context) {
-  const sudoContext = context.sudo();
-  const provider = await sudoContext.query.PaymentProvider.findOne({
+  const sudo = context.sudo();
+  const provider = await sudo.query.PaymentProvider.findOne({
     where: { id: providerId },
     query: `
-      id
-      code
-      isInstalled
-      createPaymentFunction
-      capturePaymentFunction
-      refundPaymentFunction
-      getPaymentStatusFunction
-      generatePaymentLinkFunction
-      handleWebhookFunction
-      credentials
+      id code isInstalled handleWebhookFunction credentials
     `
   });
-  if (!provider || !provider.isInstalled) {
-    throw new Error("Payment provider not found or not installed");
+  if (!provider?.isInstalled) throw new Error("Payment provider not found");
+  const verified = await handleWebhook({
+    provider,
+    event,
+    headers: normalizedHeaders(headers)
+  });
+  const type = String(verified.type || "");
+  const resource = verified.resource || {};
+  const providerEventId = String(verified.event?.id || event?.id || resource.id || "");
+  if (!providerEventId) throw new Error("Provider event ID is required");
+  const dedupeKey = `provider-webhook:${provider.id}:${providerEventId}`;
+  const existing = await sudo.prisma.idempotencyKey.findUnique({
+    where: { idempotencyKey: dedupeKey }
+  });
+  if (existing?.recoveryPoint === "completed") {
+    return { success: true, message: "Duplicate event acknowledged" };
   }
-  const { type, resource } = await handleWebhook({ provider, event, headers });
-  if (type.match(/payment_intent\.succeeded|PAYMENT\.CAPTURE\.COMPLETED/)) {
-    const paymentId = resource.metadata?.paymentId || resource.custom_id;
+  let attempt = existing;
+  if (attempt) {
+    const acquired = await sudo.prisma.idempotencyKey.updateMany({
+      where: {
+        id: attempt.id,
+        OR: [
+          { lockedAt: null },
+          { lockedAt: { lt: new Date(Date.now() - 5 * 60 * 1e3) } }
+        ]
+      },
+      data: { lockedAt: /* @__PURE__ */ new Date() }
+    });
+    if (acquired.count !== 1) {
+      throw new Error("Event is already being processed");
+    }
+  }
+  if (!attempt) {
+    try {
+      attempt = await sudo.prisma.idempotencyKey.create({
+        data: {
+          idempotencyKey: dedupeKey,
+          requestMethod: "POST",
+          requestPath: "payment-provider-webhook",
+          requestParams: { providerId: provider.id, providerEventId, type },
+          recoveryPoint: "verified",
+          lockedAt: /* @__PURE__ */ new Date()
+        }
+      });
+    } catch (error) {
+      attempt = await sudo.prisma.idempotencyKey.findUnique({
+        where: { idempotencyKey: dedupeKey }
+      });
+      if (attempt?.recoveryPoint === "completed") {
+        return { success: true, message: "Duplicate event acknowledged" };
+      }
+      if (attempt) {
+        throw new Error("Event is already being processed");
+      }
+      throw error;
+    }
+  }
+  const succeeded = /payment_intent\.succeeded|PAYMENT\.CAPTURE\.COMPLETED/.test(type);
+  const failed = /payment_intent\.payment_failed|PAYMENT\.CAPTURE\.DENIED/.test(type);
+  const authorized = /payment_intent\.amount_capturable_updated|PAYMENT\.AUTHORIZATION\.CREATED/.test(type);
+  const voided = /payment_intent\.canceled|PAYMENT\.AUTHORIZATION\.VOIDED/.test(type);
+  const cartId = resource.metadata?.cartId || resource.custom_id;
+  const explicitPaymentId = resource.metadata?.paymentId;
+  let orderId = resource.metadata?.orderId;
+  let paymentId = explicitPaymentId;
+  let checkoutAttemptId;
+  let checkoutPaymentResult;
+  if (cartId && (!paymentId || !orderId)) {
+    const cart = await sudo.query.Cart.findOne({
+      where: { id: cartId },
+      query: `
+        id rawTotal
+        region { currency { code } }
+        paymentCollection {
+          paymentSessions { id amount data isSelected paymentProvider { id } }
+        }
+        order {
+          id payments { id data paymentCollection { paymentSessions { isSelected paymentProvider { id } } } }
+        }
+      `
+    });
+    orderId ||= cart?.order?.id;
+    paymentId ||= cart?.order?.payments?.find(
+      (payment) => payment.paymentCollection?.paymentSessions?.some(
+        (session) => session.isSelected && session.paymentProvider?.id === provider.id
+      )
+    )?.id;
+    if (succeeded && !paymentId) {
+      const selectedSession = cart?.paymentCollection?.paymentSessions?.find(
+        (session) => session.isSelected && session.paymentProvider?.id === provider.id
+      );
+      if (selectedSession) {
+        assertProviderAmount(provider.code, resource, {
+          amount: selectedSession.amount,
+          currencyCode: cart.region.currency.code
+        });
+        const checkoutAttempt = await sudo.prisma.idempotencyKey.findUnique({
+          where: { idempotencyKey: `checkout:${cartId}` }
+        });
+        checkoutAttemptId = checkoutAttempt?.id;
+        checkoutPaymentResult = {
+          status: "succeeded",
+          paymentIntentId: selectedSession.data?.paymentIntentId || selectedSession.data?.orderId || resource.id,
+          amount: selectedSession.amount,
+          currency: cart.region.currency.code,
+          data: resource
+        };
+      }
+    }
+  }
+  await sudo.prisma.$transaction(async (tx) => {
+    if (succeeded && checkoutAttemptId && checkoutPaymentResult) {
+      await tx.idempotencyKey.update({
+        where: { id: checkoutAttemptId },
+        data: {
+          recoveryPoint: "payment_confirmed",
+          responseBody: { paymentResult: checkoutPaymentResult },
+          lockedAt: null
+        }
+      });
+    }
     if (paymentId) {
-      const captureResult = await capturePayment({
-        provider,
-        paymentId: resource.id,
-        amount: typeof resource.amount === "number" ? resource.amount : parseInt(resource.amount.value * 100)
-      });
-      const payment = await sudoContext.query.Payment.updateOne({
-        where: { id: paymentId },
-        data: {
-          status: captureResult.status,
-          capturedAt: (/* @__PURE__ */ new Date()).toISOString(),
-          data: captureResult.data
-        }
-      });
-      await sudoContext.query.Capture.createOne({
-        data: {
-          amount: captureResult.amount,
-          payment: { connect: { id: payment.id } },
-          metadata: {
-            providerId,
-            paymentId: resource.id
-          },
-          createdBy: "system"
-        }
-      });
-      const orderId = resource.metadata?.orderId || resource.custom_id;
-      if (orderId) {
-        await sudoContext.query.Order.updateOne({
-          where: { id: orderId },
+      if (succeeded) {
+        const currentPayment = await tx.payment.findUnique({
+          where: { id: paymentId },
+          select: { amount: true, currencyCode: true }
+        });
+        if (!currentPayment) throw new Error("Payment not found for provider event");
+        assertProviderAmount(provider.code, resource, currentPayment);
+        await tx.payment.update({
+          where: { id: paymentId },
           data: {
-            status: "completed",
-            paymentStatus: "captured"
+            status: "captured",
+            capturedAt: /* @__PURE__ */ new Date(),
+            data: resource
           }
+        });
+        const captureExists = await tx.capture.findFirst({
+          where: { paymentId, metadata: { path: ["providerEventId"], equals: providerEventId } }
+        });
+        if (!captureExists && currentPayment) {
+          await tx.capture.create({
+            data: {
+              amount: currentPayment.amount,
+              paymentId,
+              metadata: { providerId: provider.id, providerEventId, resourceId: resource.id },
+              createdBy: "provider-webhook"
+            }
+          });
+        }
+      } else if (failed) {
+        await tx.payment.update({
+          where: { id: paymentId },
+          data: { status: "failed", data: resource }
+        });
+      } else if (authorized) {
+        await tx.payment.update({
+          where: { id: paymentId },
+          data: { status: "authorized", data: resource }
+        });
+      } else if (voided) {
+        await tx.payment.update({
+          where: { id: paymentId },
+          data: { status: "canceled", canceledAt: /* @__PURE__ */ new Date(), data: resource }
         });
       }
     }
-  } else if (type.match(/payment_intent\.payment_failed|PAYMENT\.CAPTURE\.DENIED/)) {
-    const paymentId = resource.metadata?.paymentId || resource.custom_id;
-    if (paymentId) {
-      await sudoContext.query.Payment.updateOne({
-        where: { id: paymentId },
-        data: {
-          status: "failed",
+    if (orderId) {
+      if (succeeded) {
+        await reconcileOrderFulfillmentStatus(tx, orderId, {
+          reason: "payment_provider_capture_reconciled",
+          paymentRecovered: true
+        });
+        await tx.orderEvent.create({
           data: {
-            ...resource,
-            error: resource.last_payment_error || resource.error
-          }
-        }
-      });
-      const orderId = resource.metadata?.orderId || resource.custom_id;
-      if (orderId) {
-        await sudoContext.query.Order.updateOne({
-          where: { id: orderId },
-          data: {
-            status: "failed",
-            paymentStatus: "failed"
+            orderId,
+            type: "PAYMENT_CAPTURED",
+            data: { paymentId: paymentId || null, providerId: provider.id, providerEventId }
           }
         });
+      } else if (failed || voided) {
+        const currentOrder = await tx.order.findUnique({
+          where: { id: orderId },
+          select: { status: true }
+        });
+        if (currentOrder && !["completed", "canceled", "archived"].includes(currentOrder.status)) {
+          await tx.order.update({ where: { id: orderId }, data: { status: "requires_action" } });
+          if (currentOrder.status !== "requires_action") {
+            await tx.orderEvent.create({
+              data: {
+                orderId,
+                type: "STATUS_CHANGE",
+                data: {
+                  previousStatus: currentOrder.status,
+                  newStatus: "requires_action",
+                  reason: failed ? "payment_provider_failed" : "payment_provider_voided",
+                  providerEventId
+                }
+              }
+            });
+          }
+        }
       }
     }
-  } else if (type === "PAYMENT.AUTHORIZATION.CREATED") {
-    const paymentId = resource.custom_id;
-    if (paymentId) {
-      await sudoContext.query.Payment.updateOne({
-        where: { id: paymentId },
-        data: {
-          status: "authorized",
-          data: resource
-        }
-      });
-      await sudoContext.query.Order.updateOne({
-        where: { id: paymentId },
-        data: {
-          status: "pending",
-          paymentStatus: "authorized"
-        }
-      });
-    }
-  } else if (type === "PAYMENT.AUTHORIZATION.VOIDED") {
-    const paymentId = resource.custom_id;
-    if (paymentId) {
-      await sudoContext.query.Payment.updateOne({
-        where: { id: paymentId },
-        data: {
-          status: "canceled",
-          canceledAt: (/* @__PURE__ */ new Date()).toISOString(),
-          data: resource
-        }
-      });
-      await sudoContext.query.Order.updateOne({
-        where: { id: paymentId },
-        data: {
-          status: "canceled",
-          paymentStatus: "canceled"
-        }
-      });
-    }
-  } else {
-    console.log(`Unhandled webhook event type: ${type}`);
-  }
-  return { success: true };
+    await tx.idempotencyKey.update({
+      where: { id: attempt.id },
+      data: {
+        recoveryPoint: "completed",
+        responseCode: 200,
+        responseBody: { providerEventId, type, paymentId: paymentId || null, orderId: orderId || null },
+        lockedAt: null
+      }
+    });
+  });
+  return {
+    success: true,
+    message: paymentId || orderId ? "Provider event reconciled" : "Provider event recorded for manual reconciliation"
+  };
 }
 var handlePaymentProviderWebhook_default = handlePaymentProviderWebhook;
 
@@ -3450,6 +4577,11 @@ var getCustomerOrders_default = getCustomerOrders;
 
 // features/keystone/mutations/getAnalytics.ts
 async function getAnalytics(root, { timeframe = "7d" }, context) {
+  if (!context.session?.itemId || !permissions.canReadOrders({ session: context.session }) || !permissions.canReadProducts({ session: context.session })) {
+    throw new Error("Access denied");
+  }
+  const allowedTimeframes = /* @__PURE__ */ new Set(["24h", "7d", "30d", "90d"]);
+  if (!allowedTimeframes.has(timeframe)) throw new Error("Invalid timeframe");
   const endDate = /* @__PURE__ */ new Date();
   const startDate = /* @__PURE__ */ new Date();
   switch (timeframe) {
@@ -3741,6 +4873,48 @@ async function importInventory(root, { file }, context) {
 }
 var importInventory_default = importInventory;
 
+// features/keystone/mutations/adjustInventory.ts
+async function adjustInventory(root, { variantId, delta, reason, note }, context) {
+  if (!permissions.canManageProducts({ session: context.session })) {
+    throw new Error("Access denied");
+  }
+  if (!variantId || !Number.isInteger(delta) || delta === 0) {
+    throw new Error("A non-zero integer inventory delta is required");
+  }
+  if (!reason?.trim()) throw new Error("Inventory adjustment reason is required");
+  await context.sudo().prisma.$transaction(async (tx) => {
+    const variant = await tx.productVariant.findUnique({
+      where: { id: variantId },
+      select: { id: true, inventoryQuantity: true, allowBackorder: true }
+    });
+    if (!variant) throw new Error("Product variant not found");
+    const adjusted = await tx.productVariant.updateMany({
+      where: {
+        id: variantId,
+        ...delta < 0 && !variant.allowBackorder ? { inventoryQuantity: { gte: Math.abs(delta) } } : {}
+      },
+      data: { inventoryQuantity: { increment: delta } }
+    });
+    if (adjusted.count !== 1) {
+      throw new Error("Inventory adjustment would make stock negative");
+    }
+    await tx.stockMovement.create({
+      data: {
+        type: delta > 0 ? "RECEIVE" : "REMOVE",
+        quantity: Math.abs(delta),
+        reason: reason.trim(),
+        note: note?.trim() || "",
+        variantId
+      }
+    });
+  });
+  return context.query.ProductVariant.findOne({
+    where: { id: variantId },
+    query: "id title sku inventoryQuantity"
+  });
+}
+var adjustInventory_default = adjustInventory;
+
 // import("../../integrations/shipping/**/*.ts") in features/keystone/utils/shippingProviderAdapter.ts
 var globImport_integrations_shipping_ts = __glob({
   "../../integrations/shipping/index.ts": () => Promise.resolve().then(() => (init_shipping(), shipping_exports)),
@@ -3782,11 +4956,11 @@ async function executeAdapterFunction2({
     );
   }
 }
-async function createLabel({ provider, order, rateId, dimensions, lineItems }) {
+async function createLabel({ provider, order, rateId, dimensions, lineItems, idempotencyKey }) {
   return executeAdapterFunction2({
     provider,
     functionName: "createLabelFunction",
-    args: { order, rateId, dimensions, lineItems }
+    args: { order, rateId, dimensions, lineItems, idempotencyKey }
   });
 }
 async function getRates({ provider, order, dimensions }) {
@@ -3817,147 +4991,6 @@ async function cancelLabel({ provider, labelId }) {
     args: { labelId }
   });
 }
-
-// features/keystone/oauth/scopes.ts
-var SCOPE_TO_PERMISSIONS = {
-  // Products
-  "read_products": ["canReadProducts"],
-  "write_products": ["canReadProducts", "canManageProducts"],
-  // Orders  
-  "read_orders": ["canReadOrders"],
-  "write_orders": ["canReadOrders", "canManageOrders"],
-  // Customers (maps to users in our system)
-  "read_customers": ["canReadUsers"],
-  "write_customers": ["canReadUsers", "canManageUsers"],
-  // Fulfillments
-  "read_fulfillments": ["canReadFulfillments"],
-  "write_fulfillments": ["canReadFulfillments", "canManageFulfillments"],
-  // Checkouts
-  "read_checkouts": ["canReadCheckouts"],
-  "write_checkouts": ["canReadCheckouts", "canManageCheckouts"],
-  // Discounts
-  "read_discounts": ["canReadDiscounts"],
-  "write_discounts": ["canReadDiscounts", "canManageDiscounts"],
-  // Gift Cards
-  "read_gift_cards": ["canReadGiftCards"],
-  "write_gift_cards": ["canReadGiftCards", "canManageGiftCards"],
-  // Returns
-  "read_returns": ["canReadReturns"],
-  "write_returns": ["canReadReturns", "canManageReturns"],
-  // Sales Channels
-  "read_sales_channels": ["canReadSalesChannels"],
-  "write_sales_channels": ["canReadSalesChannels", "canManageSalesChannels"],
-  // Payments
-  "read_payments": ["canReadPayments"],
-  "write_payments": ["canReadPayments", "canManagePayments"],
-  // Webhooks
-  "read_webhooks": ["canReadWebhooks"],
-  "write_webhooks": ["canReadWebhooks", "canManageWebhooks"],
-  // Apps
-  "read_apps": ["canReadApps"],
-  "write_apps": ["canReadApps", "canManageApps"]
-};
-var AVAILABLE_SCOPES = Object.keys(SCOPE_TO_PERMISSIONS);
-var DEFAULT_SCOPES = ["read_products", "read_orders"];
-
-// features/keystone/access.ts
-function isSignedIn({ session }) {
-  return !!session;
-}
-function hasOAuthPermission(session, permission) {
-  if (!session?.oauthScopes) return false;
-  const scopes = session.oauthScopes;
-  const grantedPermissions = /* @__PURE__ */ new Set();
-  scopes.forEach((scope) => {
-    const scopePermissions = SCOPE_TO_PERMISSIONS[scope];
-    if (scopePermissions) {
-      scopePermissions.forEach((p) => grantedPermissions.add(p));
-    }
-  });
-  return grantedPermissions.has(permission);
-}
-function hasApiKeyPermission(session, permission) {
-  if (!session?.apiKeyScopes) return false;
-  const scopes = session.apiKeyScopes;
-  const grantedPermissions = /* @__PURE__ */ new Set();
-  scopes.forEach((scope) => {
-    const scopePermissions = SCOPE_TO_PERMISSIONS[scope];
-    if (scopePermissions) {
-      scopePermissions.forEach((p) => grantedPermissions.add(p));
-    }
-  });
-  return grantedPermissions.has(permission);
-}
-var generatedPermissions = Object.fromEntries(
-  permissionsList.map((permission) => [
-    permission,
-    function({ session }) {
-      if (hasApiKeyPermission(session, permission)) {
-        return true;
-      }
-      if (hasOAuthPermission(session, permission)) {
-        return true;
-      }
-      const rolePermission = !!session?.data?.role?.[permission];
-      return rolePermission;
-    }
-  ])
-);
-var permissions = {
-  ...generatedPermissions
-};
-var rules = {
-  canManageOrders({ session }) {
-    if (!isSignedIn({ session })) {
-      return false;
-    }
-    if (permissions.canManageProducts({ session })) {
-      return true;
-    }
-  },
-  canManageProducts({ session }) {
-    if (!isSignedIn({ session })) {
-      return false;
-    }
-    if (permissions.canManageProducts({ session })) {
-      return true;
-    }
-  },
-  canManageOrderItems({ session }) {
-    if (!isSignedIn({ session })) {
-      return false;
-    }
-    if (permissions.canManageCart({ session })) {
-      return true;
-    }
-  },
-  canReadProducts({ session }) {
-    if (!isSignedIn({ session })) {
-      return false;
-    }
-    if (permissions.canManageProducts({ session })) {
-      return true;
-    }
-  },
-  canManageUsers({ session }) {
-    if (!isSignedIn({ session })) {
-      return false;
-    }
-    if (permissions.canManageUsers({ session })) {
-      return true;
-    }
-    return { id: { equals: session?.itemId } };
-  },
-  canManageKeys({ session }) {
-    if (!isSignedIn({ session })) {
-      return false;
-    }
-    if (permissions.canManageKeys({ session })) {
-      return true;
-    }
-    return { user: { id: { equals: session?.itemId } } };
-  }
-};
 
 // features/keystone/mutations/getRatesForOrder.ts
 async function getRatesForOrder(root, { orderId, providerId, dimensions }, context) {
@@ -4177,13 +5210,21 @@ var trackShipment_default = trackShipment2;
 
 // features/keystone/mutations/cancelShippingLabel.ts
 async function cancelShippingLabel(root, { providerId, labelId }, context) {
-  const hasAccess = permissions.canReadOrders({ session: context.session }) || permissions.canManageOrders({ session: context.session });
+  const hasAccess = permissions.canManageFulfillments({ session: context.session });
   if (!hasAccess) {
     throw new Error(
       "Access denied: You do not have permission to cancel shipping labels"
     );
   }
-  const provider = await context.db.ShippingProvider.findOne({
+  const sudo = context.sudo();
+  const localLabel = await sudo.query.ShippingLabel.findOne({
+    where: { id: labelId },
+    query: "id data metadata provider { id }"
+  });
+  if (!localLabel || localLabel.provider?.id !== providerId) {
+    throw new Error("Shipping label not found");
+  }
+  const provider = await sudo.db.ShippingProvider.findOne({
     where: { id: providerId },
     query: `
       id
@@ -4200,23 +5241,669 @@ async function cancelShippingLabel(root, { providerId, labelId }, context) {
   if (!provider.accessToken) {
     throw new Error(`Shipping provider ${provider.id} has no access token configured`);
   }
-  return cancelLabel({
+  const labelData = localLabel.data;
+  const providerLabelId = labelData?.label_id || labelData?.object_id || labelData?.id;
+  if (!providerLabelId) throw new Error("Provider label reference is missing");
+  const result = await cancelLabel({
     provider: {
       ...provider,
       accessToken: provider.accessToken
     },
-    labelId
+    labelId: providerLabelId
   });
+  await sudo.query.ShippingLabel.updateOne({
+    where: { id: labelId },
+    data: {
+      metadata: {
+        ...localLabel.metadata || {},
+        cancellation: {
+          status: result?.success && (!result?.refundStatus || result.refundStatus === "SUCCESS") ? "confirmed" : result?.success ? "pending" : "unknown",
+          refundStatus: result?.refundStatus || null,
+          canceledById: context.session.itemId,
+          recordedAt: (/* @__PURE__ */ new Date()).toISOString()
+        }
+      }
+    }
+  });
+  return result;
 }
 var cancelShippingLabel_default = cancelShippingLabel;
 
+// features/keystone/mutations/createOrderFulfillment.ts
+var import_node_crypto4 = __toESM(require("node:crypto"));
+
+// features/webhooks/webhook-plugin.ts
+var import_crypto = __toESM(require("crypto"));
+
+// features/webhooks/enrichers/base-enricher.ts
+var BaseWebhookEnricher = class {
+  /**
+   * Helper method to query the entity with enriched data
+   */
+  async queryEnrichedEntity(item, context) {
+    if (!item?.id) {
+      return item;
+    }
+    try {
+      const result = await context.query[this.entityType].findOne({
+        where: { id: item.id },
+        query: this.getQueryFields()
+      });
+      return result || item;
+    } catch (error) {
+      console.error(`Error querying ${this.entityType} for webhook enrichment:`, error);
+      return item;
+    }
+  }
+};
+
+// features/webhooks/enrichers/order-enricher.ts
+var OrderWebhookEnricher = class extends BaseWebhookEnricher {
+  constructor() {
+    super(...arguments);
+    this.entityType = "Order";
+  }
+  async enrich(item, context) {
+    const enrichedItem = await this.queryEnrichedEntity(item, context);
+    return enrichedItem || item;
+  }
+  getQueryFields() {
+    return `
+      id
+      displayId
+      email
+      status
+      rawTotal
+      total
+      subtotal
+      shipping
+      discount
+      tax
+      canceledAt
+      metadata
+      idempotencyKey
+      noNotification
+      externalId
+      currency {
+        id
+        code
+        symbol
+        noDivisionCurrency
+      }
+      shippingAddress {
+        id
+        firstName
+        lastName
+        company
+        address1
+        address2
+        city
+        province
+        postalCode
+        phone
+        country {
+          id
+          iso2
+          displayName
+        }
+      }
+      billingAddress {
+        id
+        firstName
+        lastName
+        company
+        address1
+        address2
+        city
+        province
+        postalCode
+        phone
+        country {
+          id
+          iso2
+          displayName
+        }
+      }
+      lineItems {
+        id
+        title
+        quantity
+        sku
+        variantTitle
+        thumbnail
+        formattedUnitPrice
+        formattedTotal
+        moneyAmount {
+          amount
+          originalAmount
+        }
+        productVariant {
+          id
+          title
+          sku
+          product {
+            id
+            title
+            handle
+            thumbnail
+            productImages {
+              image {
+                url
+              }
+              imagePath
+            }
+          }
+        }
+        productData
+        variantData
+      }
+      createdAt
+      updatedAt
+    `;
+  }
+};
+
+// features/webhooks/enrichers/registry.ts
+var WebhookEnricherRegistry = class {
+  constructor() {
+    this.enrichers = /* @__PURE__ */ new Map();
+  }
+  register(entityType, enricher) {
+    this.enrichers.set(entityType, enricher);
+  }
+  get(entityType) {
+    return this.enrichers.get(entityType);
+  }
+  has(entityType) {
+    return this.enrichers.has(entityType);
+  }
+  /**
+   * Get all registered entity types
+   */
+  getRegisteredTypes() {
+    return Array.from(this.enrichers.keys());
+  }
+};
+var webhookEnricherRegistry = new WebhookEnricherRegistry();
+function registerWebhookEnricher(enricher) {
+  webhookEnricherRegistry.register(enricher.entityType, enricher);
+}
+
+// features/webhooks/enrichers/index.ts
+registerWebhookEnricher(new OrderWebhookEnricher());
+
+// features/webhooks/webhook-plugin.ts
+var WEBHOOK_INTERNAL_LISTS = /* @__PURE__ */ new Set(["WebhookEndpoint", "WebhookEvent"]);
+function isWebhookInternalList(listKey2) {
+  return WEBHOOK_INTERNAL_LISTS.has(listKey2);
+}
+function withWebhooks(config2) {
+  const enhancedLists = Object.fromEntries(
+    Object.entries(config2.lists || {}).map(([listKey2, listConfig]) => {
+      if (isWebhookInternalList(listKey2)) return [listKey2, listConfig];
+      return [
+        listKey2,
+        {
+          ...listConfig,
+          hooks: {
+            ...listConfig.hooks,
+            afterOperation: async (args) => {
+              const originalAfterOperation = listConfig.hooks?.afterOperation;
+              if (typeof originalAfterOperation === "function") {
+                await originalAfterOperation(args);
+              } else if (originalAfterOperation?.[args.operation]) {
+                await originalAfterOperation[args.operation](args);
+              }
+              try {
+                await triggerWebhook({
+                  listKey: listKey2,
+                  operation: args.operation,
+                  item: args.item,
+                  originalItem: args.originalItem,
+                  context: args.context.sudo()
+                });
+              } catch (error) {
+                console.error(`Webhook enqueue failed for ${listKey2}:`, error);
+              }
+            }
+          }
+        }
+      ];
+    })
+  );
+  return {
+    ...config2,
+    lists: enhancedLists
+  };
+}
+async function triggerWebhook({ listKey: listKey2, operation, item, originalItem, context }) {
+  if (isWebhookInternalList(listKey2)) return;
+  try {
+    const operationMap = {
+      "create": "created",
+      "update": "updated",
+      "delete": "deleted"
+    };
+    const webhookOperation = operationMap[operation] || operation;
+    const eventType = `${listKey2.toLowerCase()}.${webhookOperation}`;
+    const webhooks = await context.query.WebhookEndpoint.findMany({
+      where: {
+        isActive: { equals: true }
+      },
+      query: "id url secret events failureCount"
+    });
+    if (!webhooks || webhooks.length === 0) {
+      return;
+    }
+    const subscribedWebhooks = webhooks.filter((webhook) => {
+      if (!webhook.events || !Array.isArray(webhook.events)) {
+        return false;
+      }
+      return webhook.events.includes(eventType) || webhook.events.includes("*");
+    });
+    if (subscribedWebhooks.length === 0) {
+      return;
+    }
+    const payload = await formatPayload(listKey2, operation, item, originalItem, context);
+    for (const webhook of subscribedWebhooks) {
+      await deliverWebhook(webhook, eventType, payload, context);
+    }
+  } catch (error) {
+    console.error("Webhook trigger error:", error);
+  }
+}
+async function deliverWebhook(webhook, eventType, payload, context, existingEvent) {
+  let webhookEvent = existingEvent;
+  try {
+    if (!webhookEvent) {
+      webhookEvent = await context.query.WebhookEvent.createOne({
+        data: {
+          eventType,
+          resourceType: payload.listKey,
+          resourceId: payload.data?.id || "unknown",
+          payload,
+          endpoint: { connect: { id: webhook.id } },
+          deliveryAttempts: 0,
+          nextAttempt: /* @__PURE__ */ new Date()
+        },
+        query: "id deliveryAttempts"
+      });
+    }
+    await context.query.WebhookEvent.updateOne({
+      where: { id: webhookEvent.id },
+      data: { deliveryAttempts: (webhookEvent.deliveryAttempts || 0) + 1, lastAttempt: /* @__PURE__ */ new Date() }
+    });
+    if (!webhook.secret) {
+      throw new Error("Webhook endpoint secret is required");
+    }
+    const secret = webhook.secret;
+    const signature = import_crypto.default.createHmac("sha256", secret).update(JSON.stringify(payload)).digest("hex");
+    const response = await fetch(webhook.url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-OpenFront-Webhook-Signature": `sha256=${signature}`,
+        "X-OpenFront-Topic": eventType,
+        "X-OpenFront-ListKey": payload.listKey,
+        "X-OpenFront-Operation": payload.operation,
+        "X-OpenFront-Delivery-ID": webhookEvent.id
+      },
+      body: JSON.stringify(payload)
+    });
+    if (response.ok) {
+      const responseBody = (await response.text()).slice(0, 64e3);
+      await context.query.WebhookEvent.updateOne({
+        where: { id: webhookEvent.id },
+        data: {
+          delivered: true,
+          responseStatus: response.status,
+          responseBody,
+          lastAttempt: /* @__PURE__ */ new Date()
+        }
+      });
+      if (webhook.failureCount > 0) {
+        await context.query.WebhookEndpoint.updateOne({
+          where: { id: webhook.id },
+          data: {
+            failureCount: 0,
+            lastTriggered: /* @__PURE__ */ new Date()
+          }
+        });
+      } else {
+        await context.query.WebhookEndpoint.updateOne({
+          where: { id: webhook.id },
+          data: { lastTriggered: /* @__PURE__ */ new Date() }
+        });
+      }
+    } else {
+      const errorText = (await response.text()).slice(0, 64e3);
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+  } catch (error) {
+    try {
+      await context.query.WebhookEvent.updateOne({
+        where: { id: webhookEvent?.id },
+        data: {
+          delivered: false,
+          responseStatus: 0,
+          responseBody: error instanceof Error ? error.message : String(error),
+          lastAttempt: /* @__PURE__ */ new Date(),
+          // Schedule retry (exponential backoff)
+          nextAttempt: new Date(
+            Date.now() + Math.min(Math.pow(2, (webhookEvent?.deliveryAttempts || 0) + 1) * 6e4, 24 * 60 * 60 * 1e3)
+          )
+        }
+      });
+      await context.query.WebhookEndpoint.updateOne({
+        where: { id: webhook.id },
+        data: {
+          failureCount: (webhook.failureCount || 0) + 1
+        }
+      });
+    } catch (updateError) {
+      console.error("Failed to update webhook event after delivery failure:", updateError);
+    }
+  }
+}
+async function formatPayload(listKey2, operation, item, originalItem, context) {
+  const basePayload = {
+    event: `${listKey2.toLowerCase()}.${operation}`,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    listKey: listKey2,
+    operation
+  };
+  let enrichedData = item;
+  if (webhookEnricherRegistry.has(listKey2) && item?.id) {
+    try {
+      const enricher = webhookEnricherRegistry.get(listKey2);
+      if (enricher) {
+        enrichedData = await enricher.enrich(item, context);
+      }
+    } catch (error) {
+      console.error(`Error enriching webhook payload for ${listKey2}:`, error);
+      enrichedData = item;
+    }
+  }
+  switch (operation) {
+    case "create":
+      return {
+        ...basePayload,
+        data: enrichedData || item
+      };
+    case "update":
+      return {
+        ...basePayload,
+        data: enrichedData || item,
+        previousData: originalItem,
+        changes: getChangedFields(originalItem, enrichedData || item)
+      };
+    case "delete":
+      return {
+        ...basePayload,
+        data: originalItem
+      };
+    default:
+      return {
+        ...basePayload,
+        data: enrichedData || item
+      };
+  }
+}
+function getChangedFields(original, updated) {
+  if (!original || !updated) return {};
+  const changes = {};
+  for (const key in updated) {
+    if (original[key] !== updated[key]) {
+      changes[key] = {
+        from: original[key],
+        to: updated[key]
+      };
+    }
+  }
+  return changes;
+}
+async function deliverWebhookEventsById(context, eventIds) {
+  const uniqueEventIds = [...new Set(eventIds.filter(Boolean))];
+  for (const eventId of uniqueEventIds) {
+    const event = await context.sudo().query.WebhookEvent.findOne({
+      where: { id: eventId },
+      query: `
+        id eventType payload deliveryAttempts delivered
+        endpoint { id url secret failureCount }
+      `
+    });
+    if (!event || event.delivered || !event.endpoint) continue;
+    await deliverWebhook(
+      event.endpoint,
+      event.eventType,
+      event.payload,
+      context.sudo(),
+      event
+    );
+  }
+  return uniqueEventIds.length;
+}
+async function retryPendingWebhookDeliveries(context, limit = 25) {
+  const boundedLimit = Math.max(1, Math.min(limit, 100));
+  const events = await context.sudo().query.WebhookEvent.findMany({
+    where: {
+      delivered: { equals: false },
+      nextAttempt: { lte: (/* @__PURE__ */ new Date()).toISOString() }
+    },
+    orderBy: { nextAttempt: "asc" },
+    take: boundedLimit,
+    query: `
+      id eventType payload deliveryAttempts
+      endpoint { id url secret failureCount }
+    `
+  });
+  for (const event of events) {
+    if (!event.endpoint) continue;
+    await deliverWebhook(
+      event.endpoint,
+      event.eventType,
+      event.payload,
+      context.sudo(),
+      event
+    );
+  }
+  return events.length;
+}
+
+// features/keystone/mutations/createOrderFulfillment.ts
+function trackingUrl(carrier, number) {
+  const value = encodeURIComponent(number);
+  switch (carrier.toLowerCase()) {
+    case "ups":
+      return `https://www.ups.com/track?tracknum=${value}`;
+    case "usps":
+      return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${value}`;
+    case "fedex":
+      return `https://www.fedex.com/fedextrack/?trknbr=${value}`;
+    case "dhl":
+      return `https://www.dhl.com/en/express/tracking.html?AWB=${value}`;
+    default:
+      return "";
+  }
+}
+async function createOrderFulfillment(root, {
+  orderId,
+  lineItems,
+  trackingNumber,
+  carrier,
+  noNotification = false,
+  idempotencyKey,
+  deferWebhookDelivery = false,
+  suppressWebhookEnqueue = false,
+  deferLifecycleProjection = false
+}, context) {
+  if (!permissions.canManageFulfillments({ session: context.session })) {
+    throw new Error("Access denied");
+  }
+  if (!Array.isArray(lineItems) || !lineItems.length) throw new Error("Line items are required");
+  const requested = /* @__PURE__ */ new Map();
+  for (const item of lineItems) {
+    if (!item?.lineItemId || !Number.isInteger(item.quantity) || item.quantity <= 0) {
+      throw new Error("Fulfillment quantities must be positive integers");
+    }
+    requested.set(item.lineItemId, (requested.get(item.lineItemId) || 0) + item.quantity);
+  }
+  if (Boolean(trackingNumber) !== Boolean(carrier)) {
+    throw new Error("Carrier and tracking number must be provided together");
+  }
+  const normalized = [...requested.entries()].sort(([a], [b]) => a.localeCompare(b));
+  if (!idempotencyKey?.trim()) throw new Error("Fulfillment idempotency key is required");
+  const normalizedIdempotencyKey = idempotencyKey.trim();
+  const isIntegrationTrackingRelay = normalizedIdempotencyKey.startsWith("openship-tracking:");
+  const businessKey = `fulfillment:${orderId}:${import_node_crypto4.default.createHash("sha256").update(normalizedIdempotencyKey).digest("hex")}`;
+  const sudo = context.sudo();
+  const fulfillmentWebhookEndpointIds = await subscribedWebhookEndpointIds(
+    sudo,
+    "fulfillment.created"
+  );
+  const fulfillmentResult = await sudo.prisma.$transaction(async (tx) => {
+    const existing = await tx.fulfillment.findFirst({
+      where: { idempotencyKey: businessKey, canceledAt: null },
+      select: { id: true }
+    });
+    if (existing) return { fulfillmentId: existing.id, webhookEventIds: [] };
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      select: { status: true }
+    });
+    if (!order || !["pending", "completed"].includes(order.status)) {
+      throw new Error("Order is not fulfillable");
+    }
+    const orderLines = await tx.orderLineItem.findMany({
+      where: { orderId, id: { in: normalized.map(([id]) => id) } },
+      select: { id: true, quantity: true }
+    });
+    if (orderLines.length !== normalized.length) throw new Error("Order line item not found");
+    const fulfilled = await tx.fulfillmentItem.groupBy({
+      by: ["lineItemId"],
+      where: { lineItemId: { in: normalized.map(([id]) => id) }, fulfillment: { canceledAt: null } },
+      _sum: { quantity: true }
+    });
+    const fulfilledByLine = new Map(
+      fulfilled.map(
+        (item) => [item.lineItemId, item._sum.quantity || 0]
+      )
+    );
+    for (const line of orderLines) {
+      const quantity = requested.get(line.id);
+      if (quantity > line.quantity - (fulfilledByLine.get(line.id) || 0)) {
+        throw new Error(`Fulfillment exceeds remaining quantity for line ${line.id}`);
+      }
+    }
+    const fulfillmentProvider = await tx.fulfillmentProvider.findUnique({
+      where: { code: "fp_manual" },
+      select: { id: true }
+    });
+    if (!fulfillmentProvider) throw new Error("Manual fulfillment provider is not configured");
+    const fulfillment = await tx.fulfillment.create({
+      data: {
+        orderId,
+        fulfillmentProviderId: fulfillmentProvider.id,
+        idempotencyKey: businessKey,
+        noNotification,
+        metadata: {
+          source: isIntegrationTrackingRelay ? "openship-tracking-relay" : "operator-command",
+          createdById: context.session.itemId
+        },
+        fulfillmentItems: {
+          create: normalized.map(([lineItemId, quantity]) => ({
+            quantity,
+            lineItem: { connect: { id: lineItemId } }
+          }))
+        },
+        ...trackingNumber && carrier ? {
+          shippingLabels: {
+            create: {
+              status: "created",
+              carrier,
+              trackingNumber,
+              trackingUrl: trackingUrl(carrier, trackingNumber),
+              order: { connect: { id: orderId } },
+              metadata: { source: "operator-command" }
+            }
+          }
+        } : {}
+      }
+    });
+    const webhookEventIds = isIntegrationTrackingRelay || suppressWebhookEnqueue ? [] : await enqueueWebhookOutbox(
+      tx,
+      fulfillmentWebhookEndpointIds,
+      "fulfillment.created",
+      "Fulfillment",
+      fulfillment.id,
+      {
+        id: fulfillment.id,
+        orderId,
+        order: { id: orderId },
+        lineItems: normalized,
+        trackingNumber: trackingNumber || null,
+        trackingCompany: carrier || null
+      }
+    );
+    if (!noNotification) {
+      await tx.notification.create({
+        data: {
+          eventName: "FULFILLMENT_CREATED",
+          resourceType: "Fulfillment",
+          resourceId: fulfillment.id,
+          to: "notification-operations",
+          data: { orderId, fulfillmentId: fulfillment.id, status: "pending_delivery" }
+        }
+      });
+    }
+    await tx.orderEvent.create({
+      data: {
+        orderId,
+        type: "FULFILLMENT_STATUS_CHANGE",
+        data: {
+          fulfillmentId: fulfillment.id,
+          action: "created",
+          lineItems: normalized,
+          trackingNumber: trackingNumber || null,
+          carrier: carrier || null
+        },
+        userId: context.session.itemId,
+        createdById: context.session.itemId
+      }
+    });
+    if (!deferLifecycleProjection) {
+      await reconcileOrderFulfillmentStatus(tx, orderId, {
+        reason: "fulfillment_created",
+        actorId: context.session.itemId
+      });
+    }
+    return { fulfillmentId: fulfillment.id, webhookEventIds };
+  }, { isolationLevel: "Serializable" });
+  if (!deferWebhookDelivery && fulfillmentResult.webhookEventIds.length) {
+    try {
+      await deliverWebhookEventsById(sudo, fulfillmentResult.webhookEventIds);
+    } catch (error) {
+      console.error(
+        "Immediate fulfillment webhook delivery failed:",
+        error instanceof Error ? error.message : "Unknown error"
+      );
+    }
+  }
+  return sudo.query.Fulfillment.findOne({
+    where: { id: fulfillmentResult.fulfillmentId },
+    query: "id idempotencyKey fulfillmentItems { id quantity lineItem { id } } shippingLabels { id status trackingNumber trackingUrl carrier }"
+  });
+}
+var createOrderFulfillment_default = createOrderFulfillment;
+
 // features/keystone/mutations/createProviderShippingLabel.ts
-async function createProviderShippingLabel(root, { orderId, providerId, rateId, dimensions, lineItems }, context) {
+async function createProviderShippingLabel(root, { orderId, providerId, rateId, dimensions, lineItems, idempotencyKey }, context) {
   const hasAccess = permissions.canManageFulfillments({ session: context.session });
   if (!hasAccess) {
     throw new Error("Access denied: You do not have permission to create shipping labels");
   }
-  const order = await context.query.Order.findOne({
+  const sudo = context.sudo();
+  const order = await sudo.query.Order.findOne({
     where: { id: orderId },
     query: `
       id
@@ -4276,7 +5963,7 @@ async function createProviderShippingLabel(root, { orderId, providerId, rateId, 
       throw new Error(`Cannot fulfill more than ${availableQuantity} items for line item ${item.lineItemId}`);
     }
   }
-  const provider = await context.query.ShippingProvider.findOne({
+  const provider = await sudo.query.ShippingProvider.findOne({
     where: { id: providerId },
     query: `
         id 
@@ -4309,57 +5996,297 @@ async function createProviderShippingLabel(root, { orderId, providerId, rateId, 
   if (!provider.accessToken) {
     throw new Error(`Shipping provider ${provider.id} has no access token configured`);
   }
-  const labelData = await createLabel({
-    provider,
-    order,
-    rateId,
-    dimensions,
-    lineItems
-  });
-  const fulfillment = await context.query.Fulfillment.createOne({
-    data: {
-      order: { connect: { id: orderId } },
-      fulfillmentItems: {
-        create: lineItems.map((item) => ({
-          lineItem: { connect: { id: item.lineItemId } },
-          quantity: item.quantity
-        }))
-      },
-      shippingLabels: {
-        create: [{
-          status: "purchased",
-          provider: { connect: { id: providerId } },
-          labelUrl: labelData.labelUrl,
-          carrier: labelData.carrier,
-          service: labelData.service,
-          trackingNumber: labelData.trackingNumber,
-          trackingUrl: labelData.trackingUrl,
-          rate: labelData.rate,
-          data: labelData.data
-        }]
-      },
-      metadata: {
-        source: "admin",
-        createdBy: "admin"
-      }
+  const fulfillmentWebhookEndpointIds = await subscribedWebhookEndpointIds(
+    sudo,
+    "fulfillment.created"
+  );
+  const fulfillment = await createOrderFulfillment_default(
+    null,
+    {
+      orderId,
+      lineItems,
+      noNotification: true,
+      idempotencyKey,
+      deferWebhookDelivery: true,
+      suppressWebhookEnqueue: true,
+      deferLifecycleProjection: true
     },
-    query: `
-        id
-        shippingLabels {
-          id
-          status
-          trackingNumber
-          trackingUrl
-          labelUrl
-          carrier
-          service
-          data
+    context
+  );
+  const existingLabel = fulfillment.shippingLabels?.[0];
+  if (existingLabel) return existingLabel;
+  let labelData;
+  try {
+    labelData = await createLabel({
+      provider,
+      order,
+      rateId,
+      dimensions,
+      lineItems,
+      idempotencyKey
+    });
+  } catch (error) {
+    await sudo.prisma.fulfillment.update({
+      where: { id: fulfillment.id },
+      data: {
+        metadata: {
+          source: "provider-command",
+          labelStatus: "unknown",
+          providerId,
+          rateId,
+          error: error instanceof Error ? error.message : String(error)
         }
-      `
+      }
+    });
+    throw new Error(
+      `Label outcome is unknown; fulfillment ${fulfillment.id} remains reserved for reconciliation`
+    );
+  }
+  const finalized = await sudo.prisma.$transaction(async (tx) => {
+    const label = await tx.shippingLabel.create({
+      data: {
+        status: "purchased",
+        providerId,
+        fulfillmentId: fulfillment.id,
+        orderId,
+        labelUrl: labelData.labelUrl,
+        carrier: labelData.carrier,
+        service: labelData.service,
+        trackingNumber: labelData.trackingNumber,
+        trackingUrl: labelData.trackingUrl,
+        rate: labelData.rate,
+        data: labelData.data,
+        metadata: { rateId, source: "provider-command" }
+      }
+    });
+    await tx.fulfillment.update({
+      where: { id: fulfillment.id },
+      data: {
+        metadata: {
+          source: "provider-command",
+          labelStatus: "purchased",
+          providerId,
+          rateId
+        }
+      }
+    });
+    await reconcileOrderFulfillmentStatus(tx, orderId, {
+      reason: "provider_shipping_label_purchased",
+      actorId: context.session.itemId
+    });
+    const webhookEventIds = await enqueueWebhookOutbox(
+      tx,
+      fulfillmentWebhookEndpointIds,
+      "fulfillment.created",
+      "Fulfillment",
+      fulfillment.id,
+      {
+        id: fulfillment.id,
+        orderId,
+        order: { id: orderId },
+        lineItems: lineItems.map((item) => [item.lineItemId, item.quantity]),
+        trackingNumber: labelData.trackingNumber || null,
+        trackingCompany: labelData.carrier || null
+      }
+    );
+    return { label, webhookEventIds };
   });
-  return fulfillment.shippingLabels[0];
+  if (finalized.webhookEventIds.length) {
+    await deliverWebhookEventsById(sudo, finalized.webhookEventIds);
+  }
+  return finalized.label;
 }
 var createProviderShippingLabel_default = createProviderShippingLabel;
+
+// features/keystone/mutations/cancelOrderFulfillment.ts
+async function cancelOrderFulfillment(root, { fulfillmentId, reason }, context) {
+  if (!permissions.canManageFulfillments({ session: context.session })) {
+    throw new Error("Access denied");
+  }
+  if (!reason?.trim()) throw new Error("Cancellation reason is required");
+  const sudo = context.sudo();
+  const endpointIds = await subscribedWebhookEndpointIds(sudo, "fulfillment.canceled");
+  const result = await sudo.prisma.$transaction(async (tx) => {
+    const current = await tx.fulfillment.findUnique({
+      where: { id: fulfillmentId },
+      select: {
+        id: true,
+        orderId: true,
+        canceledAt: true,
+        metadata: true,
+        shippingLabels: { select: { id: true, metadata: true, providerId: true } }
+      }
+    });
+    if (!current) throw new Error("Fulfillment not found");
+    if (current.canceledAt) return current;
+    if (current.shippingLabels.some(
+      (label) => label.providerId && label.metadata?.cancellation?.status !== "confirmed"
+    )) {
+      throw new Error("Cancel the purchased shipping label before canceling fulfillment");
+    }
+    const canceled = await tx.fulfillment.update({
+      where: { id: fulfillmentId },
+      data: {
+        canceledAt: /* @__PURE__ */ new Date(),
+        metadata: {
+          ...current.metadata || {},
+          cancellationReason: reason.trim(),
+          canceledById: context.session.itemId
+        }
+      }
+    });
+    await enqueueWebhookOutbox(
+      tx,
+      endpointIds,
+      "fulfillment.canceled",
+      "Fulfillment",
+      fulfillmentId,
+      { id: fulfillmentId, orderId: current.orderId, reason: reason.trim() }
+    );
+    await tx.orderEvent.create({
+      data: {
+        orderId: current.orderId,
+        type: "FULFILLMENT_STATUS_CHANGE",
+        data: { fulfillmentId, action: "canceled", reason: reason.trim() },
+        userId: context.session.itemId,
+        createdById: context.session.itemId
+      }
+    });
+    await reconcileOrderFulfillmentStatus(tx, current.orderId, {
+      reason: "fulfillment_canceled",
+      actorId: context.session.itemId
+    });
+    return canceled;
+  });
+  return { id: result.id, canceledAt: result.canceledAt };
+}
+var cancelOrderFulfillment_default = cancelOrderFulfillment;
+
+// features/keystone/mutations/transitionOrderStatus.ts
+async function transitionOrderStatus(root, { orderId, status, reason }, context) {
+  if (!permissions.canManageOrders({ session: context.session })) throw new Error("Access denied");
+  if (!reason?.trim()) throw new Error("Transition reason is required");
+  if (!["canceled", "archived"].includes(status)) {
+    throw new Error("Order status is controlled by payment and fulfillment commands");
+  }
+  const sudo = context.sudo();
+  const endpointIds = await subscribedWebhookEndpointIds(sudo, `order.${status}`);
+  await sudo.prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: {
+        payments: {
+          select: { amount: true, amountRefunded: true, refunds: { select: { amount: true } } }
+        },
+        fulfillments: { where: { canceledAt: null }, select: { id: true } },
+        accountLineItems: {
+          select: {
+            id: true,
+            accountId: true,
+            amount: true,
+            paymentStatus: true,
+            invoiceLineItems: { select: { id: true } }
+          }
+        },
+        discounts: { select: { id: true } },
+        lineItems: {
+          select: {
+            quantity: true,
+            productVariant: {
+              select: { id: true, manageInventory: true }
+            }
+          }
+        }
+      }
+    });
+    if (!order) throw new Error("Order not found");
+    if (order.status === status) return;
+    if (status === "archived") {
+      if (order.status !== "completed") throw new Error("Only completed orders can be archived");
+    } else {
+      if (!["pending", "completed", "requires_action"].includes(order.status)) {
+        throw new Error("Order cannot be canceled from its current state");
+      }
+      if (order.fulfillments.length) throw new Error("Cancel active fulfillments before canceling the order");
+      if (order.payments.some(
+        (payment) => payment.refunds.reduce((sum, refund) => sum + refund.amount, 0) < payment.amount
+      )) {
+        throw new Error("Captured payments must be fully refunded before cancellation");
+      }
+      for (const line of order.lineItems) {
+        if (!line.productVariant?.manageInventory) continue;
+        await tx.productVariant.update({
+          where: { id: line.productVariant.id },
+          data: { inventoryQuantity: { increment: line.quantity } }
+        });
+        await tx.stockMovement.create({
+          data: {
+            type: "RECEIVE",
+            quantity: line.quantity,
+            reason: "order_cancellation",
+            note: `order:${orderId}`,
+            variantId: line.productVariant.id
+          }
+        });
+      }
+      if (order.accountLineItems.some(
+        (item) => item.paymentStatus !== "unpaid" || item.invoiceLineItems.length
+      )) {
+        throw new Error("Invoiced account orders require an approved credit-note workflow");
+      }
+      for (const item of order.accountLineItems) {
+        await tx.accountLineItem.update({
+          where: { id: item.id },
+          data: { paymentStatus: "canceled" }
+        });
+        if (item.accountId) {
+          const adjustedAccount = await tx.account.updateMany({
+            where: { id: item.accountId, totalAmount: { gte: item.amount } },
+            data: { totalAmount: { decrement: item.amount } }
+          });
+          if (adjustedAccount.count !== 1) {
+            throw new Error("Account balance is inconsistent; cancellation stopped");
+          }
+        }
+      }
+      for (const discount of order.discounts) {
+        await tx.discount.updateMany({
+          where: { id: discount.id, usageCount: { gt: 0 } },
+          data: { usageCount: { decrement: 1 } }
+        });
+      }
+    }
+    await tx.order.update({
+      where: { id: orderId },
+      data: {
+        status,
+        ...status === "canceled" ? { canceledAt: /* @__PURE__ */ new Date() } : {}
+      }
+    });
+    await tx.orderEvent.create({
+      data: {
+        orderId,
+        type: "STATUS_CHANGE",
+        data: { previousStatus: order.status, newStatus: status, reason: reason.trim() },
+        userId: context.session.itemId,
+        createdById: context.session.itemId
+      }
+    });
+    await enqueueWebhookOutbox(
+      tx,
+      endpointIds,
+      `order.${status}`,
+      "Order",
+      orderId,
+      { id: orderId, previousStatus: order.status, status, reason: reason.trim() }
+    );
+  }, { isolationLevel: "Serializable" });
+  return sudo.query.Order.findOne({
+    where: { id: orderId },
+    query: "id status canceledAt displayId"
+  });
+}
+var transitionOrderStatus_default = transitionOrderStatus;
 
 // features/keystone/mutations/regenerateCustomerToken.ts
 async function regenerateCustomerToken(root, args, context) {
@@ -4381,12 +6308,11 @@ async function regenerateCustomerToken(root, args, context) {
     if (!activeAccount) {
       throw new Error("No active account found. Customer token can only be regenerated for users with active accounts.");
     }
-    const crypto3 = require("crypto");
-    const newToken = "ctok_" + crypto3.randomBytes(32).toString("hex");
+    const newToken = generateOpaqueToken("ctok_");
     await sudoContext.query.User.updateOne({
       where: { id: userId },
       data: {
-        customerToken: newToken,
+        customerToken: customerTokenDigest(newToken),
         tokenGeneratedAt: (/* @__PURE__ */ new Date()).toISOString()
       }
     });
@@ -4531,221 +6457,15 @@ async function getCustomerAccounts(root, { limit = 10, offset = 0 }, context) {
 }
 var getCustomerAccounts_default = getCustomerAccounts;
 
-// features/keystone/mutations/payInvoice.ts
-async function payInvoice(root, { invoiceId, paymentData }, context) {
-  const sudoContext = context.sudo();
-  const invoice = await sudoContext.query.Invoice.findOne({
-    where: { id: invoiceId },
-    query: `
-      id
-      totalAmount
-      status
-      currency {
-        id
-        code
-        noDivisionCurrency
-      }
-      account {
-        id
-        totalAmount
-        paidAmount
-        currency {
-          id
-          code
-        }
-      }
-      user {
-        id
-        email
-      }
-      lineItems {
-        id
-        accountLineItem {
-          id
-          amount
-          paymentStatus
-        }
-      }
-    `
-  });
-  if (!invoice) {
-    throw new Error("Invoice not found");
-  }
-  if (invoice.status === "paid") {
-    throw new Error("Invoice is already paid");
-  }
-  if (!context.session?.itemId || invoice.user.id !== context.session.itemId) {
-    throw new Error("Unauthorized to pay this invoice");
-  }
-  try {
-    let paymentResult;
-    switch (paymentData.paymentMethod) {
-      case "stripe":
-        paymentResult = await processStripePayment(paymentData, invoice);
-        break;
-      case "paypal":
-        paymentResult = await processPayPalPayment(paymentData, invoice);
-        break;
-      case "manual":
-        paymentResult = {
-          status: "succeeded",
-          paymentIntentId: `manual_${Date.now()}`,
-          data: paymentData
-        };
-        break;
-      default:
-        throw new Error(`Unsupported payment method: ${paymentData.paymentMethod}`);
-    }
-    if (paymentResult.status !== "succeeded") {
-      throw new Error(`Payment failed: ${paymentResult.error}`);
-    }
-    const updates = await sudoContext.prisma.$transaction(async (tx) => {
-      const updatedInvoice = await sudoContext.query.Invoice.updateOne({
-        where: { id: invoiceId },
-        data: {
-          status: "paid",
-          paidAt: (/* @__PURE__ */ new Date()).toISOString(),
-          metadata: {
-            ...invoice.metadata,
-            paymentResult,
-            paidAt: (/* @__PURE__ */ new Date()).toISOString()
-          }
-        }
-      });
-      const lineItemUpdates = [];
-      for (const lineItem of invoice.lineItems) {
-        if (lineItem.accountLineItem.paymentStatus !== "paid") {
-          const updated = await sudoContext.query.AccountLineItem.updateOne({
-            where: { id: lineItem.accountLineItem.id },
-            data: { paymentStatus: "paid" }
-          });
-          lineItemUpdates.push(updated);
-        }
-      }
-      const totalLineItemAmount = invoice.lineItems.reduce(
-        (sum, item) => sum + (item.accountLineItem.amount || 0),
-        0
-      );
-      const convertCurrency2 = (init_currencyConversion(), __toCommonJS(currencyConversion_exports)).default;
-      const convertedAmount = invoice.currency.code !== invoice.account.currency.code ? await convertCurrency2(totalLineItemAmount, invoice.currency.code, invoice.account.currency.code) : totalLineItemAmount;
-      const updatedAccount = await sudoContext.query.Account.updateOne({
-        where: { id: invoice.account.id },
-        data: {
-          paidAmount: (invoice.account.paidAmount || 0) + convertedAmount
-        }
-      });
-      const payment = await sudoContext.query.Payment.createOne({
-        data: {
-          status: "captured",
-          amount: invoice.totalAmount,
-          currencyCode: invoice.currency.code,
-          data: paymentResult,
-          capturedAt: (/* @__PURE__ */ new Date()).toISOString(),
-          user: { connect: { id: invoice.user.id } },
-          // Note: Need to add invoice relationship to Payment model
-          metadata: {
-            invoiceId,
-            paymentMethod: paymentData.paymentMethod,
-            accountId: invoice.account.id
-          }
-        }
-      });
-      return {
-        invoice: updatedInvoice,
-        account: updatedAccount,
-        payment,
-        lineItemUpdates
-      };
-    });
-    return {
-      success: true,
-      invoice: updates.invoice,
-      payment: updates.payment,
-      message: `Payment of ${invoice.totalAmount / (invoice.currency.noDivisionCurrency ? 1 : 100)} ${invoice.currency.code} processed successfully`
-    };
-  } catch (error) {
-    console.error("Payment processing error:", error);
-    throw new Error(`Payment failed: ${error.message}`);
-  }
-}
-async function processStripePayment(paymentData, invoice) {
-  const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-  if (!stripe) {
-    throw new Error("Stripe not configured");
-  }
-  try {
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: invoice.totalAmount,
-      currency: invoice.currency.code.toLowerCase(),
-      payment_method: paymentData.paymentMethodId,
-      confirmation_method: "manual",
-      confirm: true,
-      metadata: {
-        invoiceId: invoice.id,
-        accountId: invoice.account.id,
-        userId: invoice.user.id
-      }
-    });
-    return {
-      status: paymentIntent.status === "succeeded" ? "succeeded" : "failed",
-      paymentIntentId: paymentIntent.id,
-      error: paymentIntent.status !== "succeeded" ? `Stripe status: ${paymentIntent.status}` : null,
-      data: paymentIntent
-    };
-  } catch (error) {
-    return {
-      status: "failed",
-      paymentIntentId: null,
-      error: error.message,
-      data: error
-    };
-  }
-}
-async function processPayPalPayment(paymentData, invoice) {
-  try {
-    const authResponse = await fetch(`${process.env.PAYPAL_API_URL || "https://api.paypal.com"}/v1/oauth2/token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Authorization": `Basic ${Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString("base64")}`
-      },
-      body: "grant_type=client_credentials"
-    });
-    if (!authResponse.ok) {
-      throw new Error("PayPal authentication failed");
-    }
-    const authData = await authResponse.json();
-    const accessToken = authData.access_token;
-    const captureResponse = await fetch(`${process.env.PAYPAL_API_URL || "https://api.paypal.com"}/v2/checkout/orders/${paymentData.orderId}/capture`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json"
-      }
-    });
-    if (!captureResponse.ok) {
-      throw new Error(`PayPal capture failed: ${captureResponse.status}`);
-    }
-    const captureData = await captureResponse.json();
-    return {
-      status: captureData.status === "COMPLETED" ? "succeeded" : "failed",
-      paymentIntentId: paymentData.orderId,
-      error: captureData.status !== "COMPLETED" ? `PayPal status: ${captureData.status}` : null,
-      data: captureData
-    };
-  } catch (error) {
-    return {
-      status: "failed",
-      paymentIntentId: paymentData.orderId,
-      error: error.message,
-      data: error
-    };
-  }
-}
-var payInvoice_default = payInvoice;
-
 // features/keystone/mutations/createInvoiceFromLineItems.ts
+var import_node_crypto5 = __toESM(require("node:crypto"));
 async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemIds, dueDate }, context) {
+  if (!lineItemIds?.length || new Set(lineItemIds).size !== lineItemIds.length) {
+    throw new Error("Unique line item IDs are required");
+  }
+  if (dueDate && !Number.isFinite(new Date(dueDate).getTime())) {
+    throw new Error("Due date is invalid");
+  }
   const sudoContext = context.sudo();
   if (!context.session?.itemId) {
     throw new Error("Authentication required");
@@ -4771,6 +6491,10 @@ async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemI
   if (!account) {
     throw new Error("Account not found");
   }
+  const canManagePayments = permissions.canManagePayments({ session: context.session });
+  if (!canManagePayments && account.user?.id !== context.session.itemId) {
+    throw new Error("Account not found");
+  }
   const region2 = await sudoContext.query.Region.findOne({
     where: { id: regionId },
     query: `
@@ -4786,6 +6510,9 @@ async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemI
   });
   if (!region2) {
     throw new Error("Region not found");
+  }
+  if (region2.currency.code !== account.currency.code) {
+    throw new Error("Cross-currency invoicing is outside the supported launch boundary");
   }
   const lineItems = await sudoContext.query.AccountLineItem.findMany({
     where: {
@@ -4816,63 +6543,114 @@ async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemI
   if (lineItems.length !== lineItemIds.length) {
     throw new Error(`Some line items were not found, are already paid, or are not from ${region2.name} region`);
   }
-  const totalAmount = lineItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+  const totalAmount = lineItems.reduce(
+    (sum, item) => sum + (item.amount || 0),
+    0
+  );
   if (totalAmount <= 0) {
     throw new Error("Invoice total must be greater than zero");
   }
   try {
     const result = await sudoContext.prisma.$transaction(async (tx) => {
-      const invoice = await sudoContext.query.Invoice.createOne({
+      const currentItems = await tx.accountLineItem.findMany({
+        where: {
+          id: { in: lineItemIds },
+          accountId,
+          regionId,
+          paymentStatus: "unpaid"
+        },
+        select: { id: true, amount: true }
+      });
+      if (currentItems.length !== lineItemIds.length) {
+        throw new Error("Invoice line items changed; reload and retry");
+      }
+      const existingInvoiceLines = await tx.invoiceLineItem.findMany({
+        where: { accountLineItemId: { in: lineItemIds } },
+        select: { id: true, invoiceId: true, accountLineItemId: true }
+      });
+      if (existingInvoiceLines.length) {
+        const invoiceIds = new Set(existingInvoiceLines.map((item) => item.invoiceId));
+        const linkedItemIds = new Set(existingInvoiceLines.map((item) => item.accountLineItemId));
+        if (existingInvoiceLines.length === lineItemIds.length && invoiceIds.size === 1 && lineItemIds.every((id) => linkedItemIds.has(id))) {
+          const existingInvoice = await tx.invoice.findUnique({
+            where: { id: [...invoiceIds][0] },
+            include: { lineItems: true }
+          });
+          if (existingInvoice?.accountId === accountId && existingInvoice.totalAmount === totalAmount && existingInvoice.status === "sent") {
+            return { invoice: existingInvoice, reused: true };
+          }
+        }
+        throw new Error("One or more line items are already invoiced");
+      }
+      const transactionTotal = currentItems.reduce(
+        (sum, item) => sum + item.amount,
+        0
+      );
+      if (transactionTotal !== totalAmount) throw new Error("Invoice amount changed; reload and retry");
+      const invoice = await tx.invoice.create({
         data: {
-          user: { connect: { id: account.user.id } },
-          account: { connect: { id: accountId } },
-          currency: { connect: { id: region2.currency.id } },
+          userId: account.user.id,
+          accountId,
+          invoiceNumber: `INV-${(/* @__PURE__ */ new Date()).getFullYear()}-${import_node_crypto5.default.randomBytes(4).toString("hex").toUpperCase()}`,
+          currencyId: region2.currency.id,
           totalAmount,
           title: `${region2.name} Invoice for Account ${account.id}`,
           description: `Payment invoice for ${lineItems.length} ${region2.name} orders (${lineItems.map((item) => `#${item.orderDisplayId}`).join(", ")})`,
           status: "sent",
-          // Ready for payment
-          dueDate: dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1e3).toISOString(),
-          // Default 30 days
+          paidAt: null,
+          dueDate: dueDate ? new Date(dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1e3),
           metadata: {
             regionId,
             regionName: region2.name,
             createdFromLineItems: lineItemIds,
             orderDisplayIds: lineItems.map((item) => item.orderDisplayId),
-            itemCount: lineItems.reduce((sum, item) => sum + (item.itemCount || 0), 0)
+            itemCount: lineItems.reduce(
+              (sum, item) => sum + (item.itemCount || 0),
+              0
+            )
           }
         }
       });
       const invoiceLineItems = [];
       for (const lineItem of lineItems) {
-        const invoiceLineItem = await sudoContext.query.InvoiceLineItem.createOne({
-          data: {
-            invoice: { connect: { id: invoice.id } },
-            accountLineItem: { connect: { id: lineItem.id } }
-          }
-        });
-        invoiceLineItems.push(invoiceLineItem);
+        invoiceLineItems.push(await tx.invoiceLineItem.create({
+          data: { invoiceId: invoice.id, accountLineItemId: lineItem.id }
+        }));
       }
-      return {
-        invoice: {
-          ...invoice,
-          lineItems: invoiceLineItems
-        }
-      };
-    });
+      return { invoice: { ...invoice, lineItems: invoiceLineItems } };
+    }, { isolationLevel: "Serializable" });
     return {
       success: true,
       invoiceId: result.invoice.id,
       message: `Invoice created with ${lineItems.length} orders`
     };
   } catch (error) {
-    throw new Error(`Failed to create invoice: ${error.message}`);
+    throw new Error(
+      `Failed to create invoice: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 }
 var createInvoiceFromLineItems_default = createInvoiceFromLineItems;
 
+// features/keystone/security/invoice-access.ts
+async function assertInvoiceAccess(context, invoiceId) {
+  if (!context.session?.itemId) throw new Error("Invoice not found");
+  const invoice = await context.sudo().query.Invoice.findOne({
+    where: { id: invoiceId },
+    query: "id status account { user { id } } user { id }"
+  });
+  if (!invoice) throw new Error("Invoice not found");
+  const canManage = permissions.canManagePayments({ session: context.session }) || permissions.canManageOrders({ session: context.session });
+  const ownerId = invoice.account?.user?.id || invoice.user?.id;
+  if (!canManage && ownerId !== context.session.itemId) {
+    throw new Error("Invoice not found");
+  }
+  return invoice;
+}
+
 // features/keystone/mutations/getInvoicePaymentSessions.ts
 async function getInvoicePaymentSessions(root, { invoiceId }, context) {
+  await assertInvoiceAccess(context, invoiceId);
   const sudoContext = context.sudo();
   try {
     const paymentCollection = await sudoContext.query.PaymentCollection.findOne({
@@ -4977,7 +6755,7 @@ async function getUnpaidLineItemsByRegion(root, { accountId }, context) {
         orderDisplayId: item.orderDisplayId,
         itemCount: item.itemCount,
         createdAt: item.createdAt,
-        formattedAmount: formatCurrencyAmount2(item.amount, currency.code),
+        formattedAmount: formatCurrencyAmount(item.amount, currency.code),
         order: item.order
       });
       acc[regionId].totalAmount += item.amount || 0;
@@ -4986,7 +6764,7 @@ async function getUnpaidLineItemsByRegion(root, { accountId }, context) {
     }, {});
     const regionsWithLineItems = Object.values(lineItemsByRegion).map((regionData) => ({
       ...regionData,
-      formattedTotalAmount: formatCurrencyAmount2(
+      formattedTotalAmount: formatCurrencyAmount(
         regionData.totalAmount,
         regionData.region.currency.code
       )
@@ -5003,7 +6781,7 @@ async function getUnpaidLineItemsByRegion(root, { accountId }, context) {
     throw new Error(`Failed to get unpaid line items: ${error.message}`);
   }
 }
-function formatCurrencyAmount2(amount, currencyCode) {
+function formatCurrencyAmount(amount, currencyCode) {
   const currency = currencyCode.toUpperCase();
   const noDivisionCurrencies = ["JPY", "KRW", "VND"];
   const divisor = noDivisionCurrencies.includes(currency) ? 1 : 100;
@@ -5016,6 +6794,7 @@ var getUnpaidLineItemsByRegion_default = getUnpaidLineItemsByRegion;
 
 // features/keystone/mutations/createInvoicePaymentSessions.ts
 async function createInvoicePaymentSessions(root, { invoiceId }, context) {
+  await assertInvoiceAccess(context, invoiceId);
   const sudoContext = context.sudo();
   const invoice = await sudoContext.query.Invoice.findOne({
     where: { id: invoiceId },
@@ -5062,7 +6841,9 @@ async function createInvoicePaymentSessions(root, { invoiceId }, context) {
     `
   });
   const invoiceLineItem = invoiceLineItems[0];
-  const availableProviders = invoiceLineItem?.accountLineItem?.region?.paymentProviders?.filter((p) => p.isInstalled) || [];
+  const availableProviders = invoiceLineItem?.accountLineItem?.region?.paymentProviders?.filter(
+    (provider) => provider.isInstalled && isPaymentProviderConfigured(provider.code || "")
+  ) || [];
   if (availableProviders.length === 0) {
     throw new Error("No payment providers are available for this region");
   }
@@ -5070,10 +6851,14 @@ async function createInvoicePaymentSessions(root, { invoiceId }, context) {
   if (!paymentCollection) {
     paymentCollection = await sudoContext.db.PaymentCollection.createOne({
       data: {
-        invoice: { connect: { id: invoiceId } },
         description: "default",
         amount: invoice.totalAmount || 0
       },
+      query: "id"
+    });
+    await sudoContext.db.Invoice.updateOne({
+      where: { id: invoiceId },
+      data: { paymentCollection: { connect: { id: paymentCollection.id } } },
       query: "id"
     });
   }
@@ -5098,255 +6883,216 @@ async function createInvoicePaymentSessions(root, { invoiceId }, context) {
       });
     }
   }
-  const invoiceWithPaymentCollection = await sudoContext.query.Invoice.findOne({
-    where: { id: invoiceId },
-    query: `
-      id
-      paymentCollection {
-        id
-        paymentSessions {
-          id
-          isSelected
-          paymentProvider {
-            id
-            code
-          }
-          data
-        }
-      }
-    `
-  });
-  return invoiceWithPaymentCollection;
+  return sudoContext.prisma.invoice.findUnique({ where: { id: invoiceId } });
 }
 var createInvoicePaymentSessions_default = createInvoicePaymentSessions;
 
+// features/keystone/payments/invoice-payment-recovery.ts
+var STALE_LOCK_MS = 5 * 60 * 1e3;
+function invoicePaymentKey(paymentSessionId) {
+  return `invoice-payment:${paymentSessionId}`;
+}
+async function getOrCreateInvoicePaymentAttempt(prisma, invoiceId, paymentSessionId) {
+  const { attempt, replay } = await getOrCreateIdempotencyAttempt(prisma, {
+    key: invoicePaymentKey(paymentSessionId),
+    requestPath: "completeInvoicePayment",
+    requestParams: { invoiceId, paymentSessionId }
+  });
+  if (!replay || attempt.recoveryPoint === "completed") return attempt;
+  const acquired = await prisma.idempotencyKey.updateMany({
+    where: {
+      id: attempt.id,
+      OR: [
+        { lockedAt: null },
+        { lockedAt: { lt: new Date(Date.now() - STALE_LOCK_MS) } }
+      ]
+    },
+    data: { lockedAt: /* @__PURE__ */ new Date() }
+  });
+  if (acquired.count !== 1) {
+    throw new Error("Invoice payment is already in progress");
+  }
+  return prisma.idempotencyKey.findUnique({ where: { id: attempt.id } });
+}
+async function claimInvoicePaymentCommit(tx, invoiceId, paidAt) {
+  const claimed = await tx.invoice.updateMany({
+    where: {
+      id: invoiceId,
+      status: { in: ["sent", "overdue"] }
+    },
+    data: { status: "paid", paidAt }
+  });
+  return claimed.count === 1;
+}
+
 // features/keystone/mutations/completeInvoicePayment.ts
+var SUCCESS = /* @__PURE__ */ new Set(["succeeded", "captured", "completed", "paid"]);
+var AUTHORIZED = /* @__PURE__ */ new Set(["authorized", "requires_capture", "approved"]);
+function providerReference(data) {
+  return data?.paymentIntentId || data?.payment_intent_id || data?.orderId || data?.id;
+}
 async function completeInvoicePayment(root, { paymentSessionId }, context) {
-  const sudoContext = context.sudo();
-  const user = context.session?.itemId;
-  const paymentSession = await sudoContext.query.PaymentSession.findOne({
+  const sudo = context.sudo();
+  const session = await sudo.query.PaymentSession.findOne({
     where: { id: paymentSessionId },
     query: `
-      id
-      amount
-      data
-      paymentProvider {
-        id
-        code
-      }
+      id amount data
+      paymentProvider { id code capturePaymentFunction getPaymentStatusFunction credentials }
       paymentCollection {
-        id
+        id payments { id }
         invoice {
-          id
-          invoiceNumber
-          totalAmount
-          status
-          currency {
-            code
-          }
-          account {
-            id
-            user {
-              id
-            }
-          }
+          id invoiceNumber totalAmount status
+          currency { code }
+          account { id paidAmount currency { code } user { id } }
+          lineItems { accountLineItem { id paymentStatus } }
         }
       }
     `
   });
-  if (!paymentSession) {
-    throw new Error("Payment session not found");
+  const invoice = session?.paymentCollection?.invoice;
+  if (!invoice) throw new Error("Invoice not found");
+  await assertInvoiceAccess(context, invoice.id);
+  if (invoice.status === "paid") {
+    return { id: invoice.id, status: "succeeded", success: true, message: "Invoice is already paid" };
   }
-  const invoice = paymentSession.paymentCollection.invoice;
-  if (!invoice) {
-    throw new Error("Invoice not found");
+  if (!["sent", "overdue"].includes(invoice.status)) {
+    throw new Error("Invoice is not payable");
   }
-  if (!user || invoice.account.user.id !== user) {
-    throw new Error("Unauthorized access to invoice");
+  if (session.amount !== invoice.totalAmount) throw new Error("Invoice payment amount mismatch");
+  if (invoice.currency.code !== invoice.account.currency.code) {
+    throw new Error("Cross-currency invoices require an approved accounting conversion workflow");
   }
-  let paymentResult;
-  switch (paymentSession.paymentProvider.code) {
-    case "pp_stripe_stripe":
-      paymentResult = await captureStripePayment2(paymentSession);
-      break;
-    case "pp_paypal_paypal":
-      paymentResult = await capturePayPalPayment2(paymentSession);
-      break;
-    case "pp_system_default":
-      paymentResult = { status: "manual_pending", paymentIntentId: null };
-      break;
-    default:
-      throw new Error(`Unsupported payment provider: ${paymentSession.paymentProvider.code}`);
+  const provider = session.paymentProvider;
+  if (!provider?.code || provider.code.includes("manual")) {
+    throw new Error("Manual invoice tenders require operator verification");
   }
-  if (paymentResult.status !== "succeeded" && paymentResult.status !== "manual_pending") {
-    throw new Error(`Payment failed: ${paymentResult.error}`);
+  const reference = providerReference(session.data);
+  if (!reference) throw new Error("Provider payment reference is missing");
+  const key = invoicePaymentKey(session.id);
+  const attempt = await getOrCreateInvoicePaymentAttempt(
+    sudo.prisma,
+    invoice.id,
+    paymentSessionId
+  );
+  if (attempt.recoveryPoint === "completed") {
+    return { id: invoice.id, status: "succeeded", success: true, message: "Invoice is already paid" };
   }
-  const updatedInvoice = await sudoContext.query.Invoice.updateOne({
-    where: { id: invoice.id },
-    data: {
-      status: "paid",
-      paidAt: (/* @__PURE__ */ new Date()).toISOString()
+  let result = attempt.responseBody?.providerResult;
+  if (attempt.recoveryPoint !== "provider_captured" || !result) {
+    result = await getPaymentStatus({ provider, paymentId: reference });
+    if (AUTHORIZED.has(String(result.status).toLowerCase())) {
+      result = await capturePayment({
+        provider,
+        paymentId: reference,
+        amount: invoice.totalAmount,
+        currency: invoice.currency.code,
+        idempotencyKey: key
+      });
     }
+    if (!SUCCESS.has(String(result.status).toLowerCase())) {
+      throw new Error(`Provider payment is not complete: ${result.status}`);
+    }
+    if (Number(result.amount) !== invoice.totalAmount) throw new Error("Provider amount mismatch");
+    if (String(result.currency).toUpperCase() !== invoice.currency.code.toUpperCase()) {
+      throw new Error("Provider currency mismatch");
+    }
+    await sudo.prisma.idempotencyKey.update({
+      where: { id: attempt.id },
+      data: { recoveryPoint: "provider_captured", responseBody: { providerResult: result } }
+    });
+  }
+  const paymentWebhookEndpointIds = await subscribedWebhookEndpointIds(
+    sudo,
+    "payment.captured"
+  );
+  await sudo.prisma.$transaction(async (tx) => {
+    const paidAt = /* @__PURE__ */ new Date();
+    const claimed = await claimInvoicePaymentCommit(tx, invoice.id, paidAt);
+    if (!claimed) {
+      const existingPayment = await tx.payment.findFirst({
+        where: {
+          paymentCollectionId: session.paymentCollection.id,
+          metadata: { path: ["idempotencyKey"], equals: key }
+        },
+        select: { id: true }
+      });
+      if (!existingPayment) {
+        throw new Error("Invoice is not payable or payment reconciliation is required");
+      }
+      await tx.idempotencyKey.update({
+        where: { id: attempt.id },
+        data: {
+          recoveryPoint: "completed",
+          responseCode: 200,
+          responseBody: { providerResult: result, paymentId: existingPayment.id },
+          lockedAt: null
+        }
+      });
+      return { paymentId: existingPayment.id };
+    }
+    const payment = await tx.payment.create({
+      data: {
+        status: "captured",
+        amount: invoice.totalAmount,
+        currencyCode: invoice.currency.code,
+        data: result,
+        metadata: { invoiceId: invoice.id, idempotencyKey: key },
+        capturedAt: /* @__PURE__ */ new Date(),
+        userId: invoice.account.user.id,
+        paymentCollectionId: session.paymentCollection.id
+      }
+    });
+    await tx.capture.create({
+      data: {
+        amount: invoice.totalAmount,
+        paymentId: payment.id,
+        metadata: { invoiceId: invoice.id, idempotencyKey: key },
+        createdBy: "invoice-checkout"
+      }
+    });
+    await tx.invoice.update({
+      where: { id: invoice.id },
+      data: {
+        metadata: { providerResult: result, paymentId: payment.id, paidAt: paidAt.toISOString() }
+      }
+    });
+    const ids = invoice.lineItems.map((item) => item.accountLineItem?.id).filter(Boolean);
+    await tx.accountLineItem.updateMany({ where: { id: { in: ids } }, data: { paymentStatus: "paid" } });
+    await tx.account.update({
+      where: { id: invoice.account.id },
+      data: { paidAmount: { increment: invoice.totalAmount } }
+    });
+    await enqueueWebhookOutbox(
+      tx,
+      paymentWebhookEndpointIds,
+      "payment.captured",
+      "Payment",
+      payment.id,
+      { id: payment.id, invoiceId: invoice.id, amount: invoice.totalAmount, currencyCode: invoice.currency.code }
+    );
+    await tx.idempotencyKey.update({
+      where: { id: attempt.id },
+      data: {
+        recoveryPoint: "completed",
+        responseCode: 200,
+        responseBody: { providerResult: result, paymentId: payment.id },
+        lockedAt: null
+      }
+    });
+    return { paymentId: payment.id };
   });
-  await createInvoicePaymentRecord(paymentResult, invoice, paymentSession, sudoContext);
-  await markOrdersAsPaid(invoice, sudoContext);
   return {
-    id: updatedInvoice.id,
+    id: invoice.id,
     status: "succeeded",
     success: true,
-    message: `Invoice ${invoice.invoiceNumber} paid successfully`,
-    error: null
+    message: `Invoice ${invoice.invoiceNumber} paid`
   };
-}
-async function captureStripePayment2(session) {
-  const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-  if (!stripe) {
-    throw new Error("Stripe not configured");
-  }
-  try {
-    const paymentIntentId = session.data.clientSecret?.split("_secret_")[0];
-    if (!paymentIntentId) {
-      throw new Error("Invalid Stripe payment intent");
-    }
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-    if (paymentIntent.status === "succeeded") {
-      return {
-        status: "succeeded",
-        paymentIntentId: paymentIntent.id,
-        error: null
-      };
-    } else if (paymentIntent.status === "requires_capture") {
-      const captured = await stripe.paymentIntents.capture(paymentIntentId);
-      return {
-        status: captured.status === "succeeded" ? "succeeded" : "failed",
-        paymentIntentId: captured.id,
-        error: captured.status !== "succeeded" ? "Payment capture failed" : null
-      };
-    } else {
-      return {
-        status: "failed",
-        paymentIntentId: paymentIntent.id,
-        error: `Payment status: ${paymentIntent.status}`
-      };
-    }
-  } catch (error) {
-    return {
-      status: "failed",
-      paymentIntentId: null,
-      error: error.message
-    };
-  }
-}
-async function capturePayPalPayment2(session) {
-  if (!session.data.orderId) {
-    return {
-      status: "failed",
-      paymentIntentId: null,
-      error: "PayPal order ID not found"
-    };
-  }
-  try {
-    const authResponse = await fetch(`${process.env.PAYPAL_API_URL || "https://api.paypal.com"}/v1/oauth2/token`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Authorization": `Basic ${Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString("base64")}`
-      },
-      body: "grant_type=client_credentials"
-    });
-    if (!authResponse.ok) {
-      throw new Error("PayPal authentication failed");
-    }
-    const authData = await authResponse.json();
-    const accessToken = authData.access_token;
-    const orderResponse = await fetch(`${process.env.PAYPAL_API_URL || "https://api.paypal.com"}/v2/checkout/orders/${session.data.orderId}`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json"
-      }
-    });
-    if (!orderResponse.ok) {
-      throw new Error(`PayPal order verification failed: ${orderResponse.status}`);
-    }
-    const orderData = await orderResponse.json();
-    if (orderData.status === "COMPLETED" || orderData.status === "APPROVED") {
-      return {
-        status: "succeeded",
-        paymentIntentId: session.data.orderId,
-        error: null
-      };
-    } else {
-      return {
-        status: "failed",
-        paymentIntentId: session.data.orderId,
-        error: `PayPal order status: ${orderData.status}`
-      };
-    }
-  } catch (error) {
-    return {
-      status: "failed",
-      paymentIntentId: session.data.orderId,
-      error: error.message
-    };
-  }
-}
-async function createInvoicePaymentRecord(paymentResult, invoice, paymentSession, sudoContext) {
-  await sudoContext.query.Payment.createOne({
-    data: {
-      status: paymentResult.status === "succeeded" ? "captured" : "pending",
-      amount: invoice.totalAmount,
-      currencyCode: invoice.currency.code,
-      data: {
-        ...paymentSession.data,
-        paymentIntentId: paymentResult.paymentIntentId,
-        invoiceId: invoice.id,
-        invoiceNumber: invoice.invoiceNumber
-      },
-      capturedAt: paymentResult.status === "succeeded" ? (/* @__PURE__ */ new Date()).toISOString() : null,
-      paymentCollection: { connect: { id: paymentSession.paymentCollection.id } },
-      user: invoice.account.user?.id ? { connect: { id: invoice.account.user.id } } : void 0
-    }
-  });
-}
-async function markOrdersAsPaid(invoice, sudoContext) {
-  try {
-    const invoiceLineItems = await sudoContext.query.InvoiceLineItem.findMany({
-      where: { invoice: { id: { equals: invoice.id } } },
-      query: `
-        id
-        accountLineItem {
-          id
-          paymentStatus
-          amount
-          orderDisplayId
-          order {
-            id
-            displayId
-            total
-          }
-        }
-      `
-    });
-    for (const lineItem of invoiceLineItems) {
-      if (lineItem.accountLineItem) {
-        const accountLineItem = lineItem.accountLineItem;
-        await sudoContext.query.AccountLineItem.updateOne({
-          where: { id: accountLineItem.id },
-          data: {
-            paymentStatus: "paid"
-          }
-        });
-      }
-    }
-  } catch (error) {
-    throw error;
-  }
 }
 var completeInvoicePayment_default = completeInvoicePayment;
 
 // features/keystone/mutations/initiateInvoicePaymentSession.ts
 async function initiateInvoicePaymentSession(root, { invoiceId, paymentProviderId }, context) {
+  await assertInvoiceAccess(context, invoiceId);
   const sudoContext = context.sudo();
   const invoice = await sudoContext.query.Invoice.findOne({
     where: { id: invoiceId },
@@ -5396,8 +7142,8 @@ async function initiateInvoicePaymentSession(root, { invoiceId, paymentProviderI
       credentials
     `
   });
-  if (!provider || !provider.isInstalled) {
-    throw new Error("Payment provider not found or not installed");
+  if (!provider || !provider.isInstalled || !isPaymentProviderConfigured(provider.code)) {
+    throw new Error("Payment provider not found, installed, and configured");
   }
   if (!invoice.paymentCollection) {
     invoice.paymentCollection = await sudoContext.query.PaymentCollection.createOne({
@@ -5475,7 +7221,7 @@ async function initiateInvoicePaymentSession(root, { invoiceId, paymentProviderI
         paymentProvider: { connect: { id: provider.id } },
         amount: invoice.totalAmount,
         isSelected: true,
-        isInitiated: false,
+        isInitiated: true,
         data: sessionData
       },
       query: `
@@ -5494,6 +7240,7 @@ var initiateInvoicePaymentSession_default = initiateInvoicePaymentSession;
 
 // features/keystone/mutations/setInvoicePaymentSession.ts
 async function setInvoicePaymentSession(root, { invoiceId, providerId }, context) {
+  await assertInvoiceAccess(context, invoiceId);
   const sudoContext = context.sudo();
   const invoice = await sudoContext.query.Invoice.findOne({
     where: { id: invoiceId },
@@ -5543,6 +7290,7 @@ async function activeInvoice(root, { invoiceId }, context) {
   if (!invoiceId) {
     throw new Error("Invoice ID is required");
   }
+  await assertInvoiceAccess(context, invoiceId);
   const sudoContext = context.sudo();
   const invoice = await sudoContext.query.Invoice.findOne({
     where: { id: invoiceId },
@@ -5622,6 +7370,8 @@ async function getCustomerPaidInvoices(root, { limit = 10, offset = 0 }, context
   if (!context.session?.itemId) {
     throw new Error("Not authenticated");
   }
+  const boundedLimit = Math.max(1, Math.min(Number(limit) || 10, 100));
+  const boundedOffset = Math.max(0, Number(offset) || 0);
   const sudoContext = context.sudo();
   const invoices = await sudoContext.query.Invoice.findMany({
     where: {
@@ -5631,8 +7381,8 @@ async function getCustomerPaidInvoices(root, { limit = 10, offset = 0 }, context
       status: { equals: "paid" }
     },
     orderBy: { paidAt: "desc" },
-    take: limit,
-    skip: offset,
+    take: boundedLimit,
+    skip: boundedOffset,
     query: `
       id
       invoiceNumber
@@ -5798,6 +7548,376 @@ async function getProductsSortedByPrice(root, { countryCode, limit, offset, pric
   };
 }
 
+// features/keystone/mutations/processReturnRefund.ts
+function providerPaymentReference(payment) {
+  return payment.data?.purchase_units?.[0]?.payments?.captures?.[0]?.id || payment.data?.payment_intent_id || payment.data?.paymentIntentId || payment.data?.orderId || payment.data?.id;
+}
+async function processReturnRefund(root, { returnId, paymentId, idempotencyKey }, context) {
+  if (!permissions.canManageReturns({ session: context.session }) || !permissions.canManagePayments({ session: context.session })) {
+    throw new Error("Access denied");
+  }
+  if (!idempotencyKey?.trim()) throw new Error("Idempotency key is required");
+  const sudo = context.sudo();
+  const businessKey = `refund:${idempotencyKey.trim()}`;
+  const idempotencyRequest = {
+    key: businessKey,
+    requestPath: "processReturnRefund",
+    requestParams: { returnId, paymentId }
+  };
+  const priorAttempt = await findIdempotencyAttempt(sudo.prisma, idempotencyRequest);
+  if (priorAttempt?.recoveryPoint === "completed" && priorAttempt.responseBody?.refundId) {
+    return sudo.query.Refund.findOne({
+      where: { id: priorAttempt.responseBody.refundId },
+      query: "id amount reason idempotencyKey payment { id amount amountRefunded }"
+    });
+  }
+  const returnRecord = await sudo.query.Return.findOne({
+    where: { id: returnId },
+    query: `id status refundAmount metadata order { id payments { id } }`
+  });
+  if (!returnRecord?.order?.id || returnRecord.refundAmount <= 0) {
+    throw new Error("Return is not refundable");
+  }
+  if (!returnRecord.order.payments?.some((payment2) => payment2.id === paymentId)) {
+    throw new Error("Payment does not belong to return order");
+  }
+  const payment = await sudo.query.Payment.findOne({
+    where: { id: paymentId },
+    query: `
+      id amount amountRefunded currencyCode data
+      refunds { id amount idempotencyKey }
+      paymentCollection {
+        paymentSessions {
+          isSelected
+          paymentProvider {
+            id code refundPaymentFunction credentials
+          }
+        }
+      }
+    `
+  });
+  if (!payment) throw new Error("Payment not found");
+  const alreadyRefunded = payment.refunds?.reduce((sum, refund2) => sum + refund2.amount, 0) || 0;
+  if (alreadyRefunded + returnRecord.refundAmount > payment.amount) {
+    throw new Error("Refund exceeds captured payment amount");
+  }
+  const provider = payment.paymentCollection?.paymentSessions?.find((session) => session.isSelected)?.paymentProvider || payment.paymentCollection?.paymentSessions?.[0]?.paymentProvider;
+  const providerReference2 = providerPaymentReference(payment);
+  if (!provider || !providerReference2) throw new Error("Refund provider reference is missing");
+  if (provider.code?.includes("manual")) {
+    throw new Error("Manual tender refunds require operator verification");
+  }
+  const { attempt, replay } = priorAttempt ? { attempt: priorAttempt, replay: true } : await getOrCreateIdempotencyAttempt(sudo.prisma, idempotencyRequest);
+  if (attempt.recoveryPoint === "completed" && attempt.responseBody?.refundId) {
+    return sudo.query.Refund.findOne({
+      where: { id: attempt.responseBody.refundId },
+      query: "id amount reason idempotencyKey payment { id amount amountRefunded }"
+    });
+  }
+  if (replay) {
+    const acquired = await sudo.prisma.idempotencyKey.updateMany({
+      where: {
+        id: attempt.id,
+        OR: [
+          { lockedAt: null },
+          { lockedAt: { lt: new Date(Date.now() - 5 * 60 * 1e3) } }
+        ]
+      },
+      data: { lockedAt: /* @__PURE__ */ new Date() }
+    });
+    if (acquired.count !== 1) throw new Error("Refund is already in progress");
+  }
+  if (attempt.recoveryPoint === "started") {
+    await sudo.prisma.$transaction(async (tx) => {
+      const reserved = await tx.payment.updateMany({
+        where: {
+          id: paymentId,
+          amountRefunded: { lte: payment.amount - returnRecord.refundAmount }
+        },
+        data: { amountRefunded: { increment: returnRecord.refundAmount } }
+      });
+      if (reserved.count !== 1) {
+        throw new Error("Concurrent refund exceeds captured payment amount");
+      }
+      await tx.idempotencyKey.update({
+        where: { id: attempt.id },
+        data: { recoveryPoint: "amount_reserved", lockedAt: /* @__PURE__ */ new Date() }
+      });
+    });
+    attempt.recoveryPoint = "amount_reserved";
+  }
+  let providerResult = attempt.responseBody?.providerResult;
+  if (attempt.recoveryPoint !== "provider_refunded" || !providerResult) {
+    providerResult = await refundPayment({
+      provider,
+      paymentId: providerReference2,
+      amount: returnRecord.refundAmount,
+      currency: payment.currencyCode,
+      idempotencyKey: businessKey
+    });
+    const status = String(providerResult.status || "").toLowerCase();
+    if (!["succeeded", "completed", "refunded"].includes(status)) {
+      throw new Error(`Provider refund is not complete: ${providerResult.status}`);
+    }
+    if (Number(providerResult.amount) !== returnRecord.refundAmount) {
+      throw new Error("Provider refund amount mismatch");
+    }
+    if (providerResult.currency && String(providerResult.currency).toUpperCase() !== String(payment.currencyCode).toUpperCase()) {
+      throw new Error("Provider refund currency mismatch");
+    }
+    await sudo.prisma.idempotencyKey.update({
+      where: { id: attempt.id },
+      data: {
+        recoveryPoint: "provider_refunded",
+        responseBody: { providerResult },
+        lockedAt: /* @__PURE__ */ new Date()
+      }
+    });
+  }
+  const refundWebhookEndpointIds = await subscribedWebhookEndpointIds(
+    sudo,
+    "refund.created"
+  );
+  const refund = await sudo.prisma.$transaction(async (tx) => {
+    const duplicate = await tx.refund.findFirst({
+      where: { idempotencyKey: businessKey }
+    });
+    if (duplicate) return duplicate;
+    const created = await tx.refund.create({
+      data: {
+        amount: returnRecord.refundAmount,
+        reason: "return",
+        note: `Return ${returnId}`,
+        idempotencyKey: businessKey,
+        paymentId,
+        metadata: { providerId: provider.id, providerResult }
+      }
+    });
+    await tx.return.update({
+      where: { id: returnId },
+      data: {
+        status: "received",
+        receivedAt: /* @__PURE__ */ new Date(),
+        metadata: {
+          ...returnRecord.metadata || {},
+          refundId: created.id,
+          refundStatus: "completed"
+        }
+      }
+    });
+    await tx.orderEvent.create({
+      data: {
+        orderId: returnRecord.order.id,
+        type: "REFUND_PROCESSED",
+        data: { returnId, refundId: created.id, amount: created.amount },
+        time: /* @__PURE__ */ new Date(),
+        userId: context.session.itemId,
+        createdById: context.session.itemId
+      }
+    });
+    await enqueueWebhookOutbox(
+      tx,
+      refundWebhookEndpointIds,
+      "refund.created",
+      "Refund",
+      created.id,
+      { id: created.id, returnId, paymentId, orderId: returnRecord.order.id, amount: created.amount }
+    );
+    return created;
+  });
+  await sudo.prisma.idempotencyKey.update({
+    where: { id: attempt.id },
+    data: {
+      recoveryPoint: "completed",
+      responseCode: 200,
+      responseBody: { refundId: refund.id, providerResult },
+      lockedAt: null
+    }
+  });
+  return sudo.query.Refund.findOne({
+    where: { id: refund.id },
+    query: "id amount reason idempotencyKey payment { id amount amountRefunded }"
+  });
+}
+var processReturnRefund_default = processReturnRefund;
+
+// features/keystone/mutations/retryWebhookDeliveries.ts
+async function retryWebhookDeliveries(root, { limit = 25 }, context) {
+  if (!permissions.canManageWebhooks({ session: context.session })) {
+    throw new Error("Access denied");
+  }
+  return retryPendingWebhookDeliveries(context, limit);
+}
+var retryWebhookDeliveries_default = retryWebhookDeliveries;
+
+// features/keystone/queries/getFinanceClose.ts
+var import_node_crypto6 = __toESM(require("node:crypto"));
+async function getFinanceClose(root, { start, end }, context) {
+  if (!context.session?.itemId || !permissions.canReadPayments({ session: context.session })) {
+    throw new Error("Access denied");
+  }
+  const startAt = new Date(start);
+  const endAt = new Date(end);
+  if (!Number.isFinite(startAt.getTime()) || !Number.isFinite(endAt.getTime()) || startAt >= endAt || endAt.getTime() - startAt.getTime() > 31 * 24 * 60 * 60 * 1e3) {
+    throw new Error("Finance close range must be valid and no longer than 31 days");
+  }
+  const payments = await context.sudo().query.Payment.findMany({
+    where: { createdAt: { gte: startAt.toISOString(), lt: endAt.toISOString() } },
+    orderBy: { createdAt: "asc" },
+    take: 5e3,
+    query: `
+      id status amount amountRefunded currencyCode capturedAt createdAt data
+      captures { id amount createdAt metadata }
+      refunds { id amount reason createdAt metadata }
+      order { id displayId status metadata }
+    `
+  });
+  if (payments.length === 5e3) {
+    throw new Error("Finance close exceeded the bounded export limit");
+  }
+  const rows = payments.map((payment) => {
+    const captured = payment.captures?.reduce((sum, item) => sum + item.amount, 0) || (payment.status === "captured" ? payment.amount : 0);
+    const refunded = payment.refunds?.reduce((sum, item) => sum + item.amount, 0) || 0;
+    const providerReference2 = payment.data?.paymentIntentId || payment.data?.orderId || payment.data?.id || null;
+    return {
+      paymentId: payment.id,
+      orderId: payment.order?.id || null,
+      orderDisplayId: payment.order?.displayId || null,
+      currency: payment.currencyCode,
+      status: payment.status,
+      captured,
+      refunded,
+      netTender: captured - refunded,
+      providerReference: providerReference2,
+      capturedAt: payment.capturedAt,
+      accountingPolicyVersion: payment.order?.metadata?.commercialSnapshot?.accountingPolicyVersion || commerceLaunchPolicy.accountingPolicyVersion,
+      exception: payment.status === "captured" && (!providerReference2 || captured !== payment.amount) ? "CAPTURE_EVIDENCE_MISMATCH" : null
+    };
+  });
+  const byCurrency = Object.values(
+    rows.reduce((result, row) => {
+      const current = result[row.currency] || {
+        currency: row.currency,
+        captured: 0,
+        refunded: 0,
+        netTender: 0,
+        count: 0
+      };
+      current.captured += row.captured;
+      current.refunded += row.refunded;
+      current.netTender += row.netTender;
+      current.count += 1;
+      result[row.currency] = current;
+      return result;
+    }, {})
+  );
+  const controlPayload = JSON.stringify({ start, end, byCurrency, rows });
+  return {
+    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    range: { start: startAt.toISOString(), end: endAt.toISOString() },
+    legalEntityId: commerceLaunchPolicy.legalEntityId,
+    reportingCurrency: commerceLaunchPolicy.reportingCurrency,
+    accountingPolicyVersion: commerceLaunchPolicy.accountingPolicyVersion,
+    providerSettlementStatus: "OWNER_DATA_REQUIRED",
+    rows,
+    byCurrency,
+    exceptions: rows.filter((row) => row.exception),
+    control: {
+      rowCount: rows.length,
+      sha256: import_node_crypto6.default.createHash("sha256").update(controlPayload).digest("hex")
+    }
+  };
+}
+var getFinanceClose_default = getFinanceClose;
+
+// features/keystone/mutations/privacy.ts
+var allowedActions = /* @__PURE__ */ new Set(["access", "correct", "delete", "restrict", "object"]);
+async function updatePrivacyPreferences(root, { preferences }, context) {
+  const userId = context.session?.itemId;
+  if (!userId) throw new Error("Authentication required");
+  const analytics = preferences?.analytics;
+  const marketingEmail = preferences?.marketingEmail;
+  if (typeof analytics !== "boolean" || typeof marketingEmail !== "boolean") {
+    throw new Error("Privacy preferences must contain boolean analytics and marketingEmail values");
+  }
+  const receipt = {
+    analytics,
+    marketingEmail,
+    privacyPolicyVersion: commerceLaunchPolicy.privacyPolicyVersion,
+    recordedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    source: "customer-account"
+  };
+  const sudo = context.sudo();
+  const user = await sudo.query.User.findOne({
+    where: { id: userId },
+    query: "id userField { id preferences }"
+  });
+  if (!user) throw new Error("User not found");
+  if (user.userField?.id) {
+    await sudo.query.UserField.updateOne({
+      where: { id: user.userField.id },
+      data: {
+        preferences: {
+          ...user.userField.preferences || {},
+          privacy: receipt
+        }
+      }
+    });
+  } else {
+    await sudo.query.UserField.createOne({
+      data: {
+        user: { connect: { id: userId } },
+        preferences: { privacy: receipt }
+      }
+    });
+  }
+  return receipt;
+}
+async function requestPrivacyAction(root, { action, details }, context) {
+  const userId = context.session?.itemId;
+  if (!userId) throw new Error("Authentication required");
+  if (!allowedActions.has(action)) throw new Error("Unsupported privacy action");
+  const request = await context.sudo().query.Notification.createOne({
+    data: {
+      eventName: "PRIVACY_REQUEST",
+      resourceType: "User",
+      resourceId: userId,
+      to: "privacy-operations",
+      user: { connect: { id: userId } },
+      data: {
+        action,
+        details: typeof details === "string" ? details.slice(0, 2e3) : null,
+        status: "pending_identity_verification",
+        privacyPolicyVersion: commerceLaunchPolicy.privacyPolicyVersion,
+        retentionPolicyVersion: commerceLaunchPolicy.retentionPolicyVersion,
+        requestedAt: (/* @__PURE__ */ new Date()).toISOString()
+      }
+    },
+    query: "id eventName createdAt data"
+  });
+  return request;
+}
+async function getMyPrivacyData(root, args, context) {
+  const userId = context.session?.itemId;
+  if (!userId) throw new Error("Authentication required");
+  const user = await context.sudo().query.User.findOne({
+    where: { id: userId },
+    query: `
+      id name email phone createdAt updatedAt onboardingStatus
+      addresses { id firstName lastName company address1 address2 city province postalCode phone country { iso2 } }
+      userField { preferences }
+      orders(orderBy: { createdAt: desc }, take: 250) { id displayId status createdAt email }
+    `
+  });
+  if (!user) throw new Error("User not found");
+  return {
+    generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    privacyPolicyVersion: commerceLaunchPolicy.privacyPolicyVersion,
+    retentionPolicyVersion: commerceLaunchPolicy.retentionPolicyVersion,
+    user
+  };
+}
+
 // features/keystone/mutations/index.ts
 var graphql = String.raw;
 var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
@@ -5822,6 +7942,8 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
         getAnalytics(timeframe: String): JSON
         activeInvoice(invoiceId: ID!): JSON
         getCustomerPaidInvoices(limit: Int, offset: Int): JSON
+        getFinanceClose(start: String!, end: String!): JSON!
+        getMyPrivacyData: JSON!
         getProductsSortedByPrice(
           countryCode: String!
           limit: Int!
@@ -5974,6 +8096,7 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
 
       type Mutation {
         updateActiveUser(data: UserUpdateProfileInput!): User
+        createActiveCart(regionId: ID!): JSON!
         updateActiveCart(cartId: ID!, data: CartUpdateInput, code: String): Cart
         updateActiveCartLineItem(cartId: ID!, lineId: ID!, quantity: Int!): Cart
         updateActiveUserPassword(
@@ -5995,8 +8118,8 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
           paymentProviderId: String!
         ): PaymentSession
         handlePaymentProviderWebhook(providerId: ID!, event: JSON!, headers: JSON!): WebhookResult!
-        getAnalytics: JSON
         importInventory: Boolean
+        adjustInventory(variantId: ID!, delta: Int!, reason: String!, note: String): ProductVariant
         getRatesForOrder(orderId: ID!, providerId: ID!, dimensions: DimensionsInput): [ShippingRate!]!
         validateShippingAddress(providerId: ID!, address: JSON!): AddressValidationResult!
         trackShipment(providerId: ID!, trackingNumber: String!): ShipmentTrackingResult!
@@ -6007,14 +8130,28 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
           rateId: String!
           dimensions: DimensionsInput
           lineItems: [LineItemInput!]
+          idempotencyKey: String!
         ): ProviderShippingLabel
+        createOrderFulfillment(
+          orderId: ID!
+          lineItems: [LineItemInput!]!
+          trackingNumber: String
+          carrier: String
+          noNotification: Boolean
+          idempotencyKey: String!
+        ): Fulfillment!
+        cancelOrderFulfillment(fulfillmentId: ID!, reason: String!): Fulfillment!
+        transitionOrderStatus(orderId: ID!, status: String!, reason: String!): Order!
         regenerateCustomerToken: CustomerTokenResult!
-        payInvoice(invoiceId: ID!, paymentData: PaymentInput!): PaymentResult!
         createInvoiceFromLineItems(accountId: ID!, regionId: ID!, lineItemIds: [ID!]!, dueDate: String): InvoiceCreationResult!
         createInvoicePaymentSessions(invoiceId: ID!): Invoice!
         initiateInvoicePaymentSession(invoiceId: ID!, paymentProviderId: String!): PaymentSession
         setInvoicePaymentSession(invoiceId: ID!, providerId: ID!): Invoice
         completeInvoicePayment(paymentSessionId: ID!): InvoicePaymentResult!
+        processReturnRefund(returnId: ID!, paymentId: ID!, idempotencyKey: String!): Refund
+        retryWebhookDeliveries(limit: Int): Int!
+        updatePrivacyPreferences(preferences: JSON!): JSON!
+        requestPrivacyAction(action: String!, details: String): Notification
       }
     `,
   resolvers: {
@@ -6033,10 +8170,13 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
       getAnalytics: getAnalytics_default,
       activeInvoice: activeInvoice_default,
       getCustomerPaidInvoices: getCustomerPaidInvoices_default,
+      getFinanceClose: getFinanceClose_default,
+      getMyPrivacyData,
       getProductsSortedByPrice
     },
     Mutation: {
       updateActiveUserPassword: updateActiveUserPassword_default,
+      createActiveCart: createActiveCart_default,
       updateActiveCart: updateActiveCart_default,
       updateActiveCartLineItem: updateActiveCartLineItem_default,
       updateActiveUser: updateActiveUser_default,
@@ -6051,20 +8191,26 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
       addActiveCartShippingMethod: addActiveCartShippingMethod_default,
       initiatePaymentSession: initiatePaymentSession_default,
       handlePaymentProviderWebhook: handlePaymentProviderWebhook_default,
-      getAnalytics: getAnalytics_default,
       importInventory: importInventory_default,
+      adjustInventory: adjustInventory_default,
       getRatesForOrder: getRatesForOrder_default,
       validateShippingAddress: validateShippingAddress_default,
       trackShipment: trackShipment_default,
       cancelShippingLabel: cancelShippingLabel_default,
       createProviderShippingLabel: createProviderShippingLabel_default,
+      createOrderFulfillment: createOrderFulfillment_default,
+      cancelOrderFulfillment: cancelOrderFulfillment_default,
+      transitionOrderStatus: transitionOrderStatus_default,
       regenerateCustomerToken: regenerateCustomerToken_default,
-      payInvoice: payInvoice_default,
       createInvoiceFromLineItems: createInvoiceFromLineItems_default,
       createInvoicePaymentSessions: createInvoicePaymentSessions_default,
       initiateInvoicePaymentSession: initiateInvoicePaymentSession_default,
       setInvoicePaymentSession: setInvoicePaymentSession_default,
-      completeInvoicePayment: completeInvoicePayment_default
+      completeInvoicePayment: completeInvoicePayment_default,
+      processReturnRefund: processReturnRefund_default,
+      retryWebhookDeliveries: retryWebhookDeliveries_default,
+      updatePrivacyPreferences,
+      requestPrivacyAction
     }
   }
 });
@@ -6097,6 +8243,34 @@ var trackingFields = {
   })
 };
 
+// features/keystone/security/address-input.ts
+var CUSTOMER_ADDRESS_FIELDS = /* @__PURE__ */ new Set([
+  "company",
+  "firstName",
+  "lastName",
+  "address1",
+  "address2",
+  "city",
+  "province",
+  "postalCode",
+  "phone",
+  "isBilling",
+  "metadata",
+  "country"
+]);
+function resolveCustomerAddressData({
+  inputData,
+  resolvedData,
+  userId
+}) {
+  const restrictedData = { ...resolvedData };
+  for (const key of Object.keys(inputData ?? {})) {
+    if (!CUSTOMER_ADDRESS_FIELDS.has(key)) delete restrictedData[key];
+  }
+  restrictedData.user = { connect: { id: userId } };
+  return restrictedData;
+}
+
 // features/keystone/models/Address.ts
 var canManageAddresses = ({ session }) => {
   if (!isSignedIn({ session })) {
@@ -6110,15 +8284,27 @@ var canManageAddresses = ({ session }) => {
 var Address = (0, import_core.list)({
   access: {
     operation: {
-      create: () => true,
+      create: isSignedIn,
       query: isSignedIn,
-      update: permissions.canManageUsers,
-      delete: permissions.canManageUsers
+      update: isSignedIn,
+      delete: isSignedIn
     },
     filter: {
       query: canManageAddresses,
       update: canManageAddresses,
       delete: canManageAddresses
+    }
+  },
+  hooks: {
+    resolveInput: ({ operation, inputData, resolvedData, context }) => {
+      if ((operation === "create" || operation === "update") && !permissions.canManageUsers({ session: context.session })) {
+        return resolveCustomerAddressData({
+          inputData,
+          resolvedData,
+          userId: context.session.itemId
+        });
+      }
+      return resolvedData;
     }
   },
   fields: {
@@ -6172,7 +8358,7 @@ var Address = (0, import_core.list)({
       many: false,
       hooks: {
         resolveInput({ operation, resolvedData, context }) {
-          if ((operation === "create" || operation === "update") && !resolvedData.user && context.session?.itemId) {
+          if ((operation === "create" || operation === "update") && context.session?.itemId && !permissions.canManageUsers({ session: context.session })) {
             return { connect: { id: context.session.itemId } };
           }
           return resolvedData.user;
@@ -6403,9 +8589,9 @@ var Capture = (0, import_core4.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadPayments({ session }) || permissions.canManagePayments({ session }),
-      create: permissions.canManagePayments,
-      update: permissions.canManagePayments,
-      delete: permissions.canManagePayments
+      create: () => false,
+      update: () => false,
+      delete: () => false
     }
   },
   fields: {
@@ -6616,6 +8802,13 @@ var Cart = (0, import_core5.list)({
   hooks: {
     async beforeOperation({ operation, resolvedData, context, item }) {
       const sudoContext = context.sudo();
+      if (operation === "create" && !permissions.canManageOrders({ session: context.session })) {
+        const allowedCreateFields = /* @__PURE__ */ new Set(["region", "type"]);
+        for (const key of Object.keys(resolvedData)) {
+          if (!allowedCreateFields.has(key)) delete resolvedData[key];
+        }
+        resolvedData.type = "default";
+      }
       if (operation === "create" && context.session?.itemId) {
         resolvedData.user = { connect: { id: context.session.itemId } };
       }
@@ -7797,7 +9990,7 @@ var Country = (0, import_core10.list)({
 // features/keystone/models/Currency.ts
 var import_core11 = require("@keystone-6/core");
 var import_fields14 = require("@keystone-6/core/fields");
-var NO_DIVISION_CURRENCIES2 = ["jpy", "krw", "vnd"];
+var NO_DIVISION_CURRENCIES3 = ["jpy", "krw", "vnd"];
 var Currency = (0, import_core11.list)({
   access: {
     operation: {
@@ -7857,7 +10050,7 @@ var Currency = (0, import_core11.list)({
           field: import_core11.graphql.field({
             type: import_core11.graphql.Boolean,
             resolve(item) {
-              return NO_DIVISION_CURRENCIES2.includes(item.code.toLowerCase());
+              return NO_DIVISION_CURRENCIES3.includes(item.code.toLowerCase());
             }
           })
         })
@@ -8230,582 +10423,13 @@ var DraftOrder = (0, import_core17.list)({
 // features/keystone/models/Fulfillment.ts
 var import_core18 = require("@keystone-6/core");
 var import_fields21 = require("@keystone-6/core/fields");
-
-// features/keystone/lib/mail.ts
-var import_nodemailer = require("nodemailer");
-function getBaseUrlForEmails() {
-  if (process.env.SMTP_STORE_LINK) {
-    return process.env.SMTP_STORE_LINK;
-  }
-  console.warn("SMTP_STORE_LINK not set. Please add SMTP_STORE_LINK to your environment variables for email links to work properly.");
-  return "";
-}
-var transport = (0, import_nodemailer.createTransport)({
-  // @ts-ignore
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASSWORD
-  }
-});
-function passwordResetEmail({ url }) {
-  const backgroundColor = "#f9f9f9";
-  const textColor = "#444444";
-  const mainBackgroundColor = "#ffffff";
-  const buttonBackgroundColor = "#346df1";
-  const buttonBorderColor = "#346df1";
-  const buttonTextColor = "#ffffff";
-  return `
-    <body style="background: ${backgroundColor};">
-      <table width="100%" border="0" cellspacing="20" cellpadding="0" style="background: ${mainBackgroundColor}; max-width: 600px; margin: auto; border-radius: 10px;">
-        <tr>
-          <td align="center" style="padding: 10px 0px 0px 0px; font-size: 18px; font-family: Helvetica, Arial, sans-serif; color: ${textColor};">
-            Please click below to reset your password
-          </td>
-        </tr>
-        <tr>
-          <td align="center" style="padding: 20px 0;">
-            <table border="0" cellspacing="0" cellpadding="0">
-              <tr>
-                <td align="center" style="border-radius: 5px;" bgcolor="${buttonBackgroundColor}"><a href="${url}" target="_blank" style="font-size: 18px; font-family: Helvetica, Arial, sans-serif; color: ${buttonTextColor}; text-decoration: none; border-radius: 5px; padding: 10px 20px; border: 1px solid ${buttonBorderColor}; display: inline-block; font-weight: bold;">Reset Password</a></td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td align="center" style="padding: 0px 0px 10px 0px; font-size: 16px; line-height: 22px; font-family: Helvetica, Arial, sans-serif; color: ${textColor};">
-            If you did not request this email you can safely ignore it.
-          </td>
-        </tr>
-      </table>
-    </body>
-  `;
-}
-async function sendPasswordResetEmail(resetToken, to, baseUrl) {
-  const frontendUrl = baseUrl || getBaseUrlForEmails();
-  const info = await transport.sendMail({
-    to,
-    from: process.env.SMTP_FROM,
-    subject: "Your password reset token!",
-    html: passwordResetEmail({
-      url: `${frontendUrl}${basePath && basePath}/reset?token=${resetToken}`
-    })
-  });
-  if (process.env.MAIL_USER?.includes("ethereal.email")) {
-    console.log(`\u{1F4E7} Message Sent!  Preview it at ${(0, import_nodemailer.getTestMessageUrl)(info)}`);
-  }
-}
-function orderConfirmationEmail({ order, orderUrl }) {
-  const backgroundColor = "#f9f9f9";
-  const textColor = "#444444";
-  const mainBackgroundColor = "#ffffff";
-  const buttonBackgroundColor = "#346df1";
-  const buttonBorderColor = "#346df1";
-  const buttonTextColor = "#ffffff";
-  const headerColor = "#333333";
-  const itemsHtml = order.lineItems?.map((item) => `
-    <tr>
-      <td style="padding: 10px; border-bottom: 1px solid #eee;">
-        <strong>${item.title}</strong><br>
-        ${item.variantTitle ? `<span style="color: #666; font-size: 14px;">${item.variantTitle}</span><br>` : ""}
-        ${item.sku ? `<span style="color: #666; font-size: 14px;">SKU: ${item.sku}</span><br>` : ""}
-        Quantity: ${item.quantity}
-      </td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">
-        ${item.formattedUnitPrice}
-      </td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">
-        ${item.formattedTotal}
-      </td>
-    </tr>
-  `).join("") || "";
-  return `
-    <body style="background: ${backgroundColor};">
-      <table width="100%" border="0" cellspacing="20" cellpadding="0" style="background: ${mainBackgroundColor}; max-width: 600px; margin: auto; border-radius: 10px;">
-        <tr>
-          <td align="center" style="padding: 20px 0px 0px 0px; font-size: 24px; font-family: Helvetica, Arial, sans-serif; color: ${headerColor}; font-weight: bold;">
-            Order Confirmation
-          </td>
-        </tr>
-        <tr>
-          <td align="center" style="padding: 10px 0px 0px 0px; font-size: 18px; font-family: Helvetica, Arial, sans-serif; color: ${textColor};">
-            Thank you for your order! Your order #${order.displayId} has been confirmed.
-          </td>
-        </tr>
-        <tr>
-          <td style="padding: 20px 0;">
-            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border: 1px solid #eee;">
-              <tr style="background: #f8f9fa;">
-                <th style="padding: 15px; text-align: left; font-family: Helvetica, Arial, sans-serif; color: ${headerColor};">Item</th>
-                <th style="padding: 15px; text-align: right; font-family: Helvetica, Arial, sans-serif; color: ${headerColor};">Price</th>
-                <th style="padding: 15px; text-align: right; font-family: Helvetica, Arial, sans-serif; color: ${headerColor};">Total</th>
-              </tr>
-              ${itemsHtml}
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding: 20px 0;">
-            <table width="100%" border="0" cellspacing="0" cellpadding="0">
-              <tr>
-                <td style="padding: 5px 0; text-align: right; font-family: Helvetica, Arial, sans-serif; color: ${textColor};">
-                  Subtotal: ${order.subtotal}
-                </td>
-              </tr>
-              ${order.shipping && order.shipping !== "$0.00" ? `
-              <tr>
-                <td style="padding: 5px 0; text-align: right; font-family: Helvetica, Arial, sans-serif; color: ${textColor};">
-                  Shipping: ${order.shipping}
-                </td>
-              </tr>
-              ` : ""}
-              ${order.discount && order.discount !== "$0.00" ? `
-              <tr>
-                <td style="padding: 5px 0; text-align: right; font-family: Helvetica, Arial, sans-serif; color: ${textColor};">
-                  Discount: -${order.discount}
-                </td>
-              </tr>
-              ` : ""}
-              ${order.tax && order.tax !== "$0.00" ? `
-              <tr>
-                <td style="padding: 5px 0; text-align: right; font-family: Helvetica, Arial, sans-serif; color: ${textColor};">
-                  Tax: ${order.tax}
-                </td>
-              </tr>
-              ` : ""}
-              <tr>
-                <td style="padding: 10px 0; text-align: right; font-family: Helvetica, Arial, sans-serif; color: ${headerColor}; font-weight: bold; font-size: 18px; border-top: 2px solid #eee;">
-                  Total: ${order.total}
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        ${order.shippingAddress ? `
-        <tr>
-          <td style="padding: 20px 0;">
-            <h3 style="font-family: Helvetica, Arial, sans-serif; color: ${headerColor}; margin: 0 0 10px 0;">Shipping Address</h3>
-            <p style="font-family: Helvetica, Arial, sans-serif; color: ${textColor}; margin: 0; line-height: 1.4;">
-              ${order.shippingAddress.firstName} ${order.shippingAddress.lastName}<br>
-              ${order.shippingAddress.company ? `${order.shippingAddress.company}<br>` : ""}
-              ${order.shippingAddress.address1}<br>
-              ${order.shippingAddress.address2 ? `${order.shippingAddress.address2}<br>` : ""}
-              ${order.shippingAddress.city}, ${order.shippingAddress.province} ${order.shippingAddress.postalCode}<br>
-              ${order.shippingAddress.country?.displayName || order.shippingAddress.country?.iso2}<br>
-              ${order.shippingAddress.phone ? `Phone: ${order.shippingAddress.phone}` : ""}
-            </p>
-          </td>
-        </tr>
-        ` : ""}
-        <tr>
-          <td align="center" style="padding: 20px 0;">
-            <table border="0" cellspacing="0" cellpadding="0">
-              <tr>
-                <td align="center" style="border-radius: 5px;" bgcolor="${buttonBackgroundColor}">
-                  <a href="${orderUrl}" target="_blank" style="font-size: 18px; font-family: Helvetica, Arial, sans-serif; color: ${buttonTextColor}; text-decoration: none; border-radius: 5px; padding: 12px 24px; border: 1px solid ${buttonBorderColor}; display: inline-block; font-weight: bold;">
-                    View Order Details
-                  </a>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td align="center" style="padding: 0px 0px 20px 0px; font-size: 14px; line-height: 20px; font-family: Helvetica, Arial, sans-serif; color: ${textColor};">
-            We'll send you another email when your order ships. If you have any questions, please contact us.
-          </td>
-        </tr>
-      </table>
-    </body>
-  `;
-}
-function orderFulfillmentEmail({ order, fulfillment, orderUrl }) {
-  const backgroundColor = "#f9f9f9";
-  const textColor = "#444444";
-  const mainBackgroundColor = "#ffffff";
-  const buttonBackgroundColor = "#346df1";
-  const buttonBorderColor = "#346df1";
-  const buttonTextColor = "#ffffff";
-  const headerColor = "#333333";
-  const itemsHtml = fulfillment.items?.map((item) => `
-    <tr>
-      <td style="padding: 10px; border-bottom: 1px solid #eee;">
-        <strong>${item.lineItem.title}</strong><br>
-        ${item.lineItem.variantTitle ? `<span style="color: #666; font-size: 14px;">${item.lineItem.variantTitle}</span><br>` : ""}
-        ${item.lineItem.sku ? `<span style="color: #666; font-size: 14px;">SKU: ${item.lineItem.sku}</span><br>` : ""}
-        Quantity: ${item.quantity}
-      </td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">
-        ${item.lineItem.formattedUnitPrice}
-      </td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">
-        ${item.lineItem.formattedTotal}
-      </td>
-    </tr>
-  `).join("") || "";
-  const trackingHtml = fulfillment.shippingLabels?.map((label) => `
-    <tr>
-      <td style="padding: 10px; border-bottom: 1px solid #eee;">
-        <strong>${label.carrier}</strong><br>
-        Tracking: ${label.trackingNumber}
-      </td>
-      <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">
-        ${label.url ? `<a href="${label.url}" target="_blank" style="color: ${buttonBackgroundColor}; text-decoration: none;">Track Package</a>` : ""}
-      </td>
-    </tr>
-  `).join("") || "";
-  return `
-    <body style="background: ${backgroundColor};">
-      <table width="100%" border="0" cellspacing="20" cellpadding="0" style="background: ${mainBackgroundColor}; max-width: 600px; margin: auto; border-radius: 10px;">
-        <tr>
-          <td align="center" style="padding: 20px 0px 0px 0px; font-size: 24px; font-family: Helvetica, Arial, sans-serif; color: ${headerColor}; font-weight: bold;">
-            Order Shipped
-          </td>
-        </tr>
-        <tr>
-          <td align="center" style="padding: 10px 0px 0px 0px; font-size: 18px; font-family: Helvetica, Arial, sans-serif; color: ${textColor};">
-            Good news! Your order #${order.displayId} has been shipped.
-          </td>
-        </tr>
-        ${trackingHtml ? `
-        <tr>
-          <td style="padding: 20px 0;">
-            <h3 style="font-family: Helvetica, Arial, sans-serif; color: ${headerColor}; margin: 0 0 10px 0;">Tracking Information</h3>
-            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border: 1px solid #eee;">
-              <tr style="background: #f8f9fa;">
-                <th style="padding: 15px; text-align: left; font-family: Helvetica, Arial, sans-serif; color: ${headerColor};">Carrier & Tracking</th>
-                <th style="padding: 15px; text-align: right; font-family: Helvetica, Arial, sans-serif; color: ${headerColor};">Track</th>
-              </tr>
-              ${trackingHtml}
-            </table>
-          </td>
-        </tr>
-        ` : ""}
-        <tr>
-          <td style="padding: 20px 0;">
-            <h3 style="font-family: Helvetica, Arial, sans-serif; color: ${headerColor}; margin: 0 0 10px 0;">Items Shipped</h3>
-            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border: 1px solid #eee;">
-              <tr style="background: #f8f9fa;">
-                <th style="padding: 15px; text-align: left; font-family: Helvetica, Arial, sans-serif; color: ${headerColor};">Item</th>
-                <th style="padding: 15px; text-align: right; font-family: Helvetica, Arial, sans-serif; color: ${headerColor};">Price</th>
-                <th style="padding: 15px; text-align: right; font-family: Helvetica, Arial, sans-serif; color: ${headerColor};">Total</th>
-              </tr>
-              ${itemsHtml}
-            </table>
-          </td>
-        </tr>
-        ${order.shippingAddress ? `
-        <tr>
-          <td style="padding: 20px 0;">
-            <h3 style="font-family: Helvetica, Arial, sans-serif; color: ${headerColor}; margin: 0 0 10px 0;">Shipping Address</h3>
-            <p style="font-family: Helvetica, Arial, sans-serif; color: ${textColor}; margin: 0; line-height: 1.4;">
-              ${order.shippingAddress.firstName} ${order.shippingAddress.lastName}<br>
-              ${order.shippingAddress.company ? `${order.shippingAddress.company}<br>` : ""}
-              ${order.shippingAddress.address1}<br>
-              ${order.shippingAddress.address2 ? `${order.shippingAddress.address2}<br>` : ""}
-              ${order.shippingAddress.city}, ${order.shippingAddress.province} ${order.shippingAddress.postalCode}<br>
-              ${order.shippingAddress.country?.displayName || order.shippingAddress.country?.iso2}<br>
-              ${order.shippingAddress.phone ? `Phone: ${order.shippingAddress.phone}` : ""}
-            </p>
-          </td>
-        </tr>
-        ` : ""}
-        <tr>
-          <td align="center" style="padding: 20px 0;">
-            <table border="0" cellspacing="0" cellpadding="0">
-              <tr>
-                <td align="center" style="border-radius: 5px;" bgcolor="${buttonBackgroundColor}">
-                  <a href="${orderUrl}" target="_blank" style="font-size: 18px; font-family: Helvetica, Arial, sans-serif; color: ${buttonTextColor}; text-decoration: none; border-radius: 5px; padding: 12px 24px; border: 1px solid ${buttonBorderColor}; display: inline-block; font-weight: bold;">
-                    View Order Details
-                  </a>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td align="center" style="padding: 0px 0px 20px 0px; font-size: 14px; line-height: 20px; font-family: Helvetica, Arial, sans-serif; color: ${textColor};">
-            Thank you for your order! If you have any questions, please contact us.
-          </td>
-        </tr>
-      </table>
-    </body>
-  `;
-}
-async function sendOrderConfirmationEmail(order, baseUrl) {
-  if (!order.email) {
-    console.warn("No email address found for order", order.id);
-    return;
-  }
-  const countryCode = order.shippingAddress?.country?.iso2?.toLowerCase() || "us";
-  const frontendUrl = baseUrl || getBaseUrlForEmails();
-  const orderUrl = order.secretKey ? `${frontendUrl}/${countryCode}/order/confirmed/${order.id}?secretKey=${order.secretKey}` : `${frontendUrl}/${countryCode}/order/confirmed/${order.id}`;
-  try {
-    const info = await transport.sendMail({
-      to: order.email,
-      from: process.env.SMTP_FROM,
-      subject: `Order Confirmation - Order #${order.displayId}`,
-      html: orderConfirmationEmail({ order, orderUrl })
-    });
-    if (process.env.SMTP_USER?.includes("ethereal.email")) {
-      console.log(`\u{1F4E7} Order confirmation email sent! Preview it at ${(0, import_nodemailer.getTestMessageUrl)(info)}`);
-    } else {
-      console.log(`\u{1F4E7} Order confirmation email sent to ${order.email}`);
-    }
-    if (order.user?.orderWebhookUrl) {
-      try {
-        const webhookPayload = {
-          event: "order.created",
-          data: {
-            order: {
-              id: order.id,
-              displayId: order.displayId,
-              status: order.status,
-              total: order.total,
-              formattedTotal: order.formattedTotal || order.total,
-              createdAt: order.createdAt,
-              email: order.email,
-              customer: {
-                id: order.user.id,
-                email: order.user.email
-              },
-              shippingAddress: order.shippingAddress,
-              lineItems: order.lineItems || []
-            }
-          },
-          timestamp: (/* @__PURE__ */ new Date()).toISOString()
-        };
-        console.log(`\u{1FA9D} Calling webhook for order ${order.displayId}: ${order.user.orderWebhookUrl}`);
-        const webhookResponse = await fetch(order.user.orderWebhookUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "User-Agent": "OpenFront-Webhook/1.0",
-            "X-OpenFront-Event": "order.created",
-            "X-OpenFront-Order-ID": order.id
-          },
-          body: JSON.stringify(webhookPayload)
-        });
-        if (webhookResponse.ok) {
-        } else {
-        }
-      } catch (webhookError) {
-      }
-    }
-  } catch (error) {
-    console.error("Failed to send order confirmation email:", error);
-  }
-}
-async function sendOrderFulfillmentEmail(order, fulfillment, baseUrl) {
-  if (!order.email) {
-    console.warn("No email address found for order", order.id);
-    return;
-  }
-  const countryCode = order.shippingAddress?.country?.iso2?.toLowerCase() || "us";
-  const frontendUrl = baseUrl || getBaseUrlForEmails();
-  const orderUrl = order.secretKey ? `${frontendUrl}/${countryCode}/order/confirmed/${order.id}?secretKey=${order.secretKey}` : `${frontendUrl}/${countryCode}/order/confirmed/${order.id}`;
-  try {
-    const info = await transport.sendMail({
-      to: order.email,
-      from: process.env.SMTP_FROM,
-      subject: `Order Shipped - Order #${order.displayId}`,
-      html: orderFulfillmentEmail({ order, fulfillment, orderUrl })
-    });
-    if (process.env.SMTP_USER?.includes("ethereal.email")) {
-      console.log(`\u{1F4E7} Order fulfillment email sent! Preview it at ${(0, import_nodemailer.getTestMessageUrl)(info)}`);
-    } else {
-      console.log(`\u{1F4E7} Order fulfillment email sent to ${order.email}`);
-    }
-    if (order.user?.orderWebhookUrl) {
-      try {
-        const webhookPayload = {
-          event: "order.shipped",
-          data: {
-            order: {
-              id: order.id,
-              displayId: order.displayId,
-              status: order.status,
-              total: order.total,
-              formattedTotal: order.formattedTotal || order.total,
-              createdAt: order.createdAt,
-              email: order.email,
-              customer: {
-                id: order.user.id,
-                email: order.user.email
-              },
-              shippingAddress: order.shippingAddress,
-              lineItems: order.lineItems || []
-            },
-            fulfillment: {
-              id: fulfillment.id,
-              trackingNumber: fulfillment.trackingNumber,
-              trackingCompany: fulfillment.trackingCompany,
-              shippingLabels: fulfillment.shippingLabels || []
-            }
-          },
-          timestamp: (/* @__PURE__ */ new Date()).toISOString()
-        };
-        console.log(`\u{1FA9D} Calling webhook for shipped order ${order.displayId}: ${order.user.orderWebhookUrl}`);
-        const webhookResponse = await fetch(order.user.orderWebhookUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "User-Agent": "OpenFront-Webhook/1.0",
-            "X-OpenFront-Event": "order.shipped",
-            "X-OpenFront-Order-ID": order.id
-          },
-          body: JSON.stringify(webhookPayload)
-        });
-        if (webhookResponse.ok) {
-        } else {
-        }
-      } catch (webhookError) {
-      }
-    }
-  } catch (error) {
-    console.error("Failed to send order fulfillment email:", error);
-  }
-}
-
-// features/keystone/models/Fulfillment.ts
-async function callOrderWebhook(context, order, eventType, additionalData = {}) {
-  try {
-    const orderWithUser = await context.sudo().query.Order.findOne({
-      where: { id: order.id },
-      query: `
-        user {
-          id
-          orderWebhookUrl
-        }
-      `
-    });
-    const webhookUrl = orderWithUser?.user?.orderWebhookUrl;
-    if (!webhookUrl) {
-      return;
-    }
-    const payload = {
-      event: eventType,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-      order: {
-        id: order.id,
-        displayId: order.displayId,
-        email: order.email,
-        secretKey: order.secretKey,
-        status: order.status,
-        total: order.total,
-        shippingAddress: order.shippingAddress
-      },
-      ...additionalData
-    };
-    const response = await fetch(webhookUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": "Openfront-Webhooks/1.0"
-      },
-      body: JSON.stringify(payload)
-    });
-    if (!response.ok) {
-      console.warn(`Order webhook call failed: ${response.status} ${response.statusText} for URL: ${webhookUrl}`);
-    } else {
-      console.log(`Order webhook successfully called: ${webhookUrl} for order ${order.displayId}`);
-    }
-  } catch (error) {
-    console.error("Error calling order webhook:", error);
-  }
-}
 var Fulfillment = (0, import_core18.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadFulfillments({ session }) || permissions.canManageFulfillments({ session }),
-      create: permissions.canManageFulfillments,
-      update: permissions.canManageFulfillments,
-      delete: permissions.canManageFulfillments
-    }
-  },
-  hooks: {
-    beforeDelete: async ({ context, item }) => {
-      await context.db.FulfillmentItem.deleteMany({
-        where: { fulfillment: { id: item.id } }
-      });
-      await context.db.ShippingLabel.deleteMany({
-        where: { fulfillment: { id: item.id } }
-      });
-    },
-    afterOperation: async ({ operation, item, context }) => {
-      if (operation === "create" && item && !item.noNotification) {
-        try {
-          const fulfillment = await context.sudo().query.Fulfillment.findOne({
-            where: { id: item.id },
-            query: `
-              id
-              noNotification
-              shippingLabels {
-                id
-                trackingNumber
-                trackingUrl
-                carrier
-                labelUrl
-              }
-              fulfillmentItems {
-                id
-                quantity
-                lineItem {
-                  id
-                  title
-                  sku
-                  variantTitle
-                  formattedUnitPrice
-                  formattedTotal
-                }
-              }
-              order {
-                id
-                displayId
-                email
-                secretKey
-                shippingAddress {
-                  id
-                  firstName
-                  lastName
-                  company
-                  address1
-                  address2
-                  city
-                  province
-                  postalCode
-                  phone
-                  country {
-                    id
-                    iso2
-                    displayName
-                  }
-                }
-              }
-            `
-          });
-          if (fulfillment?.order) {
-            const fulfillmentData = {
-              items: fulfillment.fulfillmentItems,
-              shippingLabels: fulfillment.shippingLabels?.map((label) => ({
-                id: label.id,
-                trackingNumber: label.trackingNumber,
-                url: label.trackingUrl,
-                carrier: label.carrier,
-                labelUrl: label.labelUrl
-              })) || []
-            };
-            await sendOrderFulfillmentEmail(fulfillment.order, fulfillmentData);
-            await callOrderWebhook(context, fulfillment.order, "order.fulfilled", {
-              fulfillment: fulfillmentData,
-              operation: "fulfilled"
-            });
-          }
-        } catch (error) {
-          console.error("Error sending order fulfillment email:", error);
-        }
-      }
+      create: () => false,
+      update: () => false,
+      delete: () => false
     }
   },
   fields: {
@@ -8922,9 +10546,9 @@ var FulfillmentItem = (0, import_core19.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadFulfillments({ session }) || permissions.canManageFulfillments({ session }),
-      create: permissions.canManageFulfillments,
-      update: permissions.canManageFulfillments,
-      delete: permissions.canManageFulfillments
+      create: () => false,
+      update: () => false,
+      delete: () => false
     }
   },
   fields: {
@@ -9113,9 +10737,9 @@ var IdempotencyKey = (0, import_core23.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadIdempotencyKeys({ session }) || permissions.canManageIdempotencyKeys({ session }),
-      create: permissions.canManageIdempotencyKeys,
-      update: permissions.canManageIdempotencyKeys,
-      delete: permissions.canManageIdempotencyKeys
+      create: () => false,
+      update: () => false,
+      delete: () => false
     }
   },
   fields: {
@@ -9622,8 +11246,8 @@ var Account = (0, import_core25.list)({
   hooks: {
     resolveInput({ operation, resolvedData }) {
       if (operation === "create" && !resolvedData.accountNumber) {
-        const timestamp29 = Date.now();
-        resolvedData.accountNumber = `ACC-${(/* @__PURE__ */ new Date()).getFullYear()}-${String(timestamp29).slice(-6)}`;
+        const timestamp28 = Date.now();
+        resolvedData.accountNumber = `ACC-${(/* @__PURE__ */ new Date()).getFullYear()}-${String(timestamp28).slice(-6)}`;
       }
       return resolvedData;
     }
@@ -9637,9 +11261,9 @@ var AccountLineItem = (0, import_core26.list)({
   access: {
     operation: {
       query: permissions.canManageOrders,
-      create: permissions.canManageOrders,
-      update: permissions.canManageOrders,
-      delete: permissions.canManageOrders
+      create: () => false,
+      update: () => false,
+      delete: () => false
     }
   },
   fields: {
@@ -9653,6 +11277,11 @@ var AccountLineItem = (0, import_core26.list)({
       ref: "Order.accountLineItems",
       many: false,
       validation: { isRequired: true }
+    }),
+    orderKey: (0, import_fields29.text)({
+      isIndexed: "unique",
+      db: { isNullable: true },
+      ui: { itemView: { fieldMode: "read" }, createView: { fieldMode: "hidden" } }
     }),
     region: (0, import_fields29.relationship)({
       ref: "Region.accountLineItems",
@@ -9678,7 +11307,8 @@ var AccountLineItem = (0, import_core26.list)({
     paymentStatus: (0, import_fields29.select)({
       options: [
         { label: "Unpaid", value: "unpaid" },
-        { label: "Paid", value: "paid" }
+        { label: "Paid", value: "paid" },
+        { label: "Canceled", value: "canceled" }
       ],
       defaultValue: "unpaid",
       validation: { isRequired: true }
@@ -9828,9 +11458,9 @@ var Invoice = (0, import_core27.list)({
   access: {
     operation: {
       query: permissions.canManageOrders,
-      create: permissions.canManageOrders,
-      update: permissions.canManageOrders,
-      delete: permissions.canManageOrders
+      create: () => false,
+      update: () => false,
+      delete: () => false
     }
   },
   fields: {
@@ -9895,7 +11525,8 @@ var Invoice = (0, import_core27.list)({
       many: true
     }),
     paymentCollection: (0, import_fields30.relationship)({
-      ref: "PaymentCollection.invoice"
+      ref: "PaymentCollection.invoice",
+      db: { foreignKey: true }
     }),
     // Virtual computed fields
     ...(0, import_core27.group)({
@@ -10001,8 +11632,8 @@ var Invoice = (0, import_core27.list)({
   hooks: {
     resolveInput({ operation, resolvedData }) {
       if (operation === "create" && !resolvedData.invoiceNumber) {
-        const timestamp29 = Date.now();
-        resolvedData.invoiceNumber = `INV-${(/* @__PURE__ */ new Date()).getFullYear()}-${String(timestamp29).slice(-6)}`;
+        const timestamp28 = Date.now();
+        resolvedData.invoiceNumber = `INV-${(/* @__PURE__ */ new Date()).getFullYear()}-${String(timestamp28).slice(-6)}`;
       }
       return resolvedData;
     }
@@ -10016,9 +11647,9 @@ var InvoiceLineItem = (0, import_core28.list)({
   access: {
     operation: {
       query: permissions.canManageOrders,
-      create: permissions.canManageOrders,
-      update: permissions.canManageOrders,
-      delete: permissions.canManageOrders
+      create: () => false,
+      update: () => false,
+      delete: () => false
     }
   },
   fields: {
@@ -10120,8 +11751,7 @@ var BusinessAccountRequest = (0, import_core29.list)({
     // Core relationship
     user: (0, import_fields32.relationship)({
       ref: "User.businessAccountRequest",
-      many: false,
-      validation: { isRequired: true }
+      many: false
     }),
     // Request details
     businessName: (0, import_fields32.text)({
@@ -10199,7 +11829,7 @@ var BusinessAccountRequest = (0, import_core29.list)({
           field: import_core29.graphql.field({
             type: import_core29.graphql.String,
             resolve(item) {
-              const amount = (item.requestedCreditLimit || 0) / 100;
+              const amount = Number(item.requestedCreditLimit || 0) / 100;
               return new Intl.NumberFormat("en-US", {
                 style: "currency",
                 currency: "USD"
@@ -10212,7 +11842,7 @@ var BusinessAccountRequest = (0, import_core29.list)({
             type: import_core29.graphql.String,
             resolve(item) {
               if (!item.approvedCreditLimit) return null;
-              const amount = (item.approvedCreditLimit || 0) / 100;
+              const amount = Number(item.approvedCreditLimit || 0) / 100;
               return new Intl.NumberFormat("en-US", {
                 style: "currency",
                 currency: "USD"
@@ -10268,34 +11898,28 @@ var BusinessAccountRequest = (0, import_core29.list)({
     ...trackingFields
   },
   hooks: {
-    beforeOperation: async ({ operation, item, originalItem, inputData, resolvedData, context }) => {
-      console.log("=== BusinessAccountRequest beforeOperation Hook ===");
-      console.log("operation:", operation);
-      console.log("inputData:", JSON.stringify(inputData, null, 2));
-      console.log("item (current item):", JSON.stringify(item, null, 2));
-      if (operation === "update" && item?.id && inputData?.status === "approved" && item?.status !== "approved") {
-        const accountId = await createAccountFromApprovedRequest(
-          { id: item.id, ...inputData },
-          context
-        );
-        if (accountId) {
-          return {
-            ...resolvedData,
-            generatedAccount: { connect: { id: accountId } }
-          };
-        }
-      } else {
-        console.log('  - operation === "update":', operation === "update");
-        console.log("  - item?.id exists:", !!item?.id);
-        console.log('  - inputData?.status === "approved":', inputData?.status === "approved");
-        console.log('  - item?.status !== "approved":', item?.status !== "approved");
+    validateInput: async ({ operation, resolvedData, item, addValidationError }) => {
+      if (operation === "create" && !resolvedData.user) {
+        addValidationError("A user is required");
       }
-      return resolvedData;
+      if (operation === "update" && resolvedData.status === "approved" && !resolvedData.approvedCreditLimit && !item?.approvedCreditLimit) {
+        addValidationError("An approved credit limit is required");
+      }
+    },
+    afterOperation: async ({ operation, item, originalItem, context }) => {
+      if (operation === "update" && item?.status === "approved" && originalItem?.status !== "approved" && !item.generatedAccountId) {
+        const accountId = await createAccountFromApprovedRequest(item, context);
+        if (accountId) {
+          await context.sudo().query.BusinessAccountRequest.updateOne({
+            where: { id: String(item.id) },
+            data: { generatedAccount: { connect: { id: accountId } } }
+          });
+        }
+      }
     }
   }
 });
 async function createAccountFromApprovedRequest(request, context) {
-  console.log("request.id:", request.id);
   try {
     const fullRequest = await context.sudo().query.BusinessAccountRequest.findOne({
       where: { id: request.id },
@@ -10311,16 +11935,13 @@ async function createAccountFromApprovedRequest(request, context) {
         }
       `
     });
-    console.log("fullRequest:", JSON.stringify(fullRequest, null, 2));
     if (!fullRequest) {
       return null;
     }
-    console.log("\u{1F4B0} Looking for USD currency...");
     const defaultCurrency = await context.sudo().query.Currency.findOne({
       where: { code: "usd" },
       query: "id code"
     });
-    console.log("defaultCurrency:", defaultCurrency);
     if (!defaultCurrency) {
       return null;
     }
@@ -10343,27 +11964,11 @@ async function createAccountFromApprovedRequest(request, context) {
         }
       }
     });
-    console.log("\u{1F511} Generating customer token...");
-    const customerToken = generateSecureToken();
-    console.log("Generated token:", customerToken);
-    console.log("\u{1F464} Updating user with customer token...");
-    await context.sudo().query.User.updateOne({
-      where: { id: fullRequest.user.id },
-      data: {
-        customerToken,
-        tokenGeneratedAt: (/* @__PURE__ */ new Date()).toISOString()
-      }
-    });
-    console.log(`Account created for user ${fullRequest.user.email}, token: ${customerToken}`);
     return account.id;
   } catch (error) {
     console.error("Error creating account from approved request:", error);
     return null;
   }
-}
-function generateSecureToken() {
-  const crypto3 = require("crypto");
-  return "ctok_" + crypto3.randomBytes(32).toString("hex");
 }
 
 // features/keystone/models/LineItem.ts
@@ -11004,8 +12609,8 @@ var MoneyAmount = (0, import_core35.list)({
               let originalAmount = moneyAmount.amount;
               let appliedPriceList = null;
               if (moneyAmount.priceList) {
-                const startDate = new Date(moneyAmount.priceList.startsAt);
-                const endDate = new Date(moneyAmount.priceList.endsAt);
+                const startDate = moneyAmount.priceList.startsAt ? new Date(moneyAmount.priceList.startsAt) : null;
+                const endDate = moneyAmount.priceList.endsAt ? new Date(moneyAmount.priceList.endsAt) : null;
                 if (moneyAmount.priceList.status === "active" && (!startDate || startDate <= now) && (!endDate || endDate >= now)) {
                   appliedPriceList = moneyAmount.priceList;
                 }
@@ -11015,8 +12620,8 @@ var MoneyAmount = (0, import_core35.list)({
                   (price) => {
                     if (price.currency.code !== currencyCode) return false;
                     if (price.priceList) {
-                      const startDate = new Date(price.priceList.startsAt);
-                      const endDate = new Date(price.priceList.endsAt);
+                      const startDate = price.priceList.startsAt ? new Date(price.priceList.startsAt) : null;
+                      const endDate = price.priceList.endsAt ? new Date(price.priceList.endsAt) : null;
                       return price.priceList.status === "active" && (!startDate || startDate <= now) && (!endDate || endDate >= now);
                     }
                     return true;
@@ -11193,7 +12798,7 @@ var OAuthApp = (0, import_core39.list)({
       hooks: {
         resolveInput: ({ operation, resolvedData }) => {
           if (operation === "create" && !resolvedData.clientId) {
-            return `of_${Math.random().toString(36).substring(2, 18)}`;
+            return generateOpaqueToken("of_");
           }
           return resolvedData.clientId;
         }
@@ -11205,17 +12810,23 @@ var OAuthApp = (0, import_core39.list)({
       }
     }),
     clientSecret: (0, import_fields42.text)({
+      access: {
+        read: () => false
+      },
       hooks: {
         resolveInput: ({ operation, resolvedData }) => {
           if (operation === "create" && !resolvedData.clientSecret) {
-            return `cs_${Math.random().toString(36).substring(2, 34)}`;
+            throw new Error("OAuth apps must be created through the show-once credential command");
           }
-          return resolvedData.clientSecret;
+          if (resolvedData.clientSecret) {
+            return oauthClientSecretDigest(resolvedData.clientSecret);
+          }
+          return void 0;
         }
       },
       ui: {
         createView: { fieldMode: "hidden" },
-        itemView: { fieldMode: "read" },
+        itemView: { fieldMode: "hidden" },
         // displayMode: "textarea",
         description: "Auto-generated secret key. Keep this secure - it's used to authenticate your application."
       }
@@ -11283,6 +12894,31 @@ var OAuthApp = (0, import_core39.list)({
 // features/keystone/models/OAuthToken.ts
 var import_core40 = require("@keystone-6/core");
 var import_fields43 = require("@keystone-6/core/fields");
+
+// features/keystone/security/oauth-credentials.ts
+var import_node_crypto7 = __toESM(require("node:crypto"));
+function storedOAuthToken(rawToken) {
+  return oauthTokenDigest(rawToken);
+}
+async function findOAuthToken(context, rawToken, query) {
+  if (!rawToken) return null;
+  let token = await context.sudo().query.OAuthToken.findOne({
+    where: { token: storedOAuthToken(rawToken) },
+    query
+  });
+  if (!token && process.env.NODE_ENV !== "production") {
+    token = await context.sudo().query.OAuthToken.findOne({
+      where: { token: rawToken },
+      query
+    });
+  }
+  return token;
+}
+
+// features/keystone/models/OAuthToken.ts
+var digestTokenInput = {
+  resolveInput: ({ resolvedData, fieldKey }) => resolvedData[fieldKey] ? storedOAuthToken(resolvedData[fieldKey]) : resolvedData[fieldKey]
+};
 var OAuthToken = (0, import_core40.list)({
   access: {
     operation: {
@@ -11304,10 +12940,12 @@ var OAuthToken = (0, import_core40.list)({
       }
     }),
     token: (0, import_fields43.text)({
+      access: { read: () => false },
       validation: {
         isRequired: true
       },
-      isIndexed: "unique"
+      isIndexed: "unique",
+      hooks: digestTokenInput
     }),
     clientId: (0, import_fields43.text)({
       validation: {
@@ -11345,16 +12983,22 @@ var OAuthToken = (0, import_core40.list)({
       defaultValue: "false"
     }),
     authorizationCode: (0, import_fields43.text)({
+      access: { read: () => false },
+      hooks: digestTokenInput,
       ui: {
         description: "The authorization code that was exchanged for this token (for access tokens)"
       }
     }),
     refreshToken: (0, import_fields43.text)({
+      access: { read: () => false },
+      hooks: digestTokenInput,
       ui: {
         description: "Associated refresh token (for access tokens)"
       }
     }),
     accessToken: (0, import_fields43.text)({
+      access: { read: () => false },
+      hooks: digestTokenInput,
       ui: {
         description: "Associated access token (for refresh tokens)"
       }
@@ -11413,62 +13057,9 @@ var Order = (0, import_core41.list)({
     operation: {
       query: permissions.canManageOrders,
       // Allow public access for order confirmation
-      create: permissions.canManageOrders,
-      update: permissions.canManageOrders,
-      delete: permissions.canManageOrders
-    }
-  },
-  hooks: {
-    afterOperation: async ({ operation, item, context }) => {
-      if (operation === "create" && item && !item.noNotification) {
-        try {
-          const order = await context.sudo().query.Order.findOne({
-            where: { id: item.id },
-            query: `
-              id
-              displayId
-              email
-              secretKey
-              subtotal
-              total
-              shipping
-              discount
-              tax
-              lineItems {
-                id
-                title
-                quantity
-                sku
-                variantTitle
-                formattedUnitPrice
-                formattedTotal
-              }
-              shippingAddress {
-                id
-                firstName
-                lastName
-                company
-                address1
-                address2
-                city
-                province
-                postalCode
-                phone
-                country {
-                  id
-                  iso2
-                  displayName
-                }
-              }
-            `
-          });
-          if (order) {
-            await sendOrderConfirmationEmail(order);
-          }
-        } catch (error) {
-          console.error("Error sending order confirmation email:", error);
-        }
-      }
+      create: () => false,
+      update: () => false,
+      delete: () => false
     }
   },
   fields: {
@@ -11500,24 +13091,8 @@ var Order = (0, import_core41.list)({
       validation: {
         isRequired: true
       },
-      hooks: {
-        beforeOperation: ({ operation, resolvedData, item, fieldKey }) => {
-          if (operation === "update" && resolvedData[fieldKey] && item[fieldKey] !== resolvedData[fieldKey]) {
-            return {
-              ...resolvedData,
-              events: {
-                create: {
-                  type: "STATUS_CHANGE",
-                  data: {
-                    newStatus: resolvedData[fieldKey],
-                    previousStatus: item[fieldKey]
-                  }
-                }
-              }
-            };
-          }
-          return resolvedData;
-        }
+      access: {
+        update: () => false
       }
     }),
     displayId: (0, import_fields44.integer)({
@@ -12454,8 +14029,8 @@ var OrderEvent = (0, import_core42.list)({
     operation: {
       query: permissions.canManageOrders,
       create: permissions.canManageOrders,
-      update: permissions.canManageOrders,
-      delete: permissions.canManageOrders
+      update: () => false,
+      delete: () => false
     }
   }
 });
@@ -12498,9 +14073,9 @@ var OrderLineItem = (0, import_core43.list)({
   access: {
     operation: {
       query: permissions.canManageOrders,
-      create: permissions.canManageOrders,
-      update: permissions.canManageOrders,
-      delete: permissions.canManageOrders
+      create: () => false,
+      update: () => false,
+      delete: () => false
     }
   },
   fields: {
@@ -12598,9 +14173,9 @@ var OrderMoneyAmount = (0, import_core45.list)({
   access: {
     operation: {
       query: permissions.canManageOrders,
-      create: permissions.canManageOrders,
-      update: permissions.canManageOrders,
-      delete: permissions.canManageOrders
+      create: () => false,
+      update: () => false,
+      delete: () => false
     }
   },
   fields: {
@@ -12635,9 +14210,9 @@ var Payment = (0, import_core46.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadPayments({ session }) || permissions.canManagePayments({ session }),
-      create: permissions.canManagePayments,
-      update: permissions.canManagePayments,
-      delete: permissions.canManagePayments
+      create: () => false,
+      update: () => false,
+      delete: () => false
     }
   },
   fields: {
@@ -12651,61 +14226,7 @@ var Payment = (0, import_core46.list)({
         { label: "Canceled", value: "canceled" }
       ],
       defaultValue: "pending",
-      validation: { isRequired: true },
-      hooks: {
-        beforeOperation: async ({ operation, resolvedData, item, context }) => {
-          if (operation === "update" && resolvedData.status && item.status !== resolvedData.status) {
-            const payment = await context.sudo().query.Payment.findOne({
-              where: { id: item.id },
-              query: `
-                id
-                amount
-                data
-                order {
-                  id
-                }
-              `
-            });
-            if (!payment?.order?.id) return resolvedData;
-            let eventData = {
-              ...resolvedData
-            };
-            if (resolvedData.status === "captured") {
-              eventData = {
-                ...eventData,
-                capturedAt: (/* @__PURE__ */ new Date()).toISOString(),
-                order: {
-                  update: {
-                    where: { id: payment.order.id },
-                    data: {
-                      paymentStatus: "captured",
-                      events: {
-                        create: {
-                          type: "PAYMENT_CAPTURED",
-                          data: {
-                            amount: payment.amount,
-                            paymentId: item.id
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              };
-              await context.sudo().query.Capture.createOne({
-                data: {
-                  amount: payment.amount,
-                  payment: { connect: { id: item.id } },
-                  metadata: payment.data,
-                  createdBy: "system"
-                }
-              });
-            }
-            return eventData;
-          }
-          return resolvedData;
-        }
-      }
+      validation: { isRequired: true }
     }),
     amount: (0, import_fields48.integer)({
       validation: {
@@ -12759,14 +14280,15 @@ var Payment = (0, import_core46.list)({
         type: import_core47.graphql.String,
         resolve(item) {
           if (!item.data) return null;
-          if (item.data.provider_id?.startsWith("pp_stripe_")) {
-            const paymentIntentId = item.data.payment_intent_id;
+          const data = item.data;
+          if (data.provider_id?.startsWith("pp_stripe_")) {
+            const paymentIntentId = data.payment_intent_id;
             if (paymentIntentId) {
               return `https://dashboard.stripe.com/payments/${paymentIntentId}`;
             }
           }
-          if (item.data.provider_id?.startsWith("pp_paypal_")) {
-            const paypalOrderId = item.data.id;
+          if (data.provider_id?.startsWith("pp_paypal_")) {
+            const paypalOrderId = data.id;
             if (paypalOrderId) {
               return `https://www.paypal.com/activity/payment/${paypalOrderId}`;
             }
@@ -13737,9 +15259,9 @@ var Refund = (0, import_core64.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadReturns({ session }) || permissions.canManageReturns({ session }),
-      create: permissions.canManageReturns,
-      update: permissions.canManageReturns,
-      delete: permissions.canManageReturns
+      create: () => false,
+      update: () => false,
+      delete: () => false
     }
   },
   fields: {
@@ -14107,9 +15629,9 @@ var ShippingLabel = (0, import_core72.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadFulfillments({ session }) || permissions.canManageFulfillments({ session }),
-      create: permissions.canManageFulfillments,
+      create: () => false,
       update: permissions.canManageFulfillments,
-      delete: permissions.canManageFulfillments
+      delete: () => false
     }
   },
   fields: {
@@ -14567,9 +16089,9 @@ var StockMovement = (0, import_core80.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadProducts({ session }) || permissions.canManageProducts({ session }),
-      create: permissions.canManageProducts,
-      update: permissions.canManageProducts,
-      delete: permissions.canManageProducts
+      create: () => false,
+      update: () => false,
+      delete: () => false
     }
   },
   fields: {
@@ -14590,30 +16112,7 @@ var StockMovement = (0, import_core80.list)({
       ref: "ProductVariant.stockMovements",
       many: false
     }),
-    createdAt: (0, import_fields80.timestamp)({
-      defaultValue: { kind: "now" }
-    }),
     ...trackingFields
-  },
-  hooks: {
-    resolveInput: async ({ resolvedData, context }) => {
-      const { quantity, type, variant } = resolvedData;
-      if (variant?.connect?.id && quantity) {
-        const variantData = await context.query.ProductVariant.findOne({
-          where: { id: variant.connect.id },
-          query: "inventoryQuantity"
-        });
-        if (variantData) {
-          await context.query.ProductVariant.updateOne({
-            where: { id: variant.connect.id },
-            data: {
-              inventoryQuantity: type === "RECEIVE" ? variantData.inventoryQuantity + quantity : variantData.inventoryQuantity - quantity
-            }
-          });
-        }
-      }
-      return resolvedData;
-    }
   }
 });
 
@@ -14621,6 +16120,113 @@ var StockMovement = (0, import_core80.list)({
 var import_core81 = require("@keystone-6/core");
 var import_fields81 = require("@keystone-6/core/fields");
 var import_core82 = require("@keystone-6/core");
+
+// features/platform/store-settings/lib/store-logo.ts
+var DEFAULT_STORE_LOGO_ICON = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" height="100%" width="100%" viewBox="0 0 42 48"><path fill="#155eef" fill-rule="evenodd" d="m22.102 20.86 9.9-9.9L29.88 8.84l-7.339 7.339V3h-3v13.178l-7.339-7.34-2.121 2.122 9.9 9.9 1.06 1.06zm2.12 2.121 9.9-9.9 2.121 2.122-7.339 7.339H42v3H28.904l7.34 7.339L34.121 35l-9.9-9.899-1.06-1.06zM7.96 35.001l9.9-9.899 1.06-1.06-1.06-1.061-9.9-9.9-2.121 2.122 7.339 7.339H.002v3h13.176l-7.34 7.339zm12.02-7.777-9.9 9.9 2.122 2.12 7.339-7.338V45h3V31.906l7.339 7.338L32 37.124l-9.9-9.9-1.06-1.061z" clip-rule="evenodd"/></svg>';
+var DEFAULT_STORE_LOGO_COLOR = "0";
+function normalizeStoreLogoColor(value) {
+  const numeric = Number.parseFloat(String(value ?? DEFAULT_STORE_LOGO_COLOR));
+  if (!Number.isFinite(numeric)) return DEFAULT_STORE_LOGO_COLOR;
+  return String((numeric % 360 + 360) % 360);
+}
+
+// features/keystone/utils/storeLogo.ts
+var ALLOWED_ELEMENTS = /* @__PURE__ */ new Set([
+  "svg",
+  "g",
+  "path",
+  "defs",
+  "lineargradient",
+  "radialgradient",
+  "stop",
+  "clippath",
+  "rect",
+  "circle",
+  "ellipse",
+  "line",
+  "polyline",
+  "polygon",
+  "title",
+  "desc"
+]);
+var ALLOWED_ATTRIBUTES = /* @__PURE__ */ new Set([
+  "xmlns",
+  "fill",
+  "fill-rule",
+  "clip-rule",
+  "height",
+  "width",
+  "viewbox",
+  "d",
+  "clip-path",
+  "id",
+  "x1",
+  "x2",
+  "y1",
+  "y2",
+  "gradientunits",
+  "gradienttransform",
+  "offset",
+  "stop-color",
+  "stop-opacity",
+  "opacity",
+  "cx",
+  "cy",
+  "r",
+  "rx",
+  "ry",
+  "x",
+  "y",
+  "transform",
+  "stroke",
+  "stroke-width",
+  "stroke-linecap",
+  "stroke-linejoin",
+  "points",
+  "role",
+  "aria-hidden",
+  "aria-label",
+  "preserveaspectratio"
+]);
+var ATTRIBUTE_PATTERN = /\s+([A-Za-z_:][\w:.-]*)\s*=\s*("[^"]*"|'[^']*')/g;
+var TAG_PATTERN = /<\/?\s*([A-Za-z][\w:-]*)([^<>]*)>/g;
+function sanitizeStoreLogoSvg(svg) {
+  const source = svg.trim();
+  if (!source.startsWith("<svg") || !source.endsWith("</svg>") || source.length > 1e5) {
+    return "";
+  }
+  if (/<!|<\?|\b(?:javascript|data|vbscript):|\bon[a-z]+\s*=|\b(?:href|src|style)\s*=/i.test(source)) {
+    return "";
+  }
+  let tagCount = 0;
+  let match;
+  TAG_PATTERN.lastIndex = 0;
+  while (match = TAG_PATTERN.exec(source)) {
+    tagCount += 1;
+    const element = match[1].toLowerCase();
+    if (!ALLOWED_ELEMENTS.has(element)) return "";
+    if (match[0].startsWith("</")) continue;
+    const attributes = match[2];
+    let consumed = "";
+    ATTRIBUTE_PATTERN.lastIndex = 0;
+    let attributeMatch;
+    while (attributeMatch = ATTRIBUTE_PATTERN.exec(attributes)) {
+      consumed += attributeMatch[0];
+      const attribute = attributeMatch[1].toLowerCase();
+      const value = attributeMatch[2].slice(1, -1);
+      if (!ALLOWED_ATTRIBUTES.has(attribute)) return "";
+      if (attribute === "id" && !/^[A-Za-z_][\w:.-]*$/.test(value)) return "";
+      if (/url\(/i.test(value) && !/^url\(#[A-Za-z_][\w:.-]*\)$/.test(value)) return "";
+    }
+    const remainder = attributes.replace(consumed, "").replace(/\//g, "").trim();
+    if (remainder) return "";
+  }
+  TAG_PATTERN.lastIndex = 0;
+  if (tagCount === 0 || source.replace(TAG_PATTERN, "").trim()) return "";
+  return source;
+}
+
+// features/keystone/models/Store.ts
 var Store = (0, import_core81.list)({
   access: {
     operation: {
@@ -14651,10 +16257,29 @@ var Store = (0, import_core81.list)({
       defaultValue: "A performant frontend e-commerce starter template with Next.js 15 and Openfront."
     }),
     logoIcon: (0, import_fields81.text)({
-      defaultValue: '<svg width="24" height="24" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><g clipPath="url(#clip0_238_1296)"><path fillRule="evenodd" clipRule="evenodd" d="M100 0H0L100 100H0L100 200H200L100 100H200L100 0Z" fill="currentColor" /></g><defs><clipPath id="clip0_238_1296"><rect width="200" height="200" fill="white" /></clipPath></defs></svg>'
+      defaultValue: DEFAULT_STORE_LOGO_ICON,
+      hooks: {
+        resolveInput: ({ resolvedData, fieldKey }) => {
+          const value = resolvedData[fieldKey];
+          if (value === void 0 || value === null || value === "") return value;
+          return typeof value === "string" ? sanitizeStoreLogoSvg(value) : "";
+        },
+        validate: ({ inputData, resolvedData, fieldKey, addValidationError }) => {
+          const submitted = inputData?.[fieldKey];
+          if (typeof submitted === "string" && submitted.trim() && !resolvedData?.[fieldKey]) {
+            addValidationError("Logo must be a valid, safe SVG document");
+          }
+        }
+      }
     }),
     logoColor: (0, import_fields81.text)({
-      defaultValue: "#2b7fff"
+      defaultValue: DEFAULT_STORE_LOGO_COLOR,
+      hooks: {
+        resolveInput: ({ resolvedData, fieldKey }) => {
+          const value = resolvedData[fieldKey];
+          return value === void 0 ? value : normalizeStoreLogoColor(value);
+        }
+      }
     }),
     metadata: (0, import_fields81.json)(),
     swapLinkTemplate: (0, import_fields81.text)(),
@@ -14678,33 +16303,12 @@ var Store = (0, import_core81.list)({
             }
           })
         ),
-        resolve: async (item, args, context) => {
-          const paymentProviders = await context.sudo().query.PaymentProvider.findMany({
+        resolve: async (_item, _args, context) => {
+          const installedProviders = await context.sudo().query.PaymentProvider.findMany({
             where: { isInstalled: { equals: true } },
             query: "code"
           });
-          const providers = [];
-          const hasStripe = paymentProviders.some((p) => p.code?.startsWith("pp_stripe_"));
-          if (hasStripe) {
-            const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_KEY;
-            if (stripePublishableKey) {
-              providers.push({
-                provider: "stripe",
-                publishableKey: stripePublishableKey
-              });
-            }
-          }
-          const hasPaypal = paymentProviders.some((p) => p.code?.startsWith("pp_paypal"));
-          if (hasPaypal) {
-            const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
-            if (paypalClientId) {
-              providers.push({
-                provider: "paypal",
-                publishableKey: paypalClientId
-              });
-            }
-          }
-          return providers;
+          return installedProviders.map((provider) => getPublicPaymentProviderConfig(provider.code || "")).filter((provider) => Boolean(provider));
         }
       }),
       ui: { query: "{ provider publishableKey }" }
@@ -14980,6 +16584,36 @@ var Team = (0, import_core86.list)({
 // features/keystone/models/User.ts
 var import_core87 = require("@keystone-6/core");
 var import_fields86 = require("@keystone-6/core/fields");
+
+// features/keystone/security/user-create.ts
+var canCreateUserRole = permissions.canManageUsers;
+var PUBLIC_USER_CREATE_FIELDS = /* @__PURE__ */ new Set([
+  "name",
+  "email",
+  "password",
+  "phone",
+  // createAuth merges initFirstItem.itemData into the DB API input before list
+  // hooks run. Public callers cannot supply role because User.role field access
+  // is enforced before resolveInput; allowing it here preserves the first admin.
+  "role",
+  // Guest checkout sends this explicitly. It is always forced to false below.
+  "hasAccount"
+]);
+function resolvePublicUserCreateData({
+  inputData,
+  resolvedData
+}) {
+  const restrictedData = { ...resolvedData };
+  for (const key of Object.keys(inputData ?? {})) {
+    if (!PUBLIC_USER_CREATE_FIELDS.has(key)) {
+      delete restrictedData[key];
+    }
+  }
+  restrictedData.hasAccount = false;
+  return restrictedData;
+}
+
+// features/keystone/models/User.ts
 var canManageUsers = ({ session }) => {
   if (!isSignedIn({ session })) {
     return false;
@@ -15002,6 +16636,14 @@ var User = (0, import_core87.list)({
       update: canManageUsers
     }
   },
+  hooks: {
+    resolveInput: ({ operation, inputData, resolvedData, context }) => {
+      if (operation === "create" && !permissions.canManageUsers({ session: context.session })) {
+        return resolvePublicUserCreateData({ inputData, resolvedData });
+      }
+      return resolvedData;
+    }
+  },
   ui: {
     // hide the backend UI from regular users
     hideCreate: (args) => !permissions.canManageUsers(args),
@@ -15022,7 +16664,7 @@ var User = (0, import_core87.list)({
     role: (0, import_fields86.relationship)({
       ref: "Role.assignedTo",
       access: {
-        create: permissions.canManageUsers,
+        create: canCreateUserRole,
         update: permissions.canManageUsers
       },
       ui: {
@@ -15101,9 +16743,15 @@ var User = (0, import_core87.list)({
       many: false
     }),
     customerToken: (0, import_fields86.text)({
+      access: {
+        read: () => false,
+        create: () => false,
+        update: () => false
+      },
       ui: {
         createView: { fieldMode: "hidden" },
-        itemView: { fieldMode: "read" }
+        itemView: { fieldMode: "hidden" },
+        listView: { fieldMode: "hidden" }
       },
       db: {
         isNullable: true
@@ -15272,7 +16920,7 @@ var UserField = (0, import_core88.list)({
 // features/keystone/models/WebhookEndpoint.ts
 var import_core89 = require("@keystone-6/core");
 var import_fields88 = require("@keystone-6/core/fields");
-var import_crypto = __toESM(require("crypto"));
+var import_crypto2 = __toESM(require("crypto"));
 var WebhookEndpoint = (0, import_core89.list)({
   access: {
     operation: {
@@ -15312,7 +16960,7 @@ var WebhookEndpoint = (0, import_core89.list)({
       hooks: {
         resolveInput: ({ resolvedData, operation }) => {
           if (operation === "create" && !resolvedData.secret) {
-            return import_crypto.default.randomBytes(32).toString("hex");
+            return import_crypto2.default.randomBytes(32).toString("hex");
           }
           return resolvedData.secret;
         }
@@ -15531,418 +17179,122 @@ var models = {
   WebhookEvent
 };
 
+// features/keystone/lib/mail.ts
+var import_nodemailer = require("nodemailer");
+function getBaseUrlForEmails() {
+  if (process.env.SMTP_STORE_LINK) {
+    return process.env.SMTP_STORE_LINK;
+  }
+  console.warn("SMTP_STORE_LINK not set. Please add SMTP_STORE_LINK to your environment variables for email links to work properly.");
+  return "";
+}
+var transport = (0, import_nodemailer.createTransport)({
+  // @ts-ignore
+  host: process.env.SMTP_HOST,
+  port: process.env.SMTP_PORT,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASSWORD
+  }
+});
+function passwordResetEmail({ url }) {
+  const backgroundColor = "#f9f9f9";
+  const textColor = "#444444";
+  const mainBackgroundColor = "#ffffff";
+  const buttonBackgroundColor = "#346df1";
+  const buttonBorderColor = "#346df1";
+  const buttonTextColor = "#ffffff";
+  return `
+    <body style="background: ${backgroundColor};">
+      <table width="100%" border="0" cellspacing="20" cellpadding="0" style="background: ${mainBackgroundColor}; max-width: 600px; margin: auto; border-radius: 10px;">
+        <tr>
+          <td align="center" style="padding: 10px 0px 0px 0px; font-size: 18px; font-family: Helvetica, Arial, sans-serif; color: ${textColor};">
+            Please click below to reset your password
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding: 20px 0;">
+            <table border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td align="center" style="border-radius: 5px;" bgcolor="${buttonBackgroundColor}"><a href="${url}" target="_blank" style="font-size: 18px; font-family: Helvetica, Arial, sans-serif; color: ${buttonTextColor}; text-decoration: none; border-radius: 5px; padding: 10px 20px; border: 1px solid ${buttonBorderColor}; display: inline-block; font-weight: bold;">Reset Password</a></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td align="center" style="padding: 0px 0px 10px 0px; font-size: 16px; line-height: 22px; font-family: Helvetica, Arial, sans-serif; color: ${textColor};">
+            If you did not request this email you can safely ignore it.
+          </td>
+        </tr>
+      </table>
+    </body>
+  `;
+}
+async function sendPasswordResetEmail(resetToken, to, baseUrl) {
+  const frontendUrl = baseUrl || getBaseUrlForEmails();
+  const info = await transport.sendMail({
+    to,
+    from: process.env.SMTP_FROM,
+    subject: "Your password reset token!",
+    html: passwordResetEmail({
+      url: `${frontendUrl}${basePath && basePath}/reset?token=${resetToken}`
+    })
+  });
+  if (process.env.MAIL_USER?.includes("ethereal.email")) {
+    console.log(`\u{1F4E7} Message Sent!  Preview it at ${(0, import_nodemailer.getTestMessageUrl)(info)}`);
+  }
+}
+
 // features/keystone/index.ts
 var import_iron = __toESM(require("@hapi/iron"));
 var cookie = __toESM(require("cookie"));
 var import_bcryptjs = __toESM(require("bcryptjs"));
-
-// features/webhooks/webhook-plugin.ts
-var import_crypto2 = __toESM(require("crypto"));
-
-// features/webhooks/enrichers/base-enricher.ts
-var BaseWebhookEnricher = class {
-  /**
-   * Helper method to query the entity with enriched data
-   */
-  async queryEnrichedEntity(item, context) {
-    if (!item?.id) {
-      return item;
-    }
-    try {
-      const result = await context.query[this.entityType].findOne({
-        where: { id: item.id },
-        query: this.getQueryFields()
-      });
-      return result || item;
-    } catch (error) {
-      console.error(`Error querying ${this.entityType} for webhook enrichment:`, error);
-      return item;
-    }
-  }
-};
-
-// features/webhooks/enrichers/order-enricher.ts
-var OrderWebhookEnricher = class extends BaseWebhookEnricher {
-  constructor() {
-    super(...arguments);
-    this.entityType = "Order";
-  }
-  async enrich(item, context) {
-    const enrichedItem = await this.queryEnrichedEntity(item, context);
-    return enrichedItem || item;
-  }
-  getQueryFields() {
-    return `
-      id
-      displayId
-      email
-      status
-      rawTotal
-      total
-      subtotal
-      shipping
-      discount
-      tax
-      canceledAt
-      metadata
-      idempotencyKey
-      noNotification
-      externalId
-      currency {
-        id
-        code
-        symbol
-        noDivisionCurrency
-      }
-      shippingAddress {
-        id
-        firstName
-        lastName
-        company
-        address1
-        address2
-        city
-        province
-        postalCode
-        phone
-        country {
-          id
-          iso2
-          displayName
-        }
-      }
-      billingAddress {
-        id
-        firstName
-        lastName
-        company
-        address1
-        address2
-        city
-        province
-        postalCode
-        phone
-        country {
-          id
-          iso2
-          displayName
-        }
-      }
-      lineItems {
-        id
-        title
-        quantity
-        sku
-        variantTitle
-        thumbnail
-        formattedUnitPrice
-        formattedTotal
-        moneyAmount {
-          amount
-          originalAmount
-        }
-        productVariant {
-          id
-          title
-          sku
-          product {
-            id
-            title
-            handle
-            thumbnail
-            productImages {
-              image {
-                url
-              }
-              imagePath
-            }
-          }
-        }
-        productData
-        variantData
-      }
-      createdAt
-      updatedAt
-    `;
-  }
-};
-
-// features/webhooks/enrichers/registry.ts
-var WebhookEnricherRegistry = class {
-  constructor() {
-    this.enrichers = /* @__PURE__ */ new Map();
-  }
-  register(entityType, enricher) {
-    this.enrichers.set(entityType, enricher);
-  }
-  get(entityType) {
-    return this.enrichers.get(entityType);
-  }
-  has(entityType) {
-    return this.enrichers.has(entityType);
-  }
-  /**
-   * Get all registered entity types
-   */
-  getRegisteredTypes() {
-    return Array.from(this.enrichers.keys());
-  }
-};
-var webhookEnricherRegistry = new WebhookEnricherRegistry();
-function registerWebhookEnricher(enricher) {
-  webhookEnricherRegistry.register(enricher.entityType, enricher);
+function requiredEnv(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is required`);
+  return value;
 }
-
-// features/webhooks/enrichers/index.ts
-registerWebhookEnricher(new OrderWebhookEnricher());
-
-// features/webhooks/webhook-plugin.ts
-var webhookQueue = [];
-var batchTimer = null;
-function withWebhooks(config2) {
-  const enhancedLists = Object.fromEntries(
-    Object.entries(config2.lists || {}).map(([listKey2, listConfig]) => [
-      listKey2,
-      {
-        ...listConfig,
-        hooks: {
-          ...listConfig.hooks,
-          afterOperation: async (args) => {
-            try {
-              if (listConfig.hooks?.afterOperation) {
-                await listConfig.hooks.afterOperation(args);
-              }
-            } catch (error) {
-              console.error(`Original hook failed for ${listKey2}:`, error);
-            }
-            try {
-              await queueWebhook({
-                listKey: listKey2,
-                operation: args.operation,
-                item: args.item,
-                originalItem: args.originalItem,
-                context: args.context.sudo()
-              });
-            } catch (error) {
-              console.error(`Webhook failed for ${listKey2}:`, error);
-            }
-          }
-        }
-      }
-    ])
-  );
-  return {
-    ...config2,
-    lists: enhancedLists
-  };
+function productionEnv(name, developmentFallback) {
+  if (process.env[name]) return process.env[name];
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(`${name} is required in production`);
+  }
+  return developmentFallback;
 }
-async function queueWebhook(payload) {
-  webhookQueue.push(payload);
-  if (!batchTimer) {
-    batchTimer = setTimeout(processBatch, 100);
-  }
+var databaseURL = requiredEnv("DATABASE_URL");
+var sessionSecret = requiredEnv("SESSION_SECRET");
+if (sessionSecret.length < 32) {
+  throw new Error("SESSION_SECRET must be at least 32 characters long");
 }
-async function processBatch() {
-  const batch = [...webhookQueue];
-  webhookQueue = [];
-  batchTimer = null;
-  if (batch.length === 0) {
-    return;
-  }
-  for (const webhook of batch) {
-    await triggerWebhook(webhook);
-  }
-}
-async function triggerWebhook({ listKey: listKey2, operation, item, originalItem, context }) {
-  try {
-    const operationMap = {
-      "create": "created",
-      "update": "updated",
-      "delete": "deleted"
-    };
-    const webhookOperation = operationMap[operation] || operation;
-    const eventType = `${listKey2.toLowerCase()}.${webhookOperation}`;
-    const webhooks = await context.query.WebhookEndpoint.findMany({
-      where: {
-        isActive: { equals: true }
-      },
-      query: "id url secret events failureCount"
-    });
-    if (!webhooks || webhooks.length === 0) {
-      return;
-    }
-    const subscribedWebhooks = webhooks.filter((webhook) => {
-      if (!webhook.events || !Array.isArray(webhook.events)) {
-        return false;
-      }
-      return webhook.events.includes(eventType) || webhook.events.includes("*");
-    });
-    if (subscribedWebhooks.length === 0) {
-      return;
-    }
-    const payload = await formatPayload(listKey2, operation, item, originalItem, context);
-    for (const webhook of subscribedWebhooks) {
-      await deliverWebhook(webhook, eventType, payload, context);
-    }
-  } catch (error) {
-    console.error("Webhook trigger error:", error);
-  }
-}
-async function deliverWebhook(webhook, eventType, payload, context) {
-  try {
-    const webhookEvent2 = await context.query.WebhookEvent.createOne({
-      data: {
-        eventType,
-        resourceType: payload.listKey,
-        resourceId: payload.data?.id || "unknown",
-        payload,
-        endpoint: { connect: { id: webhook.id } },
-        deliveryAttempts: 1,
-        nextAttempt: /* @__PURE__ */ new Date()
-      },
-      query: "id"
-    });
-    const secret = webhook.secret || "default-secret";
-    const signature = import_crypto2.default.createHmac("sha256", secret).update(JSON.stringify(payload)).digest("hex");
-    const response = await fetch(webhook.url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-OpenFront-Webhook-Signature": `sha256=${signature}`,
-        "X-OpenFront-Topic": eventType,
-        "X-OpenFront-ListKey": payload.listKey,
-        "X-OpenFront-Operation": payload.operation,
-        "X-OpenFront-Delivery-ID": webhookEvent2.id
-      },
-      body: JSON.stringify(payload)
-    });
-    if (response.ok) {
-      await context.query.WebhookEvent.updateOne({
-        where: { id: webhookEvent2.id },
-        data: {
-          delivered: true,
-          responseStatus: response.status,
-          responseBody: await response.text(),
-          lastAttempt: /* @__PURE__ */ new Date()
-        }
-      });
-      if (webhook.failureCount > 0) {
-        await context.query.WebhookEndpoint.updateOne({
-          where: { id: webhook.id },
-          data: {
-            failureCount: 0,
-            lastTriggered: /* @__PURE__ */ new Date()
-          }
-        });
-      } else {
-        await context.query.WebhookEndpoint.updateOne({
-          where: { id: webhook.id },
-          data: { lastTriggered: /* @__PURE__ */ new Date() }
-        });
-      }
-    } else {
-      const errorText = await response.text();
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
-    }
-  } catch (error) {
-    try {
-      await context.query.WebhookEvent.updateOne({
-        where: { id: webhookEvent?.id },
-        data: {
-          delivered: false,
-          responseStatus: error.status || 0,
-          responseBody: error.message,
-          lastAttempt: /* @__PURE__ */ new Date(),
-          // Schedule retry (exponential backoff)
-          nextAttempt: new Date(Date.now() + Math.pow(2, 1) * 6e4)
-          // 2 minutes for first retry
-        }
-      });
-      await context.query.WebhookEndpoint.updateOne({
-        where: { id: webhook.id },
-        data: {
-          failureCount: (webhook.failureCount || 0) + 1
-        }
-      });
-    } catch (updateError) {
-      console.error("Failed to update webhook event after delivery failure:", updateError);
-    }
-  }
-}
-async function formatPayload(listKey2, operation, item, originalItem, context) {
-  const basePayload = {
-    event: `${listKey2.toLowerCase()}.${operation}`,
-    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-    listKey: listKey2,
-    operation
-  };
-  let enrichedData = item;
-  if (webhookEnricherRegistry.has(listKey2) && item?.id) {
-    try {
-      const enricher = webhookEnricherRegistry.get(listKey2);
-      if (enricher) {
-        enrichedData = await enricher.enrich(item, context);
-      }
-    } catch (error) {
-      console.error(`Error enriching webhook payload for ${listKey2}:`, error);
-      enrichedData = item;
-    }
-  }
-  switch (operation) {
-    case "create":
-      return {
-        ...basePayload,
-        data: enrichedData || item
-      };
-    case "update":
-      return {
-        ...basePayload,
-        data: enrichedData || item,
-        previousData: originalItem,
-        changes: getChangedFields(originalItem, enrichedData || item)
-      };
-    case "delete":
-      return {
-        ...basePayload,
-        data: originalItem
-      };
-    default:
-      return {
-        ...basePayload,
-        data: enrichedData || item
-      };
-  }
-}
-function getChangedFields(original, updated) {
-  if (!original || !updated) return {};
-  const changes = {};
-  for (const key in updated) {
-    if (original[key] !== updated[key]) {
-      changes[key] = {
-        from: original[key],
-        to: updated[key]
-      };
-    }
-  }
-  return changes;
-}
-
-// features/keystone/index.ts
-var databaseURL = process.env.DATABASE_URL || "file:./keystone.db";
 var listKey = "User";
+var trustedProxyIps = new Set(
+  (process.env.TRUSTED_PROXY_IPS || "").split(",").map((value) => value.trim()).filter(Boolean)
+);
+function requestClientIp(req) {
+  const remote = String(
+    req.socket?.remoteAddress || req.connection?.remoteAddress || ""
+  ).replace(/^::ffff:/, "");
+  if (trustedProxyIps.has(remote)) {
+    const forwarded = req.headers["x-forwarded-for"];
+    const first = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+    if (typeof first === "string" && first.trim()) {
+      return first.split(",")[0].trim().replace(/^::ffff:/, "");
+    }
+    const realIp = req.headers["x-real-ip"];
+    if (typeof realIp === "string" && realIp.trim()) return realIp.trim();
+  }
+  return remote;
+}
 var basePath = "/dashboard";
 var sessionConfig = {
-  maxAge: 60 * 60 * 24 * 360,
-  // How long they stay signed in?
-  secret: process.env.SESSION_SECRET || "this secret should only be used in testing"
+  maxAge: 60 * 60 * 24 * 30,
+  secret: sessionSecret
 };
-var {
-  S3_BUCKET_NAME: bucketName = "keystone-test",
-  S3_REGION: region = "ap-southeast-2",
-  S3_ACCESS_KEY_ID: accessKeyId = "keystone",
-  S3_SECRET_ACCESS_KEY: secretAccessKey = "keystone",
-  S3_ENDPOINT: endpoint = "https://sfo3.digitaloceanspaces.com"
-} = process.env;
+var bucketName = productionEnv("S3_BUCKET_NAME", "keystone-test");
+var region = productionEnv("S3_REGION", "ap-southeast-2");
+var accessKeyId = productionEnv("S3_ACCESS_KEY_ID", "keystone");
+var secretAccessKey = productionEnv("S3_SECRET_ACCESS_KEY", "keystone");
+var endpoint = productionEnv("S3_ENDPOINT", "https://sfo3.digitaloceanspaces.com");
 function statelessSessions({
   secret,
   maxAge = 60 * 60 * 24 * 360,
@@ -15967,8 +17319,7 @@ function statelessSessions({
         const accessToken = authHeader.replace("Bearer ", "");
         if (accessToken.startsWith("of_")) {
           try {
-            const clientIP = context.req.headers["x-forwarded-for"] || context.req.headers["x-real-ip"] || context.req.connection?.remoteAddress || context.req.socket?.remoteAddress || context.req.connection?.socket?.remoteAddress || "127.0.0.1";
-            const actualClientIP = typeof clientIP === "string" ? clientIP.split(",")[0].trim() : "127.0.0.1";
+            const actualClientIP = requestClientIp(context.req);
             const apiKeys = await context.sudo().query.ApiKey.findMany({
               where: { status: { equals: "active" } },
               query: `
@@ -16047,10 +17398,11 @@ function statelessSessions({
           }
         }
         try {
-          const oauthToken = await context.sudo().query.OAuthToken.findOne({
-            where: { token: accessToken },
-            query: `id clientId scopes expiresAt tokenType isRevoked user { id }`
-          });
+          const oauthToken = await findOAuthToken(
+            context,
+            accessToken,
+            `id clientId scopes expiresAt tokenType isRevoked user { id }`
+          );
           if (oauthToken) {
             if (oauthToken.tokenType !== "access_token") {
               return;
@@ -16081,33 +17433,36 @@ function statelessSessions({
         }
         if (accessToken.startsWith("ctok_")) {
           try {
-            const users = await context.sudo().query.User.findMany({
-              where: { customerToken: { equals: accessToken } },
+            const digest = customerTokenDigest(accessToken);
+            let users = await context.sudo().query.User.findMany({
+              where: { customerToken: { equals: digest } },
               take: 1,
               query: `
                 id
-                email
-                name
+                tokenGeneratedAt
                 accounts(where: { status: { equals: "active" }, accountType: { equals: "business" } }) {
                   id
                   status
-                  availableCredit
                 }
               `
             });
+            if (!users[0] && process.env.NODE_ENV !== "production") {
+              users = await context.sudo().query.User.findMany({
+                where: { customerToken: { equals: accessToken } },
+                take: 1,
+                query: `id tokenGeneratedAt accounts(where: { status: { equals: "active" }, accountType: { equals: "business" } }) { id status }`
+              });
+            }
             const user = users[0];
-            if (!user) {
-              return;
-            }
-            const activeAccount = user.accounts?.[0];
-            if (!activeAccount) {
-              return;
-            }
+            const activeAccount = user?.accounts?.[0];
+            if (!user || !activeAccount || !user.tokenGeneratedAt) return;
+            const maxAgeDays = Number(process.env.CUSTOMER_TOKEN_MAX_AGE_DAYS || 90);
+            const expiresAt = new Date(user.tokenGeneratedAt).getTime() + maxAgeDays * 24 * 60 * 60 * 1e3;
+            if (!Number.isFinite(expiresAt) || Date.now() >= expiresAt) return;
             return {
               itemId: user.id,
               listKey,
               customerToken: true,
-              // Flag for permission checking
               activeAccountId: activeAccount.id
             };
           } catch (err) {

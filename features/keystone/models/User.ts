@@ -12,6 +12,10 @@ import {
 } from '@keystone-6/core/fields';
 import { isSignedIn, permissions, rules } from '../access';
 import { trackingFields } from './trackingFields';
+import {
+  canCreateUserRole,
+  resolvePublicUserCreateData,
+} from '../security/user-create';
 
 const canManageUsers = ({ session }) => {
   if (!isSignedIn({ session })) {
@@ -36,6 +40,14 @@ export const User = list({
       update: canManageUsers,
     },
   },
+  hooks: {
+    resolveInput: ({ operation, inputData, resolvedData, context }) => {
+      if (operation === 'create' && !permissions.canManageUsers({ session: context.session })) {
+        return resolvePublicUserCreateData({ inputData, resolvedData });
+      }
+      return resolvedData;
+    },
+  },
   ui: {
     // hide the backend UI from regular users
     hideCreate: (args) => !permissions.canManageUsers(args),
@@ -56,7 +68,7 @@ export const User = list({
     role: relationship({
       ref: 'Role.assignedTo',
       access: {
-        create: permissions.canManageUsers,
+        create: canCreateUserRole,
         update: permissions.canManageUsers,
       },
       ui: {
@@ -139,9 +151,15 @@ export const User = list({
       many: false,
     }),
     customerToken: text({
-      ui: { 
+      access: {
+        read: () => false,
+        create: () => false,
+        update: () => false,
+      },
+      ui: {
         createView: { fieldMode: 'hidden' },
-        itemView: { fieldMode: 'read' }
+        itemView: { fieldMode: 'hidden' },
+        listView: { fieldMode: 'hidden' },
       },
       db: {
         isNullable: true,

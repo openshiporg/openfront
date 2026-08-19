@@ -1,4 +1,7 @@
+import { assertCartAccess } from "../security/cart-access";
+
 async function removeDiscountFromActiveCart(root, { cartId, code }, context) {
+  await assertCartAccess(context, cartId);
   const sudoContext = context.sudo();
 
   const discount = await sudoContext.query.Discount.findOne({
@@ -15,7 +18,8 @@ async function removeDiscountFromActiveCart(root, { cartId, code }, context) {
     data: {
       discounts: {
         disconnect: [{ id: discount.id }]
-      }
+      },
+      paymentCollection: { disconnect: true }
     },
   });
 }

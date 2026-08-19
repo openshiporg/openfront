@@ -1,4 +1,8 @@
+import { assertCartAccess } from "../security/cart-access";
+import { isPaymentProviderConfigured } from "../utils/paymentProviderConfig";
+
 async function createActiveCartPaymentSessions(root, { cartId }, context) {
+  await assertCartAccess(context, cartId);
   const sudoContext = context.sudo();
 
   // Get cart with payment provider info
@@ -31,7 +35,9 @@ async function createActiveCartPaymentSessions(root, { cartId }, context) {
   }
 
   // Get available payment providers from region
-  const availableProviders = cart.region?.paymentProviders?.filter(p => p.isInstalled) || [];
+  const availableProviders = cart.region?.paymentProviders?.filter(
+    (provider: any) => provider.isInstalled && isPaymentProviderConfigured(provider.code || '')
+  ) || [];
 
   // Create payment collection if it doesn't exist
   let paymentCollection = cart.paymentCollection;

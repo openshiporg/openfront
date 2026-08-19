@@ -1,64 +1,50 @@
-async function addActiveCartShippingMethod(root, { cartId, shippingMethodId }, context) {
-  const sudoContext = context.sudo();
+import { assertCartAccess } from "../security/cart-access";
 
-  // Get cart and shipping option
-  const cart = await sudoContext.query.Cart.findOne({
+async function addActiveCartShippingMethod(
+  root: any,
+  { cartId, shippingMethodId }: { cartId: string; shippingMethodId: string },
+  context: any
+) {
+  await assertCartAccess(context, cartId);
+  const sudo = context.sudo();
+  const cart = await sudo.query.Cart.findOne({
     where: { id: cartId },
-    query: `
-      id
-      region {
-        id
-      }
-      shippingMethods {
-        id
-      }
-    `
+    query: "id region { id }",
   });
-
-  if (!cart) {
-    throw new Error("Cart not found");
-  }
-
-  // Delete existing shipping methods
-  if (cart.shippingMethods?.length > 0) {
-    await Promise.all(
-      cart.shippingMethods.map(method => 
-        sudoContext.db.ShippingMethod.deleteOne({
-          where: { id: method.id }
-        })
-      )
-    );
-  }
-
-  // Get shipping option
-  const shippingOption = await sudoContext.query.ShippingOption.findOne({
+  const option = await sudo.query.ShippingOption.findOne({
     where: { id: shippingMethodId },
-    query: `
-      id
-      amount
-      name
-    `
+    query: "id amount name region { id } adminOnly isReturn",
   });
-
-  if (!shippingOption) {
+  if (
+    !cart ||
+    !option ||
+    option.region?.id !== cart.region?.id ||
+    option.adminOnly ||
+    option.isReturn
+  ) {
     throw new Error("Shipping option not found");
   }
 
-  // Create shipping method
-  await sudoContext.db.ShippingMethod.createOne({
-    data: {
-      cart: { connect: { id: cartId } },
-      shippingOption: { connect: { id: shippingOption.id } },
-      price: shippingOption.amount,
+  await sudo.prisma.$transaction(async (tx: any) => {
+    await tx.shippingMethod.deleteMany({ where: { cartId } });
+    await tx.shippingMethod.create({
       data: {
-        name: shippingOption.name
-      }
-    }
+        cartId,
+        shippingOptionId: option.id,
+        price: option.amount,
+        data: { name: option.name },
+      },
+    });
+    await tx.cart.update({
+      where: { id: cartId },
+      data: { paymentCollectionId: null },
+    });
   });
 
-  return await sudoContext.db.Cart.findOne({
-    where: { id: cartId }
+  return sudo.query.Cart.findOne({
+    where: { id: cartId },
+    query: "id shippingMethods { id price data shippingOption { id name } }",
   });
 }
 
-export default addActiveCartShippingMethod; 
+export default addActiveCartShippingMethod;

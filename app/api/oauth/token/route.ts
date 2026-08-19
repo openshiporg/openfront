@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { keystoneContext } from '@/features/keystone/context';
 import crypto from 'crypto';
+import {
+  findOAuthToken,
+  storedOAuthToken,
+  verifyOAuthClientSecret,
+} from '@/features/keystone/security/oauth-credentials';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,52 +27,30 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Only require clientId for authorization_code grant
-    if (grantType === 'authorization_code' && !clientId) {
+    if (!clientId || !clientSecret) {
       return NextResponse.json(
-        { error: 'invalid_request', error_description: 'Missing client_id for authorization_code grant' },
+        { error: 'invalid_request', error_description: 'Missing client credentials' },
         { status: 400 }
       );
     }
 
+    const oauthApp = await keystoneContext.sudo().query.OAuthApp.findOne({
+      where: { clientId },
+      query: 'id name clientSecret scopes status'
+    });
 
-    let oauthApp = null;
-    
-    // Only find OAuth app for authorization_code grants
-    if (grantType === 'authorization_code') {
-      // Find the OAuth app
-      oauthApp = await keystoneContext.sudo().query.OAuthApp.findOne({
-        where: { clientId },
-        query: 'id name clientSecret scopes status'
-      });
-
-
-      if (!oauthApp) {
-        return NextResponse.json(
-          { error: 'invalid_client', error_description: 'Client not found' },
-          { status: 401 }
-        );
-      }
-
-      if (oauthApp.status !== 'active') {
-        return NextResponse.json(
-          { error: 'unauthorized_client', error_description: 'Client is not active' },
-          { status: 401 }
-        );
-      }
+    if (
+      !oauthApp ||
+      oauthApp.status !== 'active' ||
+      !verifyOAuthClientSecret(clientSecret, oauthApp.clientSecret)
+    ) {
+      return NextResponse.json(
+        { error: 'invalid_client', error_description: 'Invalid client credentials' },
+        { status: 401 }
+      );
     }
 
-
-    // Only verify client secret for authorization code grants
-    // Refresh token grants don't need client credentials
     if (grantType === 'authorization_code') {
-      // Verify client secret for authorization code flow
-      if (oauthApp.clientSecret !== clientSecret) {
-        return NextResponse.json(
-          { error: 'invalid_client', error_description: 'Invalid client credentials' },
-          { status: 401 }
-        );
-      }
       return await handleAuthorizationCodeGrant({
         code,
         redirectUri,
@@ -89,13 +72,9 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('OAuth token error:', error);
-    console.error('Full error details:', JSON.stringify(error, null, 2));
-    console.error('Stack trace:', error.stack);
-    console.error('Error name:', error.name);
-    console.error('Error constructor:', error.constructor.name);
+    console.error('OAuth token request failed');
     return NextResponse.json(
-      { error: 'server_error', error_description: `${error.name}: ${error.message}` || 'Internal server error' },
+      { error: 'server_error', error_description: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -122,10 +101,11 @@ async function handleAuthorizationCodeGrant({
   }
 
   // Find the authorization code by token only (since it's unique)
-  const authCode = await keystoneContext.sudo().query.OAuthToken.findOne({
-    where: { token: code },
-    query: 'id token tokenType clientId scopes redirectUri expiresAt codeChallenge codeChallengeMethod isRevoked user { id }'
-  });
+  const authCode = await findOAuthToken(
+    keystoneContext,
+    code,
+    'id token tokenType clientId scopes redirectUri expiresAt codeChallenge codeChallengeMethod isRevoked user { id }'
+  );
 
   if (!authCode) {
     return NextResponse.json(
@@ -213,39 +193,37 @@ async function handleAuthorizationCodeGrant({
   const accessTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
   const refreshTokenExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-  // Revoke the authorization code
-  await keystoneContext.sudo().query.OAuthToken.updateOne({
-    where: { id: authCode.id },
-    data: { isRevoked: 'true' }
-  });
-
-  // Create access token
-  await keystoneContext.sudo().query.OAuthToken.createOne({
-    data: {
-      tokenType: 'access_token',
-      token: accessToken,
-      clientId,
-      scopes: authCode.scopes,
-      expiresAt: accessTokenExpiresAt,
-      isRevoked: 'false',
-      authorizationCode: code,
-      refreshToken: newRefreshToken,
-      user: authCode.user ? { connect: { id: authCode.user.id } } : undefined
-    }
-  });
-
-  // Create refresh token
-  await keystoneContext.sudo().query.OAuthToken.createOne({
-    data: {
-      tokenType: 'refresh_token',
-      token: newRefreshToken,
-      clientId,
-      scopes: authCode.scopes,
-      expiresAt: refreshTokenExpiresAt,
-      isRevoked: 'false',
-      accessToken,
-      user: authCode.user ? { connect: { id: authCode.user.id } } : undefined
-    }
+  await keystoneContext.sudo().prisma.$transaction(async (tx) => {
+    const consumed = await tx.oAuthToken.updateMany({
+      where: { id: authCode.id, isRevoked: 'false' },
+      data: { isRevoked: 'true' },
+    });
+    if (consumed.count !== 1) throw new Error('Authorization code already consumed');
+    await tx.oAuthToken.create({
+      data: {
+        tokenType: 'access_token',
+        token: storedOAuthToken(accessToken),
+        clientId,
+        scopes: authCode.scopes,
+        expiresAt: accessTokenExpiresAt,
+        isRevoked: 'false',
+        authorizationCode: storedOAuthToken(code),
+        refreshToken: storedOAuthToken(newRefreshToken),
+        userId: authCode.user?.id,
+      },
+    });
+    await tx.oAuthToken.create({
+      data: {
+        tokenType: 'refresh_token',
+        token: storedOAuthToken(newRefreshToken),
+        clientId,
+        scopes: authCode.scopes,
+        expiresAt: refreshTokenExpiresAt,
+        isRevoked: 'false',
+        accessToken: storedOAuthToken(accessToken),
+        userId: authCode.user?.id,
+      },
+    });
   });
 
   // Return proper OAuth 2.0 response with both tokens
@@ -275,10 +253,11 @@ async function handleRefreshTokenGrant({
   }
 
   // Find the refresh token by token only (since it's unique)
-  const tokenRecord = await keystoneContext.sudo().query.OAuthToken.findOne({
-    where: { token: refreshToken },
-    query: 'id token tokenType clientId scopes expiresAt accessToken isRevoked user { id }'
-  });
+  const tokenRecord = await findOAuthToken(
+    keystoneContext,
+    refreshToken,
+    'id token tokenType clientId scopes expiresAt accessToken isRevoked user { id }'
+  );
 
   if (!tokenRecord) {
     return NextResponse.json(
@@ -295,8 +274,12 @@ async function handleRefreshTokenGrant({
     );
   }
 
-  // Skip client ID validation - refresh token should be enough
-  // Proper OAuth doesn't need client credentials for refresh
+  if (tokenRecord.clientId !== clientId) {
+    return NextResponse.json(
+      { error: 'invalid_grant', error_description: 'Client ID mismatch' },
+      { status: 400 }
+    );
+  }
 
   if (tokenRecord.isRevoked === 'true') {
     return NextResponse.json(
@@ -313,53 +296,57 @@ async function handleRefreshTokenGrant({
     );
   }
 
-  // Generate new access token
   const newAccessToken = crypto.randomBytes(32).toString('hex');
+  const newRefreshToken = crypto.randomBytes(32).toString('hex');
   const accessTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
-
-  // Revoke old access token if it exists
-  if (tokenRecord.accessToken) {
-    const oldAccessTokens = await keystoneContext.sudo().query.OAuthToken.findMany({
-      where: {
-        token: { equals: tokenRecord.accessToken },
-        tokenType: { equals: 'access_token' },
-        clientId: { equals: tokenRecord.clientId }
-      }
+  const refreshTokenExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  await keystoneContext.sudo().prisma.$transaction(async (tx) => {
+    const rotated = await tx.oAuthToken.updateMany({
+      where: { id: tokenRecord.id, isRevoked: 'false' },
+      data: { isRevoked: 'true' },
     });
-
-    for (const oldToken of oldAccessTokens) {
-      await keystoneContext.sudo().query.OAuthToken.updateOne({
-        where: { id: oldToken.id },
-        data: { isRevoked: 'true' }
+    if (rotated.count !== 1) throw new Error('Refresh token already rotated');
+    if (tokenRecord.accessToken) {
+      await tx.oAuthToken.updateMany({
+        where: {
+          token: tokenRecord.accessToken,
+          tokenType: 'access_token',
+          clientId: tokenRecord.clientId,
+        },
+        data: { isRevoked: 'true' },
       });
     }
-  }
-
-  // Create new access token
-  await keystoneContext.sudo().query.OAuthToken.createOne({
-    data: {
-      tokenType: 'access_token',
-      token: newAccessToken,
-      clientId: tokenRecord.clientId,
-      scopes: tokenRecord.scopes,
-      expiresAt: accessTokenExpiresAt,
-      isRevoked: 'false',
-      refreshToken,
-      user: tokenRecord.user ? { connect: { id: tokenRecord.user.id } } : undefined
-    }
-  });
-
-  // Update refresh token to reference new access token
-  await keystoneContext.sudo().query.OAuthToken.updateOne({
-    where: { id: tokenRecord.id },
-    data: { accessToken: newAccessToken }
+    await tx.oAuthToken.create({
+      data: {
+        tokenType: 'access_token',
+        token: storedOAuthToken(newAccessToken),
+        clientId: tokenRecord.clientId,
+        scopes: tokenRecord.scopes,
+        expiresAt: accessTokenExpiresAt,
+        isRevoked: 'false',
+        refreshToken: storedOAuthToken(newRefreshToken),
+        userId: tokenRecord.user?.id,
+      },
+    });
+    await tx.oAuthToken.create({
+      data: {
+        tokenType: 'refresh_token',
+        token: storedOAuthToken(newRefreshToken),
+        clientId: tokenRecord.clientId,
+        scopes: tokenRecord.scopes,
+        expiresAt: refreshTokenExpiresAt,
+        isRevoked: 'false',
+        accessToken: storedOAuthToken(newAccessToken),
+        userId: tokenRecord.user?.id,
+      },
+    });
   });
 
   return NextResponse.json({
     access_token: newAccessToken,
     token_type: 'bearer',
     expires_in: 3600, // 1 hour
-    refresh_token: refreshToken,
+    refresh_token: newRefreshToken,
     scope: tokenRecord.scopes?.join(' ') || ''
   });
 }

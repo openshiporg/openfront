@@ -65,7 +65,7 @@ export const SCOPE_TO_PERMISSIONS: Record<OAuthScope, Permission[]> = {
   "read_products": ["canReadProducts"],
   "write_products": ["canReadProducts", "canManageProducts"],
   
-  // Orders  
+  // Orders
   "read_orders": ["canReadOrders"],
   "write_orders": ["canReadOrders", "canManageOrders"],
   

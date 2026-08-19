@@ -11,9 +11,9 @@ export const IdempotencyKey = list({
       query: ({ session }) =>
         permissions.canReadIdempotencyKeys({ session }) ||
         permissions.canManageIdempotencyKeys({ session }),
-      create: permissions.canManageIdempotencyKeys,
-      update: permissions.canManageIdempotencyKeys,
-      delete: permissions.canManageIdempotencyKeys,
+      create: () => false,
+      update: () => false,
+      delete: () => false,
     },
   },
   fields: {

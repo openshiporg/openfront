@@ -1,7 +1,7 @@
+import { assertCartAccess } from "../security/cart-access";
+
 async function activeCart(root, { cartId }, context) {
-  if (!cartId) {
-    throw new Error("Cart ID is required");
-  }
+  await assertCartAccess(context, cartId, { allowCompleted: true });
 
   const sudoContext = context.sudo();
 

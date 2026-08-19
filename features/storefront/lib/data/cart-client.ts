@@ -132,14 +132,8 @@ const CART_QUERY = gql`
 `;
 
 const CREATE_CART_MUTATION = gql`
-  mutation CreateCart($data: CartCreateInput!) {
-    createCart(data: $data) {
-      id
-      region {
-        id
-        currencyCode
-      }
-    }
+  mutation CreateActiveCart($regionId: ID!) {
+    createActiveCart(regionId: $regionId)
   }
 `;
 
@@ -158,15 +152,11 @@ export async function retrieveCart(cartId: string) {
 
 export async function createCart(data: { regionId: string }) {
   try {
-    const { createCart } = await openfrontClient.request(
+    const { createActiveCart } = await openfrontClient.request(
       CREATE_CART_MUTATION,
-      {
-        data: {
-          region: { connect: { id: data.regionId } }
-        }
-      }
+      { regionId: data.regionId }
     );
-    return createCart;
+    return createActiveCart;
   } catch (error) {
     console.error('Error creating cart:', error);
     throw error;

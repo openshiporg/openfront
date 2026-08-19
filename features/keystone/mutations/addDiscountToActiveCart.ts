@@ -10,7 +10,10 @@
  * Note: Product-level validation (which items get the discount) happens in calculateCartDiscount
  */
 
+import { assertCartAccess } from "../security/cart-access";
+
 async function addDiscountToActiveCart(root, { cartId, code }, context) {
+  await assertCartAccess(context, cartId);
   const sudoContext = context.sudo();
 
   // Get cart with customer and region info for eligibility validation
@@ -173,7 +176,8 @@ async function addDiscountToActiveCart(root, { cartId, code }, context) {
   const updatedCart = await sudoContext.db.Cart.updateOne({
     where: { id: cartId },
     data: {
-      discounts: discountUpdate
+      discounts: discountUpdate,
+      paymentCollection: { disconnect: true },
     },
   });
 

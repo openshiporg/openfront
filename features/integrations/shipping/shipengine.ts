@@ -90,6 +90,14 @@ export async function createLabelFunction({
   rateId,
   dimensions,
   lineItems,
+  idempotencyKey,
+}: {
+  provider: any;
+  order: any;
+  rateId: string;
+  dimensions: any;
+  lineItems: any[];
+  idempotencyKey: string;
 }) {
 
   if (!dimensions) {
@@ -124,6 +132,7 @@ export async function createLabelFunction({
   // Build shipment payload for ShipEngine label creation
   const payload = {
     shipment: {
+      ...(idempotencyKey ? { external_shipment_id: idempotencyKey } : {}),
       // Use the serviceCode variable instead of rateId directly
       service_code: serviceCode,
       ship_to: {

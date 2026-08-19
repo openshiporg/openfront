@@ -10,9 +10,9 @@ export const InvoiceLineItem = list({
   access: {
     operation: {
       query: permissions.canManageOrders,
-      create: permissions.canManageOrders,
-      update: permissions.canManageOrders,
-      delete: permissions.canManageOrders,
+      create: () => false,
+      update: () => false,
+      delete: () => false,
     },
   },
   fields: {

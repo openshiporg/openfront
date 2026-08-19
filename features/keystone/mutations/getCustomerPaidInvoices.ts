@@ -1,8 +1,14 @@
-async function getCustomerPaidInvoices(root, { limit = 10, offset = 0 }, context) {
+async function getCustomerPaidInvoices(
+  root: any,
+  { limit = 10, offset = 0 }: { limit?: number; offset?: number },
+  context: any
+) {
   if (!context.session?.itemId) {
     throw new Error('Not authenticated');
   }
 
+  const boundedLimit = Math.max(1, Math.min(Number(limit) || 10, 100));
+  const boundedOffset = Math.max(0, Number(offset) || 0);
   const sudoContext = context.sudo();
   
   const invoices = await sudoContext.query.Invoice.findMany({
@@ -13,8 +19,8 @@ async function getCustomerPaidInvoices(root, { limit = 10, offset = 0 }, context
       status: { equals: 'paid' }
     },
     orderBy: { paidAt: 'desc' },
-    take: limit,
-    skip: offset,
+    take: boundedLimit,
+    skip: boundedOffset,
     query: `
       id
       invoiceNumber

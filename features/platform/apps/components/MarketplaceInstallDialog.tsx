@@ -50,16 +50,31 @@ export const MarketplaceInstallDialog: React.FC<MarketplaceInstallDialogProps> =
     return descriptions[scope] || `Access to ${scope}`;
   };
 
-  const scopes = [
-    'read_products',
-    'write_products', 
-    'read_orders',
-    'write_orders',
-    'read_customers',
-    'write_customers',
-    'read_webhooks',
-    'write_webhooks'
-  ];
+  const scopes = app?.type === 'channel'
+    ? [
+        'read_products',
+        'write_products',
+        'read_orders',
+        'write_orders',
+        'read_inventory',
+        'write_inventory',
+        'read_webhooks',
+        'write_webhooks',
+        'read_fulfillments',
+        'write_fulfillments',
+      ]
+    : [
+        'read_products',
+        'write_products',
+        'read_orders',
+        'write_orders',
+        'read_customers',
+        'write_customers',
+        'read_webhooks',
+        'write_webhooks',
+        'read_fulfillments',
+        'write_fulfillments',
+      ];
 
   const handleAuthorize = async () => {
     if (!app || !openshipUrl.trim()) return;
@@ -75,10 +90,12 @@ export const MarketplaceInstallDialog: React.FC<MarketplaceInstallDialogProps> =
       if (result.success) {
         const state = JSON.stringify({
           type: 'marketplace',
+          redirect_type: 'openship_setup',
           client_id: result.data.clientId,
-          client_secret: result.data.clientSecret,
+          installation_ticket: result.data.installationTicket,
           app_name: app?.title,
-          app_type: app?.type, // Include app type for proper routing
+          app_type: app?.type,
+          openship_url: openshipUrl.trim().replace(/\/$/, ''),
           adapter_slug: 'openfront',
           nonce: crypto.randomUUID()
         });

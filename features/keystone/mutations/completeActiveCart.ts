@@ -1,4 +1,38 @@
-async function completeActiveCart(root, { cartId, paymentSessionId }, context) {
+import {
+  assertCartAccess,
+  assertPaymentSessionBelongsToCart,
+} from "../security/cart-access";
+import {
+  capturePayment,
+  getPaymentStatus,
+} from "../utils/paymentProviderAdapter";
+import {
+  checkoutKey,
+  getOrCreateCheckoutAttempt,
+  releaseCheckoutResources,
+  reserveCartInventory,
+  reserveDiscountUsage,
+  updateCheckoutAttempt,
+} from "../checkout/recovery";
+import {
+  assertCheckoutWithinLaunchPolicy,
+  commerceLaunchPolicy,
+} from "../config/launch-policy";
+import { createOrderFromCartAtomically } from "../checkout/order-commit";
+import {
+  enqueueWebhookOutbox,
+  subscribedWebhookEndpointIds,
+} from "../../webhooks/outbox";
+
+async function completeActiveCart(
+  root: any,
+  { cartId, paymentSessionId }: { cartId: string; paymentSessionId?: string },
+  context: any
+) {
+  await assertCartAccess(context, cartId, { allowCompleted: true });
+  if (paymentSessionId) {
+    await assertPaymentSessionBelongsToCart(context, cartId, paymentSessionId);
+  }
   const sudoContext = context.sudo();
   const user = context.session?.itemId;
 
@@ -9,12 +43,23 @@ async function completeActiveCart(root, { cartId, paymentSessionId }, context) {
       id
       email
       rawTotal
+      metadata
+      order {
+        id
+        status
+        displayId
+        secretKey
+        payments { id }
+        account { id }
+        shippingAddress { country { iso2 } }
+      }
       user {
         id
         hasAccount
       }
       shippingAddress {
         id
+        country { iso2 }
         user {
           id
           hasAccount
@@ -36,7 +81,9 @@ async function completeActiveCart(root, { cartId, paymentSessionId }, context) {
       }
       discounts {
         id
+        code
       }
+      giftCards { id }
       shippingMethods {
         id
       }
@@ -50,6 +97,9 @@ async function completeActiveCart(root, { cartId, paymentSessionId }, context) {
           id
           sku
           title
+          inventoryQuantity
+          manageInventory
+          allowBackorder
           primaryImage {
             image {
               url
@@ -60,6 +110,7 @@ async function completeActiveCart(root, { cartId, paymentSessionId }, context) {
             id
             title
             thumbnail
+            productTags { id }
             description {
               document
             }
@@ -96,6 +147,9 @@ async function completeActiveCart(root, { cartId, paymentSessionId }, context) {
           paymentProvider {
             id
             code
+            capturePaymentFunction
+            getPaymentStatusFunction
+            credentials
           }
         }
       }
@@ -106,18 +160,129 @@ async function completeActiveCart(root, { cartId, paymentSessionId }, context) {
     throw new Error("Cart not found");
   }
 
-  // Handle different payment flows
-  if (!paymentSessionId) {
-    // No payment session = customer token/account flow (Openship)
-    return await handleAccountOrder(cart, user, sudoContext);
-  } else {
-    // Payment session provided = regular storefront order
-    return await handlePaidOrder(cart, paymentSessionId, sudoContext);
+  // The cart/order relationship is the local recovery anchor. Complete any
+  // post-provider local records before returning a previously created order.
+  if (cart.order?.id) {
+    const existingAttempt = await sudoContext.prisma.idempotencyKey.findUnique({
+      where: { idempotencyKey: checkoutKey(cartId) },
+    });
+    if (paymentSessionId && !cart.order.payments?.length) {
+      const selectedSession = cart.paymentCollection?.paymentSessions?.find(
+        (session: any) => session.id === paymentSessionId
+      );
+      const paymentResult = existingAttempt?.responseBody?.paymentResult;
+      if (!selectedSession || !paymentResult || existingAttempt.recoveryPoint !== 'payment_confirmed') {
+        throw new Error('Checkout requires payment reconciliation');
+      }
+      await createPaymentRecord(paymentResult, selectedSession, cart.order, cart, sudoContext);
+    } else if (!paymentSessionId && !cart.order.account?.id) {
+      if (!user) throw new Error('Checkout requires account reconciliation');
+      const accounts = await sudoContext.query.Account.findMany({
+        where: {
+          user: { id: { equals: user } },
+          accountType: { equals: 'business' },
+          status: { equals: 'active' },
+        },
+        take: 1,
+        query: 'id',
+      });
+      if (!accounts[0]) throw new Error('Checkout requires account reconciliation');
+      await addOrderToAccount(accounts[0].id, cart.order, sudoContext);
+    }
+    if (existingAttempt) {
+      await updateCheckoutAttempt(
+        sudoContext.prisma,
+        existingAttempt.id,
+        'completed',
+        { orderId: cart.order.id },
+        200
+      );
+    }
+    return sudoContext.query.Order.findOne({
+      where: { id: cart.order.id },
+      query: 'id status displayId secretKey shippingAddress { country { iso2 } }',
+    });
+  }
+  assertCheckoutWithinLaunchPolicy(cart);
+  if (cart.giftCards?.length) {
+    throw new Error('Gift-card redemption is outside the bounded launch boundary');
+  }
+
+  const attempt = await getOrCreateCheckoutAttempt(
+    sudoContext.prisma,
+    cartId,
+    paymentSessionId
+  );
+  if (attempt.recoveryPoint === 'completed' && attempt.responseBody?.orderId) {
+    return sudoContext.query.Order.findOne({
+      where: { id: attempt.responseBody.orderId },
+      query: 'id status displayId secretKey shippingAddress { country { iso2 } }',
+    });
+  }
+
+  let inventoryReserved = attempt.recoveryPoint !== 'started';
+  let discountsReserved = [
+    'resources_reserved',
+    'payment_unknown',
+    'order_created',
+    'payment_confirmed',
+  ].includes(attempt.recoveryPoint);
+  try {
+    if (!inventoryReserved) {
+      await reserveCartInventory(
+        sudoContext.prisma,
+        cart.lineItems,
+        checkoutKey(cartId),
+        attempt.id
+      );
+      inventoryReserved = true;
+      attempt.recoveryPoint = 'stock_reserved';
+    }
+    if (!discountsReserved) {
+      await reserveDiscountUsage(
+        sudoContext.prisma,
+        cart.discounts || [],
+        attempt.id
+      );
+      discountsReserved = true;
+      attempt.recoveryPoint = 'resources_reserved';
+    }
+
+    const order = !paymentSessionId
+      ? await handleAccountOrder(cart, user, sudoContext, attempt)
+      : await handlePaidOrder(cart, paymentSessionId, sudoContext, attempt);
+
+    await updateCheckoutAttempt(
+      sudoContext.prisma,
+      attempt.id,
+      'completed',
+      { orderId: order.id },
+      200
+    );
+    return order;
+  } catch (error) {
+    // Before an external payment succeeds, stock can be safely released. Once
+    // payment is confirmed the durable attempt remains recoverable and a retry
+    // completes the local order without charging again.
+    if (
+      inventoryReserved &&
+      !['payment_unknown', 'order_created', 'payment_confirmed'].includes(attempt.recoveryPoint)
+    ) {
+      await releaseCheckoutResources(
+        sudoContext.prisma,
+        cart.lineItems,
+        discountsReserved ? (cart.discounts || []) : [],
+        checkoutKey(cartId),
+        attempt.id,
+        error instanceof Error ? error.message : 'Checkout failed'
+      );
+    }
+    throw error;
   }
 }
 
 // Handle orders that go to accounts (Openship customer token flow)
-async function handleAccountOrder(cart, user, sudoContext) {
+async function handleAccountOrder(cart: any, user: string, sudoContext: any, attempt: any) {
   if (!user) {
     throw new Error('Authentication required for account orders');
   }
@@ -158,38 +323,22 @@ async function handleAccountOrder(cart, user, sudoContext) {
     throw new Error(`No active business account found. Contact administrator to set up business account access.`);
   }
   
-  // CREDIT LIMIT ENFORCEMENT - Convert order to account currency
-  const convertCurrency = (await import('../utils/currencyConversion')).default;
-  
-  // Convert cart total from cart currency to account currency for credit check
-  const orderInAccountCurrency = await convertCurrency(
-    cart.rawTotal,
-    cartCurrency,
-    activeAccount.currency.code
-  );
-  
-  // Get current balance in account currency using virtual field
-  const accountWithBalance = await sudoContext.query.Account.findOne({
-    where: { id: activeAccount.id },
-    query: 'availableCreditInAccountCurrency'
-  });
-  
-  const availableCredit = accountWithBalance.availableCreditInAccountCurrency || 0;
-  
-  if (orderInAccountCurrency > availableCredit) {
-    const { formatCurrencyAmount } = await import('../utils/currencyConversion');
-    
-    const availableCreditFormatted = formatCurrencyAmount(availableCredit, activeAccount.currency.code);
-    const requiredCreditFormatted = formatCurrencyAmount(orderInAccountCurrency, activeAccount.currency.code);
-    
-    throw new Error(
-      `Insufficient credit. Available: ${availableCreditFormatted}, Required: ${requiredCreditFormatted}. ` +
-      `Please contact billing to increase your credit limit or make a payment.`
-    );
+  // Cross-currency credit requires an owner-approved rate source and accounting
+  // policy. The bounded launch fails closed instead of using an approximation.
+  if (cartCurrency !== activeAccount.currency.code) {
+    throw new Error('Cross-currency account orders are outside the supported launch boundary');
   }
+  const orderInAccountCurrency = cart.rawTotal;
   
   // Create order without payment processing
-  const order = await createOrderFromCartData(cart, sudoContext);
+  const order = await createOrderFromCartAtomically(cart, sudoContext);
+  await updateCheckoutAttempt(
+    sudoContext.prisma,
+    attempt.id,
+    'order_created',
+    { orderId: order.id }
+  );
+  attempt.recoveryPoint = 'order_created';
   
   // Add order to account with transaction safety
   await addOrderToAccount(activeAccount.id, order, sudoContext);
@@ -198,12 +347,12 @@ async function handleAccountOrder(cart, user, sudoContext) {
 }
 
 // Handle orders with payment processing (regular storefront)
-async function handlePaidOrder(cart, paymentSessionId, sudoContext) {
+async function handlePaidOrder(cart: any, paymentSessionId: string, sudoContext: any, attempt: any) {
   // Find the specific payment session by ID
   const selectedSession = cart.paymentCollection?.paymentSessions?.find(
-    session => session.id === paymentSessionId
+    (session: any) => session.id === paymentSessionId
   );
-  
+
   if (!selectedSession) {
     throw new Error(`Payment session not found. Looking for session ID: ${paymentSessionId}`);
   }
@@ -215,175 +364,104 @@ async function handlePaidOrder(cart, paymentSessionId, sudoContext) {
   if (!selectedSession.paymentProvider.code) {
     throw new Error("Payment provider code is missing");
   }
+  assertCheckoutWithinLaunchPolicy(cart, selectedSession.paymentProvider.code);
   
-  // Process payment based on provider
-  let paymentResult;
-  switch (selectedSession.paymentProvider.code) {
-    case 'pp_stripe_stripe':
-      paymentResult = await captureStripePayment(selectedSession);
-      break;
-    case 'pp_paypal_paypal':
-      paymentResult = await capturePayPalPayment(selectedSession);
-      break;
-    case 'pp_system_default':
-      // Cash on Delivery - order is placed but payment collected on delivery
-      paymentResult = { status: 'manual_pending', paymentIntentId: null };
-      break;
-    default:
-      throw new Error(`Unsupported payment provider: ${selectedSession.paymentProvider.code}`);
+  if (selectedSession.amount !== cart.rawTotal) {
+    throw new Error("Payment session amount no longer matches cart total");
   }
-  
-  if (paymentResult.status !== 'succeeded' && paymentResult.status !== 'manual_pending') {
-    throw new Error(`Payment failed: ${paymentResult.error}`);
+
+  let paymentResult = attempt.responseBody?.paymentResult;
+  if (attempt.recoveryPoint !== 'payment_confirmed' || !paymentResult) {
+    try {
+      paymentResult = await settlePaymentSession(selectedSession, cart);
+    } catch (error) {
+      await updateCheckoutAttempt(
+        sudoContext.prisma,
+        attempt.id,
+        'payment_unknown',
+        { error: error instanceof Error ? error.message : String(error) }
+      );
+      attempt.recoveryPoint = 'payment_unknown';
+      throw error;
+    }
+    if (paymentResult.status !== 'succeeded') {
+      await updateCheckoutAttempt(
+        sudoContext.prisma,
+        attempt.id,
+        'resources_reserved',
+        { paymentResult }
+      );
+      attempt.recoveryPoint = 'resources_reserved';
+      throw new Error(`Payment failed: ${paymentResult.error || paymentResult.status}`);
+    }
+    await updateCheckoutAttempt(
+      sudoContext.prisma,
+      attempt.id,
+      'payment_confirmed',
+      { paymentResult }
+    );
+    attempt.recoveryPoint = 'payment_confirmed';
+    attempt.responseBody = { paymentResult };
   }
-  
+
   // Create order and payment record
-  const order = await createOrderFromCartData(cart, sudoContext);
-  await createPaymentRecord(paymentResult, order, cart, sudoContext);
-  
+  const order = await createOrderFromCartAtomically(cart, sudoContext);
+  await createPaymentRecord(paymentResult, selectedSession, order, cart, sudoContext);
+
   return order;
 }
 
-// Payment processing functions
-async function captureStripePayment(session) {
-  const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-  
-  if (!stripe) {
-    throw new Error('Stripe not configured');
-  }
-  
-  try {
-    // Get the payment intent from the session data
-    const paymentIntentId = session.data.clientSecret?.split('_secret_')[0];
-    
-    console.log('=== captureStripePayment Debug ===');
-    console.log('session.data:', session.data);
-    console.log('paymentIntentId:', paymentIntentId);
-    
-    if (!paymentIntentId) {
-      throw new Error('Invalid Stripe payment intent');
-    }
-    
-    // Retrieve the payment intent to check its status
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-    console.log('PaymentIntent status:', paymentIntent.status);
-    console.log('PaymentIntent amount:', paymentIntent.amount);
-    
-    if (paymentIntent.status === 'succeeded') {
-      return {
-        status: 'succeeded',
-        paymentIntentId: paymentIntent.id,
-        error: null
-      };
-    } else if (paymentIntent.status === 'requires_capture') {
-      // Capture the payment
-      const captured = await stripe.paymentIntents.capture(paymentIntentId);
-      return {
-        status: captured.status === 'succeeded' ? 'succeeded' : 'failed',
-        paymentIntentId: captured.id,
-        error: captured.status !== 'succeeded' ? 'Payment capture failed' : null
-      };
-    } else {
-      return {
-        status: 'failed',
-        paymentIntentId: paymentIntent.id,
-        error: `Payment status: ${paymentIntent.status}`
-      };
-    }
-  } catch (error) {
-    return {
-      status: 'failed',
-      paymentIntentId: null,
-      error: error.message
-    };
-  }
-}
-
-async function capturePayPalPayment(session) {
-  if (!session.data.orderId) {
-    return {
-      status: 'failed',
-      paymentIntentId: null,
-      error: 'PayPal order ID not found'
-    };
+async function settlePaymentSession(session: any, cart: any) {
+  const provider = session.paymentProvider;
+  if (provider.code === 'pp_system_default') {
+    throw new Error('Manual tender cannot complete storefront checkout');
   }
 
-  try {
-    // Get PayPal access token
-    const authResponse = await fetch(`${process.env.PAYPAL_API_URL || 'https://api.paypal.com'}/v1/oauth2/token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString('base64')}`
-      },
-      body: 'grant_type=client_credentials'
+  const paymentId =
+    session.data?.paymentIntentId ||
+    session.data?.clientSecret?.split('_secret_')[0] ||
+    session.data?.orderId;
+  if (!paymentId) throw new Error('Payment provider reference is missing');
+
+  let result = await getPaymentStatus({ provider, paymentId });
+  const normalizedStatus = String(result.status || '').toLowerCase();
+  if (['requires_capture', 'approved', 'authorized'].includes(normalizedStatus)) {
+    result = await capturePayment({
+      provider,
+      paymentId,
+      amount: cart.rawTotal,
+      currency: cart.region.currency.code,
+      idempotencyKey: checkoutKey(cart.id),
     });
-
-    if (!authResponse.ok) {
-      throw new Error('PayPal authentication failed');
-    }
-
-    const authData = await authResponse.json();
-    const accessToken = authData.access_token;
-
-    // Verify the order status with PayPal
-    const orderResponse = await fetch(`${process.env.PAYPAL_API_URL || 'https://api.paypal.com'}/v2/checkout/orders/${session.data.orderId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!orderResponse.ok) {
-      throw new Error(`PayPal order verification failed: ${orderResponse.status}`);
-    }
-
-    const orderData = await orderResponse.json();
-    
-    console.log('=== capturePayPalPayment Debug ===');
-    console.log('PayPal Order ID:', session.data.orderId);
-    console.log('PayPal Order Status:', orderData.status);
-    console.log('PayPal Order Amount:', orderData.purchase_units?.[0]?.amount);
-
-    // Verify the order is completed/approved
-    if (orderData.status === 'COMPLETED' || orderData.status === 'APPROVED') {
-      return {
-        status: 'succeeded',
-        paymentIntentId: session.data.orderId,
-        error: null
-      };
-    } else {
-      return {
-        status: 'failed',
-        paymentIntentId: session.data.orderId,
-        error: `PayPal order status: ${orderData.status}`
-      };
-    }
-  } catch (error) {
-    console.error('PayPal verification error:', error);
-    return {
-      status: 'failed',
-      paymentIntentId: session.data.orderId,
-      error: error.message
-    };
   }
+
+  const finalStatus = String(result.status || '').toLowerCase();
+  const succeeded = ['succeeded', 'completed', 'captured'].includes(finalStatus);
+  const resultAmount = Number(result.amount);
+  const expectedCurrency = String(cart.region.currency.code).toUpperCase();
+  const resultCurrency = String(result.currency || expectedCurrency).toUpperCase();
+
+  if (!succeeded) {
+    return { status: 'failed', paymentIntentId: paymentId, error: `Payment status: ${result.status}` };
+  }
+  if (!Number.isInteger(resultAmount) || resultAmount !== cart.rawTotal) {
+    throw new Error('Provider payment amount does not match cart total');
+  }
+  if (resultCurrency !== expectedCurrency) {
+    throw new Error('Provider payment currency does not match cart currency');
+  }
+
+  return {
+    status: 'succeeded',
+    paymentIntentId: paymentId,
+    amount: resultAmount,
+    currency: resultCurrency,
+    data: result.data,
+  };
 }
 
 // Helper function to add order to account
-async function addOrderToAccount(accountId, order, sudoContext) {
-  // Get account and order details for validation
-  const account = await sudoContext.query.Account.findOne({
-    where: { id: accountId },
-    query: `
-      id
-      totalAmount
-      currency {
-        code
-      }
-    `
-  });
-
+async function addOrderToAccount(accountId: string, order: any, sudoContext: any) {
   const orderDetails = await sudoContext.query.Order.findOne({
     where: { id: order.id },
     query: `
@@ -411,237 +489,135 @@ async function addOrderToAccount(accountId, order, sudoContext) {
 
   // Use atomic transaction to ensure data consistency
   try {
-    await sudoContext.prisma.$transaction(async (tx) => {
-      // Create account line item with region tracking
-      await sudoContext.query.AccountLineItem.createOne({
-        data: {
-          account: { connect: { id: accountId } },
-          order: { connect: { id: order.id } },
-          region: { connect: { id: orderDetails.region.id } },
-          description: `Order #${orderDetails.displayId} - ${orderDetails.lineItems?.length || 0} items`,
-          amount: orderDetails.rawTotal || 0,
-          orderDisplayId: String(orderDetails.displayId),
-          itemCount: orderDetails.lineItems?.length || 0,
-          paymentStatus: 'unpaid',
-        }
+    await sudoContext.prisma.$transaction(async (tx: any) => {
+      const existing = await tx.accountLineItem.findUnique({
+        where: { orderKey: order.id },
+        select: { id: true, accountId: true },
       });
-      
-      // Update account total atomically
-      await sudoContext.query.Account.updateOne({
-        where: { id: accountId },
-        data: {
-          totalAmount: (account.totalAmount || 0) + (orderDetails.rawTotal || 0)
+      if (existing && existing.accountId !== accountId) {
+        throw new Error('Order is already posted to a different account');
+      }
+
+      if (!existing) {
+        const amount = orderDetails.rawTotal || 0;
+        // Lock the account before evaluating and consuming credit so concurrent
+        // checkouts cannot both spend the same available balance.
+        const accountRows = await tx.$queryRaw<Array<{
+          id: string;
+          status: string;
+          totalAmount: number;
+          paidAmount: number;
+          creditLimit: number;
+        }>>`SELECT id, status, "totalAmount", "paidAmount", "creditLimit" FROM "Account" WHERE id = ${accountId} FOR UPDATE`;
+        const account = accountRows[0];
+        if (!account || account.status !== 'active') {
+          throw new Error('Business account is not active');
         }
-      });
-      
-      // Connect order to account
-      await sudoContext.query.Order.updateOne({
+        const availableCredit = account.creditLimit - ((account.totalAmount || 0) - (account.paidAmount || 0));
+        if (amount > availableCredit) throw new Error('Insufficient account credit');
+        await tx.account.update({
+          where: { id: accountId },
+          data: { totalAmount: { increment: amount } },
+        });
+        await tx.accountLineItem.create({
+          data: {
+            accountId,
+            orderId: order.id,
+            orderKey: order.id,
+            regionId: orderDetails.region.id,
+            description: `Order #${orderDetails.displayId} - ${orderDetails.lineItems?.length || 0} items`,
+            amount,
+            orderDisplayId: String(orderDetails.displayId),
+            itemCount: orderDetails.lineItems?.length || 0,
+            paymentStatus: 'unpaid',
+          }
+        });
+      }
+
+      await tx.order.update({
         where: { id: order.id },
-        data: {
-          account: { connect: { id: accountId } }
-        }
+        data: { accountId }
       });
-    });
+    }, { isolationLevel: 'Serializable' });
 
     console.log(`Order #${orderDetails.displayId} added to account ${accountId} for ${orderDetails.rawTotal} ${orderDetails.currency.code}`);
     
   } catch (error) {
     console.error('Error adding order to account:', error);
-    throw new Error(`Failed to add order to account: ${error.message}`);
+    throw new Error(
+      `Failed to add order to account: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 }
 
 // Helper function to create payment record
-async function createPaymentRecord(paymentResult, order, cart, sudoContext) {
-  const selectedSession = cart.paymentCollection?.paymentSessions?.[0];
-  
-  await sudoContext.query.Payment.createOne({
-    data: {
-      status: paymentResult.status === 'succeeded' ? 'captured' : 'pending',
-      amount: cart.rawTotal,
-      currencyCode: cart.region.currency.code,
-      data: {
-        ...selectedSession.data,
-        paymentIntentId: paymentResult.paymentIntentId
-      },
-      capturedAt: paymentResult.status === 'succeeded' ? new Date().toISOString() : null,
-      paymentCollection: { connect: { id: cart.paymentCollection.id } },
-      order: { connect: { id: order.id } },
-      user: order.user?.id ? { connect: { id: order.user.id } } : undefined,
-    },
-  });
-}
-
-// Extract order creation logic to reuse
-async function createOrderFromCartData(cart, sudoContext) {
-
-  // Get user from cart or shipping address
-  const userId = cart.user?.id || cart.shippingAddress?.user?.id;
-  const hasAccount = cart.user?.hasAccount || cart.shippingAddress?.user?.hasAccount || false;
-
-  // Generate a secretKey only for guest orders (no authenticated user)
-  const secretKey = !userId ? 
-    require('crypto').randomBytes(32).toString('hex') : 
-    undefined;
-
-  const formatCurrency = (amount, currencyCode) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currencyCode,
-    }).format(amount / 100);
-  };
-
-  // Create OrderLineItems and OrderMoneyAmounts first
-  const orderLineItems = [];
-  for (const lineItem of cart.lineItems) {
-    // Create OrderMoneyAmount first
-    const prices = await sudoContext.query.MoneyAmount.findMany({
-      where: {
-        productVariant: { id: { equals: lineItem.productVariant.id } },
-        region: { id: { equals: cart.region.id } },
-        currency: { code: { equals: cart.region.currency.code } },
-      },
-      query: `
-        id
-        calculatedPrice {
-          calculatedAmount
-          originalAmount
-          currencyCode
-        }
-      `,
+async function createPaymentRecord(
+  paymentResult: any,
+  selectedSession: any,
+  order: any,
+  cart: any,
+  sudoContext: any
+) {
+  const paymentWebhookEndpointIds = await subscribedWebhookEndpointIds(
+    sudoContext,
+    'payment.captured'
+  );
+  await sudoContext.prisma.$transaction(async (tx: any) => {
+    const existing = await tx.payment.findFirst({
+      where: { orderId: order.id, paymentCollectionId: cart.paymentCollection.id },
     });
-
-    const price = prices[0]?.calculatedPrice;
-    if (!price) {
-      throw new Error(`No valid price found for variant ${lineItem.productVariant.id} in region ${cart.region.id}`);
-    }
-
-    const orderMoneyAmount = await sudoContext.query.OrderMoneyAmount.createOne({
+    if (existing) return;
+    const payment = await tx.payment.create({
       data: {
-        amount: price.calculatedAmount,
-        originalAmount: price.originalAmount,
-        currency: { connect: { id: cart.region.currency.id } },
-        region: { connect: { id: cart.region.id } },
-        priceData: {
-          prices: lineItem.productVariant.prices,
+        status: 'captured',
+        amount: cart.rawTotal,
+        currencyCode: cart.region.currency.code,
+        data: {
+          ...selectedSession.data,
+          ...paymentResult.data,
+          paymentProviderId: selectedSession.paymentProvider.id,
+          paymentIntentId: paymentResult.paymentIntentId,
+        },
+        metadata: { checkoutIdempotencyKey: checkoutKey(cart.id) },
+        idempotencyKey: checkoutKey(cart.id),
+        capturedAt: new Date(),
+        paymentCollectionId: cart.paymentCollection.id,
+        orderId: order.id,
+        userId: cart.user?.id || cart.shippingAddress?.user?.id || null,
+      },
+    });
+    await tx.capture.create({
+      data: {
+        amount: cart.rawTotal,
+        paymentId: payment.id,
+        metadata: {
+          paymentProviderId: selectedSession.paymentProvider.id,
+          paymentIntentId: paymentResult.paymentIntentId,
+        },
+        createdBy: 'checkout',
+      },
+    });
+    await tx.orderEvent.create({
+      data: {
+        orderId: order.id,
+        type: 'PAYMENT_CAPTURED',
+        data: {
+          paymentId: payment.id,
+          amount: cart.rawTotal,
           currencyCode: cart.region.currency.code,
-          regionId: cart.region.id,
-          taxRate: cart.region.taxRate,
+          source: 'checkout',
         },
-        metadata: lineItem.metadata,
       },
     });
-
-    // Determine the thumbnail - prioritize variant primaryImage over product thumbnail
-    const thumbnail = lineItem.productVariant.primaryImage
-      ? (lineItem.productVariant.primaryImage.image?.url || lineItem.productVariant.primaryImage.imagePath)
-      : lineItem.productVariant.product.thumbnail;
-
-    // Create OrderLineItem with snapshot data
-    const orderLineItem = await sudoContext.query.OrderLineItem.createOne({
-      data: {
-        quantity: lineItem.quantity,
-        title: lineItem.productVariant.product.title,
-        sku: lineItem.productVariant.sku,
-        metadata: lineItem.metadata,
-        productData: {
-          id: lineItem.productVariant.product.id,
-          title: lineItem.productVariant.product.title,
-          thumbnail: thumbnail,
-          description: lineItem.productVariant.product.description,
-          metadata: lineItem.productVariant.product.metadata,
-        },
-        variantData: {
-          id: lineItem.productVariant.id,
-          sku: lineItem.productVariant.sku,
-          title: lineItem.productVariant.title,
-          measurements: lineItem.productVariant.measurements || []
-        },
-        variantTitle: lineItem.productVariant.title,
-        formattedUnitPrice: lineItem.unitPrice,
-        formattedTotal: lineItem.total,
-        productVariant: { connect: { id: lineItem.productVariant.id } },
-        originalLineItem: { connect: { id: lineItem.id } },
-        moneyAmount: { connect: { id: orderMoneyAmount.id } },
-      },
-    });
-
-    orderLineItems.push(orderLineItem);
-  }
-
-  // Create order with the new OrderLineItems
-  const order = await sudoContext.query.Order.createOne({
-    data: {
-      cart: { connect: { id: cart.id } },
-      email: cart.email,
-      user: userId ? { connect: { id: userId } } : undefined,
-      region: { connect: { id: cart.region.id } },
-      currency: { connect: { code: cart.region.currency.code } },
-      billingAddress: { connect: { id: cart.billingAddress.id } },
-      shippingAddress: { connect: { id: cart.shippingAddress.id } },
-      discounts: { connect: cart.discounts.map(d => ({ id: d.id })) },
-      shippingMethods: { connect: cart.shippingMethods.map(sm => ({ id: sm.id })) },
-      lineItems: { connect: orderLineItems.map(li => ({ id: li.id })) },
-      status: "pending",
-      displayId: Math.floor(Date.now() / 1000),
-      taxRate: cart.region.taxRate || 0,
-      secretKey,
-      events: {
-        create: {
-          type: "ORDER_PLACED",
-          data: {
-            cartId: cart.id,
-            isGuestOrder: !hasAccount
-          },
-        },
-      },
-    },
+    await enqueueWebhookOutbox(
+      tx,
+      paymentWebhookEndpointIds,
+      'payment.captured',
+      'Payment',
+      payment.id,
+      { id: payment.id, orderId: order.id, amount: cart.rawTotal, currencyCode: cart.region.currency.code }
+    );
   });
-
-  // Payment creation is now handled separately in createPaymentRecord()
-
-  // Update cart with order reference
-  await sudoContext.query.Cart.updateOne({
-    where: { id: cart.id },
-    data: {
-      order: { connect: { id: order.id } },
-    },
-  });
-
-  // Get the created order with all necessary fields
-  const createdOrder = await sudoContext.query.Order.findOne({
-    where: { id: order.id },
-    query: `
-      id
-      status
-      displayId
-      secretKey
-      subtotal
-      total
-      shipping
-      discount
-      tax
-      paymentDetails
-      shippingAddress {
-        id
-        firstName
-        lastName
-        company
-        address1
-        address2
-        city
-        province
-        postalCode
-        country {
-          id
-          iso2
-        }
-        phone
-      }
-    `
-  });
-
-  return createdOrder;
 }
 
 export default completeActiveCart; 

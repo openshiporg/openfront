@@ -276,34 +276,8 @@ export async function createPaymentProvider(input: CreatePaymentProviderInput) {
   } = input;
 
   const mutation = `
-    mutation CreatePaymentProvider(
-      $name: String!
-      $code: String!
-      $isInstalled: Boolean
-      $createPaymentFunction: String
-      $capturePaymentFunction: String
-      $refundPaymentFunction: String
-      $getPaymentStatusFunction: String
-      $generatePaymentLinkFunction: String
-      $handleWebhookFunction: String
-      $metadata: JSON
-      $credentials: JSON
-      $regionIds: [ID!]
-    ) {
-      createPaymentProvider(data: {
-        name: $name
-        code: $code
-        isInstalled: $isInstalled
-        createPaymentFunction: $createPaymentFunction
-        capturePaymentFunction: $capturePaymentFunction
-        refundPaymentFunction: $refundPaymentFunction
-        getPaymentStatusFunction: $getPaymentStatusFunction
-        generatePaymentLinkFunction: $generatePaymentLinkFunction
-        handleWebhookFunction: $handleWebhookFunction
-        metadata: $metadata
-        credentials: $credentials
-        regions: $regionIds ? { connect: $regionIds } : null
-      }) {
+    mutation CreatePaymentProvider($data: PaymentProviderCreateInput!) {
+      createPaymentProvider(data: $data) {
         id
         name
         code
@@ -319,18 +293,22 @@ export async function createPaymentProvider(input: CreatePaymentProviderInput) {
   `;
 
   const response = await keystoneClient(mutation, {
-    name,
-    code,
-    isInstalled,
-    createPaymentFunction,
-    capturePaymentFunction,
-    refundPaymentFunction,
-    getPaymentStatusFunction,
-    generatePaymentLinkFunction,
-    handleWebhookFunction,
-    metadata,
-    credentials,
-    regionIds: regionIds?.map(id => ({ id }))
+    data: {
+      name,
+      code,
+      isInstalled,
+      createPaymentFunction,
+      capturePaymentFunction,
+      refundPaymentFunction,
+      getPaymentStatusFunction,
+      generatePaymentLinkFunction,
+      handleWebhookFunction,
+      metadata,
+      credentials,
+      ...(regionIds?.length
+        ? { regions: { connect: regionIds.map((id) => ({ id })) } }
+        : {}),
+    },
   });
 
   if (response.success) {

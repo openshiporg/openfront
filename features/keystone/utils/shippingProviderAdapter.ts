@@ -68,6 +68,7 @@ type CreateLabelParams = {
   rateId: string;
   dimensions: Dimensions;
   lineItems: LineItem[];
+  idempotencyKey?: string;
 };
 
 type GetRatesParams = {
@@ -97,11 +98,11 @@ type CancelLabelParams = {
  * @param params - Parameters for creating a label
  * @returns The created label information
  */
-export async function createLabel({ provider, order, rateId, dimensions, lineItems }: CreateLabelParams): Promise<unknown> {
+export async function createLabel({ provider, order, rateId, dimensions, lineItems, idempotencyKey }: CreateLabelParams): Promise<any> {
   return executeAdapterFunction({
     provider,
     functionName: "createLabelFunction",
-    args: { order, rateId, dimensions, lineItems },
+    args: { order, rateId, dimensions, lineItems, idempotencyKey },
   });
 }
 

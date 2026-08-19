@@ -57,10 +57,10 @@ interface ExistingApp {
   name: string
   description?: string
   clientId: string
-  clientSecret: string
+  clientSecret?: string
   redirectUris: string[]
   scopes: string[]
-  status: 'active' | 'inactive'
+  status: 'active' | 'suspended'
   metadata?: Record<string, any>
 }
 
@@ -323,7 +323,6 @@ export function AppsPageClient({ existingApps = [] }: AppsPageClientProps) {
     const state = JSON.stringify({
       type: 'marketplace',
       client_id: app.clientId,
-      client_secret: app.clientSecret,
       app_name: app.name,
       app_type: app.metadata?.type || 'shop', // Include app type for proper routing
       adapter_slug: 'openfront', // Identifies which adapter to use for platform creation

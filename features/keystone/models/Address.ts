@@ -3,6 +3,7 @@ import { list, graphql } from "@keystone-6/core";
 import { json, text, relationship, checkbox, virtual } from "@keystone-6/core/fields";
 import { permissions, isSignedIn } from "../access";
 import { trackingFields } from "./trackingFields";
+import { resolveCustomerAddressData } from "../security/address-input";
 
 const canManageAddresses = ({ session }) => {
   if (!isSignedIn({ session })) {
@@ -18,16 +19,31 @@ const canManageAddresses = ({ session }) => {
 export const Address = list({
   access: {
     operation: {
-      create: () => true,
+      create: isSignedIn,
       query: isSignedIn,
-      update: permissions.canManageUsers,
-      delete: permissions.canManageUsers,
+      update: isSignedIn,
+      delete: isSignedIn,
     },
     filter: {
       query: canManageAddresses,
       update: canManageAddresses,
       delete: canManageAddresses,
     }
+  },
+  hooks: {
+    resolveInput: ({ operation, inputData, resolvedData, context }) => {
+      if (
+        (operation === "create" || operation === "update") &&
+        !permissions.canManageUsers({ session: context.session })
+      ) {
+        return resolveCustomerAddressData({
+          inputData,
+          resolvedData,
+          userId: context.session.itemId,
+        });
+      }
+      return resolvedData;
+    },
   },
   fields: {
     label: virtual({
@@ -89,8 +105,8 @@ export const Address = list({
         resolveInput({ operation, resolvedData, context }) {
           if (
             (operation === "create" || operation === "update") &&
-            !resolvedData.user &&
-            context.session?.itemId
+            context.session?.itemId &&
+            !permissions.canManageUsers({ session: context.session })
           ) {
             return { connect: { id: context.session.itemId } };
           }

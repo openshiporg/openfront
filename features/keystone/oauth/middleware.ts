@@ -1,5 +1,6 @@
 import { keystoneContext } from '../context';
 import { getPermissionsForScopes, hasPermission, OAuthScope, Permission } from './scopes';
+import { findOAuthToken } from '../security/oauth-credentials';
 
 /**
  * OAuth token validation and permission checking middleware
@@ -19,16 +20,13 @@ export interface OAuthContext {
 export async function validateOAuthToken(accessToken: string): Promise<OAuthContext | null> {
   try {
     // Find the access token in the database
-    const tokenRecord = await keystoneContext.sudo().query.OAuthToken.findOne({
-      where: {
-        token: accessToken,
-        tokenType: 'access_token',
-        isRevoked: 'false'
-      },
-      query: 'id clientId scopes expiresAt'
-    });
+    const tokenRecord = await findOAuthToken(
+      keystoneContext,
+      accessToken,
+      'id clientId scopes expiresAt tokenType isRevoked'
+    );
 
-    if (!tokenRecord) {
+    if (!tokenRecord || tokenRecord.tokenType !== 'access_token' || tokenRecord.isRevoked !== 'false') {
       return null;
     }
 

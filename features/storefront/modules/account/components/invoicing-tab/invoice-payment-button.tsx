@@ -98,7 +98,7 @@ const StripeInvoicePaymentButton: React.FC<StripeInvoicePaymentButtonProps> = ({
       
       if (result && typeof result === 'object' && 'success' in result && result.success) {
         onPaymentSuccess?.() // Close dialog
-        router.push(`/account/invoices?invoice=${result.id}`) // Navigate to invoice
+        router.push(`/account/invoices?invoice=${result.invoice?.id || invoice.id}`)
       } else {
         setErrorMessage(result?.message || result?.error || 'Payment completion failed');
       }
@@ -199,7 +199,7 @@ const ManualInvoicePaymentButton = ({ invoice, onPaymentSuccess, "data-testid": 
       const result = await completeInvoicePayment(paymentSessionId!)
       if (result && typeof result === 'object' && 'success' in result && result.success) {
         onPaymentSuccess?.() // Close dialog
-        router.push(`/account/invoices?invoice=${result.id}`) // Navigate to invoice
+        router.push(`/account/invoices?invoice=${result.invoice?.id || invoice.id}`)
       }
     } catch (err: any) {
       setErrorMessage(err.message)
@@ -270,7 +270,7 @@ const PayPalInvoicePaymentButton: React.FC<PayPalInvoicePaymentButtonProps> = ({
       const result = await completeInvoicePayment(paymentSessionId)
       if (result && typeof result === 'object' && 'success' in result && result.success) {
         onPaymentSuccess?.() // Close dialog
-        router.push(`/account/invoices?invoice=${result.id}`) // Navigate to invoice
+        router.push(`/account/invoices?invoice=${result.invoice?.id || invoice.id}`)
       }
     } catch (err: any) {
       setErrorMessage(err.message)

@@ -1,14 +1,11 @@
+import { assertLineItemBelongsToCart } from "../security/cart-access";
+
 async function updateActiveCartLineItem(root, { cartId, lineId, quantity }, context) {
-  const sudoContext = context.sudo();
-
-  // First verify cart exists
-  const cart = await sudoContext.query.Cart.findOne({
-    where: { id: cartId },
-  });
-
-  if (!cart) {
-    throw new Error("Cart not found");
+  if (!Number.isInteger(quantity) || quantity <= 0) {
+    throw new Error("Quantity must be a positive integer");
   }
+  await assertLineItemBelongsToCart(context, cartId, lineId);
+  const sudoContext = context.sudo();
 
   // Update line item quantity
   const updatedLineItem = await sudoContext.query.LineItem.updateOne({

@@ -3,16 +3,17 @@
 import { revalidatePath } from 'next/cache'
 import { keystoneClient } from '../../../dashboard/lib/keystoneClient'
 import crypto from 'crypto'
+import { sealOAuthInstallation } from '@/features/keystone/security/oauth-credentials'
 
 // Interface for OAuth app data
 export interface OAuthApp {
   id: string
   name: string
   clientId: string
-  clientSecret: string
+  clientSecret?: string
   redirectUris: string[]
   scopes: string[]
-  status: 'active' | 'inactive'
+  status: 'active' | 'suspended'
   description?: string
   metadata?: Record<string, any>  // Store app-specific metadata
   createdAt: string
@@ -34,7 +35,6 @@ export async function getOAuthApps(
         id
         name
         clientId
-        clientSecret
         redirectUris
         scopes
         status
@@ -112,7 +112,9 @@ export async function createOpenshipOAuthApp(data: {
           'write_customers',
           'read_webhooks',
           'write_webhooks',
-          'read_inventory'
+          'read_inventory',
+          'read_fulfillments',
+          'write_fulfillments'
         ]
       },
       'openship-channel': {
@@ -124,12 +126,16 @@ export async function createOpenshipOAuthApp(data: {
           oauthEndpoint: '/dashboard/platform/channels'
         },
         scopes: [
+          'read_orders',
           'write_orders',
           'read_products',
           'write_products',
           'read_inventory',
           'write_inventory',
-          'write_webhooks'
+          'read_webhooks',
+          'write_webhooks',
+          'read_fulfillments',
+          'write_fulfillments'
         ]
       }
     }
@@ -177,7 +183,12 @@ export async function createOpenshipOAuthApp(data: {
         ...createResponse.data.createOAuthApp,
         openshipUrl: cleanUrl,
         redirectUri,
-        clientSecret // Include for immediate use
+        installationTicket: sealOAuthInstallation({
+          clientId,
+          clientSecret,
+          openshipUrl: cleanUrl,
+          appType: appType === 'openship-channel' ? 'channel' : 'shop',
+        })
       }
     }
 
@@ -232,7 +243,7 @@ export async function deleteOAuthApp(id: string) {
 /**
  * Update OAuth app status
  */
-export async function updateOAuthAppStatus(id: string, status: 'active' | 'inactive') {
+export async function updateOAuthAppStatus(id: string, status: 'active' | 'suspended') {
   try {
     const updateResponse = await keystoneClient(`
       mutation UpdateOAuthApp($where: OAuthAppWhereUniqueInput!, $data: OAuthAppUpdateInput!) {

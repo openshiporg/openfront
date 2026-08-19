@@ -133,8 +133,8 @@ export async function getFilteredCountries(
 export async function getCountryStatusCounts() {
   const query = `
     query GetCountryStatusCounts {
-      assigned: countriesCount(where: { region: { isNot: null } })
-      unassigned: countriesCount(where: { region: { equals: null } })
+      assigned: countriesCount(where: { NOT: [{ region: null }] })
+      unassigned: countriesCount(where: { region: null })
       all: countriesCount
     }
   `;

@@ -2,6 +2,12 @@ import { list } from "@keystone-6/core";
 import { text, timestamp, select, json, relationship } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
+import { storedOAuthToken } from "../security/oauth-credentials";
+
+const digestTokenInput = {
+  resolveInput: ({ resolvedData, fieldKey }: any) =>
+    resolvedData[fieldKey] ? storedOAuthToken(resolvedData[fieldKey]) : resolvedData[fieldKey],
+};
 
 export const OAuthToken = list({
   access: {
@@ -26,10 +32,12 @@ export const OAuthToken = list({
       },
     }),
     token: text({
+      access: { read: () => false },
       validation: {
         isRequired: true,
       },
       isIndexed: "unique",
+      hooks: digestTokenInput,
     }),
     clientId: text({
       validation: {
@@ -67,16 +75,22 @@ export const OAuthToken = list({
       defaultValue: "false",
     }),
     authorizationCode: text({
+      access: { read: () => false },
+      hooks: digestTokenInput,
       ui: {
         description: "The authorization code that was exchanged for this token (for access tokens)",
       },
     }),
     refreshToken: text({
+      access: { read: () => false },
+      hooks: digestTokenInput,
       ui: {
         description: "Associated refresh token (for access tokens)",
       },
     }),
     accessToken: text({
+      access: { read: () => false },
+      hooks: digestTokenInput,
       ui: {
         description: "Associated access token (for refresh tokens)",
       },

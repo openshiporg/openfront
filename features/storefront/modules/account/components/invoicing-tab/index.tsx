@@ -103,9 +103,11 @@ const InvoicingTab = ({ customer, businessAccount, businessAccountRequest, order
 
   const orderCounts = getOrderCounts()
 
+  const currentToken = tokenState.success && 'token' in tokenState ? tokenState.token : null
+
   const copyToken = async () => {
-    if (customer.customerToken) {
-      await navigator.clipboard.writeText(customer.customerToken)
+    if (currentToken) {
+      await navigator.clipboard.writeText(currentToken)
       setTokenCopied(true)
       setTimeout(() => setTokenCopied(false), 1500)
     }
@@ -164,7 +166,7 @@ const InvoicingTab = ({ customer, businessAccount, businessAccountRequest, order
   if (tokenState.success && 'token' in tokenState) {
     toast({
       title: "Token regenerated",
-      description: "Your customer token has been regenerated. Please refresh the page.",
+      description: "Copy it now. It will not be shown again.",
     })
   }
 
@@ -373,7 +375,7 @@ const InvoicingTab = ({ customer, businessAccount, businessAccountRequest, order
                   </p>
                   <div className="relative">
                     <Input 
-                      value={customer.customerToken || 'Loading...'} 
+                      value={currentToken || '••••••••••••••••••••••••'}
                       readOnly 
                       className="font-mono bg-muted/30 pe-20" 
                     />
@@ -385,7 +387,7 @@ const InvoicingTab = ({ customer, businessAccount, businessAccountRequest, order
                               onClick={copyToken}
                               className="text-muted-foreground/80 hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 flex h-full w-9 items-center justify-center transition-[color,box-shadow] outline-none focus:z-10 focus-visible:ring-[3px] disabled:pointer-events-none disabled:cursor-not-allowed"
                               aria-label={tokenCopied ? "Copied" : "Copy to clipboard"}
-                              disabled={tokenCopied}
+                              disabled={tokenCopied || !currentToken}
                             >
                               <div
                                 className={cn(

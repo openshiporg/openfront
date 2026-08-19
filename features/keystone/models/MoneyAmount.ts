@@ -127,8 +127,12 @@ export const MoneyAmount = list({
 
               // Check if there's a valid price list
               if (moneyAmount.priceList) {
-                const startDate = new Date(moneyAmount.priceList.startsAt);
-                const endDate = new Date(moneyAmount.priceList.endsAt);
+                const startDate = moneyAmount.priceList.startsAt
+                  ? new Date(moneyAmount.priceList.startsAt)
+                  : null;
+                const endDate = moneyAmount.priceList.endsAt
+                  ? new Date(moneyAmount.priceList.endsAt)
+                  : null;
                 if (
                   moneyAmount.priceList.status === "active" &&
                   (!startDate || startDate <= now) &&
@@ -144,8 +148,12 @@ export const MoneyAmount = list({
                   (price) => {
                     if (price.currency.code !== currencyCode) return false;
                     if (price.priceList) {
-                      const startDate = new Date(price.priceList.startsAt);
-                      const endDate = new Date(price.priceList.endsAt);
+                      const startDate = price.priceList.startsAt
+                        ? new Date(price.priceList.startsAt)
+                        : null;
+                      const endDate = price.priceList.endsAt
+                        ? new Date(price.priceList.endsAt)
+                        : null;
                       return (
                         price.priceList.status === "active" &&
                         (!startDate || startDate <= now) &&

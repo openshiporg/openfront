@@ -97,7 +97,7 @@ export async function handleStorefrontRoutes(request: NextRequest, user: any | n
 
   const regionMap = await getRegionMap(request);
   const countryCode = await getCountryCode(request, regionMap);
-  const cartId = request.nextUrl.searchParams.get("cart_id");
+  const cartProof = request.nextUrl.searchParams.get("cart_proof");
   const cartIdCookie = request.cookies.get("_openfront_cart_id");
 
   let response;
@@ -113,11 +113,18 @@ export async function handleStorefrontRoutes(request: NextRequest, user: any | n
     response = NextResponse.next();
   }
 
-  // Handle cart_id in URL
-  if (cartId && !cartIdCookie) {
-    const redirectUrl = `${request.nextUrl.href}&step=address`;
+  // Checkout links may transfer only a server-signed cart proof. A bare
+  // cart_id is never accepted as authority.
+  if (cartProof && !cartIdCookie) {
+    const redirectUrl = new URL(request.nextUrl.href);
+    redirectUrl.searchParams.delete("cart_proof");
+    redirectUrl.searchParams.set("step", "address");
     response = NextResponse.redirect(redirectUrl);
-    response.cookies.set("_openfront_cart_id", cartId, {
+    response.cookies.set("_openfront_cart_id", cartProof, {
+      httpOnly: true,
+      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
       maxAge: 60 * 60 * 24 * 7,
     });
   }

@@ -104,7 +104,23 @@ export async function createOAuthToken(
     // Store authorization code (expires in 10 minutes)
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-    const requestedScopes = scope.includes(",") ? scope.split(",") : scope.split(" ");
+    const requestedScopes = (scope.includes(",") ? scope.split(",") : scope.split(" "))
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    // Revalidate the app at the mutation boundary. The consent-page lookup is
+    // not authority because these arguments are browser supplied.
+    const appResponse = await keystoneClient(`
+      query ValidateOAuthApp($where: OAuthAppWhereUniqueInput!) {
+        oAuthApp(where: $where) { id redirectUris scopes status }
+      }
+    `, { where: { clientId } });
+    const app = appResponse.success ? appResponse.data?.oAuthApp : null;
+    if (!app || app.status !== "active") throw new Error("Client is not active");
+    if (!app.redirectUris?.includes(redirectUri)) throw new Error("Redirect URI not registered");
+    if (requestedScopes.some((requested) => !app.scopes?.includes(requested))) {
+      throw new Error("App is not authorized for one or more requested scopes");
+    }
 
     // Create OAuth token using keystoneClient
     // The user will be automatically attached from the session by the resolveInput hook
@@ -133,11 +149,15 @@ export async function createOAuthToken(
       throw new Error(response.error || "Failed to create OAuth token");
     }
 
-    // Get the current domain from headers
+    // Advertise the canonical public origin, never Portless/proxy loopback.
+    const configuredOrigin = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
     const headersList = await headers();
-    const host = headersList.get('host') || 'localhost:3001';
-    const protocol = headersList.get('x-forwarded-proto') || 'https';
-    const shopDomain = `${protocol}://${host}`;
+    const forwardedHost = headersList.get("x-forwarded-host")?.split(",")[0]?.trim();
+    const host = forwardedHost || headersList.get("host") || "localhost:3001";
+    const protocol = headersList.get("x-forwarded-proto")?.split(",")[0]?.trim() || "https";
+    const shopDomain = configuredOrigin
+      ? new URL(configuredOrigin).origin
+      : new URL(`${protocol}://${host}`).origin;
 
     // Redirect to the callback URL with the authorization code
     const params = new URLSearchParams({
@@ -155,13 +175,17 @@ export async function createOAuthToken(
 
 export async function denyOAuthApp(redirectUri: string, state: string) {
   try {
+    const target = new URL(redirectUri);
+    const local = target.hostname === "localhost" || target.hostname === "127.0.0.1";
+    if (target.protocol !== "https:" && !local) throw new Error("Invalid OAuth redirect URI");
     const params = new URLSearchParams({
       error: "access_denied",
       error_description: "User denied authorization",
       ...(state && { state }),
     });
 
-    redirect(`${redirectUri}?${params}`);
+    target.search = params.toString();
+    redirect(target.toString());
   } catch (error) {
     console.error("OAuth denial error:", error);
     throw error;

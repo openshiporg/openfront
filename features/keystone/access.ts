@@ -3,7 +3,7 @@ import { SCOPE_TO_PERMISSIONS, OAuthScope } from "./oauth/scopes";
 
 // At it's simplest, the access control returns a yes or no value depending on the users session
 
-export function isSignedIn({ session }) {
+export function isSignedIn({ session }: { session?: any }) {
   return !!session;
 }
 
@@ -44,7 +44,7 @@ function hasApiKeyPermission(session: any, permission: string): boolean {
 const generatedPermissions = Object.fromEntries(
   permissionsList.map((permission) => [
     permission,
-    function ({ session }) {
+    function ({ session }: { session?: any }) {
       // Check API key scopes first
       if (hasApiKeyPermission(session, permission)) {
         return true;

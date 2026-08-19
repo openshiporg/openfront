@@ -19,11 +19,19 @@ export async function retrieveCart() {
   const cartId = await getCartId();
   if (!cartId) return null;
 
-  const { activeCart } = await openfrontClient.request(
-    CART_QUERY,
-    { cartId },
-    {}
-  );
+  let activeCart: any;
+  try {
+    ({ activeCart } = await openfrontClient.request(
+      CART_QUERY,
+      { cartId },
+      await getAuthHeaders()
+    ));
+  } catch {
+    // Expired, signed-out, or otherwise unauthorized proofs are stale browser
+    // state, not a storefront-wide rendering failure.
+    await removeCartId();
+    return null;
+  }
 
   if (!activeCart) return null;
 
@@ -46,7 +54,7 @@ export async function retrieveCartById(cartId: string) {
   const { activeCart } = await openfrontClient.request(
     CART_QUERY,
     { cartId },
-    {}
+    await getAuthHeaders()
   );
 
   return activeCart;
@@ -317,7 +325,8 @@ export async function createPaymentSessions(cartId: string | null) {
         }
       }
     `,
-    { cartId }
+    { cartId },
+    await getAuthHeaders()
   );
 }
 
@@ -561,7 +570,8 @@ export async function addToCart({ variantId, quantity, countryCode }: { variantI
             ],
           },
         },
-      }
+      },
+      await getAuthHeaders()
     );
     revalidateTag("cart");
   } catch (error) {
@@ -571,7 +581,7 @@ export async function addToCart({ variantId, quantity, countryCode }: { variantI
 }
 
 export async function updateLineItem({ lineId, quantity }: { lineId: string, quantity: number }) {
-  const cartId = (await cookies()).get("_openfront_cart_id")?.value;
+  const cartId = await getCartId();
   if (!cartId) return "No cartId cookie found";
 
   try {
@@ -609,7 +619,8 @@ export async function updateLineItem({ lineId, quantity }: { lineId: string, qua
         cartId,
         lineId,
         quantity,
-      }
+      },
+      await getAuthHeaders()
     );
 
     revalidateTag("cart");
@@ -620,7 +631,7 @@ export async function updateLineItem({ lineId, quantity }: { lineId: string, qua
 }
 
 export async function deleteLineItem(lineId: string) {
-  const cartId = (await cookies()).get("_openfront_cart_id")?.value;
+  const cartId = await getCartId();
   if (!cartId) return "No cart ID found";
 
   try {
@@ -642,7 +653,8 @@ export async function deleteLineItem(lineId: string) {
             disconnect: [{ id: lineId }],
           },
         },
-      }
+      },
+      await getAuthHeaders()
     );
 
     revalidateTag("cart");
@@ -653,7 +665,7 @@ export async function deleteLineItem(lineId: string) {
 }
 
 export async function updateRegion(countryCode: string, currentPath: string) {
-  const cartId = (await cookies()).get("_openfront_cart_id")?.value;
+  const cartId = await getCartId();
 
   // Always revalidate regions and products, and redirect - even without a cart
   revalidateTag("regions");
@@ -693,7 +705,8 @@ export async function updateRegion(countryCode: string, currentPath: string) {
           data: {
             region: { connect: { id: regionId } },
           },
-        }
+        },
+        await getAuthHeaders()
       );
 
       revalidateTag("cart");
@@ -722,7 +735,8 @@ export async function updateCart(data: Record<string, any>) {
       {
         cartId,
         data,
-      }
+      },
+      await getAuthHeaders()
     );
 
     revalidateTag("cart");
@@ -733,7 +747,7 @@ export async function updateCart(data: Record<string, any>) {
 }
 
 export async function cartUpdate(data: Record<string, any>) {
-  const cartId = (await cookies()).get("_openfront_cart_id")?.value;
+  const cartId = await getCartId();
 
   if (!cartId) return "No cartId cookie found";
 
@@ -747,7 +761,7 @@ export async function cartUpdate(data: Record<string, any>) {
 }
 
 export async function applyDiscount(code: string) {
-  const cartId = (await cookies()).get("_openfront_cart_id")?.value;
+  const cartId = await getCartId();
 
   if (!cartId) return "No cartId cookie found";
 
@@ -762,7 +776,7 @@ export async function applyDiscount(code: string) {
 }
 
 export async function applyGiftCard(code: string) {
-  const cartId = (await cookies()).get("_openfront_cart_id")?.value;
+  const cartId = await getCartId();
 
   if (!cartId) return "No cartId cookie found";
 
@@ -777,7 +791,7 @@ export async function applyGiftCard(code: string) {
 }
 
 export async function removeDiscount(code: string) {
-  const cartId = (await cookies()).get("_openfront_cart_id")?.value;
+  const cartId = await getCartId();
 
   if (!cartId) return "No cartId cookie found";
 
@@ -790,7 +804,7 @@ export async function removeDiscount(code: string) {
 }
 
 export async function removeGiftCard(code: string) {
-  const cartId = (await cookies()).get("_openfront_cart_id")?.value;
+  const cartId = await getCartId();
 
   if (!cartId) return "No cartId cookie found";
 
@@ -804,7 +818,7 @@ export async function removeGiftCard(code: string) {
 }
 
 export async function submitDiscountForm(prevState: any, formData: FormData) {
-  const cartId = (await cookies()).get("_openfront_cart_id")?.value;
+  const cartId = await getCartId();
   const code = formData.get("code") as string;
 
   if (!code) {
@@ -857,7 +871,8 @@ export async function submitGiftCard(code: string) {
             connect: [{ code }],
           },
         },
-      }
+      },
+      await getAuthHeaders()
     );
 
     revalidateTag("cart");
@@ -902,7 +917,7 @@ const UPDATE_CART_MUTATION = gql`
 export async function setAddresses(currentState: any, formData: FormData) {
   if (!formData) return "No form data received";
 
-  const cartId = (await cookies()).get("_openfront_cart_id")?.value;
+  const cartId = await getCartId();
   if (!cartId) return { message: "No cartId cookie found" };
 
   const selectedAddressId = formData.get("selectedAddressId");
@@ -1172,7 +1187,7 @@ export async function setAddresses(currentState: any, formData: FormData) {
 }
 
 export async function setShippingMethod(shippingOptionId: string) {
-  const cartId = (await cookies()).get("_openfront_cart_id")?.value;
+  const cartId = await getCartId();
 
   if (!cartId) throw new Error("No cartId cookie found");
 
@@ -1210,7 +1225,7 @@ export async function setShippingMethod(shippingOptionId: string) {
 }
 
 export async function setPaymentMethod(providerId: string) {
-  const cartId = (await cookies()).get("_openfront_cart_id")?.value;
+  const cartId = await getCartId();
 
   if (!cartId) throw new Error("No cartId cookie found");
 
@@ -1224,7 +1239,7 @@ export async function setPaymentMethod(providerId: string) {
 }
 
 export async function placeOrder(paymentSessionId?: string) {
-  const cartId = (await cookies()).get("_openfront_cart_id")?.value;
+  const cartId = await getCartId();
   if (!cartId) throw new Error("No cartId cookie found");
 
   try {
@@ -1237,7 +1252,8 @@ export async function placeOrder(paymentSessionId?: string) {
       {
         cartId,
         paymentSessionId,
-      }
+      },
+      await getAuthHeaders()
     );
 
     if (completeActiveCart?.id) {

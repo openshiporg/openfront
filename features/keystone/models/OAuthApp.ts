@@ -2,7 +2,11 @@ import { list } from "@keystone-6/core";
 import { text, select, json } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
-import { DEFAULT_SCOPES, AVAILABLE_SCOPES } from "../oauth/scopes";
+import { DEFAULT_SCOPES } from "../oauth/scopes";
+import {
+  generateOpaqueToken,
+  oauthClientSecretDigest,
+} from "../security/token-crypto";
 
 export const OAuthApp = list({
   access: {
@@ -26,7 +30,7 @@ export const OAuthApp = list({
       hooks: {
         resolveInput: ({ operation, resolvedData }) => {
           if (operation === "create" && !resolvedData.clientId) {
-            return `of_${Math.random().toString(36).substring(2, 18)}`;
+            return generateOpaqueToken("of_");
           }
           return resolvedData.clientId;
         },
@@ -38,17 +42,23 @@ export const OAuthApp = list({
       },
     }),
     clientSecret: text({
+      access: {
+        read: () => false,
+      },
       hooks: {
         resolveInput: ({ operation, resolvedData }) => {
           if (operation === "create" && !resolvedData.clientSecret) {
-            return `cs_${Math.random().toString(36).substring(2, 34)}`;
+            throw new Error("OAuth apps must be created through the show-once credential command");
           }
-          return resolvedData.clientSecret;
+          if (resolvedData.clientSecret) {
+            return oauthClientSecretDigest(resolvedData.clientSecret);
+          }
+          return undefined;
         },
       },
       ui: {
         createView: { fieldMode: "hidden" },
-        itemView: { fieldMode: "read" },
+        itemView: { fieldMode: "hidden" },
         // displayMode: "textarea",
         description: "Auto-generated secret key. Keep this secure - it's used to authenticate your application.",
       },

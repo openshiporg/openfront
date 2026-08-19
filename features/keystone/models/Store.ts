@@ -5,6 +5,13 @@ import { json, text, relationship, virtual } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
 import { graphql } from "@keystone-6/core";
+import {
+  DEFAULT_STORE_LOGO_COLOR,
+  DEFAULT_STORE_LOGO_ICON,
+  normalizeStoreLogoColor,
+} from "../../platform/store-settings/lib/store-logo";
+import { sanitizeStoreLogoSvg } from "../utils/storeLogo";
+import { getPublicPaymentProviderConfig } from "../utils/paymentProviderConfig";
 
 export const Store = list({
   access: {
@@ -36,10 +43,29 @@ export const Store = list({
       defaultValue: "A performant frontend e-commerce starter template with Next.js 15 and Openfront.",
     }),
     logoIcon: text({
-      defaultValue: '<svg width="24" height="24" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><g clipPath="url(#clip0_238_1296)"><path fillRule="evenodd" clipRule="evenodd" d="M100 0H0L100 100H0L100 200H200L100 100H200L100 0Z" fill="currentColor" /></g><defs><clipPath id="clip0_238_1296"><rect width="200" height="200" fill="white" /></clipPath></defs></svg>',
+      defaultValue: DEFAULT_STORE_LOGO_ICON,
+      hooks: {
+        resolveInput: ({ resolvedData, fieldKey }) => {
+          const value = resolvedData[fieldKey];
+          if (value === undefined || value === null || value === '') return value;
+          return typeof value === 'string' ? sanitizeStoreLogoSvg(value) : '';
+        },
+        validate: ({ inputData, resolvedData, fieldKey, addValidationError }) => {
+          const submitted = inputData?.[fieldKey];
+          if (typeof submitted === 'string' && submitted.trim() && !resolvedData?.[fieldKey]) {
+            addValidationError('Logo must be a valid, safe SVG document');
+          }
+        },
+      },
     }),
     logoColor: text({
-      defaultValue: '#2b7fff',
+      defaultValue: DEFAULT_STORE_LOGO_COLOR,
+      hooks: {
+        resolveInput: ({ resolvedData, fieldKey }) => {
+          const value = resolvedData[fieldKey];
+          return value === undefined ? value : normalizeStoreLogoColor(value);
+        },
+      },
     }),
     metadata: json(),
     swapLinkTemplate: text(),
@@ -66,40 +92,14 @@ export const Store = list({
             },
           })
         ),
-        resolve: async (item, args, context) => {
-          // Query actual payment providers from database
-          const paymentProviders = await context.sudo().query.PaymentProvider.findMany({
+        resolve: async (_item, _args, context) => {
+          const installedProviders = await context.sudo().query.PaymentProvider.findMany({
             where: { isInstalled: { equals: true } },
             query: 'code',
           });
-
-          const providers = [];
-
-          // Check if Stripe is installed (code starts with pp_stripe_)
-          const hasStripe = paymentProviders.some((p: any) => p.code?.startsWith('pp_stripe_'));
-          if (hasStripe) {
-            const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_KEY;
-            if (stripePublishableKey) {
-              providers.push({
-                provider: 'stripe',
-                publishableKey: stripePublishableKey,
-              });
-            }
-          }
-
-          // Check if PayPal is installed (code starts with pp_paypal)
-          const hasPaypal = paymentProviders.some((p: any) => p.code?.startsWith('pp_paypal'));
-          if (hasPaypal) {
-            const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
-            if (paypalClientId) {
-              providers.push({
-                provider: 'paypal',
-                publishableKey: paypalClientId,
-              });
-            }
-          }
-
-          return providers;
+          return installedProviders
+            .map((provider: any) => getPublicPaymentProviderConfig(provider.code || ''))
+            .filter((provider): provider is { provider: 'stripe' | 'paypal'; publishableKey: string } => Boolean(provider));
         },
       }),
       ui: { query: '{ provider publishableKey }' },

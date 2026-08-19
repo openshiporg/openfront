@@ -289,6 +289,20 @@ export const Cart = list({
     async beforeOperation({ operation, resolvedData, context, item }) {
       const sudoContext = context.sudo();
 
+      // Public cart creation is intentionally narrow. Ownership and all
+      // transactional relationships are derived by the server, never accepted
+      // from an anonymous or ordinary storefront caller.
+      if (
+        operation === 'create' &&
+        !permissions.canManageOrders({ session: context.session })
+      ) {
+        const allowedCreateFields = new Set(['region', 'type']);
+        for (const key of Object.keys(resolvedData)) {
+          if (!allowedCreateFields.has(key)) delete resolvedData[key];
+        }
+        resolvedData.type = 'default';
+      }
+
       // Handle user connection on create if user is authenticated
       if (operation === 'create' && context.session?.itemId) {
         resolvedData.user = { connect: { id: context.session.itemId } };

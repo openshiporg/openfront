@@ -10,9 +10,9 @@ export const FulfillmentItem = list({
       query: ({ session }) =>
         permissions.canReadFulfillments({ session }) ||
         permissions.canManageFulfillments({ session }),
-      create: permissions.canManageFulfillments,
-      update: permissions.canManageFulfillments,
-      delete: permissions.canManageFulfillments,
+      create: () => false,
+      update: () => false,
+      delete: () => false,
     },
   },
   fields: {

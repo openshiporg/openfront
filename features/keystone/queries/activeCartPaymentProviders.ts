@@ -1,5 +1,6 @@
 import type { KeystoneContext } from '@/features/keystone/types/context'; // Assuming this path is correct
 import type { GraphQLResolveInfo } from 'graphql';
+import { isPaymentProviderConfigured } from '../utils/paymentProviderConfig';
 
 // Define args structure if simple
 interface ActiveCartPaymentProvidersArgs {
@@ -29,7 +30,9 @@ async function activeCartPaymentProviders(
     `
   });
 
-  return providers;
+  return providers.filter((provider: any) =>
+    isPaymentProviderConfigured(provider.code || '')
+  );
 }
 
 export default activeCartPaymentProviders; 

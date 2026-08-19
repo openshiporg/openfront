@@ -1,5 +1,23 @@
+import crypto from "node:crypto";
+import { permissions } from "../access";
+
 // Create Invoice from Account Line Items - Group unpaid line items by region into invoices  
-async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemIds, dueDate }, context) {
+async function createInvoiceFromLineItems(
+  root: any,
+  { accountId, regionId, lineItemIds, dueDate }: {
+    accountId: string;
+    regionId: string;
+    lineItemIds: string[];
+    dueDate?: string;
+  },
+  context: any
+) {
+  if (!lineItemIds?.length || new Set(lineItemIds).size !== lineItemIds.length) {
+    throw new Error('Unique line item IDs are required');
+  }
+  if (dueDate && !Number.isFinite(new Date(dueDate).getTime())) {
+    throw new Error('Due date is invalid');
+  }
   const sudoContext = context.sudo();
   
   // Validate user has access to this account
@@ -31,10 +49,10 @@ async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemI
     throw new Error('Account not found');
   }
 
-  // Skip user ownership check for now - auth handled at model level
-  // if (account.user.id !== context.session.itemId) {
-  //   throw new Error('Unauthorized access to account');
-  // }
+  const canManagePayments = permissions.canManagePayments({ session: context.session });
+  if (!canManagePayments && account.user?.id !== context.session.itemId) {
+    throw new Error('Account not found');
+  }
 
   // Get region for currency information
   const region = await sudoContext.query.Region.findOne({
@@ -53,6 +71,9 @@ async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemI
 
   if (!region) {
     throw new Error('Region not found');
+  }
+  if (region.currency.code !== account.currency.code) {
+    throw new Error('Cross-currency invoicing is outside the supported launch boundary');
   }
 
   // Get and validate line items - must be from the specified region
@@ -89,7 +110,10 @@ async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemI
   }
 
   // Calculate total amount
-  const totalAmount = lineItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+  const totalAmount = lineItems.reduce(
+    (sum: number, item: any) => sum + (item.amount || 0),
+    0
+  );
   
   if (totalAmount <= 0) {
     throw new Error('Invoice total must be greater than zero');
@@ -97,47 +121,85 @@ async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemI
 
   try {
     // Create invoice and line items in transaction
-    const result = await sudoContext.prisma.$transaction(async (tx) => {
-      // Create the invoice
-      const invoice = await sudoContext.query.Invoice.createOne({
+    const result = await sudoContext.prisma.$transaction(async (tx: any) => {
+      const currentItems = await tx.accountLineItem.findMany({
+        where: {
+          id: { in: lineItemIds },
+          accountId,
+          regionId,
+          paymentStatus: 'unpaid',
+        },
+        select: { id: true, amount: true },
+      });
+      if (currentItems.length !== lineItemIds.length) {
+        throw new Error('Invoice line items changed; reload and retry');
+      }
+      const existingInvoiceLines = await tx.invoiceLineItem.findMany({
+        where: { accountLineItemId: { in: lineItemIds } },
+        select: { id: true, invoiceId: true, accountLineItemId: true },
+      });
+      if (existingInvoiceLines.length) {
+        const invoiceIds = new Set(existingInvoiceLines.map((item: any) => item.invoiceId));
+        const linkedItemIds = new Set(existingInvoiceLines.map((item: any) => item.accountLineItemId));
+        if (
+          existingInvoiceLines.length === lineItemIds.length &&
+          invoiceIds.size === 1 &&
+          lineItemIds.every((id) => linkedItemIds.has(id))
+        ) {
+          const existingInvoice = await tx.invoice.findUnique({
+            where: { id: [...invoiceIds][0] as string },
+            include: { lineItems: true },
+          });
+          if (
+            existingInvoice?.accountId === accountId &&
+            existingInvoice.totalAmount === totalAmount &&
+            existingInvoice.status === 'sent'
+          ) {
+            return { invoice: existingInvoice, reused: true };
+          }
+        }
+        throw new Error('One or more line items are already invoiced');
+      }
+      const transactionTotal = currentItems.reduce(
+        (sum: number, item: any) => sum + item.amount,
+        0
+      );
+      if (transactionTotal !== totalAmount) throw new Error('Invoice amount changed; reload and retry');
+
+      const invoice = await tx.invoice.create({
         data: {
-          user: { connect: { id: account.user.id } },
-          account: { connect: { id: accountId } },
-          currency: { connect: { id: region.currency.id } },
+          userId: account.user.id,
+          accountId,
+          invoiceNumber: `INV-${new Date().getFullYear()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`,
+          currencyId: region.currency.id,
           totalAmount,
           title: `${region.name} Invoice for Account ${account.id}`,
-          description: `Payment invoice for ${lineItems.length} ${region.name} orders (${lineItems.map(item => `#${item.orderDisplayId}`).join(', ')})`,
-          status: 'sent', // Ready for payment
-          dueDate: dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // Default 30 days
+          description: `Payment invoice for ${lineItems.length} ${region.name} orders (${lineItems.map((item: any) => `#${item.orderDisplayId}`).join(', ')})`,
+          status: 'sent',
+          paidAt: null,
+          dueDate: dueDate ? new Date(dueDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
           metadata: {
-            regionId: regionId,
+            regionId,
             regionName: region.name,
             createdFromLineItems: lineItemIds,
-            orderDisplayIds: lineItems.map(item => item.orderDisplayId),
-            itemCount: lineItems.reduce((sum, item) => sum + (item.itemCount || 0), 0)
+            orderDisplayIds: lineItems.map((item: any) => item.orderDisplayId),
+            itemCount: lineItems.reduce(
+              (sum: number, item: any) => sum + (item.itemCount || 0),
+              0
+            )
           }
         }
       });
 
-      // Create invoice line items (junction records)
       const invoiceLineItems = [];
       for (const lineItem of lineItems) {
-        const invoiceLineItem = await sudoContext.query.InvoiceLineItem.createOne({
-          data: {
-            invoice: { connect: { id: invoice.id } },
-            accountLineItem: { connect: { id: lineItem.id } }
-          }
-        });
-        invoiceLineItems.push(invoiceLineItem);
+        invoiceLineItems.push(await tx.invoiceLineItem.create({
+          data: { invoiceId: invoice.id, accountLineItemId: lineItem.id }
+        }));
       }
 
-      return {
-        invoice: {
-          ...invoice,
-          lineItems: invoiceLineItems
-        }
-      };
-    });
+      return { invoice: { ...invoice, lineItems: invoiceLineItems } };
+    }, { isolationLevel: 'Serializable' });
 
     return {
       success: true,
@@ -146,7 +208,9 @@ async function createInvoiceFromLineItems(root, { accountId, regionId, lineItemI
     };
 
   } catch (error) {
-    throw new Error(`Failed to create invoice: ${error.message}`);
+    throw new Error(
+      `Failed to create invoice: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 }
 

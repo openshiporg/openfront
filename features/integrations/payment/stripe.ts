@@ -9,11 +9,13 @@ type CreatePaymentInput = {
 type PaymentOperationInput = {
   paymentId: string;
   amount?: number;
+  idempotencyKey?: string;
+  currency?: string;
 };
 
 type PaymentWebhookInput = {
   event: any;
-  headers: Record<string, string>;
+  headers: Record<string, string> & { __rawBody?: string };
 };
 
 const getStripeClient = () => {
@@ -35,7 +37,8 @@ export async function createPaymentFunction({ cart, amount, currency }: CreatePa
     automatic_payment_methods: {
       enabled: true,
     },
-  });
+    metadata: cart?.id ? { cartId: cart.id } : undefined,
+  }, cart?.id ? { idempotencyKey: `cart:${cart.id}:${amount}:${currency.toLowerCase()}` } : undefined);
 
   return {
     clientSecret: paymentIntent.client_secret,
@@ -43,31 +46,35 @@ export async function createPaymentFunction({ cart, amount, currency }: CreatePa
   };
 }
 
-export async function capturePaymentFunction({ paymentId, amount }: PaymentOperationInput) {
+export async function capturePaymentFunction({ paymentId, amount, idempotencyKey }: PaymentOperationInput) {
   const stripe = getStripeClient();
 
-  const paymentIntent = await stripe.paymentIntents.capture(paymentId, {
-    ...(amount ? { amount_to_capture: amount } : {}),
-  });
+  const paymentIntent = await stripe.paymentIntents.capture(
+    paymentId,
+    { ...(amount ? { amount_to_capture: amount } : {}) },
+    idempotencyKey ? { idempotencyKey } : undefined
+  );
 
   return {
     status: paymentIntent.status,
     amount: paymentIntent.amount_received,
+    currency: paymentIntent.currency,
     data: paymentIntent,
   };
 }
 
-export async function refundPaymentFunction({ paymentId, amount }: PaymentOperationInput) {
+export async function refundPaymentFunction({ paymentId, amount, idempotencyKey }: PaymentOperationInput) {
   const stripe = getStripeClient();
 
   const refund = await stripe.refunds.create({
     payment_intent: paymentId,
     ...(amount ? { amount } : {}),
-  });
+  }, idempotencyKey ? { idempotencyKey } : undefined);
 
   return {
     status: refund.status,
     amount: refund.amount,
+    currency: refund.currency,
     data: refund,
   };
 }
@@ -79,7 +86,8 @@ export async function getPaymentStatusFunction({ paymentId }: PaymentOperationIn
 
   return {
     status: paymentIntent.status,
-    amount: paymentIntent.amount,
+    amount: paymentIntent.amount_received || paymentIntent.amount,
+    currency: paymentIntent.currency,
     data: paymentIntent,
   };
 }
@@ -97,8 +105,9 @@ export async function handleWebhookFunction({ event, headers }: PaymentWebhookIn
   const stripe = getStripeClient();
 
   try {
+    if (!headers.__rawBody) throw new Error('Raw webhook body is required');
     const stripeEvent = stripe.webhooks.constructEvent(
-      JSON.stringify(event),
+      headers.__rawBody,
       headers['stripe-signature'],
       webhookSecret
     );

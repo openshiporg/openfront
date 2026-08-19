@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "keystone build --no-ui && npm run migrate && next dev",
-    "build": "keystone build --no-ui && npm run migrate && next build",
+    "build": "keystone build --no-ui && next build",
+    "release:migrate": "prisma migrate deploy",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "migrate:gen": "keystone build --no-ui && tsx features/keystone/view-order/generate-view-order.ts && keystone prisma migrate dev",
     "migrate": "prisma migrate deploy"
   },

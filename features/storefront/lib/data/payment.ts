@@ -4,6 +4,7 @@ import { openfrontClient } from "../config";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { revalidateTag } from "next/cache";
+import { getAuthHeaders } from "./cookies";
 
 export const listCartPaymentMethods = cache(async function (regionId: string) {
   const LIST_PAYMENT_PROVIDERS = gql`
@@ -44,7 +45,8 @@ export const initiatePaymentSession = async (cartId: string, paymentProviderId: 
     {
       cartId,
       paymentProviderId,
-    }
+    },
+    await getAuthHeaders()
   );
 
   revalidateTag("cart");

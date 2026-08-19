@@ -1,12 +1,15 @@
 "use server";
 
 import { createPayment } from "../utils/paymentProviderAdapter";
+import { assertInvoiceAccess } from "../security/invoice-access";
+import { isPaymentProviderConfigured } from "../utils/paymentProviderConfig";
 
 async function initiateInvoicePaymentSession(
   root,
   { invoiceId, paymentProviderId },
   context
 ) {
+  await assertInvoiceAccess(context, invoiceId);
   const sudoContext = context.sudo();
 
   // Get invoice with all needed data for payment processing
@@ -62,8 +65,8 @@ async function initiateInvoicePaymentSession(
     `,
   });
 
-  if (!provider || !provider.isInstalled) {
-    throw new Error("Payment provider not found or not installed");
+  if (!provider || !provider.isInstalled || !isPaymentProviderConfigured(provider.code)) {
+    throw new Error("Payment provider not found, installed, and configured");
   }
 
   // First check if we have an existing payment collection
@@ -165,7 +168,7 @@ async function initiateInvoicePaymentSession(
         paymentProvider: { connect: { id: provider.id } },
         amount: invoice.totalAmount,
         isSelected: true,
-        isInitiated: false,
+        isInitiated: true,
         data: sessionData,
       },
       query: `

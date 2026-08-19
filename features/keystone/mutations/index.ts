@@ -12,6 +12,7 @@ import deleteActiveUserAddress from "./deleteActiveUserAddress";
 import addDiscountToActiveCart from './addDiscountToActiveCart';
 import removeDiscountFromActiveCart from './removeDiscountFromActiveCart';
 import createActiveCartPaymentSessions from './createActiveCartPaymentSessions';
+import createActiveCart from './createActiveCart';
 import setActiveCartPaymentSession from './setActiveCartPaymentSession';
 import completeActiveCart from './completeActiveCart';
 import addActiveCartShippingMethod from './addActiveCartShippingMethod';
@@ -24,15 +25,18 @@ import getCustomerOrder from "./getCustomerOrder";
 import getCustomerOrders from "./getCustomerOrders";
 import getAnalytics from './getAnalytics';
 import importInventory from './importInventory';
+import adjustInventory from './adjustInventory';
 import getRatesForOrder from './getRatesForOrder';
 import validateShippingAddress from './validateShippingAddress';
 import trackShipment from './trackShipment';
 import cancelShippingLabel from './cancelShippingLabel';
 import createProviderShippingLabel from './createProviderShippingLabel';
+import createOrderFulfillment from './createOrderFulfillment';
+import cancelOrderFulfillment from './cancelOrderFulfillment';
+import transitionOrderStatus from './transitionOrderStatus';
 import regenerateCustomerToken from './regenerateCustomerToken';
 import getCustomerAccount from './getCustomerAccount';
 import getCustomerAccounts from './getCustomerAccounts';
-import payInvoice from './payInvoice';
 import createInvoiceFromLineItems from './createInvoiceFromLineItems';
 import getInvoicePaymentSessions from './getInvoicePaymentSessions';
 import getUnpaidLineItemsByRegion from './getUnpaidLineItemsByRegion';
@@ -43,6 +47,14 @@ import setInvoicePaymentSession from './setInvoicePaymentSession';
 import activeInvoice from './activeInvoice';
 import getCustomerPaidInvoices from './getCustomerPaidInvoices';
 import getProductsSortedByPrice from '../queries/getProductsSortedByPrice';
+import processReturnRefund from './processReturnRefund';
+import retryWebhookDeliveries from './retryWebhookDeliveries';
+import getFinanceClose from '../queries/getFinanceClose';
+import {
+  getMyPrivacyData,
+  requestPrivacyAction,
+  updatePrivacyPreferences,
+} from './privacy';
 
 const graphql = String.raw;
 
@@ -69,6 +81,8 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         getAnalytics(timeframe: String): JSON
         activeInvoice(invoiceId: ID!): JSON
         getCustomerPaidInvoices(limit: Int, offset: Int): JSON
+        getFinanceClose(start: String!, end: String!): JSON!
+        getMyPrivacyData: JSON!
         getProductsSortedByPrice(
           countryCode: String!
           limit: Int!
@@ -221,6 +235,7 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
 
       type Mutation {
         updateActiveUser(data: UserUpdateProfileInput!): User
+        createActiveCart(regionId: ID!): JSON!
         updateActiveCart(cartId: ID!, data: CartUpdateInput, code: String): Cart
         updateActiveCartLineItem(cartId: ID!, lineId: ID!, quantity: Int!): Cart
         updateActiveUserPassword(
@@ -242,8 +257,8 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
           paymentProviderId: String!
         ): PaymentSession
         handlePaymentProviderWebhook(providerId: ID!, event: JSON!, headers: JSON!): WebhookResult!
-        getAnalytics: JSON
         importInventory: Boolean
+        adjustInventory(variantId: ID!, delta: Int!, reason: String!, note: String): ProductVariant
         getRatesForOrder(orderId: ID!, providerId: ID!, dimensions: DimensionsInput): [ShippingRate!]!
         validateShippingAddress(providerId: ID!, address: JSON!): AddressValidationResult!
         trackShipment(providerId: ID!, trackingNumber: String!): ShipmentTrackingResult!
@@ -254,14 +269,28 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
           rateId: String!
           dimensions: DimensionsInput
           lineItems: [LineItemInput!]
+          idempotencyKey: String!
         ): ProviderShippingLabel
+        createOrderFulfillment(
+          orderId: ID!
+          lineItems: [LineItemInput!]!
+          trackingNumber: String
+          carrier: String
+          noNotification: Boolean
+          idempotencyKey: String!
+        ): Fulfillment!
+        cancelOrderFulfillment(fulfillmentId: ID!, reason: String!): Fulfillment!
+        transitionOrderStatus(orderId: ID!, status: String!, reason: String!): Order!
         regenerateCustomerToken: CustomerTokenResult!
-        payInvoice(invoiceId: ID!, paymentData: PaymentInput!): PaymentResult!
         createInvoiceFromLineItems(accountId: ID!, regionId: ID!, lineItemIds: [ID!]!, dueDate: String): InvoiceCreationResult!
         createInvoicePaymentSessions(invoiceId: ID!): Invoice!
         initiateInvoicePaymentSession(invoiceId: ID!, paymentProviderId: String!): PaymentSession
         setInvoicePaymentSession(invoiceId: ID!, providerId: ID!): Invoice
         completeInvoicePayment(paymentSessionId: ID!): InvoicePaymentResult!
+        processReturnRefund(returnId: ID!, paymentId: ID!, idempotencyKey: String!): Refund
+        retryWebhookDeliveries(limit: Int): Int!
+        updatePrivacyPreferences(preferences: JSON!): JSON!
+        requestPrivacyAction(action: String!, details: String): Notification
       }
     `,
     resolvers: {
@@ -280,10 +309,13 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         getAnalytics,
         activeInvoice,
         getCustomerPaidInvoices,
+        getFinanceClose,
+        getMyPrivacyData,
         getProductsSortedByPrice,
       },
       Mutation: {
         updateActiveUserPassword,
+        createActiveCart,
         updateActiveCart,
         updateActiveCartLineItem,
         updateActiveUser,
@@ -298,20 +330,26 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         addActiveCartShippingMethod,
         initiatePaymentSession,
         handlePaymentProviderWebhook,
-        getAnalytics,
         importInventory,
+        adjustInventory,
         getRatesForOrder,
         validateShippingAddress,
         trackShipment,
         cancelShippingLabel,
         createProviderShippingLabel,
+        createOrderFulfillment,
+        cancelOrderFulfillment,
+        transitionOrderStatus,
         regenerateCustomerToken,
-        payInvoice,
         createInvoiceFromLineItems,
         createInvoicePaymentSessions,
         initiateInvoicePaymentSession,
         setInvoicePaymentSession,
         completeInvoicePayment,
+        processReturnRefund,
+        retryWebhookDeliveries,
+        updatePrivacyPreferences,
+        requestPrivacyAction,
       }
     },
   });

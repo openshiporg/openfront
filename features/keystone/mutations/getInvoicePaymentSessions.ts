@@ -1,4 +1,7 @@
+import { assertInvoiceAccess } from "../security/invoice-access";
+
 async function getInvoicePaymentSessions(root, { invoiceId }, context) {
+  await assertInvoiceAccess(context, invoiceId);
   const sudoContext = context.sudo();
   
   try {

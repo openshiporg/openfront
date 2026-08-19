@@ -227,20 +227,21 @@ export async function getOrder(orderId: string) {
 /**
  * Update order status
  */
-export async function updateOrderStatus(id: string, status: string) {
+export async function updateOrderStatus(
+  id: string,
+  status: string,
+  reason = 'operator_transition'
+) {
   const query = `
-    mutation UpdateOrderStatus($id: ID!, $data: OrderUpdateInput!) {
-      updateOrder(where: { id: $id }, data: $data) {
+    mutation TransitionOrderStatus($id: ID!, $status: String!, $reason: String!) {
+      transitionOrderStatus(orderId: $id, status: $status, reason: $reason) {
         id
         status
       }
     }
   `;
 
-  const response = await keystoneClient(query, {
-    id,
-    data: { status }
-  });
+  const response = await keystoneClient(query, { id, status, reason });
 
   if (response.success) {
     revalidatePath(`/dashboard/platform/orders/${id}`);

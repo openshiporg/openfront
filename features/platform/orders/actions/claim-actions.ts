@@ -145,10 +145,11 @@ export async function createClaimAction(data: CreateClaimData) {
         note: item.note,
         metadata: {
           images: item.images || [],
-          tags: item.tags || []
+          tags: item.tags || [],
+          orderLineItemId: item.lineItemId,
+          relationshipSchemaGate: 'ClaimItem.lineItem currently targets cart LineItem'
         },
-        claimOrder: { connect: { id: claimId } },
-        orderLineItem: { connect: { id: item.lineItemId } }
+        claimOrder: { connect: { id: claimId } }
       }
 
       return keystoneClient(createClaimItemMutation, { data: claimItemData })

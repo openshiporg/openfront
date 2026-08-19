@@ -37,7 +37,6 @@ export const BusinessAccountRequest = list({
     user: relationship({
       ref: 'User.businessAccountRequest',
       many: false,
-      validation: { isRequired: true },
     }),
     
     // Request details
@@ -128,7 +127,7 @@ export const BusinessAccountRequest = list({
           field: graphql.field({
             type: graphql.String,
             resolve(item) {
-              const amount = (item.requestedCreditLimit || 0) / 100;
+              const amount = Number(item.requestedCreditLimit || 0) / 100;
               return new Intl.NumberFormat('en-US', {
                 style: 'currency',
                 currency: 'USD',
@@ -142,7 +141,7 @@ export const BusinessAccountRequest = list({
             type: graphql.String,
             resolve(item) {
               if (!item.approvedCreditLimit) return null;
-              const amount = (item.approvedCreditLimit || 0) / 100;
+              const amount = Number(item.approvedCreditLimit || 0) / 100;
               return new Intl.NumberFormat('en-US', {
                 style: 'currency',
                 currency: 'USD',
@@ -203,43 +202,35 @@ export const BusinessAccountRequest = list({
   },
   
   hooks: {
-    beforeOperation: async ({ operation, item, originalItem, inputData, resolvedData, context }) => {
-      console.log('=== BusinessAccountRequest beforeOperation Hook ===');
-      console.log('operation:', operation);
-      console.log('inputData:', JSON.stringify(inputData, null, 2));
-      console.log('item (current item):', JSON.stringify(item, null, 2));
-      
-      // When request is being approved, create account first  
-      if (operation === 'update' && item?.id && inputData?.status === 'approved' && item?.status !== 'approved') {
-        
-        const accountId = await createAccountFromApprovedRequest(
-          { id: item.id, ...inputData }, 
-          context
-        );
-        
-        if (accountId) {
-          // Return modified resolvedData with the generated account
-          return {
-            ...resolvedData,
-            generatedAccount: { connect: { id: accountId } }
-          };
-        }
-      } else {
-        console.log('  - operation === "update":', operation === 'update');
-        console.log('  - item?.id exists:', !!item?.id);
-        console.log('  - inputData?.status === "approved":', inputData?.status === 'approved');
-        console.log('  - item?.status !== "approved":', item?.status !== 'approved');
+    validateInput: async ({ operation, resolvedData, item, addValidationError }) => {
+      if (operation === 'create' && !resolvedData.user) {
+        addValidationError('A user is required');
       }
-      
-      return resolvedData;
+      if (operation === 'update' && resolvedData.status === 'approved' && !resolvedData.approvedCreditLimit && !item?.approvedCreditLimit) {
+        addValidationError('An approved credit limit is required');
+      }
+    },
+    afterOperation: async ({ operation, item, originalItem, context }) => {
+      if (
+        operation === 'update' &&
+        item?.status === 'approved' &&
+        originalItem?.status !== 'approved' &&
+        !item.generatedAccountId
+      ) {
+        const accountId = await createAccountFromApprovedRequest(item, context);
+        if (accountId) {
+          await context.sudo().query.BusinessAccountRequest.updateOne({
+            where: { id: String(item.id) },
+            data: { generatedAccount: { connect: { id: accountId } } },
+          });
+        }
+      }
     }
   }
 });
 
 // Helper function to create account from approved request
 async function createAccountFromApprovedRequest(request: any, context: any): Promise<string | null> {
-  console.log('request.id:', request.id);
-  
   try {
     // Get the request with user data
     const fullRequest = await context.sudo().query.BusinessAccountRequest.findOne({
@@ -257,20 +248,15 @@ async function createAccountFromApprovedRequest(request: any, context: any): Pro
       `
     });
 
-    console.log('fullRequest:', JSON.stringify(fullRequest, null, 2));
-
     if (!fullRequest) {
       return null;
     }
 
     // Get default currency (assume USD for now, could be made configurable)
-    console.log('💰 Looking for USD currency...');
     const defaultCurrency = await context.sudo().query.Currency.findOne({
       where: { code: 'usd' },
       query: 'id code'
     });
-
-    console.log('defaultCurrency:', defaultCurrency);
 
     if (!defaultCurrency) {
       return null;
@@ -297,35 +283,13 @@ async function createAccountFromApprovedRequest(request: any, context: any): Pro
     });
 
 
-    // Generate customer token
-    console.log('🔑 Generating customer token...');
-    const customerToken = generateSecureToken();
-    console.log('Generated token:', customerToken);
-    
-    // Update user with customer token
-    console.log('👤 Updating user with customer token...');
-    await context.sudo().query.User.updateOne({
-      where: { id: fullRequest.user.id },
-      data: {
-        customerToken: customerToken,
-        tokenGeneratedAt: new Date().toISOString()
-      }
-    });
-    
-    
-    // TODO: Send approval email to user
-    console.log(`Account created for user ${fullRequest.user.email}, token: ${customerToken}`);
-    
+    // Customer API credentials are created explicitly from the account UI so
+    // the raw value can be shown exactly once. Approval never logs or stores a
+    // plaintext bearer credential.
     return account.id;
     
   } catch (error) {
     console.error('Error creating account from approved request:', error);
     return null;
   }
-}
-
-// Secure token generation function
-function generateSecureToken(): string {
-  const crypto = require('crypto');
-  return 'ctok_' + crypto.randomBytes(32).toString('hex');
 }

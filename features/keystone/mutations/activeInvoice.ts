@@ -1,8 +1,11 @@
+import { assertInvoiceAccess } from "../security/invoice-access";
+
 async function activeInvoice(root, { invoiceId }, context) {
   if (!invoiceId) {
     throw new Error("Invoice ID is required");
   }
 
+  await assertInvoiceAccess(context, invoiceId);
   const sudoContext = context.sudo();
 
   // Get invoice with sudo

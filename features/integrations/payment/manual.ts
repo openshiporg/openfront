@@ -13,16 +13,11 @@ type PaymentOperationInput = {
   paymentId: string;
   amount?: number;
   currency?: string;
+  idempotencyKey?: string;
 };
 
-export async function handleWebhookFunction({ event, headers }: PaymentWebhookInput) {
-  // Cash on Delivery payments don't have webhooks, but we'll provide a consistent interface
-  return {
-    isValid: true,
-    event,
-    type: event.type,
-    resource: event.data,
-  };
+export async function handleWebhookFunction() {
+  throw new Error('Manual payment providers do not accept webhook ingress');
 }
 
 export async function createPaymentFunction({ cart, amount, currency }: CreatePaymentInput) {
@@ -50,11 +45,12 @@ export async function capturePaymentFunction({ paymentId, amount = 0 }: PaymentO
   };
 }
 
-export async function refundPaymentFunction({ paymentId, amount = 0 }: PaymentOperationInput) {
+export async function refundPaymentFunction({ paymentId, amount = 0, currency = "USD" }: PaymentOperationInput) {
   // Cash on Delivery refunds need to be tracked manually
   return {
     status: 'refunded',
     amount,
+    currency,
     data: {
       status: 'refunded',
       amount,

@@ -1,12 +1,16 @@
 "use server";
 
 import { createPayment } from "../utils/paymentProviderAdapter";
+import { assertCartAccess } from "../security/cart-access";
+import { assertCheckoutWithinLaunchPolicy } from "../config/launch-policy";
+import { isPaymentProviderConfigured } from "../utils/paymentProviderConfig";
 
 async function initiatePaymentSession(
-  root,
-  { cartId, paymentProviderId },
-  context
+  root: any,
+  { cartId, paymentProviderId }: { cartId: string; paymentProviderId: string },
+  context: any
 ) {
+  await assertCartAccess(context, cartId);
   const sudoContext = context.sudo();
 
   // Get cart with all needed data for total calculation and payment status
@@ -15,9 +19,14 @@ async function initiatePaymentSession(
     query: `
       id
       rawTotal
+      metadata
+      shippingAddress { id country { iso2 } }
+      billingAddress { id }
+      lineItems { productVariant { product { productTags { id } } } }
       region {
         id
         taxRate
+        paymentProviders { id }
         currency {
           code
           noDivisionCurrency
@@ -30,6 +39,7 @@ async function initiatePaymentSession(
           id
           isSelected
           isInitiated
+          amount
           paymentProvider {
             id
             code
@@ -42,6 +52,10 @@ async function initiatePaymentSession(
 
   if (!cart) {
     throw new Error("Cart not found");
+  }
+
+  if (!cart.shippingAddress?.id || !cart.billingAddress?.id || cart.rawTotal <= 0) {
+    throw new Error("A positive cart with billing and shipping addresses is required");
   }
 
   // Get payment provider with all required fields
@@ -60,9 +74,15 @@ async function initiatePaymentSession(
     `,
   });
 
-  if (!provider || !provider.isInstalled) {
-    throw new Error("Payment provider not found or not installed");
+  if (
+    !provider ||
+    !provider.isInstalled ||
+    !isPaymentProviderConfigured(provider.code) ||
+    !cart.region.paymentProviders?.some((item: any) => item.id === provider.id)
+  ) {
+    throw new Error("Payment provider not found, installed, and configured for this region");
   }
+  assertCheckoutWithinLaunchPolicy(cart, provider.code);
 
   // First check if we have an existing payment collection
   if (!cart.paymentCollection) {
@@ -79,30 +99,56 @@ async function initiatePaymentSession(
 
   // Check for existing session with same provider
   const existingSession = cart.paymentCollection?.paymentSessions?.find(
-    s => s.paymentProvider.code === paymentProviderId && !s.isInitiated
+    (session: any) => session.paymentProvider.code === paymentProviderId
   );
 
-  // If we have an existing session that hasn't been initiated, just select it
-  if (existingSession) {
-    // Unselect all other sessions first
-    const otherSessions = cart.paymentCollection.paymentSessions.filter(
-      s => s.id !== existingSession.id && s.isSelected
-    );
-
-    for (const session of otherSessions) {
-      await sudoContext.query.PaymentSession.updateOne({
-        where: { id: session.id },
+  if (
+    existingSession?.isInitiated &&
+    existingSession.amount === cart.rawTotal &&
+    existingSession.data &&
+    Object.keys(existingSession.data).length
+  ) {
+    await sudoContext.prisma.$transaction(async (tx: any) => {
+      await tx.paymentSession.updateMany({
+        where: { paymentCollectionId: cart.paymentCollection.id },
         data: { isSelected: false },
       });
-    }
-
-    // Select this session
-    await sudoContext.query.PaymentSession.updateOne({
-      where: { id: existingSession.id },
-      data: { isSelected: true },
+      await tx.paymentSession.update({
+        where: { id: existingSession.id },
+        data: { isSelected: true },
+      });
     });
+    return { ...existingSession, isSelected: true };
+  }
 
-    return existingSession;
+  // Initialize and select a pre-created provider session.
+  if (existingSession) {
+    const sessionData = await createPayment({
+      provider,
+      cart,
+      amount: cart.rawTotal,
+      currency: cart.region.currency.code,
+    });
+    await sudoContext.prisma.$transaction(async (tx: any) => {
+      await tx.paymentSession.updateMany({
+        where: { paymentCollectionId: cart.paymentCollection.id },
+        data: { isSelected: false },
+      });
+      await tx.paymentSession.update({
+        where: { id: existingSession.id },
+        data: {
+          isSelected: true,
+          isInitiated: true,
+          amount: cart.rawTotal,
+          data: sessionData,
+        },
+      });
+      await tx.paymentCollection.update({
+        where: { id: cart.paymentCollection.id },
+        data: { amount: cart.rawTotal },
+      });
+    });
+    return { ...existingSession, amount: cart.rawTotal, data: sessionData, isInitiated: true };
   }
 
   // If we get here, we need to create a new session
@@ -115,34 +161,25 @@ async function initiatePaymentSession(
       currency: cart.region.currency.code,
     });
 
-    // Unselect any existing selected sessions first
-    const existingSelectedSessions = cart.paymentCollection.paymentSessions?.filter(
-      s => s.isSelected
-    ) || [];
-
-    for (const session of existingSelectedSessions) {
-      await sudoContext.query.PaymentSession.updateOne({
-        where: { id: session.id },
+    const newSession = await sudoContext.prisma.$transaction(async (tx: any) => {
+      await tx.paymentSession.updateMany({
+        where: { paymentCollectionId: cart.paymentCollection.id },
         data: { isSelected: false },
       });
-    }
-
-    // Create and select the new session
-    const newSession = await sudoContext.query.PaymentSession.createOne({
-      data: {
-        paymentCollection: { connect: { id: cart.paymentCollection.id } },
-        paymentProvider: { connect: { id: provider.id } },
-        amount: cart.rawTotal,
-        isSelected: true,
-        isInitiated: false,
-        data: sessionData,
-      },
-      query: `
-        id
-        data
-        amount
-        isInitiated
-      `,
+      await tx.paymentCollection.update({
+        where: { id: cart.paymentCollection.id },
+        data: { amount: cart.rawTotal },
+      });
+      return tx.paymentSession.create({
+        data: {
+          paymentCollectionId: cart.paymentCollection.id,
+          paymentProviderId: provider.id,
+          amount: cart.rawTotal,
+          isSelected: true,
+          isInitiated: true,
+          data: sessionData,
+        },
+      });
     });
 
     return newSession;

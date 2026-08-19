@@ -1,4 +1,17 @@
+import { permissions } from "../access";
+
 async function getAnalytics(root, { timeframe = '7d' }, context) {
+  if (
+    !context.session?.itemId ||
+    !permissions.canReadOrders({ session: context.session }) ||
+    !permissions.canReadProducts({ session: context.session })
+  ) {
+    throw new Error("Access denied");
+  }
+
+  const allowedTimeframes = new Set(['24h', '7d', '30d', '90d']);
+  if (!allowedTimeframes.has(timeframe)) throw new Error("Invalid timeframe");
+
   // Calculate date range based on timeframe
   const endDate = new Date();
   const startDate = new Date();

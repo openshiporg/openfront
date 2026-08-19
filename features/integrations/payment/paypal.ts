@@ -13,6 +13,7 @@ type PaymentOperationInput = {
   paymentId: string;
   amount?: number;
   currency?: string;
+  idempotencyKey?: string;
 };
 
 // Currencies that don't use decimal places (amount is in whole units, not cents)
@@ -138,11 +139,13 @@ export async function createPaymentFunction({ cart, amount, currency }: CreatePa
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
+        ...(cart?.id ? { "PayPal-Request-Id": `cart-${cart.id}-${amount}-${currency.toUpperCase()}` } : {}),
       },
       body: JSON.stringify({
-        intent: "AUTHORIZE",
+        intent: "CAPTURE",
         purchase_units: [
           {
+            custom_id: cart?.id,
             amount: {
               currency_code: currency.toUpperCase(),
               value: formatPayPalAmount(amount, currency),
@@ -164,7 +167,7 @@ export async function createPaymentFunction({ cart, amount, currency }: CreatePa
   };
 }
 
-export async function capturePaymentFunction({ paymentId }: PaymentOperationInput) {
+export async function capturePaymentFunction({ paymentId, idempotencyKey }: PaymentOperationInput) {
   const accessToken = await getPayPalAccessToken();
   const baseUrl = getPayPalBaseUrl();
 
@@ -175,6 +178,7 @@ export async function capturePaymentFunction({ paymentId }: PaymentOperationInpu
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
+        ...(idempotencyKey ? { "PayPal-Request-Id": idempotencyKey } : {}),
       },
     }
   );
@@ -188,11 +192,12 @@ export async function capturePaymentFunction({ paymentId }: PaymentOperationInpu
   return {
     status: capture.status,
     amount: parsePayPalAmount(capturedAmount.value, capturedAmount.currency_code),
+    currency: capturedAmount.currency_code,
     data: capture,
   };
 }
 
-export async function refundPaymentFunction({ paymentId, amount = 0, currency = "USD" }: PaymentOperationInput) {
+export async function refundPaymentFunction({ paymentId, amount = 0, currency = "USD", idempotencyKey }: PaymentOperationInput) {
   const accessToken = await getPayPalAccessToken();
   const baseUrl = getPayPalBaseUrl();
 
@@ -203,6 +208,7 @@ export async function refundPaymentFunction({ paymentId, amount = 0, currency = 
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
+        ...(idempotencyKey ? { "PayPal-Request-Id": idempotencyKey } : {}),
       },
       body: JSON.stringify({
         amount: {
@@ -221,6 +227,7 @@ export async function refundPaymentFunction({ paymentId, amount = 0, currency = 
   return {
     status: refund.status,
     amount: parsePayPalAmount(refund.amount.value, refund.amount.currency_code),
+    currency: refund.amount.currency_code,
     data: refund,
   };
 }
@@ -248,6 +255,7 @@ export async function getPaymentStatusFunction({ paymentId }: PaymentOperationIn
   return {
     status: order.status,
     amount: parsePayPalAmount(orderAmount.value, orderAmount.currency_code),
+    currency: orderAmount.currency_code,
     data: order,
   };
 }

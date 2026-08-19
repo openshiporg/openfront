@@ -314,6 +314,7 @@ type AccountLineItem {
   id: ID!
   account: Account
   order: Order
+  orderKey: String
   region: Region
   description: String
   amount: Int
@@ -331,6 +332,7 @@ type AccountLineItem {
 
 input AccountLineItemWhereUniqueInput {
   id: ID
+  orderKey: String
 }
 
 input AccountLineItemWhereInput {
@@ -340,6 +342,7 @@ input AccountLineItemWhereInput {
   id: IDFilter
   account: AccountWhereInput
   order: OrderWhereInput
+  orderKey: StringNullableFilter
   region: RegionWhereInput
   description: StringFilter
   amount: IntFilter
@@ -351,6 +354,21 @@ input AccountLineItemWhereInput {
   updatedAt: DateTimeFilter
 }
 
+input StringNullableFilter {
+  equals: String
+  in: [String!]
+  notIn: [String!]
+  lt: String
+  lte: String
+  gt: String
+  gte: String
+  contains: String
+  startsWith: String
+  endsWith: String
+  mode: QueryMode
+  not: StringNullableFilter
+}
+
 input InvoiceLineItemManyRelationFilter {
   every: InvoiceLineItemWhereInput
   some: InvoiceLineItemWhereInput
@@ -359,6 +377,7 @@ input InvoiceLineItemManyRelationFilter {
 
 input AccountLineItemOrderByInput {
   id: OrderDirection
+  orderKey: OrderDirection
   description: OrderDirection
   amount: OrderDirection
   orderDisplayId: OrderDirection
@@ -371,6 +390,7 @@ input AccountLineItemOrderByInput {
 input AccountLineItemUpdateInput {
   account: AccountRelateToOneForUpdateInput
   order: OrderRelateToOneForUpdateInput
+  orderKey: String
   region: RegionRelateToOneForUpdateInput
   description: String
   amount: Int
@@ -415,6 +435,7 @@ input AccountLineItemUpdateArgs {
 input AccountLineItemCreateInput {
   account: AccountRelateToOneForCreateInput
   order: OrderRelateToOneForCreateInput
+  orderKey: String
   region: RegionRelateToOneForCreateInput
   description: String
   amount: Int
@@ -4597,21 +4618,6 @@ input OAuthAppWhereInput {
   supportUrl: StringFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
-}
-
-input StringNullableFilter {
-  equals: String
-  in: [String!]
-  notIn: [String!]
-  lt: String
-  lte: String
-  gt: String
-  gte: String
-  contains: String
-  startsWith: String
-  endsWith: String
-  mode: QueryMode
-  not: StringNullableFilter
 }
 
 input OAuthAppOrderByInput {
@@ -10175,6 +10181,7 @@ type Mutation {
   sendUserPasswordResetLink(email: String!): Boolean!
   redeemUserPasswordResetToken(email: String!, token: String!, password: String!): RedeemUserPasswordResetTokenResult
   updateActiveUser(data: UserUpdateProfileInput!): User
+  createActiveCart(regionId: ID!): JSON!
   updateActiveCart(cartId: ID!, data: CartUpdateInput, code: String): Cart
   updateActiveCartLineItem(cartId: ID!, lineId: ID!, quantity: Int!): Cart
   updateActiveUserPassword(oldPassword: String!, newPassword: String!, confirmPassword: String!): User
@@ -10189,20 +10196,26 @@ type Mutation {
   addActiveCartShippingMethod(cartId: ID!, shippingMethodId: ID!): Cart
   initiatePaymentSession(cartId: ID!, paymentProviderId: String!): PaymentSession
   handlePaymentProviderWebhook(providerId: ID!, event: JSON!, headers: JSON!): WebhookResult!
-  getAnalytics: JSON
   importInventory: Boolean
+  adjustInventory(variantId: ID!, delta: Int!, reason: String!, note: String): ProductVariant
   getRatesForOrder(orderId: ID!, providerId: ID!, dimensions: DimensionsInput): [ShippingRate!]!
   validateShippingAddress(providerId: ID!, address: JSON!): AddressValidationResult!
   trackShipment(providerId: ID!, trackingNumber: String!): ShipmentTrackingResult!
   cancelShippingLabel(providerId: ID!, labelId: ID!): LabelCancellationResult!
-  createProviderShippingLabel(orderId: ID!, providerId: ID!, rateId: String!, dimensions: DimensionsInput, lineItems: [LineItemInput!]): ProviderShippingLabel
+  createProviderShippingLabel(orderId: ID!, providerId: ID!, rateId: String!, dimensions: DimensionsInput, lineItems: [LineItemInput!], idempotencyKey: String!): ProviderShippingLabel
+  createOrderFulfillment(orderId: ID!, lineItems: [LineItemInput!]!, trackingNumber: String, carrier: String, noNotification: Boolean, idempotencyKey: String!): Fulfillment!
+  cancelOrderFulfillment(fulfillmentId: ID!, reason: String!): Fulfillment!
+  transitionOrderStatus(orderId: ID!, status: String!, reason: String!): Order!
   regenerateCustomerToken: CustomerTokenResult!
-  payInvoice(invoiceId: ID!, paymentData: PaymentInput!): PaymentResult!
   createInvoiceFromLineItems(accountId: ID!, regionId: ID!, lineItemIds: [ID!]!, dueDate: String): InvoiceCreationResult!
   createInvoicePaymentSessions(invoiceId: ID!): Invoice!
   initiateInvoicePaymentSession(invoiceId: ID!, paymentProviderId: String!): PaymentSession
   setInvoicePaymentSession(invoiceId: ID!, providerId: ID!): Invoice
   completeInvoicePayment(paymentSessionId: ID!): InvoicePaymentResult!
+  processReturnRefund(returnId: ID!, paymentId: ID!, idempotencyKey: String!): Refund
+  retryWebhookDeliveries(limit: Int): Int!
+  updatePrivacyPreferences(preferences: JSON!): JSON!
+  requestPrivacyAction(action: String!, details: String): Notification
 }
 
 union UserAuthenticationWithPasswordResult = UserAuthenticationWithPasswordSuccess | UserAuthenticationWithPasswordFailure
@@ -10506,6 +10519,8 @@ type Query {
   getAnalytics(timeframe: String): JSON
   activeInvoice(invoiceId: ID!): JSON
   getCustomerPaidInvoices(limit: Int, offset: Int): JSON
+  getFinanceClose(start: String!, end: String!): JSON!
+  getMyPrivacyData: JSON!
   getProductsSortedByPrice(countryCode: String!, limit: Int!, offset: Int!, priceOrder: String!, collectionId: ID, categoryId: ID): ProductsSortedByPriceResult!
 }
 

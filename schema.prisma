@@ -47,6 +47,7 @@ model AccountLineItem {
   accountId        String?           @map("account")
   order            Order?            @relation("AccountLineItem_order", fields: [orderId], references: [id])
   orderId          String?           @map("order")
+  orderKey         String?           @unique
   region           Region?           @relation("AccountLineItem_region", fields: [regionId], references: [id])
   regionId         String?           @map("region")
   description      String            @default("Order line item")
@@ -1508,8 +1509,8 @@ model Store {
   defaultCurrencyCode String     @default("usd")
   homepageTitle       String     @default("Openfront Next.js Starter")
   homepageDescription String     @default("A performant frontend e-commerce starter template with Next.js 15 and Openfront.")
-  logoIcon            String     @default("<svg width=\"24\" height=\"24\" viewBox=\"0 0 200 200\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><g clipPath=\"url(#clip0_238_1296)\"><path fillRule=\"evenodd\" clipRule=\"evenodd\" d=\"M100 0H0L100 100H0L100 200H200L100 100H200L100 0Z\" fill=\"currentColor\" /></g><defs><clipPath id=\"clip0_238_1296\"><rect width=\"200\" height=\"200\" fill=\"white\" /></clipPath></defs></svg>")
-  logoColor           String     @default("#2b7fff")
+  logoIcon            String     @default("<svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" height=\"100%\" width=\"100%\" viewBox=\"0 0 42 48\"><path fill=\"#155eef\" fill-rule=\"evenodd\" d=\"m22.102 20.86 9.9-9.9L29.88 8.84l-7.339 7.339V3h-3v13.178l-7.339-7.34-2.121 2.122 9.9 9.9 1.06 1.06zm2.12 2.121 9.9-9.9 2.121 2.122-7.339 7.339H42v3H28.904l7.34 7.339L34.121 35l-9.9-9.899-1.06-1.06zM7.96 35.001l9.9-9.899 1.06-1.06-1.06-1.061-9.9-9.9-2.121 2.122 7.339 7.339H.002v3h13.176l-7.34 7.339zm12.02-7.777-9.9 9.9 2.122 2.12 7.339-7.338V45h3V31.906l7.339 7.338L32 37.124l-9.9-9.9-1.06-1.061z\" clip-rule=\"evenodd\"/></svg>")
+  logoColor           String     @default("0")
   metadata            Json?
   swapLinkTemplate    String     @default("")
   paymentLinkTemplate String     @default("")

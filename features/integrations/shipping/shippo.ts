@@ -6,6 +6,14 @@ export async function createLabelFunction({
   rateId,
   dimensions,
   lineItems,
+  idempotencyKey,
+}: {
+  provider: any;
+  order: any;
+  rateId: string;
+  dimensions: any;
+  lineItems: any[];
+  idempotencyKey: string;
 }) {
   if (!dimensions) {
     throw new Error("Dimensions are required to create a shipping label");
@@ -98,6 +106,7 @@ export async function createLabelFunction({
       rate: rateId,
       label_file_type: "PDF",
       async: false,
+      ...(idempotencyKey ? { metadata: idempotencyKey } : {}),
     }),
   });
 
@@ -308,7 +317,10 @@ export async function cancelLabelFunction({ provider, labelId }) {
       throw new Error(refund.message || "Failed to cancel label");
     }
 
-    return { success: true };
+    return {
+      success: refund.status !== "ERROR",
+      refundStatus: refund.status || "QUEUED",
+    };
   } catch (error) {
     return {
       success: false,

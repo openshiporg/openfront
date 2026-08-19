@@ -1,308 +1,259 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { keystoneContext } from '@/features/keystone/context';
-import { SCOPE_DESCRIPTIONS, OAuthScope, AVAILABLE_SCOPES } from '@/features/keystone/oauth/scopes';
-import crypto from 'crypto';
+import crypto from "node:crypto";
+import type { IncomingMessage } from "node:http";
+import { NextRequest, NextResponse } from "next/server";
+import { keystoneContext } from "@/features/keystone/context";
+import {
+  AVAILABLE_SCOPES,
+  OAuthScope,
+  SCOPE_DESCRIPTIONS,
+} from "@/features/keystone/oauth/scopes";
+import { permissions } from "@/features/keystone/access";
+import {
+  escapeHtml,
+  openAuthorizationRequest,
+  sealAuthorizationRequest,
+} from "./security";
+
+const RESPONSE_HEADERS = {
+  "Content-Type": "text/html; charset=utf-8",
+  "Cache-Control": "no-store",
+  "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+};
+
+function requestHeaders(request: NextRequest): Record<string, string> {
+  return Object.fromEntries(request.headers.entries());
+}
+
+async function authenticatedContext(request: NextRequest) {
+  const nodeRequest = {
+    headers: requestHeaders(request),
+    method: request.method,
+    url: request.nextUrl.pathname + request.nextUrl.search,
+  } as IncomingMessage;
+  return keystoneContext.withRequest(nodeRequest);
+}
+
+function oauthError(error: string, description: string, status = 400) {
+  return NextResponse.json(
+    { error, error_description: description },
+    { status, headers: { "Cache-Control": "no-store" } }
+  );
+}
+
+function parseScopes(scope: string): string[] {
+  return [...new Set(scope.split(/[ ,]+/).map(value => value.trim()).filter(Boolean))];
+}
+
+type OAuthAppRecord = {
+  name?: string | null;
+  description?: string | null;
+  redirectUris?: string[] | null;
+  scopes?: string[] | null;
+  status?: string | null;
+};
+
+function validateAppRequest(
+  app: OAuthAppRecord | null | undefined,
+  redirectUri: string | null,
+  requestedScopes: string[]
+): string | null {
+  if (!app || app.status !== "active") return "Client is not active";
+  if (!redirectUri || !app.redirectUris?.includes(redirectUri)) {
+    return "Redirect URI not registered";
+  }
+  if (requestedScopes.some(scope => !AVAILABLE_SCOPES.includes(scope as OAuthScope))) {
+    return "One or more requested scopes are unknown";
+  }
+  if (requestedScopes.some(scope => !app.scopes?.includes(scope))) {
+    return "App is not authorized for one or more requested scopes";
+  }
+  return null;
+}
+
+function redirectToClient(
+  redirectUri: string,
+  values: Record<string, string | null | undefined>
+) {
+  const target = new URL(redirectUri);
+  for (const [key, value] of Object.entries(values)) {
+    if (value) target.searchParams.set(key, value);
+  }
+  return NextResponse.redirect(target, { headers: { "Cache-Control": "no-store" } });
+}
 
 export async function GET(request: NextRequest) {
   try {
-    
-    const { searchParams } = new URL(request.url);
-    
-    const clientId = searchParams.get('client_id');
-    let redirectUri = searchParams.get('redirect_uri');
-    const responseType = searchParams.get('response_type');
-    const scope = searchParams.get('scope') || 'read_products';
-    const state = searchParams.get('state');
-    const codeChallenge = searchParams.get('code_challenge');
-    const codeChallengeMethod = searchParams.get('code_challenge_method');
-    
-
-    // Validate required parameters
-    if (!clientId || !responseType) {
-      return NextResponse.json(
-        { error: 'invalid_request', error_description: 'Missing required parameters' },
-        { status: 400 }
-      );
+    const context = await authenticatedContext(request);
+    if (!context.session?.itemId) {
+      return oauthError("access_denied", "Sign in before authorizing an application", 401);
+    }
+    if (!permissions.canAccessDashboard({ session: context.session })) {
+      return oauthError("access_denied", "Store operator access is required", 403);
     }
 
-    if (responseType !== 'code') {
-      return NextResponse.json(
-        { error: 'unsupported_response_type', error_description: 'Only authorization code flow is supported' },
-        { status: 400 }
-      );
-    }
-
-    // Find the OAuth app
-    const oauthApp = await keystoneContext.sudo().query.OAuthApp.findOne({
-      where: { clientId },
-      query: 'id name redirectUris scopes status description'
-    });
-    
-
-    if (!oauthApp) {
-      return NextResponse.json(
-        { error: 'invalid_client', error_description: 'Client not found' },
-        { status: 401 }
-      );
-    }
-
-    if (oauthApp.status !== 'active') {
-      return NextResponse.json(
-        { error: 'unauthorized_client', error_description: 'Client is not active' },
-        { status: 401 }
-      );
-    }
-
-    // Use the first redirect URI from the app if none was provided (marketplace flow)
-    if (!redirectUri && oauthApp.redirectUris?.length > 0) {
-      redirectUri = oauthApp.redirectUris[0];
-    }
-    
-
-    // Validate redirect URI
-    if (!redirectUri) {
-      return NextResponse.json(
-        { error: 'invalid_redirect_uri', error_description: 'No redirect URI provided and none registered' },
-        { status: 400 }
-      );
-    }
-
-    if (!oauthApp.redirectUris?.includes(redirectUri)) {
-      return NextResponse.json(
-        { error: 'invalid_redirect_uri', error_description: 'Redirect URI not registered' },
-        { status: 400 }
-      );
-    }
-
-    // Validate scopes (handle both space-separated and comma-separated)
-    const requestedScopes = scope.includes(',') ? scope.split(',') : scope.split(' ');
-    const allowedScopes = oauthApp.scopes || [];
-    
-    // Check if requested scopes are valid OAuth scopes
-    const invalidScopes = requestedScopes.filter(s => !AVAILABLE_SCOPES.includes(s as OAuthScope));
-    if (invalidScopes.length > 0) {
-      return NextResponse.json(
-        { error: 'invalid_scope', error_description: `Unknown scopes: ${invalidScopes.join(', ')}` },
-        { status: 400 }
-      );
-    }
-    
-    // Check if app is allowed to request these scopes
-    const unauthorizedScopes = requestedScopes.filter(s => !allowedScopes.includes(s));
-    if (unauthorizedScopes.length > 0) {
-      return NextResponse.json(
-        { error: 'invalid_scope', error_description: `App not authorized for scopes: ${unauthorizedScopes.join(', ')}` },
-        { status: 400 }
-      );
-    }
-
-    // Generate authorization code
-    const authorizationCode = crypto.randomBytes(32).toString('hex');
-    
-    // Store authorization code (expires in 10 minutes)
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-    
-    await keystoneContext.sudo().query.OAuthToken.createOne({
-      data: {
-        tokenType: 'authorization_code',
-        token: authorizationCode,
-        clientId,
-        scopes: requestedScopes,
-        redirectUri,
-        expiresAt,
-        state,
-        codeChallenge,
-        codeChallengeMethod,
-        isRevoked: 'false',
-        // No user connection - OAuth tokens can exist without a user for marketplace flows
-      }
-    });
-
-    // Return authorization page HTML
-    const authorizationPage = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Authorize ${oauthApp.name}</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 400px;
-            margin: 50px auto;
-            padding: 20px;
-            background: #f5f5f5;
-          }
-          .card {
-            background: white;
-            border-radius: 8px;
-            padding: 30px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-          }
-          .app-icon {
-            width: 60px;
-            height: 60px;
-            background: #007bff;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-            margin: 0 auto 20px;
-          }
-          h1 {
-            text-align: center;
-            margin: 0 0 20px;
-            font-size: 24px;
-          }
-          .permissions {
-            background: #f8f9fa;
-            border-radius: 4px;
-            padding: 15px;
-            margin: 20px 0;
-          }
-          .permission-item {
-            margin: 8px 0;
-            display: flex;
-            align-items: center;
-          }
-          .permission-icon {
-            width: 16px;
-            height: 16px;
-            margin-right: 8px;
-            color: #28a745;
-          }
-          .buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 30px;
-          }
-          .btn {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            cursor: pointer;
-            text-decoration: none;
-            text-align: center;
-          }
-          .btn-primary {
-            background: #007bff;
-            color: white;
-          }
-          .btn-secondary {
-            background: #6c757d;
-            color: white;
-          }
-          .btn:hover {
-            opacity: 0.9;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="card">
-          <div class="app-icon">${oauthApp.name.charAt(0).toUpperCase()}</div>
-          <h1>Authorize ${oauthApp.name}</h1>
-          <p>This application is requesting access to your OpenFront store with the following permissions:</p>
-          
-          <div class="permissions">
-            ${requestedScopes.map(scope => `
-              <div class="permission-item">
-                <span class="permission-icon">✓</span>
-                <span>${getScopeDescription(scope)}</span>
-              </div>
-            `).join('')}
-          </div>
-
-          ${oauthApp.description ? `<p><small>${oauthApp.description}</small></p>` : ''}
-          
-          <div class="buttons">
-            <form method="POST" style="flex: 1;">
-              <input type="hidden" name="client_id" value="${clientId}">
-              <input type="hidden" name="redirect_uri" value="${redirectUri}">
-              <input type="hidden" name="scope" value="${scope}">
-              <input type="hidden" name="state" value="${state || ''}">
-              <input type="hidden" name="code_challenge" value="${codeChallenge || ''}">
-              <input type="hidden" name="code_challenge_method" value="${codeChallengeMethod || ''}">
-              <input type="hidden" name="authorization_code" value="${authorizationCode}">
-              <input type="hidden" name="action" value="authorize">
-              <button type="submit" class="btn btn-primary">Authorize</button>
-            </form>
-            
-            <form method="POST" style="flex: 1;">
-              <input type="hidden" name="client_id" value="${clientId}">
-              <input type="hidden" name="redirect_uri" value="${redirectUri}">
-              <input type="hidden" name="state" value="${state || ''}">
-              <input type="hidden" name="action" value="deny">
-              <button type="submit" class="btn btn-secondary">Deny</button>
-            </form>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-
-    return new NextResponse(authorizationPage, {
-      headers: { 'Content-Type': 'text/html' }
-    });
-
-  } catch (error) {
-    console.error('OAuth authorization error:', error);
-    return NextResponse.json(
-      { error: 'server_error', error_description: 'Internal server error' },
-      { status: 500 }
+    const clientId = request.nextUrl.searchParams.get("client_id");
+    const responseType = request.nextUrl.searchParams.get("response_type");
+    const requestedRedirect = request.nextUrl.searchParams.get("redirect_uri");
+    const state = request.nextUrl.searchParams.get("state");
+    const codeChallenge = request.nextUrl.searchParams.get("code_challenge");
+    const requestedChallengeMethod = request.nextUrl.searchParams.get("code_challenge_method");
+    const requestedScopes = parseScopes(
+      request.nextUrl.searchParams.get("scope") || "read_products"
     );
+
+    if (!clientId || responseType !== "code") {
+      return oauthError("invalid_request", "A client_id and response_type=code are required");
+    }
+    if (
+      requestedChallengeMethod &&
+      requestedChallengeMethod !== "plain" &&
+      requestedChallengeMethod !== "S256"
+    ) {
+      return oauthError("invalid_request", "Unsupported PKCE code challenge method");
+    }
+    if (requestedChallengeMethod && !codeChallenge) {
+      return oauthError("invalid_request", "PKCE code challenge is required");
+    }
+
+    const app = await context.sudo().query.OAuthApp.findOne({
+      where: { clientId },
+      query: "id name redirectUris scopes status description",
+    });
+    const redirectUri = requestedRedirect || app?.redirectUris?.[0] || null;
+    const validationError = validateAppRequest(app, redirectUri, requestedScopes);
+    if (validationError) return oauthError("invalid_request", validationError);
+
+    const authorizationRequest = sealAuthorizationRequest({
+      clientId,
+      redirectUri: redirectUri!,
+      scopes: requestedScopes,
+      state,
+      codeChallenge,
+      codeChallengeMethod: requestedChallengeMethod as "plain" | "S256" | null,
+      ownerId: context.session.itemId,
+      expiresAt: Date.now() + 10 * 60 * 1000,
+    });
+
+    const permissionRows = requestedScopes.map(scope => `
+      <li>${escapeHtml(SCOPE_DESCRIPTIONS[scope as OAuthScope] || `Access to ${scope}`)}</li>
+    `).join("");
+    const appName = escapeHtml(app.name);
+    const description = app.description
+      ? `<p><small>${escapeHtml(app.description)}</small></p>`
+      : "";
+
+    const page = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Authorize ${appName}</title>
+  <style>
+    body{font-family:system-ui,sans-serif;max-width:440px;margin:48px auto;padding:20px;background:#f5f5f5}
+    main{background:#fff;border-radius:10px;padding:28px;box-shadow:0 2px 12px #0001}
+    h1{font-size:24px}.actions{display:flex;gap:12px;margin-top:24px}.actions form{flex:1}
+    button{width:100%;padding:11px;border:0;border-radius:6px;cursor:pointer}.allow{background:#111;color:#fff}.deny{background:#ddd}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Authorize ${appName}</h1>
+    <p>This application is requesting these permissions:</p>
+    <ul>${permissionRows}</ul>
+    ${description}
+    <div class="actions">
+      <form method="post">
+        <input type="hidden" name="authorization_request" value="${escapeHtml(authorizationRequest)}">
+        <input type="hidden" name="action" value="authorize">
+        <button class="allow" type="submit">Authorize</button>
+      </form>
+      <form method="post">
+        <input type="hidden" name="authorization_request" value="${escapeHtml(authorizationRequest)}">
+        <input type="hidden" name="action" value="deny">
+        <button class="deny" type="submit">Deny</button>
+      </form>
+    </div>
+  </main>
+</body>
+</html>`;
+
+    return new NextResponse(page, { headers: RESPONSE_HEADERS });
+  } catch (error) {
+    console.error("OAuth authorization error:", error instanceof Error ? error.message : "Unknown error");
+    return oauthError("server_error", "Internal server error", 500);
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
+    const context = await authenticatedContext(request);
+    if (!context.session?.itemId) {
+      return oauthError("access_denied", "Sign in before authorizing an application", 401);
+    }
+    if (!permissions.canAccessDashboard({ session: context.session })) {
+      return oauthError("access_denied", "Store operator access is required", 403);
+    }
+
     const formData = await request.formData();
-    
-    const clientId = formData.get('client_id') as string;
-    const redirectUri = formData.get('redirect_uri') as string;
-    const state = formData.get('state') as string;
-    const action = formData.get('action') as string;
-    const authorizationCode = formData.get('authorization_code') as string;
-
-    if (action === 'deny') {
-      // User denied authorization
-      const params = new URLSearchParams({
-        error: 'access_denied',
-        error_description: 'User denied authorization',
-        ...(state && { state })
-      });
-
-      return NextResponse.redirect(`${redirectUri}?${params}`);
+    const action = formData.get("action");
+    const ticket = formData.get("authorization_request");
+    if ((action !== "authorize" && action !== "deny") || typeof ticket !== "string") {
+      return oauthError("invalid_request", "Invalid authorization response");
     }
 
-    if (action === 'authorize') {
-      // User approved authorization
-      const params = new URLSearchParams({
-        code: authorizationCode,
-        ...(state && { state })
-      });
-
-      return NextResponse.redirect(`${redirectUri}?${params}`);
+    let authorizationRequest;
+    try {
+      authorizationRequest = openAuthorizationRequest(ticket);
+    } catch {
+      return oauthError("invalid_request", "Invalid or expired authorization request");
+    }
+    if (authorizationRequest.ownerId !== context.session.itemId) {
+      return oauthError("access_denied", "Authorization request belongs to another user", 403);
     }
 
-    return NextResponse.json(
-      { error: 'invalid_request', error_description: 'Invalid action' },
-      { status: 400 }
+    const app = await context.sudo().query.OAuthApp.findOne({
+      where: { clientId: authorizationRequest.clientId },
+      query: "id redirectUris scopes status",
+    });
+    const validationError = validateAppRequest(
+      app,
+      authorizationRequest.redirectUri,
+      authorizationRequest.scopes
     );
+    if (validationError) return oauthError("invalid_request", validationError);
 
+    if (action === "deny") {
+      return redirectToClient(authorizationRequest.redirectUri, {
+        error: "access_denied",
+        error_description: "User denied authorization",
+        state: authorizationRequest.state,
+      });
+    }
+
+    const authorizationCode = crypto.randomBytes(32).toString("hex");
+    await context.sudo().query.OAuthToken.createOne({
+      data: {
+        tokenType: "authorization_code",
+        token: authorizationCode,
+        clientId: authorizationRequest.clientId,
+        scopes: authorizationRequest.scopes,
+        redirectUri: authorizationRequest.redirectUri,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        state: authorizationRequest.state,
+        codeChallenge: authorizationRequest.codeChallenge,
+        codeChallengeMethod: authorizationRequest.codeChallengeMethod,
+        isRevoked: "false",
+        user: { connect: { id: context.session.itemId } },
+      },
+      query: "id",
+    });
+
+    return redirectToClient(authorizationRequest.redirectUri, {
+      code: authorizationCode,
+      state: authorizationRequest.state,
+    });
   } catch (error) {
-    console.error('OAuth authorization POST error:', error);
-    return NextResponse.json(
-      { error: 'server_error', error_description: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error("OAuth authorization POST error:", error instanceof Error ? error.message : "Unknown error");
+    return oauthError("server_error", "Internal server error", 500);
   }
-}
-
-function getScopeDescription(scope: string): string {
-  return SCOPE_DESCRIPTIONS[scope as OAuthScope] || `Access to ${scope}`;
 }

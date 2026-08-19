@@ -1,14 +1,21 @@
 "use server"
 import { cookies } from "next/headers"
+import {
+  cartIdFromProof,
+  createCartProof,
+  verifyCartProof,
+} from "@/features/keystone/security/token-crypto"
 
 export const getAuthHeaders = async (): Promise<Record<string, string>> => {
-  const token = (await cookies()).get("keystonejs-session")?.value
+  const cookieStore = await cookies()
+  const token = cookieStore.get("keystonejs-session")?.value
+  const cartProof = cookieStore.get("_openfront_cart_id")?.value
+  const headers: Record<string, string> = {}
 
-  if (token) {
-    return { authorization: `Bearer ${token}` }
-  }
+  if (token) headers.authorization = `Bearer ${token}`
+  if (cartProof) headers["x-openfront-cart-proof"] = cartProof
 
-  return {} // Empty object is compatible with Record<string, string>
+  return headers
 }
 
 // Define a type for cookie options for reusability
@@ -27,16 +34,23 @@ export const setAuthToken = async (token: string, options: CookieOptions = {}) =
 
 export const removeAuthToken = async () => {
   (await cookies()).set("keystonejs-session", "", {
-    maxAge: -1,
+    maxAge: 0,
+    expires: new Date(0),
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
   })
 }
 
 export const getCartId = async (): Promise<string | undefined> => {
-  return (await cookies()).get("_openfront_cart_id")?.value
+  const proof = (await cookies()).get("_openfront_cart_id")?.value
+  const cartId = cartIdFromProof(proof)
+  return cartId && verifyCartProof(proof, cartId) ? cartId : undefined
 }
 
 export const setCartId = async (cartId: string, options: CookieOptions = {}) => {
-  (await cookies()).set("_openfront_cart_id", cartId, {
+  (await cookies()).set("_openfront_cart_id", createCartProof(cartId), {
     maxAge: 60 * 60 * 24 * 7,
     httpOnly: true,
     sameSite: "strict",
@@ -47,5 +61,12 @@ export const setCartId = async (cartId: string, options: CookieOptions = {}) => 
 }
 
 export const removeCartId = async () => {
-  (await cookies()).set("_openfront_cart_id", "", { maxAge: -1 })
+  (await cookies()).set("_openfront_cart_id", "", {
+    maxAge: 0,
+    expires: new Date(0),
+    httpOnly: true,
+    sameSite: "strict",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+  })
 }

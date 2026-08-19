@@ -14,19 +14,11 @@ import {
   placeOrder
 } from '../data/cart-client';
 
-// Cookie helpers - these should be moved to a utilities file
-const getCartId = (): string | null => {
-  if (typeof window === 'undefined') return null;
-  const cartId = document.cookie
-    .split('; ')
-    .find(row => row.startsWith('_openfront_cart_id='))
-    ?.split('=')[1];
-  return cartId || null;
-};
-
-const setCartId = (cartId: string) => {
+// Client carts receive a server-signed bearer proof from createActiveCart.
+const setCartProof = (proof: string) => {
   if (typeof window === 'undefined') return;
-  document.cookie = `_openfront_cart_id=${cartId}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Strict`;
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `_openfront_cart_id=${encodeURIComponent(proof)}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Strict${secure}`;
 };
 
 const removeCartId = () => {
@@ -51,8 +43,8 @@ export function useCreateCart() {
   return useMutation({
     mutationFn: createCart,
     onSuccess: (newCart) => {
-      if (newCart?.id) {
-        setCartId(newCart.id);
+      if (newCart?.id && newCart?.proof) {
+        setCartProof(newCart.proof);
         queryClient.setQueryData(queryKeys.cart.active(), newCart);
         queryClient.invalidateQueries({ queryKey: queryKeys.cart.all });
       }

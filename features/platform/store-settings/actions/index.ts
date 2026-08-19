@@ -2,30 +2,8 @@
 
 import { keystoneClient } from '@/features/dashboard/lib/keystoneClient';
 import { revalidatePath } from 'next/cache';
-import { optimize } from 'svgo';
-
-function sanitizeSvg(svg: string): string {
-  try {
-    const result = optimize(svg, {
-      plugins: [
-        'preset-default',
-        // Remove script elements
-        'removeScripts',
-        // Remove event handlers like onclick, onload, etc.
-        {
-          name: 'removeAttrs',
-          params: {
-            attrs: ['on*', 'onclick', 'onload', 'onerror', 'onmouseover'],
-          },
-        },
-      ],
-    });
-    return result.data;
-  } catch {
-    // If SVGO fails to parse, return empty string to prevent malicious input
-    return '';
-  }
-}
+import { normalizeStoreLogoColor } from '../lib/store-logo';
+import { sanitizeStoreLogoSvg } from '@/features/keystone/utils/storeLogo';
 
 export async function getStoreSettings() {
   const query = `
@@ -60,7 +38,9 @@ export async function updateStoreSettings(storeId: string, data: {
   // Sanitize SVG before saving to prevent XSS attacks
   const sanitizedData = {
     ...data,
-    logoIcon: data.logoIcon ? sanitizeSvg(data.logoIcon) : undefined,
+    logoIcon: data.logoIcon ? sanitizeStoreLogoSvg(data.logoIcon) : undefined,
+    logoColor:
+      data.logoColor === undefined ? undefined : normalizeStoreLogoColor(data.logoColor),
   };
 
   // If SVG sanitization failed (returned empty string), reject the update

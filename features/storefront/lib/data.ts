@@ -84,7 +84,7 @@ export async function fetchCart() {
     const { activeCart } = await openfrontClient.request(
       CART_QUERY,
       { cartId },
-      {}
+      await getAuthHeaders()
     );
 
     return activeCart;

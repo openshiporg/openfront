@@ -17,9 +17,9 @@ export const Capture = list({
       query: ({ session }) =>
         permissions.canReadPayments({ session }) ||
         permissions.canManagePayments({ session }),
-      create: permissions.canManagePayments,
-      update: permissions.canManagePayments,
-      delete: permissions.canManagePayments,
+      create: () => false,
+      update: () => false,
+      delete: () => false,
     },
   },
   fields: {

@@ -24,7 +24,13 @@ const Addresses = ({
   const router = useRouter();
   const pathname = usePathname();
 
-  const isOpen = searchParams?.get("step") === "address";
+  // A fresh cart has no address summary to collapse. Keep the address form open
+  // until both server-owned cart relationships exist, regardless of a missing
+  // or stale step query parameter.
+  const isOpen =
+    searchParams?.get("step") === "address" ||
+    !cart?.shippingAddress ||
+    !cart?.billingAddress;
 
   const [sameAsBilling, setSameAsBilling] = useState(
     cart?.shippingAddress && cart?.billingAddress

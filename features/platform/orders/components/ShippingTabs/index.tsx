@@ -94,6 +94,7 @@ export function ShippingTabs({
           lineItemId: id,
           quantity: parseInt(qty),
         })),
+      idempotencyKey: crypto.randomUUID(),
     });
 
     if (response.success) {
@@ -129,6 +130,7 @@ export function ShippingTabs({
       trackingNumber,
       carrier,
       noNotification,
+      idempotencyKey: crypto.randomUUID(),
     });
 
     if (response.success) {

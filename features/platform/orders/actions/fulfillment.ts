@@ -54,65 +54,47 @@ export async function createManualFulfillment({
   trackingNumber,
   carrier,
   noNotification,
+  idempotencyKey,
 }: {
   orderId: string;
   lineItems: { lineItemId: string; quantity: number }[];
   trackingNumber?: string;
   carrier?: string;
   noNotification?: boolean;
+  idempotencyKey: string;
 }) {
-  // Build the shippingLabels create input if we have tracking info
-  const shippingLabelsInput = trackingNumber && carrier ? {
-    create: [{
-      status: "purchased",
-      carrier: carrier,
-      trackingNumber: trackingNumber,
-      trackingUrl: getTrackingUrl(carrier, trackingNumber),
-      metadata: {
-        source: "admin"
-      }
-    }]
-  } : undefined;
-
   const mutation = `
-    mutation CreateFulfillment($data: FulfillmentCreateInput!) {
-      createFulfillment(data: $data) {
+    mutation CreateOrderFulfillment(
+      $orderId: ID!
+      $lineItems: [LineItemInput!]!
+      $trackingNumber: String
+      $carrier: String
+      $noNotification: Boolean
+      $idempotencyKey: String!
+    ) {
+      createOrderFulfillment(
+        orderId: $orderId
+        lineItems: $lineItems
+        trackingNumber: $trackingNumber
+        carrier: $carrier
+        noNotification: $noNotification
+        idempotencyKey: $idempotencyKey
+      ) {
         id
-        shippingLabels {
-          id
-          status
-          trackingNumber
-          trackingUrl
-          labelUrl
-          carrier
-          data
-        }
+        fulfillmentItems { id quantity lineItem { id } }
+        shippingLabels { id status trackingNumber trackingUrl carrier }
       }
     }
   `;
 
-  // Build the data object
-  const data: any = {
-    order: { connect: { id: orderId } },
-    fulfillmentItems: {
-      create: lineItems.map(({ lineItemId, quantity }) => ({
-        lineItem: { connect: { id: lineItemId } },
-        quantity: quantity
-      }))
-    },
+  const response = await keystoneClient(mutation, {
+    orderId,
+    lineItems,
+    trackingNumber,
+    carrier,
     noNotification: noNotification || false,
-    metadata: {
-      source: "admin",
-      createdBy: "admin"
-    }
-  };
-
-  // Only add shippingLabels if we have the input
-  if (shippingLabelsInput) {
-    data.shippingLabels = shippingLabelsInput;
-  }
-
-  const response = await keystoneClient(mutation, { data });
+    idempotencyKey,
+  });
 
   // Revalidate the path only on success
   if (response.success) {
@@ -130,6 +112,7 @@ export async function createProviderShippingLabel({
   rateId,
   dimensions,
   lineItems,
+  idempotencyKey,
 }: {
   orderId: string;
   providerId: string;
@@ -143,6 +126,7 @@ export async function createProviderShippingLabel({
     weightUnit: 'oz' | 'lb' | 'kg';
   };
   lineItems: { lineItemId: string; quantity: number }[];
+  idempotencyKey: string;
 }) {
   const mutation = `
     mutation CreateProviderShippingLabel(
@@ -151,6 +135,7 @@ export async function createProviderShippingLabel({
       $rateId: String!
       $dimensions: DimensionsInput
       $lineItems: [LineItemInput!]
+      $idempotencyKey: String!
     ) {
       createProviderShippingLabel(
         orderId: $orderId
@@ -158,6 +143,7 @@ export async function createProviderShippingLabel({
         rateId: $rateId
         dimensions: $dimensions
         lineItems: $lineItems
+        idempotencyKey: $idempotencyKey
       ) {
         id
         status
@@ -174,7 +160,8 @@ export async function createProviderShippingLabel({
     providerId,
     rateId,
     dimensions,
-    lineItems
+    lineItems,
+    idempotencyKey,
   });
 
   // Revalidate the path only on success
@@ -189,25 +176,20 @@ export async function createProviderShippingLabel({
 /**
  * Cancel a fulfillment
  */
-export async function cancelFulfillment(fulfillmentId: string) {
+export async function cancelFulfillment(
+  fulfillmentId: string,
+  reason = 'operator_cancelled'
+) {
   const mutation = `
-    mutation CancelFulfillment($id: ID!, $data: FulfillmentUpdateInput!) {
-      updateFulfillment(
-        where: { id: $id }
-        data: $data
-      ) {
+    mutation CancelOrderFulfillment($fulfillmentId: ID!, $reason: String!) {
+      cancelOrderFulfillment(fulfillmentId: $fulfillmentId, reason: $reason) {
         id
         canceledAt
       }
     }
   `;
 
-  const response = await keystoneClient(mutation, { 
-    id: fulfillmentId,
-    data: {
-      canceledAt: new Date().toISOString()
-    }
-  });
+  const response = await keystoneClient(mutation, { fulfillmentId, reason });
 
   if (response.success) {
     revalidatePath('/dashboard/platform/orders/[id]');

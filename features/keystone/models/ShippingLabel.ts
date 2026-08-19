@@ -15,9 +15,9 @@ export const ShippingLabel = list({
       query: ({ session }) =>
         permissions.canReadFulfillments({ session }) ||
         permissions.canManageFulfillments({ session }),
-      create: permissions.canManageFulfillments,
+      create: () => false,
       update: permissions.canManageFulfillments,
-      delete: permissions.canManageFulfillments,
+      delete: () => false,
     },
   },
 

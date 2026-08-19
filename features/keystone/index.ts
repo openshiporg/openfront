@@ -11,31 +11,71 @@ import * as cookie from "cookie";
 import { permissions } from "./access";
 import bcryptjs from "bcryptjs";
 import { withWebhooks } from "../webhooks/webhook-plugin";
+import { customerTokenDigest } from "./security/token-crypto";
+import { findOAuthToken } from "./security/oauth-credentials";
+import "./config/launch-policy";
 // Add rate limiting on storefront queries and mutations
 // import { ApolloArmor } from "@escape.tech/graphql-armor";
 // import { applyMiddleware } from "graphql-middleware";
 // import { RateLimiterMemory } from "rate-limiter-flexible";
 // import { applyRateLimiting } from "./applyRateLimiting";
 
-const databaseURL = process.env.DATABASE_URL || "file:./keystone.db";
+function requiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is required`);
+  return value;
+}
+
+function productionEnv(name: string, developmentFallback: string): string {
+  if (process.env[name]) return process.env[name]!;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(`${name} is required in production`);
+  }
+  return developmentFallback;
+}
+
+const databaseURL = requiredEnv("DATABASE_URL");
+const sessionSecret = requiredEnv("SESSION_SECRET");
+if (sessionSecret.length < 32) {
+  throw new Error("SESSION_SECRET must be at least 32 characters long");
+}
 
 const listKey = "User";
+const trustedProxyIps = new Set(
+  (process.env.TRUSTED_PROXY_IPS || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+);
+
+function requestClientIp(req: any): string {
+  const remote = String(
+    req.socket?.remoteAddress || req.connection?.remoteAddress || ""
+  ).replace(/^::ffff:/, "");
+  if (trustedProxyIps.has(remote)) {
+    const forwarded = req.headers["x-forwarded-for"];
+    const first = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+    if (typeof first === "string" && first.trim()) {
+      return first.split(",")[0].trim().replace(/^::ffff:/, "");
+    }
+    const realIp = req.headers["x-real-ip"];
+    if (typeof realIp === "string" && realIp.trim()) return realIp.trim();
+  }
+  return remote;
+}
 
 export const basePath = "/dashboard";
 
 const sessionConfig = {
-  maxAge: 60 * 60 * 24 * 360, // How long they stay signed in?
-  secret:
-    process.env.SESSION_SECRET || "this secret should only be used in testing",
+  maxAge: 60 * 60 * 24 * 30,
+  secret: sessionSecret,
 };
 
-const {
-  S3_BUCKET_NAME: bucketName = "keystone-test",
-  S3_REGION: region = "ap-southeast-2",
-  S3_ACCESS_KEY_ID: accessKeyId = "keystone",
-  S3_SECRET_ACCESS_KEY: secretAccessKey = "keystone",
-  S3_ENDPOINT: endpoint = "https://sfo3.digitaloceanspaces.com",
-} = process.env;
+const bucketName = productionEnv("S3_BUCKET_NAME", "keystone-test");
+const region = productionEnv("S3_REGION", "ap-southeast-2");
+const accessKeyId = productionEnv("S3_ACCESS_KEY_ID", "keystone");
+const secretAccessKey = productionEnv("S3_SECRET_ACCESS_KEY", "keystone");
+const endpoint = productionEnv("S3_ENDPOINT", "https://sfo3.digitaloceanspaces.com");
 
 export function statelessSessions({
   secret,
@@ -76,16 +116,9 @@ export function statelessSessions({
         // Try to validate as API key first
         if (accessToken.startsWith("of_")) {
           try {
-            // Get client IP address for IP restriction validation
-            const clientIP = context.req.headers['x-forwarded-for'] || 
-                           context.req.headers['x-real-ip'] ||
-                           context.req.connection?.remoteAddress ||
-                           context.req.socket?.remoteAddress ||
-                           (context.req.connection?.socket as any)?.remoteAddress ||
-                           '127.0.0.1';
-            
-            // Handle comma-separated IPs from x-forwarded-for (use first one)
-            const actualClientIP = typeof clientIP === 'string' ? clientIP.split(',')[0].trim() : '127.0.0.1';
+            // Forwarded headers are honored only from an explicitly trusted
+            // proxy connection; direct clients cannot spoof an allowed IP.
+            const actualClientIP = requestClientIp(context.req);
             
             
             // Get all active API keys and test the token against each one
@@ -191,10 +224,11 @@ export function statelessSessions({
         
         // Try to validate as OAuth token first
         try {
-          const oauthToken = await context.sudo().query.OAuthToken.findOne({
-            where: { token: accessToken },
-            query: `id clientId scopes expiresAt tokenType isRevoked user { id }`
-          });
+          const oauthToken = await findOAuthToken(
+            context,
+            accessToken,
+            `id clientId scopes expiresAt tokenType isRevoked user { id }`
+          );
           
           
           if (oauthToken) {
@@ -241,38 +275,42 @@ export function statelessSessions({
         // Try as customer token (for invoice/Openship integration)
         if (accessToken.startsWith('ctok_')) {
           try {
-            const users = await context.sudo().query.User.findMany({
-              where: { customerToken: { equals: accessToken } },
+            const digest = customerTokenDigest(accessToken);
+            let users = await context.sudo().query.User.findMany({
+              where: { customerToken: { equals: digest } },
               take: 1,
               query: `
                 id
-                email
-                name
+                tokenGeneratedAt
                 accounts(where: { status: { equals: "active" }, accountType: { equals: "business" } }) {
                   id
                   status
-                  availableCredit
                 }
               `
             });
-            
+
+            // Development-only compatibility for owner-controlled legacy data.
+            // Production requires rotation to hashed, expiring tokens.
+            if (!users[0] && process.env.NODE_ENV !== 'production') {
+              users = await context.sudo().query.User.findMany({
+                where: { customerToken: { equals: accessToken } },
+                take: 1,
+                query: `id tokenGeneratedAt accounts(where: { status: { equals: "active" }, accountType: { equals: "business" } }) { id status }`
+              });
+            }
+
             const user = users[0];
-            if (!user) {
-              return; // Token not found
-            }
-            
-            // Check if user has active account
-            const activeAccount = user.accounts?.[0];
-            if (!activeAccount) {
-              return; // No active account
-            }
-            
-            
-            // Return user session with customer token flag
-            return { 
-              itemId: user.id, 
+            const activeAccount = user?.accounts?.[0];
+            if (!user || !activeAccount || !user.tokenGeneratedAt) return;
+
+            const maxAgeDays = Number(process.env.CUSTOMER_TOKEN_MAX_AGE_DAYS || 90);
+            const expiresAt = new Date(user.tokenGeneratedAt).getTime() + maxAgeDays * 24 * 60 * 60 * 1000;
+            if (!Number.isFinite(expiresAt) || Date.now() >= expiresAt) return;
+
+            return {
+              itemId: user.id,
               listKey,
-              customerToken: true, // Flag for permission checking
+              customerToken: true,
               activeAccountId: activeAccount.id
             };
           } catch (err) {

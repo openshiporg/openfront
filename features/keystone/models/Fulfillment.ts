@@ -9,62 +9,6 @@ import {
 } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
-import { sendOrderFulfillmentEmail } from "../lib/mail";
-
-// Helper function to call user's order webhook URL
-async function callOrderWebhook(context: any, order: any, eventType: string, additionalData: any = {}) {
-  try {
-    // Get the user's webhook URL from the order
-    const orderWithUser = await context.sudo().query.Order.findOne({
-      where: { id: order.id },
-      query: `
-        user {
-          id
-          orderWebhookUrl
-        }
-      `
-    });
-
-    const webhookUrl = orderWithUser?.user?.orderWebhookUrl;
-    if (!webhookUrl) {
-      return; // No webhook URL configured
-    }
-
-    // Prepare webhook payload
-    const payload = {
-      event: eventType,
-      timestamp: new Date().toISOString(),
-      order: {
-        id: order.id,
-        displayId: order.displayId,
-        email: order.email,
-        secretKey: order.secretKey,
-        status: order.status,
-        total: order.total,
-        shippingAddress: order.shippingAddress
-      },
-      ...additionalData
-    };
-
-    // Make the webhook call
-    const response = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Openfront-Webhooks/1.0'
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      console.warn(`Order webhook call failed: ${response.status} ${response.statusText} for URL: ${webhookUrl}`);
-    } else {
-      console.log(`Order webhook successfully called: ${webhookUrl} for order ${order.displayId}`);
-    }
-  } catch (error) {
-    console.error('Error calling order webhook:', error);
-  }
-}
 
 export const Fulfillment = list({
   access: {
@@ -72,102 +16,9 @@ export const Fulfillment = list({
       query: ({ session }) =>
         permissions.canReadFulfillments({ session }) ||
         permissions.canManageFulfillments({ session }),
-      create: permissions.canManageFulfillments,
-      update: permissions.canManageFulfillments,
-      delete: permissions.canManageFulfillments,
-    },
-  },
-
-  hooks: {
-    beforeDelete: async ({ context, item }) => {
-      // Delete all related records when a fulfillment is deleted
-      await context.db.FulfillmentItem.deleteMany({
-        where: { fulfillment: { id: item.id } },
-      });
-      await context.db.ShippingLabel.deleteMany({
-        where: { fulfillment: { id: item.id } },
-      });
-    },
-    afterOperation: async ({ operation, item, context }) => {
-      // Send order fulfillment email when fulfillment is created
-      if (operation === 'create' && item && !item.noNotification) {
-        try {
-          // Get the complete fulfillment with order and shipping labels
-          const fulfillment = await context.sudo().query.Fulfillment.findOne({
-            where: { id: item.id },
-            query: `
-              id
-              noNotification
-              shippingLabels {
-                id
-                trackingNumber
-                trackingUrl
-                carrier
-                labelUrl
-              }
-              fulfillmentItems {
-                id
-                quantity
-                lineItem {
-                  id
-                  title
-                  sku
-                  variantTitle
-                  formattedUnitPrice
-                  formattedTotal
-                }
-              }
-              order {
-                id
-                displayId
-                email
-                secretKey
-                shippingAddress {
-                  id
-                  firstName
-                  lastName
-                  company
-                  address1
-                  address2
-                  city
-                  province
-                  postalCode
-                  phone
-                  country {
-                    id
-                    iso2
-                    displayName
-                  }
-                }
-              }
-            `,
-          });
-
-          if (fulfillment?.order) {
-            // Format fulfillment data for email
-            const fulfillmentData = {
-              items: fulfillment.fulfillmentItems,
-              shippingLabels: fulfillment.shippingLabels?.map(label => ({
-                id: label.id,
-                trackingNumber: label.trackingNumber,
-                url: label.trackingUrl,
-                carrier: label.carrier,
-                labelUrl: label.labelUrl
-              })) || []
-            };
-
-            await sendOrderFulfillmentEmail(fulfillment.order, fulfillmentData);
-
-            // Call user's order webhook URL if they have one
-            await callOrderWebhook(context, fulfillment.order, 'order.fulfilled', {
-              fulfillment: fulfillmentData,
-              operation: 'fulfilled'
-            });
-          }
-        } catch (error) {
-          console.error('Error sending order fulfillment email:', error);
-        }
-      }
+      create: () => false,
+      update: () => false,
+      delete: () => false,
     },
   },
 

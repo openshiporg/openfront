@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import {
   getAuthHeaders,
   removeAuthToken,
+  removeCartId,
   setAuthToken,
   setCartId,
 } from "@/features/storefront/lib/data/cookies";
@@ -30,7 +31,7 @@ export async function getUser() {
               firstName
               lastName
               phone
-              customerToken
+              tokenGeneratedAt
               orderWebhookUrl
               billingAddress {
                 id
@@ -112,50 +113,15 @@ export async function authenticate({ email, password }: { email: string, passwor
 }
 
 export const getUserWithOrders = cache(async function () {
+  // Parallel account slots are rendered together. Do not invoke the protected
+  // orders resolver for the unauthenticated login slot.
+  const user = await getUser();
+  if (!user?.id) return null;
+
   const headers = await getAuthHeaders();
-  const { authenticatedItem, orders } = await openfrontClient.request(
+  const { orders } = await openfrontClient.request(
     gql`
-      query GetUserAndOrders {
-        authenticatedItem {
-          ... on User {
-            id
-            email
-            firstName
-            lastName
-            phone
-            billingAddress {
-              firstName
-              lastName
-              company
-              address1
-              address2
-              city
-              province
-              postalCode
-              country {
-                id
-                iso2
-              }
-              phone
-            }
-            addresses {
-              id
-              firstName
-              lastName
-              company
-              address1
-              address2
-              city
-              province
-              postalCode
-              country {
-                id
-                iso2
-              }
-              phone
-            }
-          }
-        }
+      query GetCustomerOrders {
         orders: getCustomerOrders
       }
     `,
@@ -163,7 +129,7 @@ export const getUserWithOrders = cache(async function () {
     headers
   );
 
-  return { ...authenticatedItem, orders };
+  return { ...user, orders };
 });
 
 export async function createCustomer(data: CreateCustomerData) {
@@ -522,8 +488,10 @@ export async function signOut(countryCode: string) {
       headers
     );
 
-    // Remove the auth token cookie
+    // A signed-in cart proof cannot authorize the now-anonymous browser. Clear
+    // it with the session; login will restore the user's active cart proof.
     await removeAuthToken();
+    await removeCartId();
     revalidateTag("auth");
     revalidateTag("customer");
     redirect(`/${countryCode}/account`);

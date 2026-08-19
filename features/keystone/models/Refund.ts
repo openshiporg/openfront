@@ -17,9 +17,9 @@ export const Refund = list({
       query: ({ session }) =>
         permissions.canReadReturns({ session }) ||
         permissions.canManageReturns({ session }),
-      create: permissions.canManageReturns,
-      update: permissions.canManageReturns,
-      delete: permissions.canManageReturns,
+      create: () => false,
+      update: () => false,
+      delete: () => false,
     },
   },
   fields: {

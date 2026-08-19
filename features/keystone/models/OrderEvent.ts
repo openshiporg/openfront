@@ -81,8 +81,8 @@ export const OrderEvent = list({
     operation: {
       query: permissions.canManageOrders,
       create: permissions.canManageOrders,
-      update: permissions.canManageOrders,
-      delete: permissions.canManageOrders,
+      update: () => false,
+      delete: () => false,
     },
   },
 }); 

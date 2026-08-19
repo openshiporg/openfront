@@ -1,7 +1,7 @@
 
 import { list } from "@keystone-6/core";
 import { denyAll } from "@keystone-6/core/access";
-import { relationship, text, integer, timestamp, select } from "@keystone-6/core/fields";
+import { relationship, text, integer, select } from "@keystone-6/core/fields";
 import { permissions } from "../access";
 import { trackingFields } from "./trackingFields";
 
@@ -11,9 +11,9 @@ export const StockMovement = list({
       query: ({ session }) =>
         permissions.canReadProducts({ session }) ||
         permissions.canManageProducts({ session }),
-      create: permissions.canManageProducts,
-      update: permissions.canManageProducts,
-      delete: permissions.canManageProducts,
+      create: () => false,
+      update: () => false,
+      delete: () => false,
     },
   },
   fields: {
@@ -34,34 +34,7 @@ export const StockMovement = list({
       ref: "ProductVariant.stockMovements",
       many: false,
     }),
-    createdAt: timestamp({
-      defaultValue: { kind: "now" },
-    }),
     ...trackingFields,
   },
-  hooks: {
-    resolveInput: async ({ resolvedData, context }) => {
-      const { quantity, type, variant } = resolvedData;
-      
-      if (variant?.connect?.id && quantity) {
-        const variantData = await context.query.ProductVariant.findOne({
-          where: { id: variant.connect.id },
-          query: 'inventoryQuantity',
-        });
 
-        if (variantData) {
-          await context.query.ProductVariant.updateOne({
-            where: { id: variant.connect.id },
-            data: {
-              inventoryQuantity: type === "RECEIVE" 
-                ? variantData.inventoryQuantity + quantity
-                : variantData.inventoryQuantity - quantity,
-            },
-          });
-        }
-      }
-
-      return resolvedData;
-    },
-  },
 }); 

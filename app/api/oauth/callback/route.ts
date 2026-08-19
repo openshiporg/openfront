@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { keystoneContext } from '@/features/keystone/context';
 import crypto from 'crypto';
+import {
+  findOAuthToken,
+  openOAuthInstallation,
+  storedOAuthToken,
+} from '@/features/keystone/security/oauth-credentials';
+
+function escapeHtml(value: string | null): string {
+  return String(value || '').replace(/[&<>'"]/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;',
+  })[character]!);
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -66,8 +81,8 @@ export async function GET(request: NextRequest) {
             <h1>Authorization Failed</h1>
             <p>The authorization request was not successful.</p>
             <div class="error-code">
-              <strong>Error:</strong> ${error}<br>
-              ${errorDescription ? `<strong>Description:</strong> ${errorDescription}` : ''}
+              <strong>Error:</strong> ${escapeHtml(error)}<br>
+              ${errorDescription ? `<strong>Description:</strong> ${escapeHtml(errorDescription)}` : ''}
             </div>
             <p>Please try again or contact the application developer for assistance.</p>
           </div>
@@ -100,28 +115,42 @@ export async function GET(request: NextRequest) {
 
     // If this is an Openship setup redirect, handle it differently
     if (stateData && stateData.redirect_type === 'openship_setup') {
+      let installation;
+      try {
+        installation = openOAuthInstallation(stateData.installation_ticket);
+      } catch {
+        return NextResponse.json(
+          { error: 'invalid_request', error_description: 'Invalid or expired installation ticket' },
+          { status: 400 }
+        );
+      }
+      if (installation.clientId !== stateData.client_id) {
+        return NextResponse.json(
+          { error: 'invalid_request', error_description: 'Installation client mismatch' },
+          { status: 400 }
+        );
+      }
       
       // Find the authorization code to validate it
-      const authCode = await keystoneContext.sudo().query.OAuthToken.findOne({
-        where: {
-          token: code,
-          tokenType: 'authorization_code',
-          isRevoked: 'false'
-        },
-        query: 'id clientId redirectUri state'
-      });
+      const authCode = await findOAuthToken(
+        keystoneContext,
+        code,
+        'id clientId redirectUri state tokenType isRevoked scopes user { id }'
+      );
 
-      if (!authCode) {
+      if (!authCode || authCode.tokenType !== 'authorization_code' || authCode.isRevoked !== 'false') {
         return NextResponse.json(
           { error: 'invalid_grant', error_description: 'Invalid authorization code' },
           { status: 400 }
         );
       }
 
-      // Get client secret for the app
+      // The client secret is returned only during initial installation and may
+      // be carried in this one-time authorization state. It is never read back
+      // from storage.
       const app = await keystoneContext.sudo().query.OAuthApp.findOne({
-        where: { clientId: { equals: stateData.client_id } },
-        query: 'clientId clientSecret name'
+        where: { clientId: stateData.client_id },
+        query: 'clientId name'
       });
 
       if (!app) {
@@ -131,16 +160,51 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      // Generate access token by exchanging the authorization code
-      // For simplicity, we'll use the code as a temporary token identifier
-      // In a real implementation, you'd exchange this for a proper access token
-      const accessToken = `openfront_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+      const accessToken = crypto.randomBytes(32).toString('hex');
+      const refreshToken = crypto.randomBytes(32).toString('hex');
+      const accessTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000);
+      const refreshTokenExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      await keystoneContext.sudo().prisma.$transaction(async (tx) => {
+        const consumed = await tx.oAuthToken.updateMany({
+          where: { id: authCode.id, isRevoked: 'false' },
+          data: { isRevoked: 'true' },
+        });
+        if (consumed.count !== 1) throw new Error('Authorization code already consumed');
+        await tx.oAuthToken.create({
+          data: {
+            token: storedOAuthToken(accessToken),
+            tokenType: 'access_token',
+            clientId: authCode.clientId,
+            scopes: authCode.scopes || [],
+            redirectUri: authCode.redirectUri,
+            state: '',
+            isRevoked: 'false',
+            expiresAt: accessTokenExpiresAt,
+            refreshToken: storedOAuthToken(refreshToken),
+            userId: authCode.user?.id,
+          },
+        });
+        await tx.oAuthToken.create({
+          data: {
+            token: storedOAuthToken(refreshToken),
+            tokenType: 'refresh_token',
+            clientId: authCode.clientId,
+            scopes: authCode.scopes || [],
+            redirectUri: authCode.redirectUri,
+            state: '',
+            isRevoked: 'false',
+            expiresAt: refreshTokenExpiresAt,
+            accessToken: storedOAuthToken(accessToken),
+            userId: authCode.user?.id,
+          },
+        });
+      });
 
       // Build Openship URL with platform auto-create parameters
-      const openshipUrl = stateData.openship_url;
+      const openshipUrl = installation.openshipUrl;
       
       // Determine the correct endpoint based on app type
-      const appType = stateData.app_type || 'shop'; // default to shop for backward compatibility
+      const appType = installation.appType || 'shop'; // default to shop for backward compatibility
       const endpoint = appType === 'channel' ? 'channels' : 'shops';
       const setupUrl = new URL(`${openshipUrl}/dashboard/platform/${endpoint}`);
       
@@ -148,10 +212,16 @@ export async function GET(request: NextRequest) {
       const setupParam = appType === 'channel' ? 'showCreateChannelAndChannelAndPlatform' : 'showCreateShopAndChannelAndPlatform';
       setupUrl.searchParams.set(setupParam, 'true');
       setupUrl.searchParams.set('client_id', app.clientId);
-      setupUrl.searchParams.set('client_secret', app.clientSecret);
+      setupUrl.searchParams.set('client_secret', installation.clientSecret);
       setupUrl.searchParams.set('app_name', app.name);
       setupUrl.searchParams.set('accessToken', accessToken);
-      setupUrl.searchParams.set('domain', new URL(request.url).origin); // OpenFront domain
+      setupUrl.searchParams.set('refreshToken', refreshToken);
+      setupUrl.searchParams.set('tokenExpiresAt', accessTokenExpiresAt.toISOString());
+      const configuredPublicOrigin = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
+      setupUrl.searchParams.set(
+        'domain',
+        configuredPublicOrigin ? new URL(configuredPublicOrigin).origin : new URL(request.url).origin
+      ); // OpenFront domain
       
       
       // Redirect to Openship for auto-platform/shop creation
@@ -159,16 +229,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Original flow - find the authorization code to get redirect information
-    const authCode = await keystoneContext.sudo().query.OAuthToken.findOne({
-      where: {
-        token: code,
-        tokenType: 'authorization_code',
-        isRevoked: 'false'
-      },
-      query: 'id clientId redirectUri state'
-    });
+    const authCode = await findOAuthToken(
+      keystoneContext,
+      code,
+      'id clientId redirectUri state tokenType isRevoked'
+    );
 
-    if (!authCode) {
+    if (!authCode || authCode.tokenType !== 'authorization_code' || authCode.isRevoked !== 'false') {
       const errorPage = `
         <!DOCTYPE html>
         <html>

@@ -2,6 +2,10 @@ import { GraphQLClient, gql } from 'graphql-request';
 import { startOnboarding, completeOnboarding } from '../actions/onboarding';
 import { SECTION_DEFINITIONS } from '../config/templates';
 import { TemplateType, OnboardingStep } from './useOnboardingState';
+import {
+  DEFAULT_STORE_LOGO_COLOR,
+  DEFAULT_STORE_LOGO_ICON,
+} from '../../store-settings/lib/store-logo';
 
 const GRAPHQL_ENDPOINT = '/api/graphql';
 
@@ -83,14 +87,16 @@ export function useOnboardingApi({
   const createStore = async (client: GraphQLClient, data: any) => {
     setProgress('Creating store...');
 
-    // Use store data from JSON if available, fallback to defaults
-    const storeData = data.store || {
+    // Merge seed data over the defaults so normal onboarding receives its
+    // logo and hue even when seed.json already defines a store object.
+    const storeData = {
       name: 'Impossible Tees',
       defaultCurrencyCode: 'usd',
       homepageTitle: 'Modern Apparel Store',
       homepageDescription: 'Quality clothing and unique designs.',
-      logoIcon: '<svg xmlns="http://www.w3.org/2000/svg" fill="none" height="100%" width="100%" viewBox="0 0 42 48"><path fill="#155eef" fill-rule="evenodd" d="m22.102 20.86 9.9-9.9L29.88 8.84l-7.339 7.339V3h-3v13.178l-7.339-7.34-2.121 2.122 9.9 9.9 1.06 1.06zm2.12 2.121 9.9-9.9 2.121 2.122-7.339 7.339H42v3H28.904l7.34 7.339L34.121 35l-9.9-9.899-1.06-1.06zM7.96 35.001l9.9-9.899 1.06-1.06-1.06-1.061-9.9-9.9-2.121 2.122 7.339 7.339H.002v3h13.176l-7.34 7.339zm12.02-7.777-9.9 9.9 2.122 2.12 7.339-7.338V45h3V31.906l7.339 7.338L32 37.124l-9.9-9.9-1.06-1.061z" clip-rule="evenodd"/></svg>',
-      logoColor: '0',
+      logoIcon: DEFAULT_STORE_LOGO_ICON,
+      logoColor: DEFAULT_STORE_LOGO_COLOR,
+      ...(data.store || {}),
     };
 
     // Set the store as loading
