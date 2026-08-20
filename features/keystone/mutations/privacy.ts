@@ -1,5 +1,3 @@
-import { commerceLaunchPolicy } from "../config/launch-policy";
-
 const allowedActions = new Set(["access", "correct", "delete", "restrict", "object"]);
 
 export async function updatePrivacyPreferences(
@@ -18,7 +16,6 @@ export async function updatePrivacyPreferences(
   const receipt = {
     analytics,
     marketingEmail,
-    privacyPolicyVersion: commerceLaunchPolicy.privacyPolicyVersion,
     recordedAt: new Date().toISOString(),
     source: "customer-account",
   };
@@ -70,8 +67,6 @@ export async function requestPrivacyAction(
         action,
         details: typeof details === "string" ? details.slice(0, 2000) : null,
         status: "pending_identity_verification",
-        privacyPolicyVersion: commerceLaunchPolicy.privacyPolicyVersion,
-        retentionPolicyVersion: commerceLaunchPolicy.retentionPolicyVersion,
         requestedAt: new Date().toISOString(),
       },
     },
@@ -95,8 +90,6 @@ export async function getMyPrivacyData(root: any, args: any, context: any) {
   if (!user) throw new Error("User not found");
   return {
     generatedAt: new Date().toISOString(),
-    privacyPolicyVersion: commerceLaunchPolicy.privacyPolicyVersion,
-    retentionPolicyVersion: commerceLaunchPolicy.retentionPolicyVersion,
     user,
   };
 }

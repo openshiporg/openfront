@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import { commerceLaunchPolicy } from "../config/launch-policy";
 import {
   enqueueWebhookOutbox,
   subscribedWebhookEndpointIds,
@@ -32,17 +31,11 @@ export async function createOrderFromCartAtomically(cart: any, sudo: any) {
   const userId = cart.user?.id || cart.shippingAddress?.user?.id;
   const secretKey = userId ? "" : crypto.randomBytes(32).toString("hex");
   const commercialSnapshot = {
-    legalEntityId: commerceLaunchPolicy.legalEntityId,
-    reportingCurrency: commerceLaunchPolicy.reportingCurrency,
-    accountingPolicyVersion: commerceLaunchPolicy.accountingPolicyVersion,
-    privacyPolicyVersion: commerceLaunchPolicy.privacyPolicyVersion,
-    retentionPolicyVersion: commerceLaunchPolicy.retentionPolicyVersion,
+    currency: cart.region.currency.code,
     tax: {
-      mode: commerceLaunchPolicy.taxMode,
       rate: cart.region.taxRate || 0,
       regionId: cart.region.id,
       destinationCountry: cart.shippingAddress?.country?.iso2 || null,
-      externalTransaction: cart.metadata?.taxTransaction || null,
     },
     acceptedAt: new Date().toISOString(),
   };

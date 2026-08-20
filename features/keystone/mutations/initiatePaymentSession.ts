@@ -2,7 +2,6 @@
 
 import { createPayment } from "../utils/paymentProviderAdapter";
 import { assertCartAccess } from "../security/cart-access";
-import { assertCheckoutWithinLaunchPolicy } from "../config/launch-policy";
 import { isPaymentProviderConfigured } from "../utils/paymentProviderConfig";
 
 async function initiatePaymentSession(
@@ -82,8 +81,6 @@ async function initiatePaymentSession(
   ) {
     throw new Error("Payment provider not found, installed, and configured for this region");
   }
-  assertCheckoutWithinLaunchPolicy(cart, provider.code);
-
   // First check if we have an existing payment collection
   if (!cart.paymentCollection) {
     // Create new payment collection if none exists

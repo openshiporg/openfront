@@ -13,7 +13,6 @@ import bcryptjs from "bcryptjs";
 import { withWebhooks } from "../webhooks/webhook-plugin";
 import { customerTokenDigest } from "./security/token-crypto";
 import { findOAuthToken } from "./security/oauth-credentials";
-import "./config/launch-policy";
 // Add rate limiting on storefront queries and mutations
 // import { ApolloArmor } from "@escape.tech/graphql-armor";
 // import { applyMiddleware } from "graphql-middleware";

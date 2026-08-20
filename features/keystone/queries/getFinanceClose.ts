@@ -1,6 +1,5 @@
 import crypto from "node:crypto";
 import { permissions } from "../access";
-import { commerceLaunchPolicy } from "../config/launch-policy";
 
 async function getFinanceClose(
   root: any,
@@ -57,8 +56,7 @@ async function getFinanceClose(
       providerReference,
       capturedAt: payment.capturedAt,
       accountingPolicyVersion:
-        payment.order?.metadata?.commercialSnapshot?.accountingPolicyVersion ||
-        commerceLaunchPolicy.accountingPolicyVersion,
+        payment.order?.metadata?.commercialSnapshot?.accountingPolicyVersion || null,
       exception:
         payment.status === "captured" && (!providerReference || captured !== payment.amount)
           ? "CAPTURE_EVIDENCE_MISMATCH"
@@ -88,9 +86,9 @@ async function getFinanceClose(
   return {
     generatedAt: new Date().toISOString(),
     range: { start: startAt.toISOString(), end: endAt.toISOString() },
-    legalEntityId: commerceLaunchPolicy.legalEntityId,
-    reportingCurrency: commerceLaunchPolicy.reportingCurrency,
-    accountingPolicyVersion: commerceLaunchPolicy.accountingPolicyVersion,
+    legalEntityId: null,
+    reportingCurrency: byCurrency.length === 1 ? (byCurrency[0] as any).currency : null,
+    accountingPolicyVersion: null,
     providerSettlementStatus: "OWNER_DATA_REQUIRED",
     rows,
     byCurrency,

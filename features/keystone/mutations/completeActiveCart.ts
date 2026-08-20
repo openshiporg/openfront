@@ -14,10 +14,6 @@ import {
   reserveDiscountUsage,
   updateCheckoutAttempt,
 } from "../checkout/recovery";
-import {
-  assertCheckoutWithinLaunchPolicy,
-  commerceLaunchPolicy,
-} from "../config/launch-policy";
 import { createOrderFromCartAtomically } from "../checkout/order-commit";
 import {
   enqueueWebhookOutbox,
@@ -203,11 +199,6 @@ async function completeActiveCart(
       query: 'id status displayId secretKey shippingAddress { country { iso2 } }',
     });
   }
-  assertCheckoutWithinLaunchPolicy(cart);
-  if (cart.giftCards?.length) {
-    throw new Error('Gift-card redemption is outside the bounded launch boundary');
-  }
-
   const attempt = await getOrCreateCheckoutAttempt(
     sudoContext.prisma,
     cartId,
@@ -364,8 +355,6 @@ async function handlePaidOrder(cart: any, paymentSessionId: string, sudoContext:
   if (!selectedSession.paymentProvider.code) {
     throw new Error("Payment provider code is missing");
   }
-  assertCheckoutWithinLaunchPolicy(cart, selectedSession.paymentProvider.code);
-  
   if (selectedSession.amount !== cart.rawTotal) {
     throw new Error("Payment session amount no longer matches cart total");
   }
