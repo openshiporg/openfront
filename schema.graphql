@@ -1041,6 +1041,7 @@ enum CartStatus {
 
 input CartWhereUniqueInput {
   id: ID
+  idempotencyKey: String
   draftOrder: DraftOrderWhereUniqueInput
   order: OrderWhereUniqueInput
   swap: SwapWhereUniqueInput
@@ -1055,7 +1056,7 @@ input CartWhereInput {
   id: IDFilter
   email: StringFilter
   type: CartTypeTypeNullableFilter
-  idempotencyKey: StringFilter
+  idempotencyKey: StringNullableFilter
   paymentAuthorizedAt: DateTimeNullableFilter
   abandonedEmailSent: BooleanFilter
   user: UserWhereInput
@@ -9147,12 +9148,13 @@ type User {
   onboardingStatus: String
   accounts(where: AccountWhereInput! = {}, orderBy: [AccountOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: AccountWhereUniqueInput): [Account!]
   accountsCount(where: AccountWhereInput! = {}): Int
+  webhookEndpoints(where: WebhookEndpointWhereInput! = {}, orderBy: [WebhookEndpointOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: WebhookEndpointWhereUniqueInput): [WebhookEndpoint!]
+  webhookEndpointsCount(where: WebhookEndpointWhereInput! = {}): Int
   invoices(where: InvoiceWhereInput! = {}, orderBy: [InvoiceOrderByInput!]! = [], take: Int, skip: Int! = 0, cursor: InvoiceWhereUniqueInput): [Invoice!]
   invoicesCount(where: InvoiceWhereInput! = {}): Int
   businessAccountRequest: BusinessAccountRequest
   customerToken: String
   tokenGeneratedAt: DateTime
-  orderWebhookUrl: String
   firstName: String
   lastName: String
   activeCartId: String
@@ -9195,11 +9197,11 @@ input UserWhereInput {
   userField: UserFieldWhereInput
   onboardingStatus: StringNullableFilter
   accounts: AccountManyRelationFilter
+  webhookEndpoints: WebhookEndpointManyRelationFilter
   invoices: InvoiceManyRelationFilter
   businessAccountRequest: BusinessAccountRequestWhereInput
   customerToken: StringNullableFilter
   tokenGeneratedAt: DateTimeNullableFilter
-  orderWebhookUrl: StringFilter
   createdAt: DateTimeFilter
   updatedAt: DateTimeFilter
   passwordResetToken: PasswordFilter
@@ -9225,6 +9227,12 @@ input TeamManyRelationFilter {
   none: TeamWhereInput
 }
 
+input WebhookEndpointManyRelationFilter {
+  every: WebhookEndpointWhereInput
+  some: WebhookEndpointWhereInput
+  none: WebhookEndpointWhereInput
+}
+
 input PasswordFilter {
   isSet: Boolean!
 }
@@ -9238,7 +9246,6 @@ input UserOrderByInput {
   onboardingStatus: OrderDirection
   customerToken: OrderDirection
   tokenGeneratedAt: OrderDirection
-  orderWebhookUrl: OrderDirection
   createdAt: OrderDirection
   updatedAt: OrderDirection
   passwordResetIssuedAt: OrderDirection
@@ -9266,11 +9273,11 @@ input UserUpdateInput {
   userField: UserFieldRelateToOneForUpdateInput
   onboardingStatus: String
   accounts: AccountRelateToManyForUpdateInput
+  webhookEndpoints: WebhookEndpointRelateToManyForUpdateInput
   invoices: InvoiceRelateToManyForUpdateInput
   businessAccountRequest: BusinessAccountRequestRelateToOneForUpdateInput
   customerToken: String
   tokenGeneratedAt: DateTime
-  orderWebhookUrl: String
   createdAt: DateTime
   updatedAt: DateTime
   passwordResetToken: String
@@ -9317,6 +9324,13 @@ input UserFieldRelateToOneForUpdateInput {
   disconnect: Boolean
 }
 
+input WebhookEndpointRelateToManyForUpdateInput {
+  disconnect: [WebhookEndpointWhereUniqueInput!]
+  set: [WebhookEndpointWhereUniqueInput!]
+  create: [WebhookEndpointCreateInput!]
+  connect: [WebhookEndpointWhereUniqueInput!]
+}
+
 input BusinessAccountRequestRelateToOneForUpdateInput {
   create: BusinessAccountRequestCreateInput
   connect: BusinessAccountRequestWhereUniqueInput
@@ -9349,11 +9363,11 @@ input UserCreateInput {
   userField: UserFieldRelateToOneForCreateInput
   onboardingStatus: String
   accounts: AccountRelateToManyForCreateInput
+  webhookEndpoints: WebhookEndpointRelateToManyForCreateInput
   invoices: InvoiceRelateToManyForCreateInput
   businessAccountRequest: BusinessAccountRequestRelateToOneForCreateInput
   customerToken: String
   tokenGeneratedAt: DateTime
-  orderWebhookUrl: String
   createdAt: DateTime
   updatedAt: DateTime
   passwordResetToken: String
@@ -9389,6 +9403,11 @@ input TeamRelateToManyForCreateInput {
 input UserFieldRelateToOneForCreateInput {
   create: UserFieldCreateInput
   connect: UserFieldWhereUniqueInput
+}
+
+input WebhookEndpointRelateToManyForCreateInput {
+  create: [WebhookEndpointCreateInput!]
+  connect: [WebhookEndpointWhereUniqueInput!]
 }
 
 input BusinessAccountRequestRelateToOneForCreateInput {
@@ -9473,7 +9492,11 @@ input UserFieldCreateInput {
 type WebhookEndpoint {
   id: ID!
   url: String
+  registrationKey: String
+  subscriptionKey: String
   events: JSON
+  scope: String
+  user: User
   isActive: Boolean
   secret: String
   lastTriggered: DateTime
@@ -9486,6 +9509,7 @@ type WebhookEndpoint {
 
 input WebhookEndpointWhereUniqueInput {
   id: ID
+  subscriptionKey: String
 }
 
 input WebhookEndpointWhereInput {
@@ -9494,6 +9518,10 @@ input WebhookEndpointWhereInput {
   NOT: [WebhookEndpointWhereInput!]
   id: IDFilter
   url: StringFilter
+  registrationKey: StringNullableFilter
+  subscriptionKey: StringNullableFilter
+  scope: StringFilter
+  user: UserWhereInput
   isActive: BooleanFilter
   secret: StringFilter
   lastTriggered: DateTimeNullableFilter
@@ -9512,6 +9540,9 @@ input WebhookEventManyRelationFilter {
 input WebhookEndpointOrderByInput {
   id: OrderDirection
   url: OrderDirection
+  registrationKey: OrderDirection
+  subscriptionKey: OrderDirection
+  scope: OrderDirection
   isActive: OrderDirection
   secret: OrderDirection
   lastTriggered: OrderDirection
@@ -9522,7 +9553,11 @@ input WebhookEndpointOrderByInput {
 
 input WebhookEndpointUpdateInput {
   url: String
+  registrationKey: String
+  subscriptionKey: String
   events: JSON
+  scope: String
+  user: UserRelateToOneForUpdateInput
   isActive: Boolean
   secret: String
   lastTriggered: DateTime
@@ -9546,7 +9581,11 @@ input WebhookEndpointUpdateArgs {
 
 input WebhookEndpointCreateInput {
   url: String
+  registrationKey: String
+  subscriptionKey: String
   events: JSON
+  scope: String
+  user: UserRelateToOneForCreateInput
   isActive: Boolean
   secret: String
   lastTriggered: DateTime
@@ -9571,6 +9610,7 @@ type WebhookEvent {
   delivered: Boolean
   lastAttempt: DateTime
   nextAttempt: DateTime
+  deadLetteredAt: DateTime
   responseStatus: Int
   responseBody: String
   endpoint: WebhookEndpoint
@@ -9593,6 +9633,7 @@ input WebhookEventWhereInput {
   delivered: BooleanFilter
   lastAttempt: DateTimeNullableFilter
   nextAttempt: DateTimeNullableFilter
+  deadLetteredAt: DateTimeNullableFilter
   responseStatus: IntNullableFilter
   responseBody: StringFilter
   endpoint: WebhookEndpointWhereInput
@@ -9608,6 +9649,7 @@ input WebhookEventOrderByInput {
   delivered: OrderDirection
   lastAttempt: OrderDirection
   nextAttempt: OrderDirection
+  deadLetteredAt: OrderDirection
   responseStatus: OrderDirection
   responseBody: OrderDirection
   createdAt: OrderDirection
@@ -9622,6 +9664,7 @@ input WebhookEventUpdateInput {
   delivered: Boolean
   lastAttempt: DateTime
   nextAttempt: DateTime
+  deadLetteredAt: DateTime
   responseStatus: Int
   responseBody: String
   endpoint: WebhookEndpointRelateToOneForUpdateInput
@@ -9648,6 +9691,7 @@ input WebhookEventCreateInput {
   delivered: Boolean
   lastAttempt: DateTime
   nextAttempt: DateTime
+  deadLetteredAt: DateTime
   responseStatus: Int
   responseBody: String
   endpoint: WebhookEndpointRelateToOneForCreateInput
@@ -10214,6 +10258,7 @@ type Mutation {
   completeInvoicePayment(paymentSessionId: ID!): InvoicePaymentResult!
   processReturnRefund(returnId: ID!, paymentId: ID!, idempotencyKey: String!): Refund
   retryWebhookDeliveries(limit: Int): Int!
+  registerWebhookEndpoint(registrationKey: String!, url: String!, events: [String!]!, secret: String!, requiredScope: String): WebhookEndpoint!
   updatePrivacyPreferences(preferences: JSON!): JSON!
   requestPrivacyAction(action: String!, details: String): Notification
 }
@@ -10744,7 +10789,6 @@ input UserUpdateProfileInput {
   billingAddress: String
   password: String
   onboardingStatus: String
-  orderWebhookUrl: String
 }
 
 type WebhookResult {

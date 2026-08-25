@@ -266,7 +266,8 @@ export const Cart = list({
     operation: {
       query: ({ session }) =>
         permissions.canReadOrders({ session }) ||
-        permissions.canManageOrders({ session }),
+        permissions.canManageOrders({ session }) ||
+        Boolean(session?.customerToken),
       create: () => true,
       update: permissions.canManageOrders,
       delete: permissions.canManageOrders,
@@ -296,7 +297,11 @@ export const Cart = list({
         operation === 'create' &&
         !permissions.canManageOrders({ session: context.session })
       ) {
-        const allowedCreateFields = new Set(['region', 'type']);
+        const allowedCreateFields = new Set([
+          'region',
+          'type',
+          ...(context.session?.customerToken ? ['idempotencyKey'] : []),
+        ]);
         for (const key of Object.keys(resolvedData)) {
           if (!allowedCreateFields.has(key)) delete resolvedData[key];
         }
@@ -374,7 +379,11 @@ export const Cart = list({
       validation: { isRequired: true },
     }),
     metadata: json(),
-    idempotencyKey: text(),
+    idempotencyKey: text({
+      isIndexed: 'unique',
+      db: { isNullable: true },
+      ui: { itemView: { fieldMode: 'read' } },
+    }),
     context: json(),
     paymentAuthorizedAt: timestamp(),
     abandonedEmailSent: checkbox({ defaultValue: false }), // Track if abandoned cart email was sent

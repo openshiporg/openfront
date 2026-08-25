@@ -65,9 +65,16 @@ export const WebhookEvent = list({
     }),
     
     nextAttempt: timestamp({
-      ui: { 
+      ui: {
         itemView: { fieldMode: 'read' },
         description: 'Timestamp for the next retry attempt'
+      }
+    }),
+
+    deadLetteredAt: timestamp({
+      ui: {
+        itemView: { fieldMode: 'read' },
+        description: 'Set when the delivery exhausted its retry budget'
       }
     }),
     
@@ -95,5 +102,11 @@ export const WebhookEvent = list({
       defaultValue: { kind: 'now' },
       ui: { itemView: { fieldMode: 'read' } }
     }),
+  },
+  db: {
+    extendPrismaSchema: (schema) => schema.replace(
+      /(model [^}]+)}/g,
+      '$1@@index([delivered, deadLetteredAt, nextAttempt], map: "WebhookEvent_retry_queue_idx")\n}'
+    ),
   },
 });

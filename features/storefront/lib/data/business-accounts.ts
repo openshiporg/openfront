@@ -172,42 +172,6 @@ export async function submitBusinessAccountRequest(prevState: any, formData: For
   }
 }
 
-export async function updateWebhookUrl(prevState: any, formData: FormData) {
-  try {
-    const headers = await getAuthHeaders();
-    const webhookUrl = formData.get('webhookUrl') as string;
-
-    const result = await openfrontClient.request(
-      gql`
-        mutation UpdateUserWebhookUrl($data: UserUpdateProfileInput!) {
-          updateActiveUser(data: $data) {
-            id
-            orderWebhookUrl
-          }
-        }
-      `,
-      {
-        data: { orderWebhookUrl: webhookUrl.trim() }
-      },
-      headers
-    );
-
-    if (!result || !result.updateActiveUser) {
-      throw new Error('No response from updateActiveUser mutation');
-    }
-
-    return {
-      success: true,
-      message: 'Webhook URL updated successfully'
-    };
-  } catch (error: any) {
-    return {
-      success: false,
-      error: error.message || 'Failed to update webhook URL'
-    };
-  }
-}
-
 export async function regenerateCustomerToken(prevState: any, formData: FormData) {
   try {
     const headers = await getAuthHeaders();

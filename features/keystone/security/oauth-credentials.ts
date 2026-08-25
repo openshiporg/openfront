@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import {
   oauthClientSecretDigest,
   oauthTokenDigest,
@@ -22,30 +21,6 @@ export function verifyOAuthClientSecret(
     return true;
   }
   return process.env.NODE_ENV !== "production" && rawSecret === storedSecret;
-}
-
-export function sealOAuthInstallation(payload: Record<string, unknown>): string {
-  if (!process.env.SESSION_SECRET) throw new Error("SESSION_SECRET is required");
-  const key = crypto.createHash("sha256").update(process.env.SESSION_SECRET).digest();
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
-  const plaintext = Buffer.from(JSON.stringify({ ...payload, expiresAt: Date.now() + 10 * 60 * 1000 }));
-  const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()]);
-  return Buffer.concat([iv, cipher.getAuthTag(), encrypted]).toString("base64url");
-}
-
-export function openOAuthInstallation(ticket: string): Record<string, any> {
-  if (!process.env.SESSION_SECRET) throw new Error("SESSION_SECRET is required");
-  const packed = Buffer.from(ticket, "base64url");
-  if (packed.length < 29) throw new Error("Invalid installation ticket");
-  const key = crypto.createHash("sha256").update(process.env.SESSION_SECRET).digest();
-  const decipher = crypto.createDecipheriv("aes-256-gcm", key, packed.subarray(0, 12));
-  decipher.setAuthTag(packed.subarray(12, 28));
-  const value = JSON.parse(
-    Buffer.concat([decipher.update(packed.subarray(28)), decipher.final()]).toString("utf8")
-  );
-  if (!value.expiresAt || value.expiresAt < Date.now()) throw new Error("Installation ticket expired");
-  return value;
 }
 
 export async function findOAuthToken(

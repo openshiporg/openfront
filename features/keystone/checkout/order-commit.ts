@@ -3,6 +3,7 @@ import {
   enqueueWebhookOutbox,
   subscribedWebhookEndpointIds,
 } from "../../webhooks/outbox";
+import { deliverWebhookEventsById } from "../../webhooks/webhook-plugin";
 
 export async function createOrderFromCartAtomically(cart: any, sudo: any) {
   const prepared: Array<{ line: any; price: any; thumbnail: any }> = [];
@@ -24,11 +25,12 @@ export async function createOrderFromCartAtomically(cart: any, sudo: any) {
     prepared.push({ line, price, thumbnail });
   }
 
+  const userId = cart.user?.id || cart.shippingAddress?.user?.id;
   const orderWebhookEndpointIds = await subscribedWebhookEndpointIds(
     sudo,
-    "order.created"
+    'order.created',
+    userId
   );
-  const userId = cart.user?.id || cart.shippingAddress?.user?.id;
   const secretKey = userId ? "" : crypto.randomBytes(32).toString("hex");
   const commercialSnapshot = {
     currency: cart.region.currency.code,
@@ -40,11 +42,12 @@ export async function createOrderFromCartAtomically(cart: any, sudo: any) {
     acceptedAt: new Date().toISOString(),
   };
 
-  const orderId = await sudo.prisma.$transaction(async (tx: any) => {
+  const commit = await sudo.prisma.$transaction(async (tx: any) => {
     const existing = await tx.order.findFirst({ where: { cart: { id: cart.id } }, select: { id: true } });
-    if (existing) return existing.id;
+    if (existing) return { orderId: existing.id, webhookEventIds: [] as string[] };
 
     const lineItemIds = [];
+    const webhookLineItems: any[] = [];
     for (const { line, price, thumbnail } of prepared) {
       const money = await tx.orderMoneyAmount.create({
         data: {
@@ -89,6 +92,27 @@ export async function createOrderFromCartAtomically(cart: any, sudo: any) {
         },
       });
       lineItemIds.push(item.id);
+      webhookLineItems.push({
+        id: item.id,
+        title: item.title,
+        quantity: item.quantity,
+        sku: item.sku,
+        thumbnail,
+        moneyAmount: {
+          amount: price.calculatedAmount,
+          originalAmount: price.originalAmount,
+        },
+        productVariant: {
+          id: line.productVariant.id,
+          title: line.productVariant.title,
+          sku: line.productVariant.sku,
+          product: {
+            id: line.productVariant.product.id,
+            title: line.productVariant.product.title,
+            thumbnail,
+          },
+        },
+      });
     }
 
     const order = await tx.order.create({
@@ -117,13 +141,23 @@ export async function createOrderFromCartAtomically(cart: any, sudo: any) {
       },
     });
     await tx.cart.update({ where: { id: cart.id }, data: { orderId: order.id } });
-    await enqueueWebhookOutbox(
+    const webhookEventIds = await enqueueWebhookOutbox(
       tx,
       orderWebhookEndpointIds,
       "order.created",
       "Order",
       order.id,
-      { id: order.id, cartId: cart.id, status: order.status }
+      {
+        id: order.id,
+        cartId: cart.id,
+        displayId: order.displayId,
+        email: order.email,
+        status: order.status,
+        rawTotal: cart.rawTotal,
+        currency: { id: cart.region.currency.id, code: cart.region.currency.code },
+        shippingAddress: cart.shippingAddress,
+        lineItems: webhookLineItems,
+      }
     );
     if (cart.email) {
       await tx.notification.create({
@@ -137,11 +171,22 @@ export async function createOrderFromCartAtomically(cart: any, sudo: any) {
         },
       });
     }
-    return order.id;
+    return { orderId: order.id, webhookEventIds };
   });
 
+  if (commit.webhookEventIds.length) {
+    try {
+      await deliverWebhookEventsById(sudo, commit.webhookEventIds);
+    } catch (error) {
+      console.error(
+        "Immediate order webhook delivery failed:",
+        error instanceof Error ? error.message : "Unknown error"
+      );
+    }
+  }
+
   return sudo.query.Order.findOne({
-    where: { id: orderId },
+    where: { id: commit.orderId },
     query: `
       id status displayId secretKey subtotal total shipping discount tax paymentDetails
       shippingAddress { id firstName lastName company address1 address2 city province postalCode country { id iso2 } phone }

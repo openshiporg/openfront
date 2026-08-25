@@ -2934,105 +2934,36 @@ async function releaseCheckoutResources(prisma, lines, discounts, idempotencyKey
   });
 }
 
-// features/keystone/config/launch-policy.ts
-var developmentPolicy = {
-  legalEntityId: "development-merchant",
-  reportingCurrency: "USD",
-  supportedCountries: [],
-  supportedCurrencies: ["USD", "EUR", "GBP"],
-  supportedPaymentProviderCodes: [
-    "pp_stripe_stripe",
-    "pp_paypal_paypal",
-    "pp_system_default"
-  ],
-  prohibitedProductTagIds: [],
-  taxMode: "configured_rate",
-  retentionPolicyVersion: "development-only",
-  privacyPolicyVersion: "development-only",
-  accountingPolicyVersion: "development-only"
-};
-function parsePolicy() {
-  const raw = process.env.COMMERCE_LAUNCH_POLICY;
-  if (!raw) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("COMMERCE_LAUNCH_POLICY is required in production");
-    }
-    return developmentPolicy;
-  }
-  let value;
-  try {
-    value = JSON.parse(raw);
-  } catch {
-    throw new Error("COMMERCE_LAUNCH_POLICY must be valid JSON");
-  }
-  const requiredStrings = [
-    "legalEntityId",
-    "reportingCurrency",
-    "taxMode",
-    "retentionPolicyVersion",
-    "privacyPolicyVersion",
-    "accountingPolicyVersion"
-  ];
-  for (const key of requiredStrings) {
-    if (!value[key] || typeof value[key] !== "string") {
-      throw new Error(`COMMERCE_LAUNCH_POLICY.${key} is required`);
-    }
-  }
-  if (!Array.isArray(value.supportedCountries) || !value.supportedCountries.length) {
-    throw new Error("COMMERCE_LAUNCH_POLICY.supportedCountries must be non-empty");
-  }
-  if (!Array.isArray(value.supportedCurrencies) || !value.supportedCurrencies.length) {
-    throw new Error("COMMERCE_LAUNCH_POLICY.supportedCurrencies must be non-empty");
-  }
-  if (!Array.isArray(value.prohibitedProductTagIds)) {
-    throw new Error("COMMERCE_LAUNCH_POLICY.prohibitedProductTagIds must be an array");
-  }
-  if (!Array.isArray(value.supportedPaymentProviderCodes) || !value.supportedPaymentProviderCodes.length) {
-    throw new Error(
-      "COMMERCE_LAUNCH_POLICY.supportedPaymentProviderCodes must be non-empty"
-    );
-  }
-  if (!["configured_rate", "external_provider"].includes(value.taxMode)) {
-    throw new Error("COMMERCE_LAUNCH_POLICY.taxMode is invalid");
-  }
-  return {
-    ...value,
-    reportingCurrency: value.reportingCurrency.toUpperCase(),
-    supportedCountries: value.supportedCountries.map((code) => code.toLowerCase()),
-    supportedCurrencies: value.supportedCurrencies.map((code) => code.toUpperCase())
-  };
-}
-var commerceLaunchPolicy = parsePolicy();
-function assertCheckoutWithinLaunchPolicy(cart, providerCode) {
-  const country = cart.shippingAddress?.country?.iso2?.toLowerCase();
-  const currency = cart.region?.currency?.code?.toUpperCase();
-  if (!currency || !commerceLaunchPolicy.supportedCurrencies.includes(currency)) {
-    throw new Error("Cart currency is outside the supported launch boundary");
-  }
-  const prohibitedTags = new Set(commerceLaunchPolicy.prohibitedProductTagIds);
-  if (cart.lineItems?.some(
-    (line) => line.productVariant?.product?.productTags?.some((tag) => prohibitedTags.has(tag.id))
-  )) {
-    throw new Error("Cart contains a product outside the supported launch boundary");
-  }
-  if (commerceLaunchPolicy.supportedCountries.length && (!country || !commerceLaunchPolicy.supportedCountries.includes(country))) {
-    throw new Error("Shipping destination is outside the supported launch boundary");
-  }
-  if (providerCode && !commerceLaunchPolicy.supportedPaymentProviderCodes.includes(providerCode)) {
-    throw new Error("Payment provider is outside the supported launch boundary");
-  }
-  if (commerceLaunchPolicy.taxMode === "external_provider" && !cart.metadata?.taxTransaction) {
-    throw new Error("A committed external tax transaction is required");
-  }
-}
-
 // features/keystone/checkout/order-commit.ts
 var import_node_crypto3 = __toESM(require("node:crypto"));
 
+// features/webhooks/delivery-policy.ts
+var WEBHOOK_DELIVERY_MAX_ATTEMPTS = 12;
+var WEBHOOK_DELIVERY_TIMEOUT_MS = 15e3;
+var WEBHOOK_DELIVERY_LEASE_MS = 2 * 6e4;
+function webhookDeliveryLease(now = Date.now()) {
+  return new Date(now + WEBHOOK_DELIVERY_LEASE_MS);
+}
+function nextWebhookAttempt(attempts, now = Date.now()) {
+  if (attempts >= WEBHOOK_DELIVERY_MAX_ATTEMPTS) return null;
+  const delay = Math.min(Math.pow(2, attempts) * 6e4, 24 * 60 * 60 * 1e3);
+  return new Date(now + delay);
+}
+
 // features/webhooks/outbox.ts
-async function subscribedWebhookEndpointIds(context, eventType) {
+async function subscribedWebhookEndpointIds(context, eventType, userId) {
+  const scopeFilters = [{ scope: { equals: "STORE" } }];
+  if (userId) {
+    scopeFilters.push({
+      scope: { equals: "USER" },
+      user: { id: { equals: userId } }
+    });
+  }
   const endpoints = await context.query.WebhookEndpoint.findMany({
-    where: { isActive: { equals: true } },
+    where: {
+      isActive: { equals: true },
+      OR: scopeFilters
+    },
     query: "id events"
   });
   return endpoints.filter(
@@ -3058,13 +2989,469 @@ async function enqueueWebhookOutbox(tx, endpointIds, eventType, resourceType, re
         endpointId,
         delivered: false,
         deliveryAttempts: 0,
-        nextAttempt: /* @__PURE__ */ new Date()
+        nextAttempt: webhookDeliveryLease()
       },
       select: { id: true }
     });
     eventIds.push(event.id);
   }
   return eventIds;
+}
+
+// features/webhooks/webhook-plugin.ts
+var import_crypto = __toESM(require("crypto"));
+
+// features/webhooks/enrichers/base-enricher.ts
+var BaseWebhookEnricher = class {
+  /**
+   * Helper method to query the entity with enriched data
+   */
+  async queryEnrichedEntity(item, context) {
+    if (!item?.id) {
+      return item;
+    }
+    try {
+      const result = await context.query[this.entityType].findOne({
+        where: { id: item.id },
+        query: this.getQueryFields()
+      });
+      return result || item;
+    } catch (error) {
+      console.error(`Error querying ${this.entityType} for webhook enrichment:`, error);
+      return item;
+    }
+  }
+};
+
+// features/webhooks/enrichers/order-enricher.ts
+var OrderWebhookEnricher = class extends BaseWebhookEnricher {
+  constructor() {
+    super(...arguments);
+    this.entityType = "Order";
+  }
+  async enrich(item, context) {
+    const enrichedItem = await this.queryEnrichedEntity(item, context);
+    return enrichedItem || item;
+  }
+  getQueryFields() {
+    return `
+      id
+      displayId
+      email
+      status
+      rawTotal
+      total
+      subtotal
+      shipping
+      discount
+      tax
+      canceledAt
+      metadata
+      idempotencyKey
+      noNotification
+      externalId
+      currency {
+        id
+        code
+        symbol
+        noDivisionCurrency
+      }
+      shippingAddress {
+        id
+        firstName
+        lastName
+        company
+        address1
+        address2
+        city
+        province
+        postalCode
+        phone
+        country {
+          id
+          iso2
+          displayName
+        }
+      }
+      billingAddress {
+        id
+        firstName
+        lastName
+        company
+        address1
+        address2
+        city
+        province
+        postalCode
+        phone
+        country {
+          id
+          iso2
+          displayName
+        }
+      }
+      lineItems {
+        id
+        title
+        quantity
+        sku
+        variantTitle
+        thumbnail
+        formattedUnitPrice
+        formattedTotal
+        moneyAmount {
+          amount
+          originalAmount
+        }
+        productVariant {
+          id
+          title
+          sku
+          product {
+            id
+            title
+            handle
+            thumbnail
+            productImages {
+              image {
+                url
+              }
+              imagePath
+            }
+          }
+        }
+        productData
+        variantData
+      }
+      createdAt
+      updatedAt
+    `;
+  }
+};
+
+// features/webhooks/enrichers/registry.ts
+var WebhookEnricherRegistry = class {
+  constructor() {
+    this.enrichers = /* @__PURE__ */ new Map();
+  }
+  register(entityType, enricher) {
+    this.enrichers.set(entityType, enricher);
+  }
+  get(entityType) {
+    return this.enrichers.get(entityType);
+  }
+  has(entityType) {
+    return this.enrichers.has(entityType);
+  }
+  /**
+   * Get all registered entity types
+   */
+  getRegisteredTypes() {
+    return Array.from(this.enrichers.keys());
+  }
+};
+var webhookEnricherRegistry = new WebhookEnricherRegistry();
+function registerWebhookEnricher(enricher) {
+  webhookEnricherRegistry.register(enricher.entityType, enricher);
+}
+
+// features/webhooks/enrichers/index.ts
+registerWebhookEnricher(new OrderWebhookEnricher());
+
+// features/webhooks/webhook-plugin.ts
+var WEBHOOK_INTERNAL_LISTS = /* @__PURE__ */ new Set(["WebhookEndpoint", "WebhookEvent"]);
+function isWebhookInternalList(listKey2) {
+  return WEBHOOK_INTERNAL_LISTS.has(listKey2);
+}
+function withWebhooks(config2) {
+  const enhancedLists = Object.fromEntries(
+    Object.entries(config2.lists || {}).map(([listKey2, listConfig]) => {
+      if (isWebhookInternalList(listKey2)) return [listKey2, listConfig];
+      return [
+        listKey2,
+        {
+          ...listConfig,
+          hooks: {
+            ...listConfig.hooks,
+            afterOperation: async (args) => {
+              const originalAfterOperation = listConfig.hooks?.afterOperation;
+              if (typeof originalAfterOperation === "function") {
+                await originalAfterOperation(args);
+              } else if (originalAfterOperation?.[args.operation]) {
+                await originalAfterOperation[args.operation](args);
+              }
+              try {
+                await triggerWebhook({
+                  listKey: listKey2,
+                  operation: args.operation,
+                  item: args.item,
+                  originalItem: args.originalItem,
+                  context: args.context.sudo()
+                });
+              } catch (error) {
+                console.error(`Webhook enqueue failed for ${listKey2}:`, error);
+              }
+            }
+          }
+        }
+      ];
+    })
+  );
+  return {
+    ...config2,
+    lists: enhancedLists
+  };
+}
+async function triggerWebhook({ listKey: listKey2, operation, item, originalItem, context }) {
+  if (isWebhookInternalList(listKey2)) return;
+  try {
+    const operationMap = {
+      "create": "created",
+      "update": "updated",
+      "delete": "deleted"
+    };
+    const webhookOperation = operationMap[operation] || operation;
+    const eventType = `${listKey2.toLowerCase()}.${webhookOperation}`;
+    const webhooks = await context.query.WebhookEndpoint.findMany({
+      where: {
+        isActive: { equals: true },
+        scope: { equals: "STORE" }
+      },
+      query: "id url secret events failureCount"
+    });
+    if (!webhooks || webhooks.length === 0) {
+      return;
+    }
+    const subscribedWebhooks = webhooks.filter((webhook) => {
+      if (!webhook.events || !Array.isArray(webhook.events)) {
+        return false;
+      }
+      return webhook.events.includes(eventType) || webhook.events.includes("*");
+    });
+    if (subscribedWebhooks.length === 0) {
+      return;
+    }
+    const payload = await formatPayload(listKey2, operation, item, originalItem, context);
+    for (const webhook of subscribedWebhooks) {
+      await deliverWebhook(webhook, eventType, payload, context);
+    }
+  } catch (error) {
+    console.error("Webhook trigger error:", error);
+  }
+}
+async function deliverWebhook(webhook, eventType, payload, context, existingEvent) {
+  let webhookEvent = existingEvent;
+  try {
+    if (!webhookEvent) {
+      webhookEvent = await context.query.WebhookEvent.createOne({
+        data: {
+          eventType,
+          resourceType: payload.listKey,
+          resourceId: payload.data?.id || "unknown",
+          payload,
+          endpoint: { connect: { id: webhook.id } },
+          deliveryAttempts: 0,
+          nextAttempt: webhookDeliveryLease()
+        },
+        query: "id deliveryAttempts"
+      });
+    }
+    await context.query.WebhookEvent.updateOne({
+      where: { id: webhookEvent.id },
+      data: { deliveryAttempts: (webhookEvent.deliveryAttempts || 0) + 1, lastAttempt: /* @__PURE__ */ new Date() }
+    });
+    if (!webhook.secret) {
+      throw new Error("Webhook endpoint secret is required");
+    }
+    const secret = webhook.secret;
+    const signature = import_crypto.default.createHmac("sha256", secret).update(JSON.stringify(payload)).digest("hex");
+    const response = await fetch(webhook.url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-OpenFront-Webhook-Signature": `sha256=${signature}`,
+        "X-OpenFront-Topic": eventType,
+        "X-OpenFront-ListKey": payload.listKey,
+        "X-OpenFront-Operation": payload.operation,
+        "X-OpenFront-Delivery-ID": webhookEvent.id
+      },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(WEBHOOK_DELIVERY_TIMEOUT_MS)
+    });
+    if (response.ok) {
+      const responseBody = (await response.text()).slice(0, 64e3);
+      await context.query.WebhookEvent.updateOne({
+        where: { id: webhookEvent.id },
+        data: {
+          delivered: true,
+          responseStatus: response.status,
+          responseBody,
+          lastAttempt: /* @__PURE__ */ new Date()
+        }
+      });
+      if (webhook.failureCount > 0) {
+        await context.query.WebhookEndpoint.updateOne({
+          where: { id: webhook.id },
+          data: {
+            failureCount: 0,
+            lastTriggered: /* @__PURE__ */ new Date()
+          }
+        });
+      } else {
+        await context.query.WebhookEndpoint.updateOne({
+          where: { id: webhook.id },
+          data: { lastTriggered: /* @__PURE__ */ new Date() }
+        });
+      }
+    } else {
+      const errorText = (await response.text()).slice(0, 64e3);
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+  } catch (error) {
+    try {
+      const attempts = Number(webhookEvent?.deliveryAttempts || 0) + 1;
+      const nextAttempt = nextWebhookAttempt(attempts);
+      await context.query.WebhookEvent.updateOne({
+        where: { id: webhookEvent?.id },
+        data: {
+          delivered: false,
+          responseStatus: 0,
+          responseBody: error instanceof Error ? error.message : String(error),
+          lastAttempt: /* @__PURE__ */ new Date(),
+          nextAttempt,
+          ...nextAttempt ? {} : { deadLetteredAt: /* @__PURE__ */ new Date() }
+        }
+      });
+      await context.query.WebhookEndpoint.updateOne({
+        where: { id: webhook.id },
+        data: {
+          failureCount: (webhook.failureCount || 0) + 1
+        }
+      });
+    } catch (updateError) {
+      console.error("Failed to update webhook event after delivery failure:", updateError);
+    }
+  }
+}
+async function formatPayload(listKey2, operation, item, originalItem, context) {
+  const basePayload = {
+    event: `${listKey2.toLowerCase()}.${operation}`,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    listKey: listKey2,
+    operation
+  };
+  let enrichedData = item;
+  if (webhookEnricherRegistry.has(listKey2) && item?.id) {
+    try {
+      const enricher = webhookEnricherRegistry.get(listKey2);
+      if (enricher) {
+        enrichedData = await enricher.enrich(item, context);
+      }
+    } catch (error) {
+      console.error(`Error enriching webhook payload for ${listKey2}:`, error);
+      enrichedData = item;
+    }
+  }
+  switch (operation) {
+    case "create":
+      return {
+        ...basePayload,
+        data: enrichedData || item
+      };
+    case "update":
+      return {
+        ...basePayload,
+        data: enrichedData || item,
+        previousData: originalItem,
+        changes: getChangedFields(originalItem, enrichedData || item)
+      };
+    case "delete":
+      return {
+        ...basePayload,
+        data: originalItem
+      };
+    default:
+      return {
+        ...basePayload,
+        data: enrichedData || item
+      };
+  }
+}
+function getChangedFields(original, updated) {
+  if (!original || !updated) return {};
+  const changes = {};
+  for (const key in updated) {
+    if (original[key] !== updated[key]) {
+      changes[key] = {
+        from: original[key],
+        to: updated[key]
+      };
+    }
+  }
+  return changes;
+}
+async function deliverWebhookEventsById(context, eventIds) {
+  const uniqueEventIds = [...new Set(eventIds.filter(Boolean))];
+  for (const eventId of uniqueEventIds) {
+    const event = await context.sudo().query.WebhookEvent.findOne({
+      where: { id: eventId },
+      query: `
+        id eventType payload deliveryAttempts delivered
+        endpoint { id url secret failureCount }
+      `
+    });
+    if (!event || event.delivered || !event.endpoint) continue;
+    await deliverWebhook(
+      event.endpoint,
+      event.eventType,
+      event.payload,
+      context.sudo(),
+      event
+    );
+  }
+  return uniqueEventIds.length;
+}
+async function retryPendingWebhookDeliveries(context, limit = 25) {
+  const boundedLimit = Math.max(1, Math.min(limit, 100));
+  const sudo = context.sudo();
+  const now = /* @__PURE__ */ new Date();
+  const candidates = await sudo.prisma.webhookEvent.findMany({
+    where: {
+      delivered: false,
+      deadLetteredAt: null,
+      nextAttempt: { lte: now },
+      deliveryAttempts: { lt: WEBHOOK_DELIVERY_MAX_ATTEMPTS },
+      endpointId: { not: null }
+    },
+    orderBy: { nextAttempt: "asc" },
+    take: boundedLimit,
+    select: { id: true }
+  });
+  let claimed = 0;
+  for (const candidate of candidates) {
+    const claim = await sudo.prisma.webhookEvent.updateMany({
+      where: {
+        id: candidate.id,
+        delivered: false,
+        deadLetteredAt: null,
+        nextAttempt: { lte: now },
+        deliveryAttempts: { lt: WEBHOOK_DELIVERY_MAX_ATTEMPTS }
+      },
+      data: { nextAttempt: webhookDeliveryLease() }
+    });
+    if (claim.count !== 1) continue;
+    const event = await sudo.query.WebhookEvent.findOne({
+      where: { id: candidate.id },
+      query: `
+        id eventType payload deliveryAttempts
+        endpoint { id url secret failureCount }
+      `
+    });
+    if (!event?.endpoint) continue;
+    claimed += 1;
+    await deliverWebhook(event.endpoint, event.eventType, event.payload, sudo, event);
+  }
+  return claimed;
 }
 
 // features/keystone/checkout/order-commit.ts
@@ -3085,31 +3472,27 @@ async function createOrderFromCartAtomically(cart, sudo) {
     const thumbnail = line.productVariant.primaryImage ? line.productVariant.primaryImage.image?.url || line.productVariant.primaryImage.imagePath : line.productVariant.product.thumbnail;
     prepared.push({ line, price, thumbnail });
   }
+  const userId = cart.user?.id || cart.shippingAddress?.user?.id;
   const orderWebhookEndpointIds = await subscribedWebhookEndpointIds(
     sudo,
-    "order.created"
+    "order.created",
+    userId
   );
-  const userId = cart.user?.id || cart.shippingAddress?.user?.id;
   const secretKey = userId ? "" : import_node_crypto3.default.randomBytes(32).toString("hex");
   const commercialSnapshot = {
-    legalEntityId: commerceLaunchPolicy.legalEntityId,
-    reportingCurrency: commerceLaunchPolicy.reportingCurrency,
-    accountingPolicyVersion: commerceLaunchPolicy.accountingPolicyVersion,
-    privacyPolicyVersion: commerceLaunchPolicy.privacyPolicyVersion,
-    retentionPolicyVersion: commerceLaunchPolicy.retentionPolicyVersion,
+    currency: cart.region.currency.code,
     tax: {
-      mode: commerceLaunchPolicy.taxMode,
       rate: cart.region.taxRate || 0,
       regionId: cart.region.id,
-      destinationCountry: cart.shippingAddress?.country?.iso2 || null,
-      externalTransaction: cart.metadata?.taxTransaction || null
+      destinationCountry: cart.shippingAddress?.country?.iso2 || null
     },
     acceptedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
-  const orderId = await sudo.prisma.$transaction(async (tx) => {
+  const commit = await sudo.prisma.$transaction(async (tx) => {
     const existing = await tx.order.findFirst({ where: { cart: { id: cart.id } }, select: { id: true } });
-    if (existing) return existing.id;
+    if (existing) return { orderId: existing.id, webhookEventIds: [] };
     const lineItemIds = [];
+    const webhookLineItems = [];
     for (const { line, price, thumbnail } of prepared) {
       const money = await tx.orderMoneyAmount.create({
         data: {
@@ -3154,6 +3537,27 @@ async function createOrderFromCartAtomically(cart, sudo) {
         }
       });
       lineItemIds.push(item.id);
+      webhookLineItems.push({
+        id: item.id,
+        title: item.title,
+        quantity: item.quantity,
+        sku: item.sku,
+        thumbnail,
+        moneyAmount: {
+          amount: price.calculatedAmount,
+          originalAmount: price.originalAmount
+        },
+        productVariant: {
+          id: line.productVariant.id,
+          title: line.productVariant.title,
+          sku: line.productVariant.sku,
+          product: {
+            id: line.productVariant.product.id,
+            title: line.productVariant.product.title,
+            thumbnail
+          }
+        }
+      });
     }
     const order = await tx.order.create({
       data: {
@@ -3181,13 +3585,23 @@ async function createOrderFromCartAtomically(cart, sudo) {
       }
     });
     await tx.cart.update({ where: { id: cart.id }, data: { orderId: order.id } });
-    await enqueueWebhookOutbox(
+    const webhookEventIds = await enqueueWebhookOutbox(
       tx,
       orderWebhookEndpointIds,
       "order.created",
       "Order",
       order.id,
-      { id: order.id, cartId: cart.id, status: order.status }
+      {
+        id: order.id,
+        cartId: cart.id,
+        displayId: order.displayId,
+        email: order.email,
+        status: order.status,
+        rawTotal: cart.rawTotal,
+        currency: { id: cart.region.currency.id, code: cart.region.currency.code },
+        shippingAddress: cart.shippingAddress,
+        lineItems: webhookLineItems
+      }
     );
     if (cart.email) {
       await tx.notification.create({
@@ -3201,10 +3615,20 @@ async function createOrderFromCartAtomically(cart, sudo) {
         }
       });
     }
-    return order.id;
+    return { orderId: order.id, webhookEventIds };
   });
+  if (commit.webhookEventIds.length) {
+    try {
+      await deliverWebhookEventsById(sudo, commit.webhookEventIds);
+    } catch (error) {
+      console.error(
+        "Immediate order webhook delivery failed:",
+        error instanceof Error ? error.message : "Unknown error"
+      );
+    }
+  }
   return sudo.query.Order.findOne({
-    where: { id: orderId },
+    where: { id: commit.orderId },
     query: `
       id status displayId secretKey subtotal total shipping discount tax paymentDetails
       shippingAddress { id firstName lastName company address1 address2 city province postalCode country { id iso2 } phone }
@@ -3382,10 +3806,6 @@ async function completeActiveCart(root, { cartId, paymentSessionId }, context) {
       query: "id status displayId secretKey shippingAddress { country { iso2 } }"
     });
   }
-  assertCheckoutWithinLaunchPolicy(cart);
-  if (cart.giftCards?.length) {
-    throw new Error("Gift-card redemption is outside the bounded launch boundary");
-  }
   const attempt = await getOrCreateCheckoutAttempt(
     sudoContext.prisma,
     cartId,
@@ -3509,7 +3929,6 @@ async function handlePaidOrder(cart, paymentSessionId, sudoContext, attempt) {
   if (!selectedSession.paymentProvider.code) {
     throw new Error("Payment provider code is missing");
   }
-  assertCheckoutWithinLaunchPolicy(cart, selectedSession.paymentProvider.code);
   if (selectedSession.amount !== cart.rawTotal) {
     throw new Error("Payment session amount no longer matches cart total");
   }
@@ -3956,7 +4375,6 @@ async function initiatePaymentSession(root, { cartId, paymentProviderId }, conte
   if (!provider || !provider.isInstalled || !isPaymentProviderConfigured(provider.code) || !cart.region.paymentProviders?.some((item) => item.id === provider.id)) {
     throw new Error("Payment provider not found, installed, and configured for this region");
   }
-  assertCheckoutWithinLaunchPolicy(cart, provider.code);
   if (!cart.paymentCollection) {
     cart.paymentCollection = await sudoContext.query.PaymentCollection.createOne({
       data: {
@@ -5271,446 +5689,6 @@ var cancelShippingLabel_default = cancelShippingLabel;
 
 // features/keystone/mutations/createOrderFulfillment.ts
 var import_node_crypto4 = __toESM(require("node:crypto"));
-
-// features/webhooks/webhook-plugin.ts
-var import_crypto = __toESM(require("crypto"));
-
-// features/webhooks/enrichers/base-enricher.ts
-var BaseWebhookEnricher = class {
-  /**
-   * Helper method to query the entity with enriched data
-   */
-  async queryEnrichedEntity(item, context) {
-    if (!item?.id) {
-      return item;
-    }
-    try {
-      const result = await context.query[this.entityType].findOne({
-        where: { id: item.id },
-        query: this.getQueryFields()
-      });
-      return result || item;
-    } catch (error) {
-      console.error(`Error querying ${this.entityType} for webhook enrichment:`, error);
-      return item;
-    }
-  }
-};
-
-// features/webhooks/enrichers/order-enricher.ts
-var OrderWebhookEnricher = class extends BaseWebhookEnricher {
-  constructor() {
-    super(...arguments);
-    this.entityType = "Order";
-  }
-  async enrich(item, context) {
-    const enrichedItem = await this.queryEnrichedEntity(item, context);
-    return enrichedItem || item;
-  }
-  getQueryFields() {
-    return `
-      id
-      displayId
-      email
-      status
-      rawTotal
-      total
-      subtotal
-      shipping
-      discount
-      tax
-      canceledAt
-      metadata
-      idempotencyKey
-      noNotification
-      externalId
-      currency {
-        id
-        code
-        symbol
-        noDivisionCurrency
-      }
-      shippingAddress {
-        id
-        firstName
-        lastName
-        company
-        address1
-        address2
-        city
-        province
-        postalCode
-        phone
-        country {
-          id
-          iso2
-          displayName
-        }
-      }
-      billingAddress {
-        id
-        firstName
-        lastName
-        company
-        address1
-        address2
-        city
-        province
-        postalCode
-        phone
-        country {
-          id
-          iso2
-          displayName
-        }
-      }
-      lineItems {
-        id
-        title
-        quantity
-        sku
-        variantTitle
-        thumbnail
-        formattedUnitPrice
-        formattedTotal
-        moneyAmount {
-          amount
-          originalAmount
-        }
-        productVariant {
-          id
-          title
-          sku
-          product {
-            id
-            title
-            handle
-            thumbnail
-            productImages {
-              image {
-                url
-              }
-              imagePath
-            }
-          }
-        }
-        productData
-        variantData
-      }
-      createdAt
-      updatedAt
-    `;
-  }
-};
-
-// features/webhooks/enrichers/registry.ts
-var WebhookEnricherRegistry = class {
-  constructor() {
-    this.enrichers = /* @__PURE__ */ new Map();
-  }
-  register(entityType, enricher) {
-    this.enrichers.set(entityType, enricher);
-  }
-  get(entityType) {
-    return this.enrichers.get(entityType);
-  }
-  has(entityType) {
-    return this.enrichers.has(entityType);
-  }
-  /**
-   * Get all registered entity types
-   */
-  getRegisteredTypes() {
-    return Array.from(this.enrichers.keys());
-  }
-};
-var webhookEnricherRegistry = new WebhookEnricherRegistry();
-function registerWebhookEnricher(enricher) {
-  webhookEnricherRegistry.register(enricher.entityType, enricher);
-}
-
-// features/webhooks/enrichers/index.ts
-registerWebhookEnricher(new OrderWebhookEnricher());
-
-// features/webhooks/webhook-plugin.ts
-var WEBHOOK_INTERNAL_LISTS = /* @__PURE__ */ new Set(["WebhookEndpoint", "WebhookEvent"]);
-function isWebhookInternalList(listKey2) {
-  return WEBHOOK_INTERNAL_LISTS.has(listKey2);
-}
-function withWebhooks(config2) {
-  const enhancedLists = Object.fromEntries(
-    Object.entries(config2.lists || {}).map(([listKey2, listConfig]) => {
-      if (isWebhookInternalList(listKey2)) return [listKey2, listConfig];
-      return [
-        listKey2,
-        {
-          ...listConfig,
-          hooks: {
-            ...listConfig.hooks,
-            afterOperation: async (args) => {
-              const originalAfterOperation = listConfig.hooks?.afterOperation;
-              if (typeof originalAfterOperation === "function") {
-                await originalAfterOperation(args);
-              } else if (originalAfterOperation?.[args.operation]) {
-                await originalAfterOperation[args.operation](args);
-              }
-              try {
-                await triggerWebhook({
-                  listKey: listKey2,
-                  operation: args.operation,
-                  item: args.item,
-                  originalItem: args.originalItem,
-                  context: args.context.sudo()
-                });
-              } catch (error) {
-                console.error(`Webhook enqueue failed for ${listKey2}:`, error);
-              }
-            }
-          }
-        }
-      ];
-    })
-  );
-  return {
-    ...config2,
-    lists: enhancedLists
-  };
-}
-async function triggerWebhook({ listKey: listKey2, operation, item, originalItem, context }) {
-  if (isWebhookInternalList(listKey2)) return;
-  try {
-    const operationMap = {
-      "create": "created",
-      "update": "updated",
-      "delete": "deleted"
-    };
-    const webhookOperation = operationMap[operation] || operation;
-    const eventType = `${listKey2.toLowerCase()}.${webhookOperation}`;
-    const webhooks = await context.query.WebhookEndpoint.findMany({
-      where: {
-        isActive: { equals: true }
-      },
-      query: "id url secret events failureCount"
-    });
-    if (!webhooks || webhooks.length === 0) {
-      return;
-    }
-    const subscribedWebhooks = webhooks.filter((webhook) => {
-      if (!webhook.events || !Array.isArray(webhook.events)) {
-        return false;
-      }
-      return webhook.events.includes(eventType) || webhook.events.includes("*");
-    });
-    if (subscribedWebhooks.length === 0) {
-      return;
-    }
-    const payload = await formatPayload(listKey2, operation, item, originalItem, context);
-    for (const webhook of subscribedWebhooks) {
-      await deliverWebhook(webhook, eventType, payload, context);
-    }
-  } catch (error) {
-    console.error("Webhook trigger error:", error);
-  }
-}
-async function deliverWebhook(webhook, eventType, payload, context, existingEvent) {
-  let webhookEvent = existingEvent;
-  try {
-    if (!webhookEvent) {
-      webhookEvent = await context.query.WebhookEvent.createOne({
-        data: {
-          eventType,
-          resourceType: payload.listKey,
-          resourceId: payload.data?.id || "unknown",
-          payload,
-          endpoint: { connect: { id: webhook.id } },
-          deliveryAttempts: 0,
-          nextAttempt: /* @__PURE__ */ new Date()
-        },
-        query: "id deliveryAttempts"
-      });
-    }
-    await context.query.WebhookEvent.updateOne({
-      where: { id: webhookEvent.id },
-      data: { deliveryAttempts: (webhookEvent.deliveryAttempts || 0) + 1, lastAttempt: /* @__PURE__ */ new Date() }
-    });
-    if (!webhook.secret) {
-      throw new Error("Webhook endpoint secret is required");
-    }
-    const secret = webhook.secret;
-    const signature = import_crypto.default.createHmac("sha256", secret).update(JSON.stringify(payload)).digest("hex");
-    const response = await fetch(webhook.url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-OpenFront-Webhook-Signature": `sha256=${signature}`,
-        "X-OpenFront-Topic": eventType,
-        "X-OpenFront-ListKey": payload.listKey,
-        "X-OpenFront-Operation": payload.operation,
-        "X-OpenFront-Delivery-ID": webhookEvent.id
-      },
-      body: JSON.stringify(payload)
-    });
-    if (response.ok) {
-      const responseBody = (await response.text()).slice(0, 64e3);
-      await context.query.WebhookEvent.updateOne({
-        where: { id: webhookEvent.id },
-        data: {
-          delivered: true,
-          responseStatus: response.status,
-          responseBody,
-          lastAttempt: /* @__PURE__ */ new Date()
-        }
-      });
-      if (webhook.failureCount > 0) {
-        await context.query.WebhookEndpoint.updateOne({
-          where: { id: webhook.id },
-          data: {
-            failureCount: 0,
-            lastTriggered: /* @__PURE__ */ new Date()
-          }
-        });
-      } else {
-        await context.query.WebhookEndpoint.updateOne({
-          where: { id: webhook.id },
-          data: { lastTriggered: /* @__PURE__ */ new Date() }
-        });
-      }
-    } else {
-      const errorText = (await response.text()).slice(0, 64e3);
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
-    }
-  } catch (error) {
-    try {
-      await context.query.WebhookEvent.updateOne({
-        where: { id: webhookEvent?.id },
-        data: {
-          delivered: false,
-          responseStatus: 0,
-          responseBody: error instanceof Error ? error.message : String(error),
-          lastAttempt: /* @__PURE__ */ new Date(),
-          // Schedule retry (exponential backoff)
-          nextAttempt: new Date(
-            Date.now() + Math.min(Math.pow(2, (webhookEvent?.deliveryAttempts || 0) + 1) * 6e4, 24 * 60 * 60 * 1e3)
-          )
-        }
-      });
-      await context.query.WebhookEndpoint.updateOne({
-        where: { id: webhook.id },
-        data: {
-          failureCount: (webhook.failureCount || 0) + 1
-        }
-      });
-    } catch (updateError) {
-      console.error("Failed to update webhook event after delivery failure:", updateError);
-    }
-  }
-}
-async function formatPayload(listKey2, operation, item, originalItem, context) {
-  const basePayload = {
-    event: `${listKey2.toLowerCase()}.${operation}`,
-    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-    listKey: listKey2,
-    operation
-  };
-  let enrichedData = item;
-  if (webhookEnricherRegistry.has(listKey2) && item?.id) {
-    try {
-      const enricher = webhookEnricherRegistry.get(listKey2);
-      if (enricher) {
-        enrichedData = await enricher.enrich(item, context);
-      }
-    } catch (error) {
-      console.error(`Error enriching webhook payload for ${listKey2}:`, error);
-      enrichedData = item;
-    }
-  }
-  switch (operation) {
-    case "create":
-      return {
-        ...basePayload,
-        data: enrichedData || item
-      };
-    case "update":
-      return {
-        ...basePayload,
-        data: enrichedData || item,
-        previousData: originalItem,
-        changes: getChangedFields(originalItem, enrichedData || item)
-      };
-    case "delete":
-      return {
-        ...basePayload,
-        data: originalItem
-      };
-    default:
-      return {
-        ...basePayload,
-        data: enrichedData || item
-      };
-  }
-}
-function getChangedFields(original, updated) {
-  if (!original || !updated) return {};
-  const changes = {};
-  for (const key in updated) {
-    if (original[key] !== updated[key]) {
-      changes[key] = {
-        from: original[key],
-        to: updated[key]
-      };
-    }
-  }
-  return changes;
-}
-async function deliverWebhookEventsById(context, eventIds) {
-  const uniqueEventIds = [...new Set(eventIds.filter(Boolean))];
-  for (const eventId of uniqueEventIds) {
-    const event = await context.sudo().query.WebhookEvent.findOne({
-      where: { id: eventId },
-      query: `
-        id eventType payload deliveryAttempts delivered
-        endpoint { id url secret failureCount }
-      `
-    });
-    if (!event || event.delivered || !event.endpoint) continue;
-    await deliverWebhook(
-      event.endpoint,
-      event.eventType,
-      event.payload,
-      context.sudo(),
-      event
-    );
-  }
-  return uniqueEventIds.length;
-}
-async function retryPendingWebhookDeliveries(context, limit = 25) {
-  const boundedLimit = Math.max(1, Math.min(limit, 100));
-  const events = await context.sudo().query.WebhookEvent.findMany({
-    where: {
-      delivered: { equals: false },
-      nextAttempt: { lte: (/* @__PURE__ */ new Date()).toISOString() }
-    },
-    orderBy: { nextAttempt: "asc" },
-    take: boundedLimit,
-    query: `
-      id eventType payload deliveryAttempts
-      endpoint { id url secret failureCount }
-    `
-  });
-  for (const event of events) {
-    if (!event.endpoint) continue;
-    await deliverWebhook(
-      event.endpoint,
-      event.eventType,
-      event.payload,
-      context.sudo(),
-      event
-    );
-  }
-  return events.length;
-}
-
-// features/keystone/mutations/createOrderFulfillment.ts
 function trackingUrl(carrier, number) {
   const value = encodeURIComponent(number);
   switch (carrier.toLowerCase()) {
@@ -5757,9 +5735,15 @@ async function createOrderFulfillment(root, {
   const isIntegrationTrackingRelay = normalizedIdempotencyKey.startsWith("openship-tracking:");
   const businessKey = `fulfillment:${orderId}:${import_node_crypto4.default.createHash("sha256").update(normalizedIdempotencyKey).digest("hex")}`;
   const sudo = context.sudo();
+  const orderIdentity = await sudo.query.Order.findOne({
+    where: { id: orderId },
+    query: "id user { id }"
+  });
+  if (!orderIdentity) throw new Error("Order not found");
   const fulfillmentWebhookEndpointIds = await subscribedWebhookEndpointIds(
     sudo,
-    "fulfillment.created"
+    "fulfillment.created",
+    orderIdentity.user?.id
   );
   const fulfillmentResult = await sudo.prisma.$transaction(async (tx) => {
     const existing = await tx.fulfillment.findFirst({
@@ -5776,7 +5760,7 @@ async function createOrderFulfillment(root, {
     }
     const orderLines = await tx.orderLineItem.findMany({
       where: { orderId, id: { in: normalized.map(([id]) => id) } },
-      select: { id: true, quantity: true }
+      select: { id: true, quantity: true, metadata: true }
     });
     if (orderLines.length !== normalized.length) throw new Error("Order line item not found");
     const fulfilled = await tx.fulfillmentItem.groupBy({
@@ -5795,6 +5779,18 @@ async function createOrderFulfillment(root, {
         throw new Error(`Fulfillment exceeds remaining quantity for line ${line.id}`);
       }
     }
+    const orderLinesById = new Map(
+      orderLines.map((line) => [line.id, line])
+    );
+    const webhookLineItems = normalized.map(([lineItemId, quantity]) => {
+      const metadata = orderLinesById.get(lineItemId)?.metadata;
+      const cartItemId = String(metadata?.openshipCartItemId || "").trim();
+      return {
+        lineItemId,
+        quantity,
+        ...cartItemId ? { cartItemId } : {}
+      };
+    });
     const fulfillmentProvider = await tx.fulfillmentProvider.findUnique({
       where: { code: "fp_manual" },
       select: { id: true }
@@ -5840,7 +5836,7 @@ async function createOrderFulfillment(root, {
         id: fulfillment.id,
         orderId,
         order: { id: orderId },
-        lineItems: normalized,
+        lineItems: webhookLineItems,
         trackingNumber: trackingNumber || null,
         trackingCompany: carrier || null
       }
@@ -5907,9 +5903,11 @@ async function createProviderShippingLabel(root, { orderId, providerId, rateId, 
     where: { id: orderId },
     query: `
       id
+      user { id }
       lineItems {
         id
         quantity
+        metadata
       }
       fulfillments {
         canceledAt
@@ -5998,7 +5996,8 @@ async function createProviderShippingLabel(root, { orderId, providerId, rateId, 
   }
   const fulfillmentWebhookEndpointIds = await subscribedWebhookEndpointIds(
     sudo,
-    "fulfillment.created"
+    "fulfillment.created",
+    order.user?.id
   );
   const fulfillment = await createOrderFulfillment_default(
     null,
@@ -6084,7 +6083,15 @@ async function createProviderShippingLabel(root, { orderId, providerId, rateId, 
         id: fulfillment.id,
         orderId,
         order: { id: orderId },
-        lineItems: lineItems.map((item) => [item.lineItemId, item.quantity]),
+        lineItems: lineItems.map((item) => {
+          const sourceLine = order.lineItems.find((line) => line.id === item.lineItemId);
+          const cartItemId = String(sourceLine?.metadata?.openshipCartItemId || "").trim();
+          return {
+            lineItemId: item.lineItemId,
+            quantity: item.quantity,
+            ...cartItemId ? { cartItemId } : {}
+          };
+        }),
         trackingNumber: labelData.trackingNumber || null,
         trackingCompany: labelData.carrier || null
       }
@@ -7750,8 +7757,315 @@ async function retryWebhookDeliveries(root, { limit = 25 }, context) {
 }
 var retryWebhookDeliveries_default = retryWebhookDeliveries;
 
-// features/keystone/queries/getFinanceClose.ts
+// features/keystone/models/WebhookEndpoint.ts
+var import_core = require("@keystone-6/core");
+var import_fields3 = require("@keystone-6/core/fields");
+var import_node_crypto7 = __toESM(require("node:crypto"));
+
+// features/webhooks/subscriptions.ts
 var import_node_crypto6 = __toESM(require("node:crypto"));
+function normalizeWebhookUrl(value) {
+  let url;
+  try {
+    url = new URL(String(value || "").trim());
+  } catch {
+    throw new Error("Webhook URL must be an absolute URL");
+  }
+  const localDevelopment = process.env.NODE_ENV !== "production" && (url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "::1" || url.hostname.endsWith(".local"));
+  if (url.protocol !== "https:" && !(localDevelopment && url.protocol === "http:")) {
+    throw new Error("Webhook URL must use HTTPS");
+  }
+  if (url.username || url.password || url.hash) {
+    throw new Error("Webhook URL cannot contain credentials or a fragment");
+  }
+  return url.toString();
+}
+function normalizeWebhookEvents(value) {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error("At least one webhook event is required");
+  }
+  const events = value.map((event) => String(event || "").trim()).filter(Boolean);
+  if (events.length !== value.length) throw new Error("Webhook event names cannot be empty");
+  return [...new Set(events)].sort();
+}
+function normalizeWebhookRegistrationKey(value) {
+  const key = String(value || "").trim();
+  if (!key || key.length > 255) {
+    throw new Error("Webhook registration key must be between 1 and 255 characters");
+  }
+  return key;
+}
+function requireWebhookScope(actual, required) {
+  if (required === void 0 || required === null || required === "") return;
+  const expected = String(required).trim().toUpperCase();
+  if (expected !== "STORE" && expected !== "USER") {
+    throw new Error("Required webhook scope must be STORE or USER");
+  }
+  if (expected !== actual) {
+    throw new Error(`Webhook registration requires ${expected} scope`);
+  }
+}
+function webhookSubscriptionKey(scope, ownerId, registrationKey) {
+  if (scope === "USER" && !ownerId) throw new Error("USER webhook subscriptions require an owner");
+  const principal = scope === "USER" ? ownerId : "store";
+  return import_node_crypto6.default.createHash("sha256").update(`webhook-subscription:v1\0${scope}\0${principal}\0${registrationKey}`).digest("hex");
+}
+
+// features/keystone/models/WebhookEndpoint.ts
+var CUSTOMER_WEBHOOK_EVENTS = /* @__PURE__ */ new Set(["fulfillment.created"]);
+function isCustomerTokenSession(session) {
+  return Boolean(session?.customerToken && session?.itemId);
+}
+function customerEndpointFilter(session) {
+  return {
+    scope: { equals: "USER" },
+    user: { id: { equals: session.itemId } }
+  };
+}
+function canReadEndpoints({ session }) {
+  return permissions.canReadWebhooks({ session }) || isCustomerTokenSession(session);
+}
+function canManageEndpoints({ session }) {
+  return permissions.canManageWebhooks({ session }) || isCustomerTokenSession(session);
+}
+function readEndpointFilter({ session }) {
+  if (permissions.canReadWebhooks({ session })) return true;
+  return isCustomerTokenSession(session) ? customerEndpointFilter(session) : false;
+}
+function manageEndpointFilter({ session }) {
+  if (permissions.canManageWebhooks({ session })) return true;
+  return isCustomerTokenSession(session) ? customerEndpointFilter(session) : false;
+}
+function validateCustomerEndpoint(urlValue, eventsValue, addValidationError) {
+  try {
+    normalizeWebhookUrl(urlValue);
+  } catch (error) {
+    addValidationError(error instanceof Error ? error.message : "Invalid webhook URL");
+  }
+  let events = [];
+  try {
+    events = normalizeWebhookEvents(eventsValue);
+  } catch (error) {
+    addValidationError(error instanceof Error ? error.message : "Invalid webhook events");
+  }
+  if (events.some((event) => !CUSTOMER_WEBHOOK_EVENTS.has(event))) {
+    addValidationError("Customer tokens may subscribe only to fulfillment.created");
+  }
+}
+var WebhookEndpoint = (0, import_core.list)({
+  access: {
+    operation: {
+      query: canReadEndpoints,
+      create: canManageEndpoints,
+      update: canManageEndpoints,
+      delete: canManageEndpoints
+    },
+    filter: {
+      query: readEndpointFilter,
+      update: manageEndpointFilter,
+      delete: manageEndpointFilter
+    }
+  },
+  hooks: {
+    resolveInput: {
+      create: ({ context, resolvedData }) => {
+        if (!context.session?.itemId) return resolvedData;
+        const scope = isCustomerTokenSession(context.session) ? "USER" : "STORE";
+        const registrationKey = normalizeWebhookRegistrationKey(
+          resolvedData.registrationKey || `manual:${import_node_crypto7.default.randomUUID()}`
+        );
+        return {
+          ...resolvedData,
+          url: normalizeWebhookUrl(resolvedData.url),
+          events: normalizeWebhookEvents(resolvedData.events),
+          registrationKey,
+          subscriptionKey: webhookSubscriptionKey(
+            scope,
+            scope === "USER" ? context.session.itemId : null,
+            registrationKey
+          ),
+          scope,
+          user: { connect: { id: context.session.itemId } }
+        };
+      },
+      update: ({ context, resolvedData }) => ({
+        ...resolvedData,
+        ...resolvedData.url !== void 0 ? { url: normalizeWebhookUrl(resolvedData.url) } : {},
+        ...resolvedData.events !== void 0 ? { events: normalizeWebhookEvents(resolvedData.events) } : {},
+        ...isCustomerTokenSession(context.session) ? { scope: "USER", user: { connect: { id: context.session.itemId } } } : {}
+      })
+    },
+    validateInput: async ({ context, resolvedData, item, addValidationError }) => {
+      if (!isCustomerTokenSession(context.session)) return;
+      validateCustomerEndpoint(
+        resolvedData.url ?? item?.url,
+        resolvedData.events ?? item?.events,
+        addValidationError
+      );
+    }
+  },
+  ui: {
+    hideCreate: (args) => !permissions.canManageWebhooks(args),
+    hideDelete: (args) => !permissions.canManageWebhooks(args),
+    listView: {
+      initialColumns: ["url", "scope", "isActive", "events", "lastTriggered", "failureCount"]
+    }
+  },
+  fields: {
+    url: (0, import_fields3.text)({
+      validation: { isRequired: true },
+      ui: { description: "The URL where webhook events will be sent" }
+    }),
+    registrationKey: (0, import_fields3.text)({
+      db: { isNullable: true },
+      access: { read: () => false, create: () => false, update: () => false },
+      ui: { itemView: { fieldMode: "hidden" }, listView: { fieldMode: "hidden" } }
+    }),
+    subscriptionKey: (0, import_fields3.text)({
+      db: { isNullable: true },
+      isIndexed: "unique",
+      access: { read: () => false, create: () => false, update: () => false },
+      ui: { itemView: { fieldMode: "hidden" }, listView: { fieldMode: "hidden" } }
+    }),
+    events: (0, import_fields3.json)({
+      defaultValue: [],
+      ui: {
+        description: 'Events to subscribe to, e.g. ["order.created", "fulfillment.created"]'
+      }
+    }),
+    scope: (0, import_fields3.select)({
+      options: [
+        { label: "Store", value: "STORE" },
+        { label: "User", value: "USER" }
+      ],
+      defaultValue: "STORE",
+      validation: { isRequired: true },
+      access: { create: () => false, update: () => false },
+      ui: { itemView: { fieldMode: "read" } }
+    }),
+    user: (0, import_fields3.relationship)({
+      ref: "User.webhookEndpoints",
+      access: { create: () => false, update: () => false },
+      ui: { itemView: { fieldMode: "read" } }
+    }),
+    isActive: (0, import_fields3.checkbox)({
+      defaultValue: true,
+      ui: { description: "Whether this webhook endpoint is currently active" }
+    }),
+    secret: (0, import_fields3.text)({
+      access: { read: () => false },
+      ui: {
+        itemView: { fieldMode: "hidden" },
+        description: "Secret key for webhook signature verification (auto-generated)"
+      },
+      hooks: {
+        resolveInput: ({ resolvedData, operation }) => {
+          if (operation === "create" && !resolvedData.secret) {
+            return import_node_crypto7.default.randomBytes(32).toString("hex");
+          }
+          return resolvedData.secret;
+        }
+      }
+    }),
+    lastTriggered: (0, import_fields3.timestamp)({
+      ui: {
+        itemView: { fieldMode: "read" },
+        description: "Last time this webhook was triggered"
+      }
+    }),
+    failureCount: (0, import_fields3.integer)({
+      defaultValue: 0,
+      ui: {
+        itemView: { fieldMode: "read" },
+        description: "Number of consecutive delivery failures"
+      }
+    }),
+    webhookEvents: (0, import_fields3.relationship)({
+      ref: "WebhookEvent.endpoint",
+      many: true,
+      ui: {
+        displayMode: "count",
+        description: "Events sent to this endpoint"
+      }
+    }),
+    createdAt: (0, import_fields3.timestamp)({
+      defaultValue: { kind: "now" },
+      ui: { itemView: { fieldMode: "read" } }
+    }),
+    updatedAt: (0, import_fields3.timestamp)({
+      db: { updatedAt: true },
+      ui: { itemView: { fieldMode: "read" } }
+    })
+  }
+});
+
+// features/keystone/mutations/registerWebhookEndpoint.ts
+var CUSTOMER_WEBHOOK_EVENTS2 = /* @__PURE__ */ new Set(["fulfillment.created"]);
+async function registerWebhookEndpoint(_root, {
+  registrationKey: registrationKeyInput,
+  url: urlInput,
+  events: eventsInput,
+  secret: secretInput,
+  requiredScope: requiredScopeInput
+}, context) {
+  const session = context.session;
+  const customerSession = isCustomerTokenSession(session);
+  if (!session?.itemId || !customerSession && !permissions.canManageWebhooks({ session })) {
+    throw new Error("Webhook management permission required");
+  }
+  const scope = customerSession ? "USER" : "STORE";
+  requireWebhookScope(scope, requiredScopeInput);
+  const ownerId = customerSession ? session.itemId : null;
+  const registrationKey = normalizeWebhookRegistrationKey(registrationKeyInput);
+  const subscriptionKey = webhookSubscriptionKey(scope, ownerId, registrationKey);
+  const url = normalizeWebhookUrl(urlInput);
+  const events = normalizeWebhookEvents(eventsInput);
+  const secret = String(secretInput || "").trim();
+  if (!secret) throw new Error("Webhook signing secret is required");
+  if (customerSession && events.some((event) => !CUSTOMER_WEBHOOK_EVENTS2.has(event))) {
+    throw new Error("Customer tokens may subscribe only to fulfillment.created");
+  }
+  const sudo = context.sudo();
+  const endpoint2 = await sudo.prisma.$transaction(async (tx) => {
+    const saved = await tx.webhookEndpoint.upsert({
+      where: { subscriptionKey },
+      create: {
+        registrationKey,
+        subscriptionKey,
+        url,
+        events,
+        scope,
+        userId: session.itemId,
+        isActive: true,
+        secret,
+        failureCount: 0
+      },
+      update: {
+        url,
+        events,
+        isActive: true,
+        secret
+      },
+      select: { id: true }
+    });
+    await tx.webhookEndpoint.updateMany({
+      where: {
+        id: { not: saved.id },
+        scope,
+        url,
+        registrationKey: { startsWith: "legacy:" },
+        ...scope === "USER" ? { userId: session.itemId } : {}
+      },
+      data: { isActive: false }
+    });
+    return saved;
+  });
+  return context.db.WebhookEndpoint.findOne({ where: { id: endpoint2.id } });
+}
+var registerWebhookEndpoint_default = registerWebhookEndpoint;
+
+// features/keystone/queries/getFinanceClose.ts
+var import_node_crypto8 = __toESM(require("node:crypto"));
 async function getFinanceClose(root, { start, end }, context) {
   if (!context.session?.itemId || !permissions.canReadPayments({ session: context.session })) {
     throw new Error("Access denied");
@@ -7790,7 +8104,7 @@ async function getFinanceClose(root, { start, end }, context) {
       netTender: captured - refunded,
       providerReference: providerReference2,
       capturedAt: payment.capturedAt,
-      accountingPolicyVersion: payment.order?.metadata?.commercialSnapshot?.accountingPolicyVersion || commerceLaunchPolicy.accountingPolicyVersion,
+      accountingPolicyVersion: payment.order?.metadata?.commercialSnapshot?.accountingPolicyVersion || null,
       exception: payment.status === "captured" && (!providerReference2 || captured !== payment.amount) ? "CAPTURE_EVIDENCE_MISMATCH" : null
     };
   });
@@ -7815,16 +8129,16 @@ async function getFinanceClose(root, { start, end }, context) {
   return {
     generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
     range: { start: startAt.toISOString(), end: endAt.toISOString() },
-    legalEntityId: commerceLaunchPolicy.legalEntityId,
-    reportingCurrency: commerceLaunchPolicy.reportingCurrency,
-    accountingPolicyVersion: commerceLaunchPolicy.accountingPolicyVersion,
+    legalEntityId: null,
+    reportingCurrency: byCurrency.length === 1 ? byCurrency[0].currency : null,
+    accountingPolicyVersion: null,
     providerSettlementStatus: "OWNER_DATA_REQUIRED",
     rows,
     byCurrency,
     exceptions: rows.filter((row) => row.exception),
     control: {
       rowCount: rows.length,
-      sha256: import_node_crypto6.default.createHash("sha256").update(controlPayload).digest("hex")
+      sha256: import_node_crypto8.default.createHash("sha256").update(controlPayload).digest("hex")
     }
   };
 }
@@ -7843,7 +8157,6 @@ async function updatePrivacyPreferences(root, { preferences }, context) {
   const receipt = {
     analytics,
     marketingEmail,
-    privacyPolicyVersion: commerceLaunchPolicy.privacyPolicyVersion,
     recordedAt: (/* @__PURE__ */ new Date()).toISOString(),
     source: "customer-account"
   };
@@ -7888,8 +8201,6 @@ async function requestPrivacyAction(root, { action, details }, context) {
         action,
         details: typeof details === "string" ? details.slice(0, 2e3) : null,
         status: "pending_identity_verification",
-        privacyPolicyVersion: commerceLaunchPolicy.privacyPolicyVersion,
-        retentionPolicyVersion: commerceLaunchPolicy.retentionPolicyVersion,
         requestedAt: (/* @__PURE__ */ new Date()).toISOString()
       }
     },
@@ -7912,8 +8223,6 @@ async function getMyPrivacyData(root, args, context) {
   if (!user) throw new Error("User not found");
   return {
     generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-    privacyPolicyVersion: commerceLaunchPolicy.privacyPolicyVersion,
-    retentionPolicyVersion: commerceLaunchPolicy.retentionPolicyVersion,
     user
   };
 }
@@ -8032,7 +8341,6 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
         billingAddress: String
         password: String
         onboardingStatus: String
-        orderWebhookUrl: String
       }
 
       type WebhookResult {
@@ -8150,6 +8458,13 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
         completeInvoicePayment(paymentSessionId: ID!): InvoicePaymentResult!
         processReturnRefund(returnId: ID!, paymentId: ID!, idempotencyKey: String!): Refund
         retryWebhookDeliveries(limit: Int): Int!
+        registerWebhookEndpoint(
+          registrationKey: String!
+          url: String!
+          events: [String!]!
+          secret: String!
+          requiredScope: String
+        ): WebhookEndpoint!
         updatePrivacyPreferences(preferences: JSON!): JSON!
         requestPrivacyAction(action: String!, details: String): Notification
       }
@@ -8209,6 +8524,7 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
       completeInvoicePayment: completeInvoicePayment_default,
       processReturnRefund: processReturnRefund_default,
       retryWebhookDeliveries: retryWebhookDeliveries_default,
+      registerWebhookEndpoint: registerWebhookEndpoint_default,
       updatePrivacyPreferences,
       requestPrivacyAction
     }
@@ -8216,13 +8532,13 @@ var extendGraphqlSchema = (schema) => (0, import_schema.mergeSchemas)({
 });
 
 // features/keystone/models/Address.ts
-var import_core = require("@keystone-6/core");
-var import_fields4 = require("@keystone-6/core/fields");
+var import_core2 = require("@keystone-6/core");
+var import_fields5 = require("@keystone-6/core/fields");
 
 // features/keystone/models/trackingFields.ts
-var import_fields3 = require("@keystone-6/core/fields");
+var import_fields4 = require("@keystone-6/core/fields");
 var trackingFields = {
-  createdAt: (0, import_fields3.timestamp)({
+  createdAt: (0, import_fields4.timestamp)({
     access: { read: () => true, create: () => false, update: () => false },
     validation: { isRequired: true },
     defaultValue: { kind: "now" },
@@ -8231,7 +8547,7 @@ var trackingFields = {
       itemView: { fieldMode: "read" }
     }
   }),
-  updatedAt: (0, import_fields3.timestamp)({
+  updatedAt: (0, import_fields4.timestamp)({
     access: { read: () => true, create: () => false, update: () => false },
     db: { updatedAt: true },
     validation: { isRequired: true },
@@ -8281,7 +8597,7 @@ var canManageAddresses = ({ session }) => {
   }
   return { user: { id: { equals: session?.itemId } } };
 };
-var Address = (0, import_core.list)({
+var Address = (0, import_core2.list)({
   access: {
     operation: {
       create: isSignedIn,
@@ -8308,9 +8624,9 @@ var Address = (0, import_core.list)({
     }
   },
   fields: {
-    label: (0, import_fields4.virtual)({
-      field: import_core.graphql.field({
-        type: import_core.graphql.String,
+    label: (0, import_fields5.virtual)({
+      field: import_core2.graphql.field({
+        type: import_core2.graphql.String,
         resolve(item) {
           const parts = [];
           if (item.company) {
@@ -8337,23 +8653,23 @@ var Address = (0, import_core.list)({
         }
       })
     }),
-    company: (0, import_fields4.text)(),
-    firstName: (0, import_fields4.text)(),
-    lastName: (0, import_fields4.text)(),
-    address1: (0, import_fields4.text)(),
-    address2: (0, import_fields4.text)(),
-    city: (0, import_fields4.text)(),
-    province: (0, import_fields4.text)(),
-    postalCode: (0, import_fields4.text)(),
-    phone: (0, import_fields4.text)(),
-    isBilling: (0, import_fields4.checkbox)({ defaultValue: false }),
-    metadata: (0, import_fields4.json)(),
-    country: (0, import_fields4.relationship)({
+    company: (0, import_fields5.text)(),
+    firstName: (0, import_fields5.text)(),
+    lastName: (0, import_fields5.text)(),
+    address1: (0, import_fields5.text)(),
+    address2: (0, import_fields5.text)(),
+    city: (0, import_fields5.text)(),
+    province: (0, import_fields5.text)(),
+    postalCode: (0, import_fields5.text)(),
+    phone: (0, import_fields5.text)(),
+    isBilling: (0, import_fields5.checkbox)({ defaultValue: false }),
+    metadata: (0, import_fields5.json)(),
+    country: (0, import_fields5.relationship)({
       ref: "Country.addresses",
       many: false,
       validation: { isRequired: true }
     }),
-    user: (0, import_fields4.relationship)({
+    user: (0, import_fields5.relationship)({
       ref: "User.addresses",
       many: false,
       hooks: {
@@ -8365,35 +8681,35 @@ var Address = (0, import_core.list)({
         }
       }
     }),
-    shippingProviders: (0, import_fields4.relationship)({
+    shippingProviders: (0, import_fields5.relationship)({
       ref: "ShippingProvider.fromAddress",
       many: true
     }),
-    cart: (0, import_fields4.relationship)({
+    cart: (0, import_fields5.relationship)({
       ref: "Cart.addresses",
       many: false
     }),
-    claimOrders: (0, import_fields4.relationship)({
+    claimOrders: (0, import_fields5.relationship)({
       ref: "ClaimOrder.address",
       many: true
     }),
-    ordersUsingAsBillingAddress: (0, import_fields4.relationship)({
+    ordersUsingAsBillingAddress: (0, import_fields5.relationship)({
       ref: "Order.billingAddress",
       many: true
     }),
-    ordersUsingAsShippingAddress: (0, import_fields4.relationship)({
+    ordersUsingAsShippingAddress: (0, import_fields5.relationship)({
       ref: "Order.shippingAddress",
       many: true
     }),
-    cartsUsingAsBillingAddress: (0, import_fields4.relationship)({
+    cartsUsingAsBillingAddress: (0, import_fields5.relationship)({
       ref: "Cart.billingAddress",
       many: true
     }),
-    cartsUsingAsShippingAddress: (0, import_fields4.relationship)({
+    cartsUsingAsShippingAddress: (0, import_fields5.relationship)({
       ref: "Cart.shippingAddress",
       many: true
     }),
-    swaps: (0, import_fields4.relationship)({
+    swaps: (0, import_fields5.relationship)({
       ref: "Swap.address",
       many: true
     }),
@@ -8405,9 +8721,9 @@ var Address = (0, import_core.list)({
 });
 
 // features/keystone/models/ApiKey.ts
-var import_fields5 = require("@keystone-6/core/fields");
-var import_core2 = require("@keystone-6/core");
-var ApiKey = (0, import_core2.list)({
+var import_fields6 = require("@keystone-6/core/fields");
+var import_core3 = require("@keystone-6/core");
+var ApiKey = (0, import_core3.list)({
   access: {
     operation: {
       query: isSignedIn,
@@ -8439,13 +8755,13 @@ var ApiKey = (0, import_core2.list)({
     }
   },
   fields: {
-    name: (0, import_fields5.text)({
+    name: (0, import_fields6.text)({
       validation: { isRequired: true },
       ui: {
         description: "A descriptive name for this API key (e.g. 'Production Bot', 'Analytics Dashboard')"
       }
     }),
-    tokenSecret: (0, import_fields5.password)({
+    tokenSecret: (0, import_fields6.password)({
       validation: { isRequired: true },
       ui: {
         createView: { fieldMode: "hidden" },
@@ -8454,7 +8770,7 @@ var ApiKey = (0, import_core2.list)({
         description: "Secure API key token (hashed and never displayed)"
       }
     }),
-    tokenPreview: (0, import_fields5.text)({
+    tokenPreview: (0, import_fields6.text)({
       ui: {
         createView: { fieldMode: "hidden" },
         itemView: { fieldMode: "read" },
@@ -8462,13 +8778,13 @@ var ApiKey = (0, import_core2.list)({
         description: "Preview of the API key (actual key is hidden for security)"
       }
     }),
-    scopes: (0, import_fields5.json)({
+    scopes: (0, import_fields6.json)({
       defaultValue: [],
       ui: {
         description: "Array of scopes for this API key. Available scopes: orders:read, orders:write, shops:read, shops:write, channels:read, channels:write, etc."
       }
     }),
-    status: (0, import_fields5.select)({
+    status: (0, import_fields6.select)({
       type: "enum",
       options: [
         { label: "Active", value: "active" },
@@ -8480,19 +8796,19 @@ var ApiKey = (0, import_core2.list)({
         description: "Current status of this API key"
       }
     }),
-    expiresAt: (0, import_fields5.timestamp)({
+    expiresAt: (0, import_fields6.timestamp)({
       ui: {
         description: "When this API key expires (optional - leave blank for no expiration)"
       }
     }),
-    lastUsedAt: (0, import_fields5.timestamp)({
+    lastUsedAt: (0, import_fields6.timestamp)({
       ui: {
         createView: { fieldMode: "hidden" },
         itemView: { fieldMode: "read" },
         description: "Last time this API key was used"
       }
     }),
-    usageCount: (0, import_fields5.json)({
+    usageCount: (0, import_fields6.json)({
       defaultValue: { total: 0, daily: {} },
       ui: {
         createView: { fieldMode: "hidden" },
@@ -8500,13 +8816,13 @@ var ApiKey = (0, import_core2.list)({
         description: "Usage statistics for this API key"
       }
     }),
-    restrictedToIPs: (0, import_fields5.json)({
+    restrictedToIPs: (0, import_fields6.json)({
       defaultValue: [],
       ui: {
         description: "Optional: Restrict this key to specific IP addresses (array of IPs)"
       }
     }),
-    user: (0, import_fields5.relationship)({
+    user: (0, import_fields6.relationship)({
       ref: "User.apiKeys",
       ui: {
         createView: { fieldMode: "hidden" },
@@ -8525,9 +8841,9 @@ var ApiKey = (0, import_core2.list)({
 });
 
 // features/keystone/models/BatchJob.ts
-var import_core3 = require("@keystone-6/core");
-var import_fields6 = require("@keystone-6/core/fields");
-var BatchJob = (0, import_core3.list)({
+var import_core4 = require("@keystone-6/core");
+var import_fields7 = require("@keystone-6/core/fields");
+var BatchJob = (0, import_core4.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadProducts({ session }) || permissions.canManageProducts({ session }),
@@ -8537,7 +8853,7 @@ var BatchJob = (0, import_core3.list)({
     }
   },
   fields: {
-    type: (0, import_fields6.select)({
+    type: (0, import_fields7.select)({
       type: "enum",
       options: [
         { label: "Product Import", value: "PRODUCT_IMPORT" },
@@ -8547,7 +8863,7 @@ var BatchJob = (0, import_core3.list)({
       ],
       validation: { isRequired: true }
     }),
-    status: (0, import_fields6.select)({
+    status: (0, import_fields7.select)({
       type: "enum",
       options: [
         { label: "Created", value: "CREATED" },
@@ -8559,33 +8875,33 @@ var BatchJob = (0, import_core3.list)({
       defaultValue: "CREATED",
       validation: { isRequired: true }
     }),
-    context: (0, import_fields6.json)({
+    context: (0, import_fields7.json)({
       defaultValue: {}
     }),
-    result: (0, import_fields6.json)({
+    result: (0, import_fields7.json)({
       defaultValue: {}
     }),
-    error: (0, import_fields6.text)(),
-    progress: (0, import_fields6.integer)({
+    error: (0, import_fields7.text)(),
+    progress: (0, import_fields7.integer)({
       defaultValue: 0,
       validation: {
         min: 0,
         max: 100
       }
     }),
-    createdBy: (0, import_fields6.relationship)({
+    createdBy: (0, import_fields7.relationship)({
       ref: "User.batchJobs",
       many: false
     }),
-    completedAt: (0, import_fields6.timestamp)(),
+    completedAt: (0, import_fields7.timestamp)(),
     ...trackingFields
   }
 });
 
 // features/keystone/models/Capture.ts
-var import_core4 = require("@keystone-6/core");
-var import_fields7 = require("@keystone-6/core/fields");
-var Capture = (0, import_core4.list)({
+var import_core5 = require("@keystone-6/core");
+var import_fields8 = require("@keystone-6/core/fields");
+var Capture = (0, import_core5.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadPayments({ session }) || permissions.canManagePayments({ session }),
@@ -8595,23 +8911,23 @@ var Capture = (0, import_core4.list)({
     }
   },
   fields: {
-    amount: (0, import_fields7.integer)({
+    amount: (0, import_fields8.integer)({
       validation: {
         isRequired: true
       }
     }),
-    payment: (0, import_fields7.relationship)({
+    payment: (0, import_fields8.relationship)({
       ref: "Payment.captures"
     }),
-    metadata: (0, import_fields7.json)(),
-    createdBy: (0, import_fields7.text)(),
+    metadata: (0, import_fields8.json)(),
+    createdBy: (0, import_fields8.text)(),
     ...trackingFields
   }
 });
 
 // features/keystone/models/Cart.ts
-var import_core5 = require("@keystone-6/core");
-var import_fields8 = require("@keystone-6/core/fields");
+var import_core6 = require("@keystone-6/core");
+var import_fields9 = require("@keystone-6/core/fields");
 var formatCurrency = (amount, currencyCode) => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -8778,10 +9094,10 @@ async function findCheapestShippingOption(regionId, context) {
   });
   return shippingOptions[0];
 }
-var Cart = (0, import_core5.list)({
+var Cart = (0, import_core6.list)({
   access: {
     operation: {
-      query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
+      query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }) || Boolean(session?.customerToken),
       create: () => true,
       update: permissions.canManageOrders,
       delete: permissions.canManageOrders
@@ -8803,7 +9119,11 @@ var Cart = (0, import_core5.list)({
     async beforeOperation({ operation, resolvedData, context, item }) {
       const sudoContext = context.sudo();
       if (operation === "create" && !permissions.canManageOrders({ session: context.session })) {
-        const allowedCreateFields = /* @__PURE__ */ new Set(["region", "type"]);
+        const allowedCreateFields = /* @__PURE__ */ new Set([
+          "region",
+          "type",
+          ...context.session?.customerToken ? ["idempotencyKey"] : []
+        ]);
         for (const key of Object.keys(resolvedData)) {
           if (!allowedCreateFields.has(key)) delete resolvedData[key];
         }
@@ -8851,8 +9171,8 @@ var Cart = (0, import_core5.list)({
     }
   },
   fields: {
-    email: (0, import_fields8.text)(),
-    type: (0, import_fields8.select)({
+    email: (0, import_fields9.text)(),
+    type: (0, import_fields9.select)({
       type: "enum",
       options: [
         { label: "Default", value: "default" },
@@ -8864,13 +9184,17 @@ var Cart = (0, import_core5.list)({
       defaultValue: "default",
       validation: { isRequired: true }
     }),
-    metadata: (0, import_fields8.json)(),
-    idempotencyKey: (0, import_fields8.text)(),
-    context: (0, import_fields8.json)(),
-    paymentAuthorizedAt: (0, import_fields8.timestamp)(),
-    abandonedEmailSent: (0, import_fields8.checkbox)({ defaultValue: false }),
+    metadata: (0, import_fields9.json)(),
+    idempotencyKey: (0, import_fields9.text)({
+      isIndexed: "unique",
+      db: { isNullable: true },
+      ui: { itemView: { fieldMode: "read" } }
+    }),
+    context: (0, import_fields9.json)(),
+    paymentAuthorizedAt: (0, import_fields9.timestamp)(),
+    abandonedEmailSent: (0, import_fields9.checkbox)({ defaultValue: false }),
     // Track if abandoned cart email was sent
-    user: (0, import_fields8.relationship)({
+    user: (0, import_fields9.relationship)({
       ref: "User.carts",
       many: false,
       hooks: {
@@ -8883,63 +9207,63 @@ var Cart = (0, import_core5.list)({
       }
     }),
     // Regular fields
-    region: (0, import_fields8.relationship)({
+    region: (0, import_fields9.relationship)({
       ref: "Region.carts"
     }),
-    addresses: (0, import_fields8.relationship)({
+    addresses: (0, import_fields9.relationship)({
       ref: "Address.cart",
       many: true
     }),
-    discounts: (0, import_fields8.relationship)({
+    discounts: (0, import_fields9.relationship)({
       ref: "Discount.carts",
       many: true
     }),
-    giftCards: (0, import_fields8.relationship)({
+    giftCards: (0, import_fields9.relationship)({
       ref: "GiftCard.carts",
       many: true
     }),
-    draftOrder: (0, import_fields8.relationship)({
+    draftOrder: (0, import_fields9.relationship)({
       ref: "DraftOrder.cart"
     }),
-    order: (0, import_fields8.relationship)({
+    order: (0, import_fields9.relationship)({
       ref: "Order.cart"
     }),
-    lineItems: (0, import_fields8.relationship)({
+    lineItems: (0, import_fields9.relationship)({
       ref: "LineItem.cart",
       many: true
     }),
-    customShippingOptions: (0, import_fields8.relationship)({
+    customShippingOptions: (0, import_fields9.relationship)({
       ref: "CustomShippingOption.cart",
       many: true
     }),
-    swap: (0, import_fields8.relationship)({
+    swap: (0, import_fields9.relationship)({
       ref: "Swap.cart"
     }),
-    shippingMethods: (0, import_fields8.relationship)({
+    shippingMethods: (0, import_fields9.relationship)({
       ref: "ShippingMethod.cart",
       many: true
     }),
-    payment: (0, import_fields8.relationship)({
+    payment: (0, import_fields9.relationship)({
       ref: "Payment.cart"
     }),
-    paymentCollection: (0, import_fields8.relationship)({
+    paymentCollection: (0, import_fields9.relationship)({
       ref: "PaymentCollection.cart"
     }),
-    billingAddress: (0, import_fields8.relationship)({
+    billingAddress: (0, import_fields9.relationship)({
       ref: "Address.cartsUsingAsBillingAddress",
       many: false
     }),
-    shippingAddress: (0, import_fields8.relationship)({
+    shippingAddress: (0, import_fields9.relationship)({
       ref: "Address.cartsUsingAsShippingAddress",
       many: false
     }),
-    ...(0, import_core5.group)({
+    ...(0, import_core6.group)({
       label: "Virtual Fields",
       description: "Calculated fields for cart display and totals",
       fields: {
-        abandonedFor: (0, import_fields8.virtual)({
-          field: import_core5.graphql.field({
-            type: import_core5.graphql.Int,
+        abandonedFor: (0, import_fields9.virtual)({
+          field: import_core6.graphql.field({
+            type: import_core6.graphql.Int,
             resolve(item) {
               if (!item.updatedAt) return 0;
               const lastActivity = new Date(item.updatedAt).getTime();
@@ -8947,28 +9271,28 @@ var Cart = (0, import_core5.list)({
             }
           })
         }),
-        status: (0, import_fields8.virtual)({
-          field: import_core5.graphql.field({
-            type: import_core5.graphql.enum({
+        status: (0, import_fields9.virtual)({
+          field: import_core6.graphql.field({
+            type: import_core6.graphql.enum({
               name: "CartStatus",
-              values: import_core5.graphql.enumValues(["ACTIVE", "COMPLETED"])
+              values: import_core6.graphql.enumValues(["ACTIVE", "COMPLETED"])
             }),
             resolve(item) {
               return item.order ? "COMPLETED" : "ACTIVE";
             }
           })
         }),
-        isActive: (0, import_fields8.virtual)({
-          field: import_core5.graphql.field({
-            type: import_core5.graphql.Boolean,
+        isActive: (0, import_fields9.virtual)({
+          field: import_core6.graphql.field({
+            type: import_core6.graphql.Boolean,
             resolve(item) {
               return !item.order;
             }
           })
         }),
-        subtotal: (0, import_fields8.virtual)({
-          field: import_core5.graphql.field({
-            type: import_core5.graphql.String,
+        subtotal: (0, import_fields9.virtual)({
+          field: import_core6.graphql.field({
+            type: import_core6.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const cart = await sudoContext.query.Cart.findOne({
@@ -8998,9 +9322,9 @@ var Cart = (0, import_core5.list)({
             }
           })
         }),
-        total: (0, import_fields8.virtual)({
-          field: import_core5.graphql.field({
-            type: import_core5.graphql.String,
+        total: (0, import_fields9.virtual)({
+          field: import_core6.graphql.field({
+            type: import_core6.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const cart = await sudoContext.query.Cart.findOne({
@@ -9056,9 +9380,9 @@ var Cart = (0, import_core5.list)({
             }
           })
         }),
-        rawTotal: (0, import_fields8.virtual)({
-          field: import_core5.graphql.field({
-            type: import_core5.graphql.Int,
+        rawTotal: (0, import_fields9.virtual)({
+          field: import_core6.graphql.field({
+            type: import_core6.graphql.Int,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const cart = await sudoContext.query.Cart.findOne({
@@ -9112,9 +9436,9 @@ var Cart = (0, import_core5.list)({
             }
           })
         }),
-        rawSubtotal: (0, import_fields8.virtual)({
-          field: import_core5.graphql.field({
-            type: import_core5.graphql.String,
+        rawSubtotal: (0, import_fields9.virtual)({
+          field: import_core6.graphql.field({
+            type: import_core6.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const cart = await sudoContext.query.Cart.findOne({
@@ -9164,9 +9488,9 @@ ${breakdown.join("\n")}`;
             }
           })
         }),
-        rawTotalBreakdown: (0, import_fields8.virtual)({
-          field: import_core5.graphql.field({
-            type: import_core5.graphql.String,
+        rawTotalBreakdown: (0, import_fields9.virtual)({
+          field: import_core6.graphql.field({
+            type: import_core6.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const cart = await sudoContext.query.Cart.findOne({
@@ -9225,9 +9549,9 @@ ${breakdown.join("\n")}`;
             }
           })
         }),
-        discount: (0, import_fields8.virtual)({
-          field: import_core5.graphql.field({
-            type: import_core5.graphql.String,
+        discount: (0, import_fields9.virtual)({
+          field: import_core6.graphql.field({
+            type: import_core6.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const cart = await sudoContext.query.Cart.findOne({
@@ -9326,9 +9650,9 @@ ${breakdown.join("\n")}`;
             }
           })
         }),
-        giftCardTotal: (0, import_fields8.virtual)({
-          field: import_core5.graphql.field({
-            type: import_core5.graphql.String,
+        giftCardTotal: (0, import_fields9.virtual)({
+          field: import_core6.graphql.field({
+            type: import_core6.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const cart = await sudoContext.query.Cart.findOne({
@@ -9364,9 +9688,9 @@ ${breakdown.join("\n")}`;
             }
           })
         }),
-        tax: (0, import_fields8.virtual)({
-          field: import_core5.graphql.field({
-            type: import_core5.graphql.String,
+        tax: (0, import_fields9.virtual)({
+          field: import_core6.graphql.field({
+            type: import_core6.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const cart = await sudoContext.query.Cart.findOne({
@@ -9419,9 +9743,9 @@ ${breakdown.join("\n")}`;
             }
           })
         }),
-        shipping: (0, import_fields8.virtual)({
-          field: import_core5.graphql.field({
-            type: import_core5.graphql.String,
+        shipping: (0, import_fields9.virtual)({
+          field: import_core6.graphql.field({
+            type: import_core6.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const cart = await sudoContext.query.Cart.findOne({
@@ -9471,9 +9795,9 @@ ${breakdown.join("\n")}`;
             }
           })
         }),
-        cheapestShipping: (0, import_fields8.virtual)({
-          field: import_core5.graphql.field({
-            type: import_core5.graphql.String,
+        cheapestShipping: (0, import_fields9.virtual)({
+          field: import_core6.graphql.field({
+            type: import_core6.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const cart = await sudoContext.query.Cart.findOne({
@@ -9526,9 +9850,9 @@ ${breakdown.join("\n")}`;
             }
           })
         }),
-        discountsById: (0, import_fields8.virtual)({
-          field: import_core5.graphql.field({
-            type: import_core5.graphql.JSON,
+        discountsById: (0, import_fields9.virtual)({
+          field: import_core6.graphql.field({
+            type: import_core6.graphql.JSON,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const cart = await sudoContext.query.Cart.findOne({
@@ -9630,9 +9954,9 @@ ${breakdown.join("\n")}`;
             }
           })
         }),
-        checkoutStep: (0, import_fields8.virtual)({
-          field: import_core5.graphql.field({
-            type: import_core5.graphql.String,
+        checkoutStep: (0, import_fields9.virtual)({
+          field: import_core6.graphql.field({
+            type: import_core6.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const cart = await sudoContext.query.Cart.findOne({
@@ -9677,9 +10001,9 @@ ${breakdown.join("\n")}`;
 });
 
 // features/keystone/models/ClaimImage.ts
-var import_core6 = require("@keystone-6/core");
-var import_fields9 = require("@keystone-6/core/fields");
-var ClaimImage = (0, import_core6.list)({
+var import_core7 = require("@keystone-6/core");
+var import_fields10 = require("@keystone-6/core/fields");
+var ClaimImage = (0, import_core7.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -9693,16 +10017,16 @@ var ClaimImage = (0, import_core6.list)({
     //   cloudinary,
     //   label: 'Source',
     // }),
-    image: (0, import_fields9.image)({ storage: "my_images" }),
-    url: (0, import_fields9.text)({
+    image: (0, import_fields10.image)({ storage: "my_images" }),
+    url: (0, import_fields10.text)({
       label: "Image URL",
       ui: {
         description: "Direct URL to the image file"
       }
     }),
-    altText: (0, import_fields9.text)(),
-    claimItem: (0, import_fields9.relationship)({ ref: "ClaimItem.claimImages" }),
-    metadata: (0, import_fields9.json)(),
+    altText: (0, import_fields10.text)(),
+    claimItem: (0, import_fields10.relationship)({ ref: "ClaimItem.claimImages" }),
+    metadata: (0, import_fields10.json)(),
     ...trackingFields
   },
   ui: {
@@ -9713,9 +10037,9 @@ var ClaimImage = (0, import_core6.list)({
 });
 
 // features/keystone/models/ClaimItem.ts
-var import_core7 = require("@keystone-6/core");
-var import_fields10 = require("@keystone-6/core/fields");
-var ClaimItem = (0, import_core7.list)({
+var import_core8 = require("@keystone-6/core");
+var import_fields11 = require("@keystone-6/core/fields");
+var ClaimItem = (0, import_core8.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -9725,7 +10049,7 @@ var ClaimItem = (0, import_core7.list)({
     }
   },
   fields: {
-    reason: (0, import_fields10.select)({
+    reason: (0, import_fields11.select)({
       type: "enum",
       options: [
         {
@@ -9749,27 +10073,27 @@ var ClaimItem = (0, import_core7.list)({
         isRequired: true
       }
     }),
-    note: (0, import_fields10.text)(),
-    quantity: (0, import_fields10.integer)({
+    note: (0, import_fields11.text)(),
+    quantity: (0, import_fields11.integer)({
       validation: {
         isRequired: true
       }
     }),
-    metadata: (0, import_fields10.json)(),
-    productVariant: (0, import_fields10.relationship)({
+    metadata: (0, import_fields11.json)(),
+    productVariant: (0, import_fields11.relationship)({
       ref: "ProductVariant.claimItems"
     }),
-    lineItem: (0, import_fields10.relationship)({
+    lineItem: (0, import_fields11.relationship)({
       ref: "LineItem.claimItems"
     }),
-    claimOrder: (0, import_fields10.relationship)({
+    claimOrder: (0, import_fields11.relationship)({
       ref: "ClaimOrder.claimItems"
     }),
-    claimImages: (0, import_fields10.relationship)({
+    claimImages: (0, import_fields11.relationship)({
       ref: "ClaimImage.claimItem",
       many: true
     }),
-    claimTags: (0, import_fields10.relationship)({
+    claimTags: (0, import_fields11.relationship)({
       ref: "ClaimTag.claimItems",
       many: true
     }),
@@ -9778,9 +10102,9 @@ var ClaimItem = (0, import_core7.list)({
 });
 
 // features/keystone/models/ClaimOrder.ts
-var import_core8 = require("@keystone-6/core");
-var import_fields11 = require("@keystone-6/core/fields");
-var ClaimOrder = (0, import_core8.list)({
+var import_core9 = require("@keystone-6/core");
+var import_fields12 = require("@keystone-6/core/fields");
+var ClaimOrder = (0, import_core9.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -9790,7 +10114,7 @@ var ClaimOrder = (0, import_core8.list)({
     }
   },
   fields: {
-    paymentStatus: (0, import_fields11.select)({
+    paymentStatus: (0, import_fields12.select)({
       type: "enum",
       options: [
         {
@@ -9811,7 +10135,7 @@ var ClaimOrder = (0, import_core8.list)({
         isRequired: true
       }
     }),
-    fulfillmentStatus: (0, import_fields11.select)({
+    fulfillmentStatus: (0, import_fields12.select)({
       type: "enum",
       options: [
         {
@@ -9856,7 +10180,7 @@ var ClaimOrder = (0, import_core8.list)({
         isRequired: true
       }
     }),
-    type: (0, import_fields11.select)({
+    type: (0, import_fields12.select)({
       type: "enum",
       options: [
         {
@@ -9872,33 +10196,33 @@ var ClaimOrder = (0, import_core8.list)({
         isRequired: true
       }
     }),
-    refundAmount: (0, import_fields11.integer)(),
-    canceledAt: (0, import_fields11.timestamp)(),
-    metadata: (0, import_fields11.json)(),
-    idempotencyKey: (0, import_fields11.text)(),
-    noNotification: (0, import_fields11.checkbox)(),
-    address: (0, import_fields11.relationship)({
+    refundAmount: (0, import_fields12.integer)(),
+    canceledAt: (0, import_fields12.timestamp)(),
+    metadata: (0, import_fields12.json)(),
+    idempotencyKey: (0, import_fields12.text)(),
+    noNotification: (0, import_fields12.checkbox)(),
+    address: (0, import_fields12.relationship)({
       ref: "Address.claimOrders"
     }),
-    order: (0, import_fields11.relationship)({
+    order: (0, import_fields12.relationship)({
       ref: "Order.claimOrders"
     }),
-    claimItems: (0, import_fields11.relationship)({
+    claimItems: (0, import_fields12.relationship)({
       ref: "ClaimItem.claimOrder",
       many: true
     }),
-    fulfillments: (0, import_fields11.relationship)({
+    fulfillments: (0, import_fields12.relationship)({
       ref: "Fulfillment.claimOrder",
       many: true
     }),
-    lineItems: (0, import_fields11.relationship)({
+    lineItems: (0, import_fields12.relationship)({
       ref: "LineItem.claimOrder",
       many: true
     }),
-    return: (0, import_fields11.relationship)({
+    return: (0, import_fields12.relationship)({
       ref: "Return.claimOrder"
     }),
-    shippingMethods: (0, import_fields11.relationship)({
+    shippingMethods: (0, import_fields12.relationship)({
       ref: "ShippingMethod.claimOrder",
       many: true
     }),
@@ -9907,9 +10231,9 @@ var ClaimOrder = (0, import_core8.list)({
 });
 
 // features/keystone/models/ClaimTag.ts
-var import_core9 = require("@keystone-6/core");
-var import_fields12 = require("@keystone-6/core/fields");
-var ClaimTag = (0, import_core9.list)({
+var import_core10 = require("@keystone-6/core");
+var import_fields13 = require("@keystone-6/core/fields");
+var ClaimTag = (0, import_core10.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -9919,14 +10243,14 @@ var ClaimTag = (0, import_core9.list)({
     }
   },
   fields: {
-    value: (0, import_fields12.text)({
+    value: (0, import_fields13.text)({
       validation: {
         isRequired: true
       }
     }),
-    description: (0, import_fields12.text)(),
-    metadata: (0, import_fields12.json)(),
-    claimItems: (0, import_fields12.relationship)({
+    description: (0, import_fields13.text)(),
+    metadata: (0, import_fields13.json)(),
+    claimItems: (0, import_fields13.relationship)({
       ref: "ClaimItem.claimTags",
       many: true
     }),
@@ -9935,9 +10259,9 @@ var ClaimTag = (0, import_core9.list)({
 });
 
 // features/keystone/models/Country.ts
-var import_core10 = require("@keystone-6/core");
-var import_fields13 = require("@keystone-6/core/fields");
-var Country = (0, import_core10.list)({
+var import_core11 = require("@keystone-6/core");
+var import_fields14 = require("@keystone-6/core/fields");
+var Country = (0, import_core11.list)({
   access: {
     operation: {
       query: () => true,
@@ -9950,36 +10274,36 @@ var Country = (0, import_core10.list)({
     }
   },
   fields: {
-    iso2: (0, import_fields13.text)({
+    iso2: (0, import_fields14.text)({
       isIndexed: "unique",
       validation: {
         isRequired: true
       }
     }),
-    iso3: (0, import_fields13.text)({
+    iso3: (0, import_fields14.text)({
       validation: {
         isRequired: true
       }
     }),
-    numCode: (0, import_fields13.integer)({
+    numCode: (0, import_fields14.integer)({
       validation: {
         isRequired: true
       }
     }),
-    name: (0, import_fields13.text)({
+    name: (0, import_fields14.text)({
       validation: {
         isRequired: true
       }
     }),
-    displayName: (0, import_fields13.text)({
+    displayName: (0, import_fields14.text)({
       validation: {
         isRequired: true
       }
     }),
-    region: (0, import_fields13.relationship)({
+    region: (0, import_fields14.relationship)({
       ref: "Region.countries"
     }),
-    addresses: (0, import_fields13.relationship)({
+    addresses: (0, import_fields14.relationship)({
       ref: "Address.country",
       many: true
     }),
@@ -9988,10 +10312,10 @@ var Country = (0, import_core10.list)({
 });
 
 // features/keystone/models/Currency.ts
-var import_core11 = require("@keystone-6/core");
-var import_fields14 = require("@keystone-6/core/fields");
+var import_core12 = require("@keystone-6/core");
+var import_fields15 = require("@keystone-6/core/fields");
 var NO_DIVISION_CURRENCIES3 = ["jpy", "krw", "vnd"];
-var Currency = (0, import_core11.list)({
+var Currency = (0, import_core12.list)({
   access: {
     operation: {
       query: () => true,
@@ -10001,54 +10325,54 @@ var Currency = (0, import_core11.list)({
     }
   },
   fields: {
-    code: (0, import_fields14.text)({
+    code: (0, import_fields15.text)({
       isIndexed: "unique",
       validation: { isRequired: true }
     }),
-    symbol: (0, import_fields14.text)({
+    symbol: (0, import_fields15.text)({
       validation: { isRequired: true }
     }),
-    symbolNative: (0, import_fields14.text)({
+    symbolNative: (0, import_fields15.text)({
       validation: { isRequired: true }
     }),
-    name: (0, import_fields14.text)({
+    name: (0, import_fields15.text)({
       validation: { isRequired: true }
     }),
-    moneyAmounts: (0, import_fields14.relationship)({
+    moneyAmounts: (0, import_fields15.relationship)({
       ref: "MoneyAmount.currency",
       many: true
     }),
-    orders: (0, import_fields14.relationship)({
+    orders: (0, import_fields15.relationship)({
       ref: "Order.currency",
       many: true
     }),
-    payments: (0, import_fields14.relationship)({
+    payments: (0, import_fields15.relationship)({
       ref: "Payment.currency",
       many: true
     }),
-    regions: (0, import_fields14.relationship)({
+    regions: (0, import_fields15.relationship)({
       ref: "Region.currency",
       many: true
     }),
-    stores: (0, import_fields14.relationship)({
+    stores: (0, import_fields15.relationship)({
       ref: "Store.currencies",
       many: true
     }),
-    accounts: (0, import_fields14.relationship)({
+    accounts: (0, import_fields15.relationship)({
       ref: "Account.currency",
       many: true
     }),
-    invoices: (0, import_fields14.relationship)({
+    invoices: (0, import_fields15.relationship)({
       ref: "Invoice.currency",
       many: true
     }),
-    ...(0, import_core11.group)({
+    ...(0, import_core12.group)({
       label: "Virtual Fields",
       description: "Virtual fields for currency",
       fields: {
-        noDivisionCurrency: (0, import_fields14.virtual)({
-          field: import_core11.graphql.field({
-            type: import_core11.graphql.Boolean,
+        noDivisionCurrency: (0, import_fields15.virtual)({
+          field: import_core12.graphql.field({
+            type: import_core12.graphql.Boolean,
             resolve(item) {
               return NO_DIVISION_CURRENCIES3.includes(item.code.toLowerCase());
             }
@@ -10061,9 +10385,9 @@ var Currency = (0, import_core11.list)({
 });
 
 // features/keystone/models/CustomerGroup.ts
-var import_core12 = require("@keystone-6/core");
-var import_fields15 = require("@keystone-6/core/fields");
-var CustomerGroup = (0, import_core12.list)({
+var import_core13 = require("@keystone-6/core");
+var import_fields16 = require("@keystone-6/core/fields");
+var CustomerGroup = (0, import_core13.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadUsers({ session }) || permissions.canManageUsers({ session }),
@@ -10073,21 +10397,21 @@ var CustomerGroup = (0, import_core12.list)({
     }
   },
   fields: {
-    name: (0, import_fields15.text)({
+    name: (0, import_fields16.text)({
       validation: {
         isRequired: true
       }
     }),
-    metadata: (0, import_fields15.json)(),
-    users: (0, import_fields15.relationship)({
+    metadata: (0, import_fields16.json)(),
+    users: (0, import_fields16.relationship)({
       ref: "User.customerGroups",
       many: true
     }),
-    discountConditions: (0, import_fields15.relationship)({
+    discountConditions: (0, import_fields16.relationship)({
       ref: "DiscountCondition.customerGroups",
       many: true
     }),
-    priceLists: (0, import_fields15.relationship)({
+    priceLists: (0, import_fields16.relationship)({
       ref: "PriceList.customerGroups",
       many: true
     }),
@@ -10096,9 +10420,9 @@ var CustomerGroup = (0, import_core12.list)({
 });
 
 // features/keystone/models/CustomShippingOption.ts
-var import_core13 = require("@keystone-6/core");
-var import_fields16 = require("@keystone-6/core/fields");
-var CustomShippingOption = (0, import_core13.list)({
+var import_core14 = require("@keystone-6/core");
+var import_fields17 = require("@keystone-6/core/fields");
+var CustomShippingOption = (0, import_core14.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -10108,16 +10432,16 @@ var CustomShippingOption = (0, import_core13.list)({
     }
   },
   fields: {
-    price: (0, import_fields16.integer)({
+    price: (0, import_fields17.integer)({
       validation: {
         isRequired: true
       }
     }),
-    metadata: (0, import_fields16.json)(),
-    shippingOption: (0, import_fields16.relationship)({
+    metadata: (0, import_fields17.json)(),
+    shippingOption: (0, import_fields17.relationship)({
       ref: "ShippingOption.customShippingOptions"
     }),
-    cart: (0, import_fields16.relationship)({
+    cart: (0, import_fields17.relationship)({
       ref: "Cart.customShippingOptions"
     }),
     ...trackingFields
@@ -10125,9 +10449,9 @@ var CustomShippingOption = (0, import_core13.list)({
 });
 
 // features/keystone/models/Discount.ts
-var import_core14 = require("@keystone-6/core");
-var import_fields17 = require("@keystone-6/core/fields");
-var Discount = (0, import_core14.list)({
+var import_core15 = require("@keystone-6/core");
+var import_fields18 = require("@keystone-6/core/fields");
+var Discount = (0, import_core15.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -10137,51 +10461,51 @@ var Discount = (0, import_core14.list)({
     }
   },
   fields: {
-    code: (0, import_fields17.text)({
+    code: (0, import_fields18.text)({
       validation: { isRequired: true },
       isIndexed: "unique"
     }),
-    isDynamic: (0, import_fields17.checkbox)(),
-    isDisabled: (0, import_fields17.checkbox)(),
-    stackable: (0, import_fields17.checkbox)({
+    isDynamic: (0, import_fields18.checkbox)(),
+    isDisabled: (0, import_fields18.checkbox)(),
+    stackable: (0, import_fields18.checkbox)({
       defaultValue: false
     }),
-    startsAt: (0, import_fields17.timestamp)({
+    startsAt: (0, import_fields18.timestamp)({
       defaultValue: { kind: "now" },
       validation: {
         isRequired: true
       }
     }),
-    endsAt: (0, import_fields17.timestamp)({
+    endsAt: (0, import_fields18.timestamp)({
       validation: {
         isRequired: false
       }
     }),
-    metadata: (0, import_fields17.json)(),
-    usageLimit: (0, import_fields17.integer)(),
-    usageCount: (0, import_fields17.integer)({
+    metadata: (0, import_fields18.json)(),
+    usageLimit: (0, import_fields18.integer)(),
+    usageCount: (0, import_fields18.integer)({
       defaultValue: 0,
       validation: {
         isRequired: true
       }
     }),
-    validDuration: (0, import_fields17.text)(),
-    discountRule: (0, import_fields17.relationship)({
+    validDuration: (0, import_fields18.text)(),
+    discountRule: (0, import_fields18.relationship)({
       ref: "DiscountRule.discounts"
     }),
-    carts: (0, import_fields17.relationship)({
+    carts: (0, import_fields18.relationship)({
       ref: "Cart.discounts",
       many: true
     }),
-    lineItemAdjustments: (0, import_fields17.relationship)({
+    lineItemAdjustments: (0, import_fields18.relationship)({
       ref: "LineItemAdjustment.discount",
       many: true
     }),
-    regions: (0, import_fields17.relationship)({
+    regions: (0, import_fields18.relationship)({
       ref: "Region.discounts",
       many: true
     }),
-    orders: (0, import_fields17.relationship)({
+    orders: (0, import_fields18.relationship)({
       ref: "Order.discounts",
       many: true
     }),
@@ -10213,9 +10537,9 @@ var Discount = (0, import_core14.list)({
 });
 
 // features/keystone/models/DiscountCondition.ts
-var import_core15 = require("@keystone-6/core");
-var import_fields18 = require("@keystone-6/core/fields");
-var DiscountCondition = (0, import_core15.list)({
+var import_core16 = require("@keystone-6/core");
+var import_fields19 = require("@keystone-6/core/fields");
+var DiscountCondition = (0, import_core16.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -10225,7 +10549,7 @@ var DiscountCondition = (0, import_core15.list)({
     }
   },
   fields: {
-    type: (0, import_fields18.select)({
+    type: (0, import_fields19.select)({
       type: "enum",
       options: [
         {
@@ -10253,7 +10577,7 @@ var DiscountCondition = (0, import_core15.list)({
         isRequired: true
       }
     }),
-    operator: (0, import_fields18.select)({
+    operator: (0, import_fields19.select)({
       type: "enum",
       options: [
         {
@@ -10269,31 +10593,31 @@ var DiscountCondition = (0, import_core15.list)({
         isRequired: true
       }
     }),
-    metadata: (0, import_fields18.json)(),
-    discountRule: (0, import_fields18.relationship)({
+    metadata: (0, import_fields19.json)(),
+    discountRule: (0, import_fields19.relationship)({
       ref: "DiscountRule.discountConditions"
     }),
-    customerGroups: (0, import_fields18.relationship)({
+    customerGroups: (0, import_fields19.relationship)({
       ref: "CustomerGroup.discountConditions",
       many: true
     }),
-    products: (0, import_fields18.relationship)({
+    products: (0, import_fields19.relationship)({
       ref: "Product.discountConditions",
       many: true
     }),
-    productCollections: (0, import_fields18.relationship)({
+    productCollections: (0, import_fields19.relationship)({
       ref: "ProductCollection.discountConditions",
       many: true
     }),
-    productCategories: (0, import_fields18.relationship)({
+    productCategories: (0, import_fields19.relationship)({
       ref: "ProductCategory.discountConditions",
       many: true
     }),
-    productTags: (0, import_fields18.relationship)({
+    productTags: (0, import_fields19.relationship)({
       ref: "ProductTag.discountConditions",
       many: true
     }),
-    productTypes: (0, import_fields18.relationship)({
+    productTypes: (0, import_fields19.relationship)({
       ref: "ProductType.discountConditions",
       many: true
     }),
@@ -10302,9 +10626,9 @@ var DiscountCondition = (0, import_core15.list)({
 });
 
 // features/keystone/models/DiscountRule.ts
-var import_core16 = require("@keystone-6/core");
-var import_fields19 = require("@keystone-6/core/fields");
-var DiscountRule = (0, import_core16.list)({
+var import_core17 = require("@keystone-6/core");
+var import_fields20 = require("@keystone-6/core/fields");
+var DiscountRule = (0, import_core17.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -10314,8 +10638,8 @@ var DiscountRule = (0, import_core16.list)({
     }
   },
   fields: {
-    description: (0, import_fields19.text)(),
-    type: (0, import_fields19.select)({
+    description: (0, import_fields20.text)(),
+    type: (0, import_fields20.select)({
       type: "enum",
       options: [
         {
@@ -10335,12 +10659,12 @@ var DiscountRule = (0, import_core16.list)({
         isRequired: true
       }
     }),
-    value: (0, import_fields19.integer)({
+    value: (0, import_fields20.integer)({
       validation: {
         isRequired: true
       }
     }),
-    allocation: (0, import_fields19.select)({
+    allocation: (0, import_fields20.select)({
       type: "enum",
       options: [
         {
@@ -10353,16 +10677,16 @@ var DiscountRule = (0, import_core16.list)({
         }
       ]
     }),
-    metadata: (0, import_fields19.json)(),
-    discounts: (0, import_fields19.relationship)({
+    metadata: (0, import_fields20.json)(),
+    discounts: (0, import_fields20.relationship)({
       ref: "Discount.discountRule",
       many: true
     }),
-    discountConditions: (0, import_fields19.relationship)({
+    discountConditions: (0, import_fields20.relationship)({
       ref: "DiscountCondition.discountRule",
       many: true
     }),
-    products: (0, import_fields19.relationship)({
+    products: (0, import_fields20.relationship)({
       ref: "Product.discountRules",
       many: true
     }),
@@ -10371,9 +10695,9 @@ var DiscountRule = (0, import_core16.list)({
 });
 
 // features/keystone/models/DraftOrder.ts
-var import_core17 = require("@keystone-6/core");
-var import_fields20 = require("@keystone-6/core/fields");
-var DraftOrder = (0, import_core17.list)({
+var import_core18 = require("@keystone-6/core");
+var import_fields21 = require("@keystone-6/core/fields");
+var DraftOrder = (0, import_core18.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -10383,7 +10707,7 @@ var DraftOrder = (0, import_core17.list)({
     }
   },
   fields: {
-    status: (0, import_fields20.select)({
+    status: (0, import_fields21.select)({
       type: "enum",
       options: [
         {
@@ -10400,20 +10724,20 @@ var DraftOrder = (0, import_core17.list)({
         isRequired: true
       }
     }),
-    displayId: (0, import_fields20.integer)({
+    displayId: (0, import_fields21.integer)({
       validation: {
         isRequired: true
       }
     }),
-    canceledAt: (0, import_fields20.timestamp)(),
-    completedAt: (0, import_fields20.timestamp)(),
-    metadata: (0, import_fields20.json)(),
-    idempotencyKey: (0, import_fields20.text)(),
-    noNotificationOrder: (0, import_fields20.checkbox)(),
-    cart: (0, import_fields20.relationship)({
+    canceledAt: (0, import_fields21.timestamp)(),
+    completedAt: (0, import_fields21.timestamp)(),
+    metadata: (0, import_fields21.json)(),
+    idempotencyKey: (0, import_fields21.text)(),
+    noNotificationOrder: (0, import_fields21.checkbox)(),
+    cart: (0, import_fields21.relationship)({
       ref: "Cart.draftOrder"
     }),
-    order: (0, import_fields20.relationship)({
+    order: (0, import_fields21.relationship)({
       ref: "Order.draftOrder"
     }),
     ...trackingFields
@@ -10421,9 +10745,9 @@ var DraftOrder = (0, import_core17.list)({
 });
 
 // features/keystone/models/Fulfillment.ts
-var import_core18 = require("@keystone-6/core");
-var import_fields21 = require("@keystone-6/core/fields");
-var Fulfillment = (0, import_core18.list)({
+var import_core19 = require("@keystone-6/core");
+var import_fields22 = require("@keystone-6/core/fields");
+var Fulfillment = (0, import_core19.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadFulfillments({ session }) || permissions.canManageFulfillments({ session }),
@@ -10434,17 +10758,17 @@ var Fulfillment = (0, import_core18.list)({
   },
   fields: {
     // Status fields
-    shippedAt: (0, import_fields21.timestamp)(),
-    canceledAt: (0, import_fields21.timestamp)(),
+    shippedAt: (0, import_fields22.timestamp)(),
+    canceledAt: (0, import_fields22.timestamp)(),
     // Data fields
-    data: (0, import_fields21.json)(),
-    metadata: (0, import_fields21.json)(),
-    idempotencyKey: (0, import_fields21.text)(),
-    noNotification: (0, import_fields21.checkbox)({
+    data: (0, import_fields22.json)(),
+    metadata: (0, import_fields22.json)(),
+    idempotencyKey: (0, import_fields22.text)(),
+    noNotification: (0, import_fields22.checkbox)({
       defaultValue: false
     }),
     // Relationships
-    order: (0, import_fields21.relationship)({
+    order: (0, import_fields22.relationship)({
       ref: "Order.fulfillments",
       many: false,
       validation: { isRequired: true },
@@ -10514,24 +10838,24 @@ var Fulfillment = (0, import_core18.list)({
         }
       }
     }),
-    claimOrder: (0, import_fields21.relationship)({
+    claimOrder: (0, import_fields22.relationship)({
       ref: "ClaimOrder.fulfillments",
       many: false
     }),
-    swap: (0, import_fields21.relationship)({
+    swap: (0, import_fields22.relationship)({
       ref: "Swap.fulfillments",
       many: false
     }),
-    fulfillmentProvider: (0, import_fields21.relationship)({
+    fulfillmentProvider: (0, import_fields22.relationship)({
       ref: "FulfillmentProvider.fulfillments",
       many: false,
       validation: { isRequired: true }
     }),
-    fulfillmentItems: (0, import_fields21.relationship)({
+    fulfillmentItems: (0, import_fields22.relationship)({
       ref: "FulfillmentItem.fulfillment",
       many: true
     }),
-    shippingLabels: (0, import_fields21.relationship)({
+    shippingLabels: (0, import_fields22.relationship)({
       ref: "ShippingLabel.fulfillment",
       many: true
     }),
@@ -10540,9 +10864,9 @@ var Fulfillment = (0, import_core18.list)({
 });
 
 // features/keystone/models/FulfillmentItem.ts
-var import_core19 = require("@keystone-6/core");
-var import_fields22 = require("@keystone-6/core/fields");
-var FulfillmentItem = (0, import_core19.list)({
+var import_core20 = require("@keystone-6/core");
+var import_fields23 = require("@keystone-6/core/fields");
+var FulfillmentItem = (0, import_core20.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadFulfillments({ session }) || permissions.canManageFulfillments({ session }),
@@ -10552,17 +10876,17 @@ var FulfillmentItem = (0, import_core19.list)({
     }
   },
   fields: {
-    quantity: (0, import_fields22.integer)({
+    quantity: (0, import_fields23.integer)({
       validation: {
         isRequired: true
       }
     }),
-    fulfillment: (0, import_fields22.relationship)({
+    fulfillment: (0, import_fields23.relationship)({
       ref: "Fulfillment.fulfillmentItems",
       many: false,
       validation: { isRequired: true }
     }),
-    lineItem: (0, import_fields22.relationship)({
+    lineItem: (0, import_fields23.relationship)({
       ref: "OrderLineItem.fulfillmentItems",
       many: false,
       validation: { isRequired: true }
@@ -10572,9 +10896,9 @@ var FulfillmentItem = (0, import_core19.list)({
 });
 
 // features/keystone/models/FulfillmentProvider.ts
-var import_core20 = require("@keystone-6/core");
-var import_fields23 = require("@keystone-6/core/fields");
-var FulfillmentProvider = (0, import_core20.list)({
+var import_core21 = require("@keystone-6/core");
+var import_fields24 = require("@keystone-6/core/fields");
+var FulfillmentProvider = (0, import_core21.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadFulfillments({ session }) || permissions.canManageFulfillments({ session }),
@@ -10584,10 +10908,10 @@ var FulfillmentProvider = (0, import_core20.list)({
     }
   },
   fields: {
-    name: (0, import_fields23.text)({
+    name: (0, import_fields24.text)({
       validation: { isRequired: true }
     }),
-    code: (0, import_fields23.text)({
+    code: (0, import_fields24.text)({
       isIndexed: "unique",
       validation: {
         isRequired: true,
@@ -10597,29 +10921,29 @@ var FulfillmentProvider = (0, import_core20.list)({
         }
       }
     }),
-    isInstalled: (0, import_fields23.checkbox)({
+    isInstalled: (0, import_fields24.checkbox)({
       defaultValue: true
     }),
-    credentials: (0, import_fields23.json)({
+    credentials: (0, import_fields24.json)({
       ui: {
         itemView: { fieldMode: "hidden" }
       }
     }),
-    metadata: (0, import_fields23.json)(),
+    metadata: (0, import_fields24.json)(),
     // Relationships
-    fulfillments: (0, import_fields23.relationship)({
+    fulfillments: (0, import_fields24.relationship)({
       ref: "Fulfillment.fulfillmentProvider",
       many: true
     }),
-    regions: (0, import_fields23.relationship)({
+    regions: (0, import_fields24.relationship)({
       ref: "Region.fulfillmentProviders",
       many: true
     }),
-    shippingOptions: (0, import_fields23.relationship)({
+    shippingOptions: (0, import_fields24.relationship)({
       ref: "ShippingOption.fulfillmentProvider",
       many: true
     }),
-    shippingProviders: (0, import_fields23.relationship)({
+    shippingProviders: (0, import_fields24.relationship)({
       ref: "ShippingProvider.fulfillmentProvider",
       many: true
     }),
@@ -10628,9 +10952,9 @@ var FulfillmentProvider = (0, import_core20.list)({
 });
 
 // features/keystone/models/GiftCard.ts
-var import_core21 = require("@keystone-6/core");
-var import_fields24 = require("@keystone-6/core/fields");
-var GiftCard = (0, import_core21.list)({
+var import_core22 = require("@keystone-6/core");
+var import_fields25 = require("@keystone-6/core/fields");
+var GiftCard = (0, import_core22.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadGiftCards({ session }) || permissions.canManageGiftCards({ session }),
@@ -10663,37 +10987,37 @@ var GiftCard = (0, import_core21.list)({
     }
   },
   fields: {
-    code: (0, import_fields24.text)({
+    code: (0, import_fields25.text)({
       validation: {
         isRequired: true
       },
       isIndexed: "unique"
     }),
-    value: (0, import_fields24.integer)({
+    value: (0, import_fields25.integer)({
       validation: {
         isRequired: true
       }
     }),
-    balance: (0, import_fields24.integer)({
+    balance: (0, import_fields25.integer)({
       validation: {
         isRequired: true
       }
     }),
-    isDisabled: (0, import_fields24.checkbox)(),
-    endsAt: (0, import_fields24.timestamp)(),
-    metadata: (0, import_fields24.json)(),
-    order: (0, import_fields24.relationship)({
+    isDisabled: (0, import_fields25.checkbox)(),
+    endsAt: (0, import_fields25.timestamp)(),
+    metadata: (0, import_fields25.json)(),
+    order: (0, import_fields25.relationship)({
       ref: "Order.giftCards"
     }),
-    carts: (0, import_fields24.relationship)({
+    carts: (0, import_fields25.relationship)({
       ref: "Cart.giftCards",
       many: true
     }),
-    giftCardTransactions: (0, import_fields24.relationship)({
+    giftCardTransactions: (0, import_fields25.relationship)({
       ref: "GiftCardTransaction.giftCard",
       many: true
     }),
-    region: (0, import_fields24.relationship)({
+    region: (0, import_fields25.relationship)({
       ref: "Region.giftCards"
     }),
     ...trackingFields
@@ -10701,9 +11025,9 @@ var GiftCard = (0, import_core21.list)({
 });
 
 // features/keystone/models/GiftCardTransaction.ts
-var import_core22 = require("@keystone-6/core");
-var import_fields25 = require("@keystone-6/core/fields");
-var GiftCardTransaction = (0, import_core22.list)({
+var import_core23 = require("@keystone-6/core");
+var import_fields26 = require("@keystone-6/core/fields");
+var GiftCardTransaction = (0, import_core23.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadGiftCards({ session }) || permissions.canManageGiftCards({ session }),
@@ -10713,17 +11037,17 @@ var GiftCardTransaction = (0, import_core22.list)({
     }
   },
   fields: {
-    amount: (0, import_fields25.integer)({
+    amount: (0, import_fields26.integer)({
       validation: {
         isRequired: true
       }
     }),
-    isTaxable: (0, import_fields25.checkbox)(),
-    taxRate: (0, import_fields25.float)(),
-    giftCard: (0, import_fields25.relationship)({
+    isTaxable: (0, import_fields26.checkbox)(),
+    taxRate: (0, import_fields26.float)(),
+    giftCard: (0, import_fields26.relationship)({
       ref: "GiftCard.giftCardTransactions"
     }),
-    order: (0, import_fields25.relationship)({
+    order: (0, import_fields26.relationship)({
       ref: "Order.giftCardTransactions"
     }),
     ...trackingFields
@@ -10731,9 +11055,9 @@ var GiftCardTransaction = (0, import_core22.list)({
 });
 
 // features/keystone/models/IdempotencyKey.ts
-var import_core23 = require("@keystone-6/core");
-var import_fields26 = require("@keystone-6/core/fields");
-var IdempotencyKey = (0, import_core23.list)({
+var import_core24 = require("@keystone-6/core");
+var import_fields27 = require("@keystone-6/core/fields");
+var IdempotencyKey = (0, import_core24.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadIdempotencyKeys({ session }) || permissions.canManageIdempotencyKeys({ session }),
@@ -10743,32 +11067,32 @@ var IdempotencyKey = (0, import_core23.list)({
     }
   },
   fields: {
-    idempotencyKey: (0, import_fields26.text)({
+    idempotencyKey: (0, import_fields27.text)({
       isIndexed: "unique",
       validation: {
         isRequired: true
       }
     }),
-    requestMethod: (0, import_fields26.text)(),
-    requestParams: (0, import_fields26.json)(),
-    requestPath: (0, import_fields26.text)(),
-    responseCode: (0, import_fields26.integer)(),
-    responseBody: (0, import_fields26.json)(),
-    recoveryPoint: (0, import_fields26.text)({
+    requestMethod: (0, import_fields27.text)(),
+    requestParams: (0, import_fields27.json)(),
+    requestPath: (0, import_fields27.text)(),
+    responseCode: (0, import_fields27.integer)(),
+    responseBody: (0, import_fields27.json)(),
+    recoveryPoint: (0, import_fields27.text)({
       defaultValue: "started",
       validation: {
         isRequired: true
       }
     }),
-    lockedAt: (0, import_fields26.timestamp)(),
+    lockedAt: (0, import_fields27.timestamp)(),
     ...trackingFields
   }
 });
 
 // features/keystone/models/Invite.ts
-var import_core24 = require("@keystone-6/core");
-var import_fields27 = require("@keystone-6/core/fields");
-var Invite = (0, import_core24.list)({
+var import_core25 = require("@keystone-6/core");
+var import_fields28 = require("@keystone-6/core/fields");
+var Invite = (0, import_core25.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadUsers({ session }) || permissions.canManageUsers({ session }),
@@ -10778,12 +11102,12 @@ var Invite = (0, import_core24.list)({
     }
   },
   fields: {
-    userEmail: (0, import_fields27.text)({
+    userEmail: (0, import_fields28.text)({
       validation: {
         isRequired: true
       }
     }),
-    role: (0, import_fields27.select)({
+    role: (0, import_fields28.select)({
       type: "enum",
       options: [
         {
@@ -10801,14 +11125,14 @@ var Invite = (0, import_core24.list)({
       ],
       defaultValue: "member"
     }),
-    accepted: (0, import_fields27.checkbox)(),
-    metadata: (0, import_fields27.json)(),
-    token: (0, import_fields27.text)({
+    accepted: (0, import_fields28.checkbox)(),
+    metadata: (0, import_fields28.json)(),
+    token: (0, import_fields28.text)({
       validation: {
         isRequired: true
       }
     }),
-    expiresAt: (0, import_fields27.timestamp)({
+    expiresAt: (0, import_fields28.timestamp)({
       defaultValue: { kind: "now" },
       validation: {
         isRequired: true
@@ -10819,9 +11143,9 @@ var Invite = (0, import_core24.list)({
 });
 
 // features/keystone/models/Account.ts
-var import_core25 = require("@keystone-6/core");
-var import_fields28 = require("@keystone-6/core/fields");
-var Account = (0, import_core25.list)({
+var import_core26 = require("@keystone-6/core");
+var import_fields29 = require("@keystone-6/core/fields");
+var Account = (0, import_core26.list)({
   access: {
     operation: {
       query: permissions.canManageOrders,
@@ -10832,42 +11156,42 @@ var Account = (0, import_core25.list)({
   },
   fields: {
     // Core account data
-    user: (0, import_fields28.relationship)({
+    user: (0, import_fields29.relationship)({
       ref: "User.accounts",
       many: false,
       validation: { isRequired: true }
     }),
-    accountNumber: (0, import_fields28.text)({
+    accountNumber: (0, import_fields29.text)({
       validation: { isRequired: true },
       isIndexed: "unique"
     }),
-    title: (0, import_fields28.text)({
+    title: (0, import_fields29.text)({
       validation: { isRequired: true },
       defaultValue: "Business Account"
     }),
-    description: (0, import_fields28.text)({
+    description: (0, import_fields29.text)({
       ui: { displayMode: "textarea" },
       defaultValue: "Running business account for automated orders placed through API integration"
     }),
     // Financial fields (amounts in cents)
-    totalAmount: (0, import_fields28.integer)({
+    totalAmount: (0, import_fields29.integer)({
       defaultValue: 0
     }),
-    paidAmount: (0, import_fields28.integer)({
+    paidAmount: (0, import_fields29.integer)({
       defaultValue: 0
     }),
-    creditLimit: (0, import_fields28.integer)({
+    creditLimit: (0, import_fields29.integer)({
       validation: { isRequired: true },
       defaultValue: 1e5
       // $1000 default
     }),
-    currency: (0, import_fields28.relationship)({
+    currency: (0, import_fields29.relationship)({
       ref: "Currency.accounts",
       many: false,
       validation: { isRequired: true }
     }),
     // Status and dates
-    status: (0, import_fields28.select)({
+    status: (0, import_fields29.select)({
       options: [
         { label: "Active", value: "active" },
         { label: "Suspended", value: "suspended" },
@@ -10878,12 +11202,12 @@ var Account = (0, import_core25.list)({
       defaultValue: "active",
       validation: { isRequired: true }
     }),
-    dueDate: (0, import_fields28.timestamp)(),
-    paidAt: (0, import_fields28.timestamp)(),
-    suspendedAt: (0, import_fields28.timestamp)(),
-    notApprovedAt: (0, import_fields28.timestamp)(),
+    dueDate: (0, import_fields29.timestamp)(),
+    paidAt: (0, import_fields29.timestamp)(),
+    suspendedAt: (0, import_fields29.timestamp)(),
+    notApprovedAt: (0, import_fields29.timestamp)(),
     // Account type
-    accountType: (0, import_fields28.select)({
+    accountType: (0, import_fields29.select)({
       options: [
         { label: "Business", value: "business" },
         { label: "Personal", value: "personal" }
@@ -10892,38 +11216,38 @@ var Account = (0, import_core25.list)({
       validation: { isRequired: true }
     }),
     // Metadata for additional context
-    metadata: (0, import_fields28.json)({
+    metadata: (0, import_fields29.json)({
       defaultValue: {}
     }),
     // Relationships
-    orders: (0, import_fields28.relationship)({
+    orders: (0, import_fields29.relationship)({
       ref: "Order.account",
       many: true
     }),
-    lineItems: (0, import_fields28.relationship)({
+    lineItems: (0, import_fields29.relationship)({
       ref: "AccountLineItem.account",
       many: true
     }),
-    invoices: (0, import_fields28.relationship)({
+    invoices: (0, import_fields29.relationship)({
       ref: "Invoice.account",
       many: true
     }),
     // Virtual computed fields
-    ...(0, import_core25.group)({
+    ...(0, import_core26.group)({
       label: "Computed Fields",
       description: "Auto-calculated fields for account display",
       fields: {
-        balanceDue: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.Int,
+        balanceDue: (0, import_fields29.virtual)({
+          field: import_core26.graphql.field({
+            type: import_core26.graphql.Int,
             resolve(item) {
               return (item.totalAmount || 0) - (item.paidAmount || 0);
             }
           })
         }),
-        formattedTotal: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.String,
+        formattedTotal: (0, import_fields29.virtual)({
+          field: import_core26.graphql.field({
+            type: import_core26.graphql.String,
             async resolve(item, args, context) {
               const account = await context.sudo().query.Account.findOne({
                 where: { id: item.id },
@@ -10946,9 +11270,9 @@ var Account = (0, import_core25.list)({
             }
           })
         }),
-        formattedCreditLimit: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.String,
+        formattedCreditLimit: (0, import_fields29.virtual)({
+          field: import_core26.graphql.field({
+            type: import_core26.graphql.String,
             async resolve(item, args, context) {
               const account = await context.sudo().query.Account.findOne({
                 where: { id: item.id },
@@ -10971,9 +11295,9 @@ var Account = (0, import_core25.list)({
             }
           })
         }),
-        availableCredit: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.Int,
+        availableCredit: (0, import_fields29.virtual)({
+          field: import_core26.graphql.field({
+            type: import_core26.graphql.Int,
             resolve(item) {
               const used = (item.totalAmount || 0) - (item.paidAmount || 0);
               return Math.max(0, (item.creditLimit || 0) - used);
@@ -10981,9 +11305,9 @@ var Account = (0, import_core25.list)({
           })
         }),
         // New currency-aware fields for multi-region support
-        totalOwedInAccountCurrency: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.Int,
+        totalOwedInAccountCurrency: (0, import_fields29.virtual)({
+          field: import_core26.graphql.field({
+            type: import_core26.graphql.Int,
             async resolve(item, args, context) {
               const convertCurrency2 = (await Promise.resolve().then(() => (init_currencyConversion(), currencyConversion_exports))).default;
               const account = await context.sudo().query.Account.findOne({
@@ -11020,9 +11344,9 @@ var Account = (0, import_core25.list)({
             }
           })
         }),
-        availableCreditInAccountCurrency: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.Int,
+        availableCreditInAccountCurrency: (0, import_fields29.virtual)({
+          field: import_core26.graphql.field({
+            type: import_core26.graphql.Int,
             async resolve(item, args, context) {
               const convertCurrency2 = (await Promise.resolve().then(() => (init_currencyConversion(), currencyConversion_exports))).default;
               const account = await context.sudo().query.Account.findOne({
@@ -11061,9 +11385,9 @@ var Account = (0, import_core25.list)({
             }
           })
         }),
-        formattedTotalOwedInAccountCurrency: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.String,
+        formattedTotalOwedInAccountCurrency: (0, import_fields29.virtual)({
+          field: import_core26.graphql.field({
+            type: import_core26.graphql.String,
             async resolve(item, args, context) {
               const { formatCurrencyAmount: formatCurrencyAmount3 } = await Promise.resolve().then(() => (init_currencyConversion(), currencyConversion_exports));
               const account = await context.sudo().query.Account.findOne({
@@ -11081,9 +11405,9 @@ var Account = (0, import_core25.list)({
             }
           })
         }),
-        formattedAvailableCreditInAccountCurrency: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.String,
+        formattedAvailableCreditInAccountCurrency: (0, import_fields29.virtual)({
+          field: import_core26.graphql.field({
+            type: import_core26.graphql.String,
             async resolve(item, args, context) {
               const { formatCurrencyAmount: formatCurrencyAmount3 } = await Promise.resolve().then(() => (init_currencyConversion(), currencyConversion_exports));
               const account = await context.sudo().query.Account.findOne({
@@ -11102,9 +11426,9 @@ var Account = (0, import_core25.list)({
           })
         }),
         // Proper current balance calculated from unpaid line items (same logic as unpaidLineItemsByRegion)
-        formattedCurrentBalance: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.String,
+        formattedCurrentBalance: (0, import_fields29.virtual)({
+          field: import_core26.graphql.field({
+            type: import_core26.graphql.String,
             async resolve(item, args, context) {
               const account = await context.sudo().query.Account.findOne({
                 where: { id: item.id },
@@ -11148,9 +11472,9 @@ var Account = (0, import_core25.list)({
             }
           })
         }),
-        unpaidLineItemsByRegion: (0, import_fields28.virtual)({
-          field: import_core25.graphql.field({
-            type: import_core25.graphql.JSON,
+        unpaidLineItemsByRegion: (0, import_fields29.virtual)({
+          field: import_core26.graphql.field({
+            type: import_core26.graphql.JSON,
             async resolve(item, args, context) {
               const unpaidLineItems = await context.sudo().query.AccountLineItem.findMany({
                 where: {
@@ -11255,9 +11579,9 @@ var Account = (0, import_core25.list)({
 });
 
 // features/keystone/models/AccountLineItem.ts
-var import_core26 = require("@keystone-6/core");
-var import_fields29 = require("@keystone-6/core/fields");
-var AccountLineItem = (0, import_core26.list)({
+var import_core27 = require("@keystone-6/core");
+var import_fields30 = require("@keystone-6/core/fields");
+var AccountLineItem = (0, import_core27.list)({
   access: {
     operation: {
       query: permissions.canManageOrders,
@@ -11268,43 +11592,43 @@ var AccountLineItem = (0, import_core26.list)({
   },
   fields: {
     // Core relationships
-    account: (0, import_fields29.relationship)({
+    account: (0, import_fields30.relationship)({
       ref: "Account.lineItems",
       many: false,
       validation: { isRequired: true }
     }),
-    order: (0, import_fields29.relationship)({
+    order: (0, import_fields30.relationship)({
       ref: "Order.accountLineItems",
       many: false,
       validation: { isRequired: true }
     }),
-    orderKey: (0, import_fields29.text)({
+    orderKey: (0, import_fields30.text)({
       isIndexed: "unique",
       db: { isNullable: true },
       ui: { itemView: { fieldMode: "read" }, createView: { fieldMode: "hidden" } }
     }),
-    region: (0, import_fields29.relationship)({
+    region: (0, import_fields30.relationship)({
       ref: "Region.accountLineItems",
       many: false
     }),
     // Line item details
-    description: (0, import_fields29.text)({
+    description: (0, import_fields30.text)({
       validation: { isRequired: true },
       defaultValue: "Order line item"
     }),
-    amount: (0, import_fields29.integer)({
+    amount: (0, import_fields30.integer)({
       validation: { isRequired: true },
       label: "Amount (in cents)"
     }),
-    orderDisplayId: (0, import_fields29.text)({
+    orderDisplayId: (0, import_fields30.text)({
       validation: { isRequired: true },
       isIndexed: true
     }),
-    itemCount: (0, import_fields29.integer)({
+    itemCount: (0, import_fields30.integer)({
       validation: { isRequired: true },
       defaultValue: 0
     }),
-    paymentStatus: (0, import_fields29.select)({
+    paymentStatus: (0, import_fields30.select)({
       options: [
         { label: "Unpaid", value: "unpaid" },
         { label: "Paid", value: "paid" },
@@ -11314,18 +11638,18 @@ var AccountLineItem = (0, import_core26.list)({
       validation: { isRequired: true }
     }),
     // Junction relationship to track which invoices paid this item
-    invoiceLineItems: (0, import_fields29.relationship)({
+    invoiceLineItems: (0, import_fields30.relationship)({
       ref: "InvoiceLineItem.accountLineItem",
       many: true
     }),
     // Virtual computed fields
-    ...(0, import_core26.group)({
+    ...(0, import_core27.group)({
       label: "Computed Fields",
       description: "Auto-calculated fields for line item display",
       fields: {
-        formattedAmount: (0, import_fields29.virtual)({
-          field: import_core26.graphql.field({
-            type: import_core26.graphql.String,
+        formattedAmount: (0, import_fields30.virtual)({
+          field: import_core27.graphql.field({
+            type: import_core27.graphql.String,
             async resolve(item, args, context) {
               const lineItem = await context.sudo().query.AccountLineItem.findOne({
                 where: { id: item.id },
@@ -11350,9 +11674,9 @@ var AccountLineItem = (0, import_core26.list)({
             }
           })
         }),
-        orderDetails: (0, import_fields29.virtual)({
-          field: import_core26.graphql.field({
-            type: import_core26.graphql.JSON,
+        orderDetails: (0, import_fields30.virtual)({
+          field: import_core27.graphql.field({
+            type: import_core27.graphql.JSON,
             async resolve(item, args, context) {
               const lineItem = await context.sudo().query.AccountLineItem.findOne({
                 where: { id: item.id },
@@ -11384,9 +11708,9 @@ var AccountLineItem = (0, import_core26.list)({
             }
           })
         }),
-        paidAt: (0, import_fields29.virtual)({
-          field: import_core26.graphql.field({
-            type: import_core26.graphql.String,
+        paidAt: (0, import_fields30.virtual)({
+          field: import_core27.graphql.field({
+            type: import_core27.graphql.String,
             async resolve(item, args, context) {
               try {
                 const lineItem = await context.sudo().query.AccountLineItem.findOne({
@@ -11452,9 +11776,9 @@ var AccountLineItem = (0, import_core26.list)({
 });
 
 // features/keystone/models/Invoice.ts
-var import_core27 = require("@keystone-6/core");
-var import_fields30 = require("@keystone-6/core/fields");
-var Invoice = (0, import_core27.list)({
+var import_core28 = require("@keystone-6/core");
+var import_fields31 = require("@keystone-6/core/fields");
+var Invoice = (0, import_core28.list)({
   access: {
     operation: {
       query: permissions.canManageOrders,
@@ -11465,35 +11789,35 @@ var Invoice = (0, import_core27.list)({
   },
   fields: {
     // Core invoice data
-    user: (0, import_fields30.relationship)({
+    user: (0, import_fields31.relationship)({
       ref: "User.invoices",
       many: false,
       validation: { isRequired: true }
     }),
-    invoiceNumber: (0, import_fields30.text)({
+    invoiceNumber: (0, import_fields31.text)({
       validation: { isRequired: true },
       isIndexed: "unique"
     }),
-    title: (0, import_fields30.text)({
+    title: (0, import_fields31.text)({
       validation: { isRequired: true },
       defaultValue: "Payment Invoice"
     }),
-    description: (0, import_fields30.text)({
+    description: (0, import_fields31.text)({
       ui: { displayMode: "textarea" },
       defaultValue: "Invoice for selected orders payment"
     }),
     // Financial fields (amounts in cents)
-    totalAmount: (0, import_fields30.integer)({
+    totalAmount: (0, import_fields31.integer)({
       validation: { isRequired: true },
       defaultValue: 0
     }),
-    currency: (0, import_fields30.relationship)({
+    currency: (0, import_fields31.relationship)({
       ref: "Currency.invoices",
       many: false,
       validation: { isRequired: true }
     }),
     // Status and dates
-    status: (0, import_fields30.select)({
+    status: (0, import_fields31.select)({
       options: [
         { label: "Draft", value: "draft" },
         { label: "Sent", value: "sent" },
@@ -11505,37 +11829,37 @@ var Invoice = (0, import_core27.list)({
       // Most invoices will be immediately paid
       validation: { isRequired: true }
     }),
-    dueDate: (0, import_fields30.timestamp)(),
-    paidAt: (0, import_fields30.timestamp)({
+    dueDate: (0, import_fields31.timestamp)(),
+    paidAt: (0, import_fields31.timestamp)({
       defaultValue: { kind: "now" }
       // Default to now since most are paid immediately
     }),
     // Metadata for payment details
-    metadata: (0, import_fields30.json)({
+    metadata: (0, import_fields31.json)({
       defaultValue: {}
     }),
     // Relationships
-    account: (0, import_fields30.relationship)({
+    account: (0, import_fields31.relationship)({
       ref: "Account.invoices",
       many: false,
       validation: { isRequired: true }
     }),
-    lineItems: (0, import_fields30.relationship)({
+    lineItems: (0, import_fields31.relationship)({
       ref: "InvoiceLineItem.invoice",
       many: true
     }),
-    paymentCollection: (0, import_fields30.relationship)({
+    paymentCollection: (0, import_fields31.relationship)({
       ref: "PaymentCollection.invoice",
       db: { foreignKey: true }
     }),
     // Virtual computed fields
-    ...(0, import_core27.group)({
+    ...(0, import_core28.group)({
       label: "Computed Fields",
       description: "Auto-calculated fields for invoice display",
       fields: {
-        formattedTotal: (0, import_fields30.virtual)({
-          field: import_core27.graphql.field({
-            type: import_core27.graphql.String,
+        formattedTotal: (0, import_fields31.virtual)({
+          field: import_core28.graphql.field({
+            type: import_core28.graphql.String,
             async resolve(item, args, context) {
               try {
                 let currency = item.currency;
@@ -11568,9 +11892,9 @@ var Invoice = (0, import_core27.list)({
             }
           })
         }),
-        itemCount: (0, import_fields30.virtual)({
-          field: import_core27.graphql.field({
-            type: import_core27.graphql.Int,
+        itemCount: (0, import_fields31.virtual)({
+          field: import_core28.graphql.field({
+            type: import_core28.graphql.Int,
             async resolve(item, args, context) {
               try {
                 if (item.lineItems && Array.isArray(item.lineItems)) {
@@ -11591,9 +11915,9 @@ var Invoice = (0, import_core27.list)({
             }
           })
         }),
-        paymentSessions: (0, import_fields30.virtual)({
-          field: import_core27.graphql.field({
-            type: import_core27.graphql.list(import_core27.graphql.nonNull(import_core27.graphql.JSON)),
+        paymentSessions: (0, import_fields31.virtual)({
+          field: import_core28.graphql.field({
+            type: import_core28.graphql.list(import_core28.graphql.nonNull(import_core28.graphql.JSON)),
             async resolve(item, args, context) {
               try {
                 if (item.paymentCollection?.paymentSessions && Array.isArray(item.paymentCollection.paymentSessions)) {
@@ -11641,9 +11965,9 @@ var Invoice = (0, import_core27.list)({
 });
 
 // features/keystone/models/InvoiceLineItem.ts
-var import_core28 = require("@keystone-6/core");
-var import_fields31 = require("@keystone-6/core/fields");
-var InvoiceLineItem = (0, import_core28.list)({
+var import_core29 = require("@keystone-6/core");
+var import_fields32 = require("@keystone-6/core/fields");
+var InvoiceLineItem = (0, import_core29.list)({
   access: {
     operation: {
       query: permissions.canManageOrders,
@@ -11654,24 +11978,24 @@ var InvoiceLineItem = (0, import_core28.list)({
   },
   fields: {
     // Junction table relationships
-    invoice: (0, import_fields31.relationship)({
+    invoice: (0, import_fields32.relationship)({
       ref: "Invoice.lineItems",
       many: false,
       validation: { isRequired: true }
     }),
-    accountLineItem: (0, import_fields31.relationship)({
+    accountLineItem: (0, import_fields32.relationship)({
       ref: "AccountLineItem.invoiceLineItems",
       many: false,
       validation: { isRequired: true }
     }),
     // Virtual computed fields
-    ...(0, import_core28.group)({
+    ...(0, import_core29.group)({
       label: "Computed Fields",
       description: "Auto-calculated fields from related account line item",
       fields: {
-        orderDisplayId: (0, import_fields31.virtual)({
-          field: import_core28.graphql.field({
-            type: import_core28.graphql.String,
+        orderDisplayId: (0, import_fields32.virtual)({
+          field: import_core29.graphql.field({
+            type: import_core29.graphql.String,
             async resolve(item, args, context) {
               const invoiceLineItem = await context.sudo().query.InvoiceLineItem.findOne({
                 where: { id: item.id },
@@ -11685,9 +12009,9 @@ var InvoiceLineItem = (0, import_core28.list)({
             }
           })
         }),
-        formattedAmount: (0, import_fields31.virtual)({
-          field: import_core28.graphql.field({
-            type: import_core28.graphql.String,
+        formattedAmount: (0, import_fields32.virtual)({
+          field: import_core29.graphql.field({
+            type: import_core29.graphql.String,
             async resolve(item, args, context) {
               const invoiceLineItem = await context.sudo().query.InvoiceLineItem.findOne({
                 where: { id: item.id },
@@ -11701,9 +12025,9 @@ var InvoiceLineItem = (0, import_core28.list)({
             }
           })
         }),
-        orderDetails: (0, import_fields31.virtual)({
-          field: import_core28.graphql.field({
-            type: import_core28.graphql.JSON,
+        orderDetails: (0, import_fields32.virtual)({
+          field: import_core29.graphql.field({
+            type: import_core29.graphql.JSON,
             async resolve(item, args, context) {
               const invoiceLineItem = await context.sudo().query.InvoiceLineItem.findOne({
                 where: { id: item.id },
@@ -11724,9 +12048,9 @@ var InvoiceLineItem = (0, import_core28.list)({
 });
 
 // features/keystone/models/BusinessAccountRequest.ts
-var import_core29 = require("@keystone-6/core");
-var import_fields32 = require("@keystone-6/core/fields");
-var BusinessAccountRequest = (0, import_core29.list)({
+var import_core30 = require("@keystone-6/core");
+var import_fields33 = require("@keystone-6/core/fields");
+var BusinessAccountRequest = (0, import_core30.list)({
   access: {
     operation: {
       query: ({ session }) => {
@@ -11749,15 +12073,15 @@ var BusinessAccountRequest = (0, import_core29.list)({
   },
   fields: {
     // Core relationship
-    user: (0, import_fields32.relationship)({
+    user: (0, import_fields33.relationship)({
       ref: "User.businessAccountRequest",
       many: false
     }),
     // Request details
-    businessName: (0, import_fields32.text)({
+    businessName: (0, import_fields33.text)({
       validation: { isRequired: true }
     }),
-    businessType: (0, import_fields32.select)({
+    businessType: (0, import_fields33.select)({
       options: [
         { label: "Wholesale Partner", value: "wholesale" },
         { label: "Distribution Channel", value: "distribution" },
@@ -11767,7 +12091,7 @@ var BusinessAccountRequest = (0, import_core29.list)({
       ],
       validation: { isRequired: true }
     }),
-    monthlyOrderVolume: (0, import_fields32.select)({
+    monthlyOrderVolume: (0, import_fields33.select)({
       options: [
         { label: "1-50 orders/month", value: "low" },
         { label: "51-200 orders/month", value: "medium" },
@@ -11776,16 +12100,16 @@ var BusinessAccountRequest = (0, import_core29.list)({
       ],
       validation: { isRequired: true }
     }),
-    requestedCreditLimit: (0, import_fields32.integer)({
+    requestedCreditLimit: (0, import_fields33.integer)({
       validation: { isRequired: true },
       label: "Requested Credit Limit (in cents)"
     }),
-    businessDescription: (0, import_fields32.text)({
+    businessDescription: (0, import_fields33.text)({
       ui: { displayMode: "textarea" },
       validation: { isRequired: true }
     }),
     // Status tracking
-    status: (0, import_fields32.select)({
+    status: (0, import_fields33.select)({
       options: [
         { label: "Pending", value: "pending" },
         { label: "Approved", value: "approved" },
@@ -11796,38 +12120,38 @@ var BusinessAccountRequest = (0, import_core29.list)({
       validation: { isRequired: true }
     }),
     // Admin fields
-    reviewedBy: (0, import_fields32.relationship)({
+    reviewedBy: (0, import_fields33.relationship)({
       ref: "User",
       many: false,
       label: "Reviewed By Admin"
     }),
-    reviewNotes: (0, import_fields32.text)({
+    reviewNotes: (0, import_fields33.text)({
       ui: { displayMode: "textarea" },
       label: "Admin Review Notes"
     }),
-    approvedCreditLimit: (0, import_fields32.integer)({
+    approvedCreditLimit: (0, import_fields33.integer)({
       label: "Approved Credit Limit (in cents)"
     }),
     // Timestamps
-    submittedAt: (0, import_fields32.timestamp)({
+    submittedAt: (0, import_fields33.timestamp)({
       defaultValue: { kind: "now" },
       validation: { isRequired: true }
     }),
-    reviewedAt: (0, import_fields32.timestamp)(),
+    reviewedAt: (0, import_fields33.timestamp)(),
     // Generated account (once approved)
-    generatedAccount: (0, import_fields32.relationship)({
+    generatedAccount: (0, import_fields33.relationship)({
       ref: "Account",
       many: false,
       label: "Generated Account"
     }),
     // Virtual computed fields
-    ...(0, import_core29.group)({
+    ...(0, import_core30.group)({
       label: "Computed Fields",
       description: "Auto-calculated fields for request display",
       fields: {
-        formattedRequestedCredit: (0, import_fields32.virtual)({
-          field: import_core29.graphql.field({
-            type: import_core29.graphql.String,
+        formattedRequestedCredit: (0, import_fields33.virtual)({
+          field: import_core30.graphql.field({
+            type: import_core30.graphql.String,
             resolve(item) {
               const amount = Number(item.requestedCreditLimit || 0) / 100;
               return new Intl.NumberFormat("en-US", {
@@ -11837,9 +12161,9 @@ var BusinessAccountRequest = (0, import_core29.list)({
             }
           })
         }),
-        formattedApprovedCredit: (0, import_fields32.virtual)({
-          field: import_core29.graphql.field({
-            type: import_core29.graphql.String,
+        formattedApprovedCredit: (0, import_fields33.virtual)({
+          field: import_core30.graphql.field({
+            type: import_core30.graphql.String,
             resolve(item) {
               if (!item.approvedCreditLimit) return null;
               const amount = Number(item.approvedCreditLimit || 0) / 100;
@@ -11850,9 +12174,9 @@ var BusinessAccountRequest = (0, import_core29.list)({
             }
           })
         }),
-        businessTypeLabel: (0, import_fields32.virtual)({
-          field: import_core29.graphql.field({
-            type: import_core29.graphql.String,
+        businessTypeLabel: (0, import_fields33.virtual)({
+          field: import_core30.graphql.field({
+            type: import_core30.graphql.String,
             resolve(item) {
               const typeMap = {
                 wholesale: "Wholesale Partner",
@@ -11865,9 +12189,9 @@ var BusinessAccountRequest = (0, import_core29.list)({
             }
           })
         }),
-        volumeLabel: (0, import_fields32.virtual)({
-          field: import_core29.graphql.field({
-            type: import_core29.graphql.String,
+        volumeLabel: (0, import_fields33.virtual)({
+          field: import_core30.graphql.field({
+            type: import_core30.graphql.String,
             resolve(item) {
               const volumeMap = {
                 low: "1-50 orders/month",
@@ -11879,9 +12203,9 @@ var BusinessAccountRequest = (0, import_core29.list)({
             }
           })
         }),
-        statusLabel: (0, import_fields32.virtual)({
-          field: import_core29.graphql.field({
-            type: import_core29.graphql.String,
+        statusLabel: (0, import_fields33.virtual)({
+          field: import_core30.graphql.field({
+            type: import_core30.graphql.String,
             resolve(item) {
               const statusMap = {
                 pending: "Pending Review",
@@ -11972,15 +12296,15 @@ async function createAccountFromApprovedRequest(request, context) {
 }
 
 // features/keystone/models/LineItem.ts
-var import_core30 = require("@keystone-6/core");
-var import_fields33 = require("@keystone-6/core/fields");
+var import_core31 = require("@keystone-6/core");
+var import_fields34 = require("@keystone-6/core/fields");
 var formatCurrency2 = (amount, currencyCode) => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: currencyCode
   }).format(amount);
 };
-var LineItem = (0, import_core30.list)({
+var LineItem = (0, import_core31.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -12012,55 +12336,55 @@ var LineItem = (0, import_core30.list)({
   },
   fields: {
     // Core fields
-    quantity: (0, import_fields33.integer)({
+    quantity: (0, import_fields34.integer)({
       validation: { isRequired: true }
     }),
-    metadata: (0, import_fields33.json)(),
-    isReturn: (0, import_fields33.checkbox)(),
-    isGiftcard: (0, import_fields33.checkbox)(),
-    shouldMerge: (0, import_fields33.checkbox)({
+    metadata: (0, import_fields34.json)(),
+    isReturn: (0, import_fields34.checkbox)(),
+    isGiftcard: (0, import_fields34.checkbox)(),
+    shouldMerge: (0, import_fields34.checkbox)({
       defaultValue: true
     }),
-    allowDiscounts: (0, import_fields33.checkbox)({
+    allowDiscounts: (0, import_fields34.checkbox)({
       defaultValue: true
     }),
-    hasShipping: (0, import_fields33.checkbox)(),
+    hasShipping: (0, import_fields34.checkbox)(),
     // Relationships
-    claimOrder: (0, import_fields33.relationship)({
+    claimOrder: (0, import_fields34.relationship)({
       ref: "ClaimOrder.lineItems"
     }),
-    cart: (0, import_fields33.relationship)({
+    cart: (0, import_fields34.relationship)({
       ref: "Cart.lineItems"
     }),
-    swap: (0, import_fields33.relationship)({
+    swap: (0, import_fields34.relationship)({
       ref: "Swap.lineItems"
     }),
-    productVariant: (0, import_fields33.relationship)({
+    productVariant: (0, import_fields34.relationship)({
       ref: "ProductVariant.lineItems"
     }),
-    claimItems: (0, import_fields33.relationship)({
+    claimItems: (0, import_fields34.relationship)({
       ref: "ClaimItem.lineItem",
       many: true
     }),
-    lineItemAdjustments: (0, import_fields33.relationship)({
+    lineItemAdjustments: (0, import_fields34.relationship)({
       ref: "LineItemAdjustment.lineItem",
       many: true
     }),
-    lineItemTaxLines: (0, import_fields33.relationship)({
+    lineItemTaxLines: (0, import_fields34.relationship)({
       ref: "LineItemTaxLine.lineItem",
       many: true
     }),
-    returnItems: (0, import_fields33.relationship)({
+    returnItems: (0, import_fields34.relationship)({
       ref: "ReturnItem.lineItem",
       many: true
     }),
-    ...(0, import_core30.group)({
+    ...(0, import_core31.group)({
       label: "Virtual Fields",
       description: "Virtual fields for line item",
       fields: {
-        title: (0, import_fields33.virtual)({
-          field: import_core30.graphql.field({
-            type: import_core30.graphql.String,
+        title: (0, import_fields34.virtual)({
+          field: import_core31.graphql.field({
+            type: import_core31.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const lineItem = await sudoContext.query.LineItem.findOne({
@@ -12074,9 +12398,9 @@ var LineItem = (0, import_core30.list)({
             }
           })
         }),
-        thumbnail: (0, import_fields33.virtual)({
-          field: import_core30.graphql.field({
-            type: import_core30.graphql.String,
+        thumbnail: (0, import_fields34.virtual)({
+          field: import_core31.graphql.field({
+            type: import_core31.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const lineItem = await sudoContext.query.LineItem.findOne({
@@ -12102,9 +12426,9 @@ var LineItem = (0, import_core30.list)({
             }
           })
         }),
-        description: (0, import_fields33.virtual)({
-          field: import_core30.graphql.field({
-            type: import_core30.graphql.JSON,
+        description: (0, import_fields34.virtual)({
+          field: import_core31.graphql.field({
+            type: import_core31.graphql.JSON,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const lineItem = await sudoContext.query.LineItem.findOne({
@@ -12118,9 +12442,9 @@ var LineItem = (0, import_core30.list)({
             }
           })
         }),
-        originalPrice: (0, import_fields33.virtual)({
-          field: import_core30.graphql.field({
-            type: import_core30.graphql.String,
+        originalPrice: (0, import_fields34.virtual)({
+          field: import_core31.graphql.field({
+            type: import_core31.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const { cart } = await sudoContext.query.LineItem.findOne({
@@ -12156,9 +12480,9 @@ var LineItem = (0, import_core30.list)({
             }
           })
         }),
-        unitPrice: (0, import_fields33.virtual)({
-          field: import_core30.graphql.field({
-            type: import_core30.graphql.String,
+        unitPrice: (0, import_fields34.virtual)({
+          field: import_core31.graphql.field({
+            type: import_core31.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const { cart } = await sudoContext.query.LineItem.findOne({
@@ -12204,9 +12528,9 @@ var LineItem = (0, import_core30.list)({
             }
           })
         }),
-        total: (0, import_fields33.virtual)({
-          field: import_core30.graphql.field({
-            type: import_core30.graphql.String,
+        total: (0, import_fields34.virtual)({
+          field: import_core31.graphql.field({
+            type: import_core31.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const { cart, quantity } = await sudoContext.query.LineItem.findOne({
@@ -12253,9 +12577,9 @@ var LineItem = (0, import_core30.list)({
             }
           })
         }),
-        availableInRegion: (0, import_fields33.virtual)({
-          field: import_core30.graphql.field({
-            type: import_core30.graphql.String,
+        availableInRegion: (0, import_fields34.virtual)({
+          field: import_core31.graphql.field({
+            type: import_core31.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const { cart } = await sudoContext.query.LineItem.findOne({
@@ -12284,9 +12608,9 @@ var LineItem = (0, import_core30.list)({
             }
           })
         }),
-        percentageOff: (0, import_fields33.virtual)({
-          field: import_core30.graphql.field({
-            type: import_core30.graphql.Int,
+        percentageOff: (0, import_fields34.virtual)({
+          field: import_core31.graphql.field({
+            type: import_core31.graphql.Int,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const { cart, quantity } = await sudoContext.query.LineItem.findOne({
@@ -12331,9 +12655,9 @@ var LineItem = (0, import_core30.list)({
 });
 
 // features/keystone/models/LineItemAdjustment.ts
-var import_core31 = require("@keystone-6/core");
-var import_fields34 = require("@keystone-6/core/fields");
-var LineItemAdjustment = (0, import_core31.list)({
+var import_core32 = require("@keystone-6/core");
+var import_fields35 = require("@keystone-6/core/fields");
+var LineItemAdjustment = (0, import_core32.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -12343,21 +12667,21 @@ var LineItemAdjustment = (0, import_core31.list)({
     }
   },
   fields: {
-    description: (0, import_fields34.text)({
+    description: (0, import_fields35.text)({
       validation: {
         isRequired: true
       }
     }),
-    amount: (0, import_fields34.integer)({
+    amount: (0, import_fields35.integer)({
       validation: {
         isRequired: true
       }
     }),
-    metadata: (0, import_fields34.json)(),
-    discount: (0, import_fields34.relationship)({
+    metadata: (0, import_fields35.json)(),
+    discount: (0, import_fields35.relationship)({
       ref: "Discount.lineItemAdjustments"
     }),
-    lineItem: (0, import_fields34.relationship)({
+    lineItem: (0, import_fields35.relationship)({
       ref: "LineItem.lineItemAdjustments"
     }),
     ...trackingFields
@@ -12365,9 +12689,9 @@ var LineItemAdjustment = (0, import_core31.list)({
 });
 
 // features/keystone/models/LineItemTaxLine.ts
-var import_core32 = require("@keystone-6/core");
-var import_fields35 = require("@keystone-6/core/fields");
-var LineItemTaxLine = (0, import_core32.list)({
+var import_core33 = require("@keystone-6/core");
+var import_fields36 = require("@keystone-6/core/fields");
+var LineItemTaxLine = (0, import_core33.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -12377,19 +12701,19 @@ var LineItemTaxLine = (0, import_core32.list)({
     }
   },
   fields: {
-    rate: (0, import_fields35.float)({
+    rate: (0, import_fields36.float)({
       validation: {
         isRequired: true
       }
     }),
-    name: (0, import_fields35.text)({
+    name: (0, import_fields36.text)({
       validation: {
         isRequired: true
       }
     }),
-    code: (0, import_fields35.text)(),
-    metadata: (0, import_fields35.json)(),
-    lineItem: (0, import_fields35.relationship)({
+    code: (0, import_fields36.text)(),
+    metadata: (0, import_fields36.json)(),
+    lineItem: (0, import_fields36.relationship)({
       ref: "LineItem.lineItemTaxLines"
     }),
     ...trackingFields
@@ -12397,9 +12721,9 @@ var LineItemTaxLine = (0, import_core32.list)({
 });
 
 // features/keystone/models/Location.ts
-var import_core33 = require("@keystone-6/core");
-var import_fields36 = require("@keystone-6/core/fields");
-var Location = (0, import_core33.list)({
+var import_core34 = require("@keystone-6/core");
+var import_fields37 = require("@keystone-6/core/fields");
+var Location = (0, import_core34.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadProducts({ session }) || permissions.canManageProducts({ session }),
@@ -12409,12 +12733,12 @@ var Location = (0, import_core33.list)({
     }
   },
   fields: {
-    name: (0, import_fields36.text)({
+    name: (0, import_fields37.text)({
       validation: { isRequired: true }
     }),
-    description: (0, import_fields36.text)(),
-    address: (0, import_fields36.text)(),
-    variants: (0, import_fields36.relationship)({
+    description: (0, import_fields37.text)(),
+    address: (0, import_fields37.text)(),
+    variants: (0, import_fields37.relationship)({
       ref: "ProductVariant.location",
       many: true
     }),
@@ -12431,13 +12755,13 @@ var Location = (0, import_core33.list)({
 });
 
 // features/keystone/models/Measurement.ts
-var import_core34 = require("@keystone-6/core");
-var import_fields37 = require("@keystone-6/core/fields");
+var import_core35 = require("@keystone-6/core");
+var import_fields38 = require("@keystone-6/core/fields");
 var UNITS = {
   weight: ["g", "kg", "oz", "lb"],
   dimensions: ["cm", "m", "in", "ft"]
 };
-var Measurement = (0, import_core34.list)({
+var Measurement = (0, import_core35.list)({
   access: {
     operation: {
       query: () => true,
@@ -12447,13 +12771,13 @@ var Measurement = (0, import_core34.list)({
     }
   },
   fields: {
-    value: (0, import_fields37.float)({
+    value: (0, import_fields38.float)({
       validation: {
         isRequired: true,
         min: 0
       }
     }),
-    unit: (0, import_fields37.select)({
+    unit: (0, import_fields38.select)({
       type: "string",
       validation: {
         isRequired: true
@@ -12467,7 +12791,7 @@ var Measurement = (0, import_core34.list)({
         displayMode: "select"
       }
     }),
-    type: (0, import_fields37.select)({
+    type: (0, import_fields38.select)({
       type: "string",
       validation: {
         isRequired: true
@@ -12483,7 +12807,7 @@ var Measurement = (0, import_core34.list)({
         displayMode: "select"
       }
     }),
-    productVariant: (0, import_fields37.relationship)({
+    productVariant: (0, import_fields38.relationship)({
       ref: "ProductVariant.measurements"
     }),
     ...trackingFields
@@ -12491,9 +12815,9 @@ var Measurement = (0, import_core34.list)({
 });
 
 // features/keystone/models/MoneyAmount.ts
-var import_core35 = require("@keystone-6/core");
-var import_fields38 = require("@keystone-6/core/fields");
-var MoneyAmount = (0, import_core35.list)({
+var import_core36 = require("@keystone-6/core");
+var import_fields39 = require("@keystone-6/core/fields");
+var MoneyAmount = (0, import_core36.list)({
   access: {
     operation: {
       query: () => true,
@@ -12503,40 +12827,40 @@ var MoneyAmount = (0, import_core35.list)({
     }
   },
   fields: {
-    amount: (0, import_fields38.integer)({
+    amount: (0, import_fields39.integer)({
       validation: {
         isRequired: true
       }
     }),
-    compareAmount: (0, import_fields38.integer)(),
-    minQuantity: (0, import_fields38.integer)(),
-    maxQuantity: (0, import_fields38.integer)(),
-    productVariant: (0, import_fields38.relationship)({
+    compareAmount: (0, import_fields39.integer)(),
+    minQuantity: (0, import_fields39.integer)(),
+    maxQuantity: (0, import_fields39.integer)(),
+    productVariant: (0, import_fields39.relationship)({
       ref: "ProductVariant.prices"
     }),
-    region: (0, import_fields38.relationship)({
+    region: (0, import_fields39.relationship)({
       ref: "Region.moneyAmounts"
     }),
-    currency: (0, import_fields38.relationship)({
+    currency: (0, import_fields39.relationship)({
       ref: "Currency.moneyAmounts"
     }),
-    priceList: (0, import_fields38.relationship)({
+    priceList: (0, import_fields39.relationship)({
       ref: "PriceList.moneyAmounts"
     }),
-    priceSet: (0, import_fields38.relationship)({
+    priceSet: (0, import_fields39.relationship)({
       ref: "PriceSet.prices"
     }),
-    priceRules: (0, import_fields38.relationship)({
+    priceRules: (0, import_fields39.relationship)({
       ref: "PriceRule.moneyAmounts",
       many: true
     }),
-    ...(0, import_core35.group)({
+    ...(0, import_core36.group)({
       label: "Virtual Fields",
       description: "Virtual fields for money amount",
       fields: {
-        displayPrice: (0, import_fields38.virtual)({
-          field: import_core35.graphql.field({
-            type: import_core35.graphql.String,
+        displayPrice: (0, import_fields39.virtual)({
+          field: import_core36.graphql.field({
+            type: import_core36.graphql.String,
             resolve: async (item, args, context) => {
               const { currency, amount } = await context.query.MoneyAmount.findOne({
                 where: { id: item.id },
@@ -12546,18 +12870,18 @@ var MoneyAmount = (0, import_core35.list)({
             }
           })
         }),
-        calculatedPrice: (0, import_fields38.virtual)({
-          field: import_core35.graphql.field({
-            type: import_core35.graphql.object()({
+        calculatedPrice: (0, import_fields39.virtual)({
+          field: import_core36.graphql.field({
+            type: import_core36.graphql.object()({
               name: "CalculatedPrice",
               fields: {
-                calculatedAmount: import_core35.graphql.field({ type: import_core35.graphql.Int }),
-                originalAmount: import_core35.graphql.field({ type: import_core35.graphql.Int }),
-                currencyCode: import_core35.graphql.field({ type: import_core35.graphql.String }),
-                moneyAmountId: import_core35.graphql.field({ type: import_core35.graphql.ID }),
-                variantId: import_core35.graphql.field({ type: import_core35.graphql.ID }),
-                priceListId: import_core35.graphql.field({ type: import_core35.graphql.ID }),
-                priceListType: import_core35.graphql.field({ type: import_core35.graphql.String })
+                calculatedAmount: import_core36.graphql.field({ type: import_core36.graphql.Int }),
+                originalAmount: import_core36.graphql.field({ type: import_core36.graphql.Int }),
+                currencyCode: import_core36.graphql.field({ type: import_core36.graphql.String }),
+                moneyAmountId: import_core36.graphql.field({ type: import_core36.graphql.ID }),
+                variantId: import_core36.graphql.field({ type: import_core36.graphql.ID }),
+                priceListId: import_core36.graphql.field({ type: import_core36.graphql.ID }),
+                priceListType: import_core36.graphql.field({ type: import_core36.graphql.String })
               }
             }),
             resolve: async (item, args, context) => {
@@ -12673,9 +12997,9 @@ var MoneyAmount = (0, import_core35.list)({
 });
 
 // features/keystone/models/Note.ts
-var import_core36 = require("@keystone-6/core");
-var import_fields39 = require("@keystone-6/core/fields");
-var Note = (0, import_core36.list)({
+var import_core37 = require("@keystone-6/core");
+var import_fields40 = require("@keystone-6/core/fields");
+var Note = (0, import_core37.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -12685,41 +13009,11 @@ var Note = (0, import_core36.list)({
     }
   },
   fields: {
-    value: (0, import_fields39.text)({
+    value: (0, import_fields40.text)({
       validation: {
         isRequired: true
       }
     }),
-    resourceType: (0, import_fields39.text)({
-      validation: {
-        isRequired: true
-      }
-    }),
-    resourceId: (0, import_fields39.text)({
-      validation: {
-        isRequired: true
-      }
-    }),
-    authorId: (0, import_fields39.text)(),
-    metadata: (0, import_fields39.json)(),
-    ...trackingFields
-  }
-});
-
-// features/keystone/models/Notification.ts
-var import_core37 = require("@keystone-6/core");
-var import_fields40 = require("@keystone-6/core/fields");
-var Notification = (0, import_core37.list)({
-  access: {
-    operation: {
-      query: ({ session }) => permissions.canReadUsers({ session }) || permissions.canManageUsers({ session }),
-      create: permissions.canManageUsers,
-      update: permissions.canManageUsers,
-      delete: permissions.canManageUsers
-    }
-  },
-  fields: {
-    eventName: (0, import_fields40.text)(),
     resourceType: (0, import_fields40.text)({
       validation: {
         isRequired: true
@@ -12730,31 +13024,16 @@ var Notification = (0, import_core37.list)({
         isRequired: true
       }
     }),
-    to: (0, import_fields40.text)({
-      validation: {
-        isRequired: true
-      }
-    }),
-    data: (0, import_fields40.json)(),
-    parentId: (0, import_fields40.text)(),
-    notificationProvider: (0, import_fields40.relationship)({
-      ref: "NotificationProvider.notifications"
-    }),
-    user: (0, import_fields40.relationship)({
-      ref: "User.notifications"
-    }),
-    otherNotifications: (0, import_fields40.relationship)({
-      ref: "Notification",
-      many: true
-    }),
+    authorId: (0, import_fields40.text)(),
+    metadata: (0, import_fields40.json)(),
     ...trackingFields
   }
 });
 
-// features/keystone/models/NotificationProvider.ts
+// features/keystone/models/Notification.ts
 var import_core38 = require("@keystone-6/core");
 var import_fields41 = require("@keystone-6/core/fields");
-var NotificationProvider = (0, import_core38.list)({
+var Notification = (0, import_core38.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadUsers({ session }) || permissions.canManageUsers({ session }),
@@ -12764,10 +13043,55 @@ var NotificationProvider = (0, import_core38.list)({
     }
   },
   fields: {
-    isInstalled: (0, import_fields41.checkbox)({
+    eventName: (0, import_fields41.text)(),
+    resourceType: (0, import_fields41.text)({
+      validation: {
+        isRequired: true
+      }
+    }),
+    resourceId: (0, import_fields41.text)({
+      validation: {
+        isRequired: true
+      }
+    }),
+    to: (0, import_fields41.text)({
+      validation: {
+        isRequired: true
+      }
+    }),
+    data: (0, import_fields41.json)(),
+    parentId: (0, import_fields41.text)(),
+    notificationProvider: (0, import_fields41.relationship)({
+      ref: "NotificationProvider.notifications"
+    }),
+    user: (0, import_fields41.relationship)({
+      ref: "User.notifications"
+    }),
+    otherNotifications: (0, import_fields41.relationship)({
+      ref: "Notification",
+      many: true
+    }),
+    ...trackingFields
+  }
+});
+
+// features/keystone/models/NotificationProvider.ts
+var import_core39 = require("@keystone-6/core");
+var import_fields42 = require("@keystone-6/core/fields");
+var NotificationProvider = (0, import_core39.list)({
+  access: {
+    operation: {
+      query: ({ session }) => permissions.canReadUsers({ session }) || permissions.canManageUsers({ session }),
+      create: permissions.canManageUsers,
+      update: permissions.canManageUsers,
+      delete: permissions.canManageUsers
+    }
+  },
+  fields: {
+    isInstalled: (0, import_fields42.checkbox)({
       defaultValue: true
     }),
-    notifications: (0, import_fields41.relationship)({
+    notifications: (0, import_fields42.relationship)({
       ref: "Notification.notificationProvider",
       many: true
     }),
@@ -12776,9 +13100,9 @@ var NotificationProvider = (0, import_core38.list)({
 });
 
 // features/keystone/models/OAuthApp.ts
-var import_core39 = require("@keystone-6/core");
-var import_fields42 = require("@keystone-6/core/fields");
-var OAuthApp = (0, import_core39.list)({
+var import_core40 = require("@keystone-6/core");
+var import_fields43 = require("@keystone-6/core/fields");
+var OAuthApp = (0, import_core40.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadApps({ session }) || permissions.canManageApps({ session }),
@@ -12788,12 +13112,12 @@ var OAuthApp = (0, import_core39.list)({
     }
   },
   fields: {
-    name: (0, import_fields42.text)({
+    name: (0, import_fields43.text)({
       validation: {
         isRequired: true
       }
     }),
-    clientId: (0, import_fields42.text)({
+    clientId: (0, import_fields43.text)({
       isIndexed: "unique",
       hooks: {
         resolveInput: ({ operation, resolvedData }) => {
@@ -12809,7 +13133,7 @@ var OAuthApp = (0, import_core39.list)({
         description: "Auto-generated unique identifier for your application."
       }
     }),
-    clientSecret: (0, import_fields42.text)({
+    clientSecret: (0, import_fields43.text)({
       access: {
         read: () => false
       },
@@ -12831,24 +13155,24 @@ var OAuthApp = (0, import_core39.list)({
         description: "Auto-generated secret key. Keep this secure - it's used to authenticate your application."
       }
     }),
-    redirectUris: (0, import_fields42.json)({
+    redirectUris: (0, import_fields43.json)({
       defaultValue: [],
       ui: {
         description: "Array of allowed redirect URIs for OAuth callbacks"
       }
     }),
-    scopes: (0, import_fields42.json)({
+    scopes: (0, import_fields43.json)({
       defaultValue: DEFAULT_SCOPES,
       ui: {
         description: "Array of allowed OAuth scopes that map to permissions"
       }
     }),
-    webhookUrl: (0, import_fields42.text)({
+    webhookUrl: (0, import_fields43.text)({
       ui: {
         description: "URL to receive webhook notifications"
       }
     }),
-    status: (0, import_fields42.select)({
+    status: (0, import_fields43.select)({
       options: [
         { label: "Active", value: "active" },
         { label: "Suspended", value: "suspended" },
@@ -12856,31 +13180,31 @@ var OAuthApp = (0, import_core39.list)({
       ],
       defaultValue: "active"
     }),
-    installUrl: (0, import_fields42.text)({
+    installUrl: (0, import_fields43.text)({
       ui: {
         description: "URL where users can install this app"
       }
     }),
-    uninstallUrl: (0, import_fields42.text)({
+    uninstallUrl: (0, import_fields43.text)({
       ui: {
         description: "URL to handle app uninstallation"
       }
     }),
-    description: (0, import_fields42.text)({
+    description: (0, import_fields43.text)({
       ui: {
         displayMode: "textarea"
       }
     }),
-    metadata: (0, import_fields42.json)({
+    metadata: (0, import_fields43.json)({
       defaultValue: {},
       ui: {
         description: "Additional app-specific configuration and settings"
       }
     }),
-    developerEmail: (0, import_fields42.text)(),
-    privacyPolicyUrl: (0, import_fields42.text)(),
-    termsOfServiceUrl: (0, import_fields42.text)(),
-    supportUrl: (0, import_fields42.text)(),
+    developerEmail: (0, import_fields43.text)(),
+    privacyPolicyUrl: (0, import_fields43.text)(),
+    termsOfServiceUrl: (0, import_fields43.text)(),
+    supportUrl: (0, import_fields43.text)(),
     ...trackingFields
   },
   ui: {
@@ -12892,11 +13216,10 @@ var OAuthApp = (0, import_core39.list)({
 });
 
 // features/keystone/models/OAuthToken.ts
-var import_core40 = require("@keystone-6/core");
-var import_fields43 = require("@keystone-6/core/fields");
+var import_core41 = require("@keystone-6/core");
+var import_fields44 = require("@keystone-6/core/fields");
 
 // features/keystone/security/oauth-credentials.ts
-var import_node_crypto7 = __toESM(require("node:crypto"));
 function storedOAuthToken(rawToken) {
   return oauthTokenDigest(rawToken);
 }
@@ -12919,7 +13242,7 @@ async function findOAuthToken(context, rawToken, query) {
 var digestTokenInput = {
   resolveInput: ({ resolvedData, fieldKey }) => resolvedData[fieldKey] ? storedOAuthToken(resolvedData[fieldKey]) : resolvedData[fieldKey]
 };
-var OAuthToken = (0, import_core40.list)({
+var OAuthToken = (0, import_core41.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadApps({ session }) || permissions.canManageApps({ session }),
@@ -12929,7 +13252,7 @@ var OAuthToken = (0, import_core40.list)({
     }
   },
   fields: {
-    tokenType: (0, import_fields43.select)({
+    tokenType: (0, import_fields44.select)({
       options: [
         { label: "Authorization Code", value: "authorization_code" },
         { label: "Access Token", value: "access_token" },
@@ -12939,7 +13262,7 @@ var OAuthToken = (0, import_core40.list)({
         isRequired: true
       }
     }),
-    token: (0, import_fields43.text)({
+    token: (0, import_fields44.text)({
       access: { read: () => false },
       validation: {
         isRequired: true
@@ -12947,73 +13270,73 @@ var OAuthToken = (0, import_core40.list)({
       isIndexed: "unique",
       hooks: digestTokenInput
     }),
-    clientId: (0, import_fields43.text)({
+    clientId: (0, import_fields44.text)({
       validation: {
         isRequired: true
       },
       isIndexed: true
     }),
-    user: (0, import_fields43.relationship)({
+    user: (0, import_fields44.relationship)({
       ref: "User",
       ui: {
         description: "The user who authorized this token"
       }
     }),
-    scopes: (0, import_fields43.json)({
+    scopes: (0, import_fields44.json)({
       defaultValue: [],
       ui: {
         description: "Array of granted scopes"
       }
     }),
-    redirectUri: (0, import_fields43.text)({
+    redirectUri: (0, import_fields44.text)({
       ui: {
         description: "The redirect URI used during authorization"
       }
     }),
-    expiresAt: (0, import_fields43.timestamp)({
+    expiresAt: (0, import_fields44.timestamp)({
       ui: {
         description: "When this token expires"
       }
     }),
-    isRevoked: (0, import_fields43.select)({
+    isRevoked: (0, import_fields44.select)({
       options: [
         { label: "Active", value: "false" },
         { label: "Revoked", value: "true" }
       ],
       defaultValue: "false"
     }),
-    authorizationCode: (0, import_fields43.text)({
+    authorizationCode: (0, import_fields44.text)({
       access: { read: () => false },
       hooks: digestTokenInput,
       ui: {
         description: "The authorization code that was exchanged for this token (for access tokens)"
       }
     }),
-    refreshToken: (0, import_fields43.text)({
+    refreshToken: (0, import_fields44.text)({
       access: { read: () => false },
       hooks: digestTokenInput,
       ui: {
         description: "Associated refresh token (for access tokens)"
       }
     }),
-    accessToken: (0, import_fields43.text)({
+    accessToken: (0, import_fields44.text)({
       access: { read: () => false },
       hooks: digestTokenInput,
       ui: {
         description: "Associated access token (for refresh tokens)"
       }
     }),
-    state: (0, import_fields43.text)({
+    state: (0, import_fields44.text)({
       ui: {
         description: "OAuth state parameter for CSRF protection"
       }
     }),
-    codeChallenge: (0, import_fields43.text)({
+    codeChallenge: (0, import_fields44.text)({
       ui: {
         description: "PKCE code challenge"
       }
     }),
-    codeChallengeMethod: (0, import_fields43.select)({
+    codeChallengeMethod: (0, import_fields44.select)({
       options: [
         { label: "Plain", value: "plain" },
         { label: "SHA256", value: "S256" }
@@ -13044,26 +13367,34 @@ var OAuthToken = (0, import_core40.list)({
 });
 
 // features/keystone/models/Order.ts
-var import_core41 = require("@keystone-6/core");
-var import_fields44 = require("@keystone-6/core/fields");
+var import_core42 = require("@keystone-6/core");
+var import_fields45 = require("@keystone-6/core/fields");
 var formatCurrency3 = (amount, currencyCode) => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: currencyCode
   }).format(amount);
 };
-var Order = (0, import_core41.list)({
+var Order = (0, import_core42.list)({
   access: {
     operation: {
-      query: permissions.canManageOrders,
-      // Allow public access for order confirmation
+      query: ({ session }) => permissions.canManageOrders({ session }) || Boolean(session?.customerToken),
       create: () => false,
       update: () => false,
       delete: () => false
+    },
+    filter: {
+      query: ({ session }) => {
+        if (permissions.canManageOrders({ session })) return true;
+        if (session?.customerToken && session?.itemId) {
+          return { user: { id: { equals: session.itemId } } };
+        }
+        return false;
+      }
     }
   },
   fields: {
-    status: (0, import_fields44.select)({
+    status: (0, import_fields45.select)({
       type: "enum",
       options: [
         {
@@ -13095,50 +13426,50 @@ var Order = (0, import_core41.list)({
         update: () => false
       }
     }),
-    displayId: (0, import_fields44.integer)({
+    displayId: (0, import_fields45.integer)({
       validation: {
         isRequired: true
       }
     }),
-    email: (0, import_fields44.text)({
+    email: (0, import_fields45.text)({
       validation: {
         isRequired: true
       }
     }),
-    taxRate: (0, import_fields44.float)(),
-    canceledAt: (0, import_fields44.timestamp)(),
-    metadata: (0, import_fields44.json)(),
-    idempotencyKey: (0, import_fields44.text)(),
-    noNotification: (0, import_fields44.checkbox)(),
-    externalId: (0, import_fields44.text)(),
-    shippingAddress: (0, import_fields44.relationship)({
+    taxRate: (0, import_fields45.float)(),
+    canceledAt: (0, import_fields45.timestamp)(),
+    metadata: (0, import_fields45.json)(),
+    idempotencyKey: (0, import_fields45.text)(),
+    noNotification: (0, import_fields45.checkbox)(),
+    externalId: (0, import_fields45.text)(),
+    shippingAddress: (0, import_fields45.relationship)({
       ref: "Address.ordersUsingAsShippingAddress",
       many: false
     }),
-    billingAddress: (0, import_fields44.relationship)({
+    billingAddress: (0, import_fields45.relationship)({
       ref: "Address.ordersUsingAsBillingAddress",
       many: false
     }),
-    currency: (0, import_fields44.relationship)({
+    currency: (0, import_fields45.relationship)({
       ref: "Currency.orders"
     }),
-    draftOrder: (0, import_fields44.relationship)({
+    draftOrder: (0, import_fields45.relationship)({
       ref: "DraftOrder.order"
     }),
-    cart: (0, import_fields44.relationship)({
+    cart: (0, import_fields45.relationship)({
       ref: "Cart.order"
     }),
-    user: (0, import_fields44.relationship)({
+    user: (0, import_fields45.relationship)({
       ref: "User.orders"
     }),
-    region: (0, import_fields44.relationship)({
+    region: (0, import_fields45.relationship)({
       ref: "Region.orders"
     }),
-    claimOrders: (0, import_fields44.relationship)({
+    claimOrders: (0, import_fields45.relationship)({
       ref: "ClaimOrder.order",
       many: true
     }),
-    fulfillments: (0, import_fields44.relationship)({
+    fulfillments: (0, import_fields45.relationship)({
       ref: "Fulfillment.order",
       many: true,
       hooks: {
@@ -13177,23 +13508,23 @@ var Order = (0, import_core41.list)({
         }
       }
     }),
-    giftCards: (0, import_fields44.relationship)({
+    giftCards: (0, import_fields45.relationship)({
       ref: "GiftCard.order",
       many: true
     }),
-    giftCardTransactions: (0, import_fields44.relationship)({
+    giftCardTransactions: (0, import_fields45.relationship)({
       ref: "GiftCardTransaction.order",
       many: true
     }),
-    lineItems: (0, import_fields44.relationship)({
+    lineItems: (0, import_fields45.relationship)({
       ref: "OrderLineItem.order",
       many: true
     }),
-    discounts: (0, import_fields44.relationship)({
+    discounts: (0, import_fields45.relationship)({
       ref: "Discount.orders",
       many: true
     }),
-    payments: (0, import_fields44.relationship)({
+    payments: (0, import_fields45.relationship)({
       ref: "Payment.order",
       many: true,
       hooks: {
@@ -13224,7 +13555,7 @@ var Order = (0, import_core41.list)({
         }
       }
     }),
-    returns: (0, import_fields44.relationship)({
+    returns: (0, import_fields45.relationship)({
       ref: "Return.order",
       many: true,
       hooks: {
@@ -13246,24 +13577,24 @@ var Order = (0, import_core41.list)({
         }
       }
     }),
-    shippingMethods: (0, import_fields44.relationship)({
+    shippingMethods: (0, import_fields45.relationship)({
       ref: "ShippingMethod.order",
       many: true
     }),
-    swaps: (0, import_fields44.relationship)({
+    swaps: (0, import_fields45.relationship)({
       ref: "Swap.order",
       many: true
     }),
     // Account relationship for Openship integration
-    account: (0, import_fields44.relationship)({
+    account: (0, import_fields45.relationship)({
       ref: "Account.orders",
       many: false
     }),
-    accountLineItems: (0, import_fields44.relationship)({
+    accountLineItems: (0, import_fields45.relationship)({
       ref: "AccountLineItem.order",
       many: true
     }),
-    secretKey: (0, import_fields44.text)({
+    secretKey: (0, import_fields45.text)({
       hooks: {
         resolveInput: ({ operation }) => {
           if (operation === "create") {
@@ -13274,13 +13605,13 @@ var Order = (0, import_core41.list)({
         }
       }
     }),
-    ...(0, import_core41.group)({
+    ...(0, import_core42.group)({
       label: "Virtual Fields",
       description: "Calculated fields for order display and totals",
       fields: {
-        subtotal: (0, import_fields44.virtual)({
-          field: import_core41.graphql.field({
-            type: import_core41.graphql.String,
+        subtotal: (0, import_fields45.virtual)({
+          field: import_core42.graphql.field({
+            type: import_core42.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const order = await sudoContext.query.Order.findOne({
@@ -13321,9 +13652,9 @@ var Order = (0, import_core41.list)({
             }
           })
         }),
-        shipping: (0, import_fields44.virtual)({
-          field: import_core41.graphql.field({
-            type: import_core41.graphql.String,
+        shipping: (0, import_fields45.virtual)({
+          field: import_core42.graphql.field({
+            type: import_core42.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const order = await sudoContext.query.Order.findOne({
@@ -13351,9 +13682,9 @@ var Order = (0, import_core41.list)({
             }
           })
         }),
-        discount: (0, import_fields44.virtual)({
-          field: import_core41.graphql.field({
-            type: import_core41.graphql.String,
+        discount: (0, import_fields45.virtual)({
+          field: import_core42.graphql.field({
+            type: import_core42.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const order = await sudoContext.query.Order.findOne({
@@ -13422,9 +13753,9 @@ var Order = (0, import_core41.list)({
             }
           })
         }),
-        tax: (0, import_fields44.virtual)({
-          field: import_core41.graphql.field({
-            type: import_core41.graphql.String,
+        tax: (0, import_fields45.virtual)({
+          field: import_core42.graphql.field({
+            type: import_core42.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const order = await sudoContext.query.Order.findOne({
@@ -13485,9 +13816,9 @@ var Order = (0, import_core41.list)({
             }
           })
         }),
-        total: (0, import_fields44.virtual)({
-          field: import_core41.graphql.field({
-            type: import_core41.graphql.String,
+        total: (0, import_fields45.virtual)({
+          field: import_core42.graphql.field({
+            type: import_core42.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const order = await sudoContext.query.Order.findOne({
@@ -13562,9 +13893,9 @@ var Order = (0, import_core41.list)({
             }
           })
         }),
-        rawTotal: (0, import_fields44.virtual)({
-          field: import_core41.graphql.field({
-            type: import_core41.graphql.Int,
+        rawTotal: (0, import_fields45.virtual)({
+          field: import_core42.graphql.field({
+            type: import_core42.graphql.Int,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const order = await sudoContext.query.Order.findOne({
@@ -13636,9 +13967,9 @@ var Order = (0, import_core41.list)({
             }
           })
         }),
-        fulfillmentDetails: (0, import_fields44.virtual)({
-          field: import_core41.graphql.field({
-            type: import_core41.graphql.JSON,
+        fulfillmentDetails: (0, import_fields45.virtual)({
+          field: import_core42.graphql.field({
+            type: import_core42.graphql.JSON,
             async resolve(item, args, context) {
               const order = await context.sudo().query.Order.findOne({
                 where: { id: item.id },
@@ -13703,9 +14034,9 @@ var Order = (0, import_core41.list)({
             }
           })
         }),
-        unfulfilled: (0, import_fields44.virtual)({
-          field: import_core41.graphql.field({
-            type: import_core41.graphql.JSON,
+        unfulfilled: (0, import_fields45.virtual)({
+          field: import_core42.graphql.field({
+            type: import_core42.graphql.JSON,
             async resolve(item, args, context) {
               const order = await context.sudo().query.Order.findOne({
                 where: { id: item.id },
@@ -13767,9 +14098,9 @@ var Order = (0, import_core41.list)({
             }
           })
         }),
-        fulfillmentStatus: (0, import_fields44.virtual)({
-          field: import_core41.graphql.field({
-            type: import_core41.graphql.JSON,
+        fulfillmentStatus: (0, import_fields45.virtual)({
+          field: import_core42.graphql.field({
+            type: import_core42.graphql.JSON,
             async resolve(item, args, context) {
               const order = await context.sudo().query.Order.findOne({
                 where: { id: item.id },
@@ -13809,9 +14140,9 @@ var Order = (0, import_core41.list)({
             }
           })
         }),
-        paymentDetails: (0, import_fields44.virtual)({
-          field: import_core41.graphql.field({
-            type: import_core41.graphql.JSON,
+        paymentDetails: (0, import_fields45.virtual)({
+          field: import_core42.graphql.field({
+            type: import_core42.graphql.JSON,
             async resolve(item, args, context) {
               const order = await context.sudo().query.Order.findOne({
                 where: { id: item.id },
@@ -13853,9 +14184,9 @@ var Order = (0, import_core41.list)({
             }
           })
         }),
-        totalPaid: (0, import_fields44.virtual)({
-          field: import_core41.graphql.field({
-            type: import_core41.graphql.Int,
+        totalPaid: (0, import_fields45.virtual)({
+          field: import_core42.graphql.field({
+            type: import_core42.graphql.Int,
             async resolve(item, args, context) {
               const order = await context.sudo().query.Order.findOne({
                 where: { id: item.id },
@@ -13894,9 +14225,9 @@ var Order = (0, import_core41.list)({
             }
           })
         }),
-        formattedTotalPaid: (0, import_fields44.virtual)({
-          field: import_core41.graphql.field({
-            type: import_core41.graphql.String,
+        formattedTotalPaid: (0, import_fields45.virtual)({
+          field: import_core42.graphql.field({
+            type: import_core42.graphql.String,
             async resolve(item, args, context) {
               const order = await context.sudo().query.Order.findOne({
                 where: { id: item.id },
@@ -13942,14 +14273,14 @@ var Order = (0, import_core41.list)({
         })
       }
     }),
-    events: (0, import_fields44.relationship)({
+    events: (0, import_fields45.relationship)({
       ref: "OrderEvent.order",
       many: true
     }),
-    note: (0, import_fields44.text)({
+    note: (0, import_fields45.text)({
       label: "Note"
     }),
-    shippingLabels: (0, import_fields44.relationship)({
+    shippingLabels: (0, import_fields45.relationship)({
       ref: "ShippingLabel.order",
       many: true
     }),
@@ -13958,15 +14289,15 @@ var Order = (0, import_core41.list)({
 });
 
 // features/keystone/models/OrderEvent.ts
-var import_core42 = require("@keystone-6/core");
-var import_fields45 = require("@keystone-6/core/fields");
-var OrderEvent = (0, import_core42.list)({
+var import_core43 = require("@keystone-6/core");
+var import_fields46 = require("@keystone-6/core/fields");
+var OrderEvent = (0, import_core43.list)({
   fields: {
-    order: (0, import_fields45.relationship)({
+    order: (0, import_fields46.relationship)({
       ref: "Order.events",
       many: false
     }),
-    user: (0, import_fields45.relationship)({
+    user: (0, import_fields46.relationship)({
       ref: "User.orderEvents",
       many: false,
       hooks: {
@@ -13978,7 +14309,7 @@ var OrderEvent = (0, import_core42.list)({
         }
       }
     }),
-    type: (0, import_fields45.select)({
+    type: (0, import_fields46.select)({
       type: "enum",
       options: [
         { label: "Order Placed", value: "ORDER_PLACED" },
@@ -13995,13 +14326,13 @@ var OrderEvent = (0, import_core42.list)({
       validation: { isRequired: true },
       defaultValue: "STATUS_CHANGE"
     }),
-    data: (0, import_fields45.json)({
+    data: (0, import_fields46.json)({
       defaultValue: {}
     }),
-    time: (0, import_fields45.timestamp)({
+    time: (0, import_fields46.timestamp)({
       defaultValue: { kind: "now" }
     }),
-    createdBy: (0, import_fields45.relationship)({
+    createdBy: (0, import_fields46.relationship)({
       ref: "User",
       many: false,
       ui: {
@@ -14036,9 +14367,9 @@ var OrderEvent = (0, import_core42.list)({
 });
 
 // features/keystone/models/OrderLineItem.ts
-var import_core43 = require("@keystone-6/core");
-var import_fields46 = require("@keystone-6/core/fields");
 var import_core44 = require("@keystone-6/core");
+var import_fields47 = require("@keystone-6/core/fields");
+var import_core45 = require("@keystone-6/core");
 var isS3SignedUrl = (url) => {
   try {
     const parsedUrl = new URL(url);
@@ -14069,7 +14400,7 @@ var checkUrlIsAccessible = async (url) => {
     return false;
   }
 };
-var OrderLineItem = (0, import_core43.list)({
+var OrderLineItem = (0, import_core44.list)({
   access: {
     operation: {
       query: permissions.canManageOrders,
@@ -14079,16 +14410,16 @@ var OrderLineItem = (0, import_core43.list)({
     }
   },
   fields: {
-    quantity: (0, import_fields46.integer)({
+    quantity: (0, import_fields47.integer)({
       validation: { isRequired: true }
     }),
-    title: (0, import_fields46.text)({
+    title: (0, import_fields47.text)({
       validation: { isRequired: true }
     }),
-    sku: (0, import_fields46.text)(),
-    thumbnail: (0, import_fields46.virtual)({
-      field: import_core44.graphql.field({
-        type: import_core44.graphql.String,
+    sku: (0, import_fields47.text)(),
+    thumbnail: (0, import_fields47.virtual)({
+      field: import_core45.graphql.field({
+        type: import_core45.graphql.String,
         async resolve(item, args, context) {
           const sudoContext = context.sudo();
           if (item.productData?.thumbnail) {
@@ -14133,32 +14464,32 @@ var OrderLineItem = (0, import_core43.list)({
         }
       })
     }),
-    metadata: (0, import_fields46.json)(),
-    productData: (0, import_fields46.json)({
+    metadata: (0, import_fields47.json)(),
+    productData: (0, import_fields47.json)({
       description: "Snapshot of product data at time of order"
     }),
-    variantData: (0, import_fields46.json)({
+    variantData: (0, import_fields47.json)({
       description: "Snapshot of variant data at time of order"
     }),
     // Formatted values for display
-    variantTitle: (0, import_fields46.text)(),
-    formattedUnitPrice: (0, import_fields46.text)(),
-    formattedTotal: (0, import_fields46.text)(),
-    order: (0, import_fields46.relationship)({
+    variantTitle: (0, import_fields47.text)(),
+    formattedUnitPrice: (0, import_fields47.text)(),
+    formattedTotal: (0, import_fields47.text)(),
+    order: (0, import_fields47.relationship)({
       ref: "Order.lineItems"
     }),
-    productVariant: (0, import_fields46.relationship)({
+    productVariant: (0, import_fields47.relationship)({
       ref: "ProductVariant",
       description: "Optional reference to product variant (may be deleted)"
     }),
-    moneyAmount: (0, import_fields46.relationship)({
+    moneyAmount: (0, import_fields47.relationship)({
       ref: "OrderMoneyAmount.orderLineItem"
     }),
-    originalLineItem: (0, import_fields46.relationship)({
+    originalLineItem: (0, import_fields47.relationship)({
       ref: "LineItem",
       description: "Reference to the original cart line item"
     }),
-    fulfillmentItems: (0, import_fields46.relationship)({
+    fulfillmentItems: (0, import_fields47.relationship)({
       ref: "FulfillmentItem.lineItem",
       many: true
     }),
@@ -14167,9 +14498,9 @@ var OrderLineItem = (0, import_core43.list)({
 });
 
 // features/keystone/models/OrderMoneyAmount.ts
-var import_core45 = require("@keystone-6/core");
-var import_fields47 = require("@keystone-6/core/fields");
-var OrderMoneyAmount = (0, import_core45.list)({
+var import_core46 = require("@keystone-6/core");
+var import_fields48 = require("@keystone-6/core/fields");
+var OrderMoneyAmount = (0, import_core46.list)({
   access: {
     operation: {
       query: permissions.canManageOrders,
@@ -14179,23 +14510,23 @@ var OrderMoneyAmount = (0, import_core45.list)({
     }
   },
   fields: {
-    amount: (0, import_fields47.integer)({
+    amount: (0, import_fields48.integer)({
       validation: { isRequired: true }
     }),
-    originalAmount: (0, import_fields47.integer)({
+    originalAmount: (0, import_fields48.integer)({
       validation: { isRequired: true }
     }),
-    priceData: (0, import_fields47.json)({
+    priceData: (0, import_fields48.json)({
       description: "Snapshot of complete price data including rules, lists, etc."
     }),
-    metadata: (0, import_fields47.json)(),
-    orderLineItem: (0, import_fields47.relationship)({
+    metadata: (0, import_fields48.json)(),
+    orderLineItem: (0, import_fields48.relationship)({
       ref: "OrderLineItem.moneyAmount"
     }),
-    currency: (0, import_fields47.relationship)({
+    currency: (0, import_fields48.relationship)({
       ref: "Currency"
     }),
-    region: (0, import_fields47.relationship)({
+    region: (0, import_fields48.relationship)({
       ref: "Region"
     }),
     ...trackingFields
@@ -14203,10 +14534,10 @@ var OrderMoneyAmount = (0, import_core45.list)({
 });
 
 // features/keystone/models/Payment.ts
-var import_core46 = require("@keystone-6/core");
-var import_fields48 = require("@keystone-6/core/fields");
 var import_core47 = require("@keystone-6/core");
-var Payment = (0, import_core46.list)({
+var import_fields49 = require("@keystone-6/core/fields");
+var import_core48 = require("@keystone-6/core");
+var Payment = (0, import_core47.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadPayments({ session }) || permissions.canManagePayments({ session }),
@@ -14216,7 +14547,7 @@ var Payment = (0, import_core46.list)({
     }
   },
   fields: {
-    status: (0, import_fields48.select)({
+    status: (0, import_fields49.select)({
       type: "enum",
       options: [
         { label: "Pending", value: "pending" },
@@ -14228,56 +14559,56 @@ var Payment = (0, import_core46.list)({
       defaultValue: "pending",
       validation: { isRequired: true }
     }),
-    amount: (0, import_fields48.integer)({
+    amount: (0, import_fields49.integer)({
       validation: {
         isRequired: true
       }
     }),
-    currencyCode: (0, import_fields48.text)({
+    currencyCode: (0, import_fields49.text)({
       validation: {
         isRequired: true
       }
     }),
-    amountRefunded: (0, import_fields48.integer)({
+    amountRefunded: (0, import_fields49.integer)({
       defaultValue: 0,
       validation: {
         isRequired: true
       }
     }),
-    data: (0, import_fields48.json)(),
-    capturedAt: (0, import_fields48.timestamp)(),
-    canceledAt: (0, import_fields48.timestamp)(),
-    metadata: (0, import_fields48.json)(),
-    idempotencyKey: (0, import_fields48.text)(),
-    cart: (0, import_fields48.relationship)({
+    data: (0, import_fields49.json)(),
+    capturedAt: (0, import_fields49.timestamp)(),
+    canceledAt: (0, import_fields49.timestamp)(),
+    metadata: (0, import_fields49.json)(),
+    idempotencyKey: (0, import_fields49.text)(),
+    cart: (0, import_fields49.relationship)({
       ref: "Cart.payment"
     }),
-    paymentCollection: (0, import_fields48.relationship)({
+    paymentCollection: (0, import_fields49.relationship)({
       ref: "PaymentCollection.payments"
     }),
-    swap: (0, import_fields48.relationship)({
+    swap: (0, import_fields49.relationship)({
       ref: "Swap.payment"
     }),
-    currency: (0, import_fields48.relationship)({
+    currency: (0, import_fields49.relationship)({
       ref: "Currency.payments"
     }),
-    order: (0, import_fields48.relationship)({
+    order: (0, import_fields49.relationship)({
       ref: "Order.payments"
     }),
-    captures: (0, import_fields48.relationship)({
+    captures: (0, import_fields49.relationship)({
       ref: "Capture.payment",
       many: true
     }),
-    refunds: (0, import_fields48.relationship)({
+    refunds: (0, import_fields49.relationship)({
       ref: "Refund.payment",
       many: true
     }),
-    user: (0, import_fields48.relationship)({
+    user: (0, import_fields49.relationship)({
       ref: "User.payments"
     }),
-    paymentLink: (0, import_fields48.virtual)({
-      field: import_core47.graphql.field({
-        type: import_core47.graphql.String,
+    paymentLink: (0, import_fields49.virtual)({
+      field: import_core48.graphql.field({
+        type: import_core48.graphql.String,
         resolve(item) {
           if (!item.data) return null;
           const data = item.data;
@@ -14302,9 +14633,9 @@ var Payment = (0, import_core46.list)({
 });
 
 // features/keystone/models/PaymentCollection.ts
-var import_core48 = require("@keystone-6/core");
-var import_fields49 = require("@keystone-6/core/fields");
-var PaymentCollection = (0, import_core48.list)({
+var import_core49 = require("@keystone-6/core");
+var import_fields50 = require("@keystone-6/core/fields");
+var PaymentCollection = (0, import_core49.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadPayments({ session }) || permissions.canManagePayments({ session }),
@@ -14314,7 +14645,7 @@ var PaymentCollection = (0, import_core48.list)({
     }
   },
   fields: {
-    description: (0, import_fields49.select)({
+    description: (0, import_fields50.select)({
       type: "enum",
       options: [
         { label: "Default", value: "default" },
@@ -14322,28 +14653,28 @@ var PaymentCollection = (0, import_core48.list)({
       ],
       defaultValue: "default"
     }),
-    amount: (0, import_fields49.integer)({
+    amount: (0, import_fields50.integer)({
       validation: { isRequired: true }
     }),
-    authorizedAmount: (0, import_fields49.integer)({
+    authorizedAmount: (0, import_fields50.integer)({
       defaultValue: 0
     }),
-    refundedAmount: (0, import_fields49.integer)({
+    refundedAmount: (0, import_fields50.integer)({
       defaultValue: 0
     }),
-    metadata: (0, import_fields49.json)(),
-    paymentSessions: (0, import_fields49.relationship)({
+    metadata: (0, import_fields50.json)(),
+    paymentSessions: (0, import_fields50.relationship)({
       ref: "PaymentSession.paymentCollection",
       many: true
     }),
-    payments: (0, import_fields49.relationship)({
+    payments: (0, import_fields50.relationship)({
       ref: "Payment.paymentCollection",
       many: true
     }),
-    cart: (0, import_fields49.relationship)({
+    cart: (0, import_fields50.relationship)({
       ref: "Cart.paymentCollection"
     }),
-    invoice: (0, import_fields49.relationship)({
+    invoice: (0, import_fields50.relationship)({
       ref: "Invoice.paymentCollection"
     }),
     ...trackingFields
@@ -14351,9 +14682,9 @@ var PaymentCollection = (0, import_core48.list)({
 });
 
 // features/keystone/models/PaymentProvider.ts
-var import_core49 = require("@keystone-6/core");
-var import_fields50 = require("@keystone-6/core/fields");
-var PaymentProvider = (0, import_core49.list)({
+var import_core50 = require("@keystone-6/core");
+var import_fields51 = require("@keystone-6/core/fields");
+var PaymentProvider = (0, import_core50.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadPayments({ session }) || permissions.canManagePayments({ session }),
@@ -14363,10 +14694,10 @@ var PaymentProvider = (0, import_core49.list)({
     }
   },
   fields: {
-    name: (0, import_fields50.text)({
+    name: (0, import_fields51.text)({
       validation: { isRequired: true }
     }),
-    code: (0, import_fields50.text)({
+    code: (0, import_fields51.text)({
       isIndexed: "unique",
       validation: {
         isRequired: true,
@@ -14376,57 +14707,57 @@ var PaymentProvider = (0, import_core49.list)({
         }
       }
     }),
-    isInstalled: (0, import_fields50.checkbox)({
+    isInstalled: (0, import_fields51.checkbox)({
       defaultValue: true
     }),
-    credentials: (0, import_fields50.json)({
+    credentials: (0, import_fields51.json)({
       defaultValue: {}
     }),
-    metadata: (0, import_fields50.json)({
+    metadata: (0, import_fields51.json)({
       defaultValue: {}
     }),
     // Adapter function fields
-    createPaymentFunction: (0, import_fields50.text)({
+    createPaymentFunction: (0, import_fields51.text)({
       validation: { isRequired: true },
       ui: {
         description: "Name of the adapter function to create payments"
       }
     }),
-    capturePaymentFunction: (0, import_fields50.text)({
+    capturePaymentFunction: (0, import_fields51.text)({
       validation: { isRequired: true },
       ui: {
         description: "Name of the adapter function to capture payments"
       }
     }),
-    refundPaymentFunction: (0, import_fields50.text)({
+    refundPaymentFunction: (0, import_fields51.text)({
       validation: { isRequired: true },
       ui: {
         description: "Name of the adapter function to refund payments"
       }
     }),
-    getPaymentStatusFunction: (0, import_fields50.text)({
+    getPaymentStatusFunction: (0, import_fields51.text)({
       validation: { isRequired: true },
       ui: {
         description: "Name of the adapter function to check payment status"
       }
     }),
-    generatePaymentLinkFunction: (0, import_fields50.text)({
+    generatePaymentLinkFunction: (0, import_fields51.text)({
       validation: { isRequired: true },
       ui: {
         description: "Name of the adapter function to generate payment dashboard links"
       }
     }),
-    handleWebhookFunction: (0, import_fields50.text)({
+    handleWebhookFunction: (0, import_fields51.text)({
       validation: { isRequired: true },
       ui: {
         description: "Name of the adapter function to handle provider webhooks"
       }
     }),
-    regions: (0, import_fields50.relationship)({
+    regions: (0, import_fields51.relationship)({
       ref: "Region.paymentProviders",
       many: true
     }),
-    sessions: (0, import_fields50.relationship)({
+    sessions: (0, import_fields51.relationship)({
       ref: "PaymentSession.paymentProvider",
       many: true
     }),
@@ -14435,10 +14766,10 @@ var PaymentProvider = (0, import_core49.list)({
 });
 
 // features/keystone/models/PaymentSession.ts
-var import_core50 = require("@keystone-6/core");
-var import_fields51 = require("@keystone-6/core/fields");
 var import_core51 = require("@keystone-6/core");
-var PaymentSession = (0, import_core50.list)({
+var import_fields52 = require("@keystone-6/core/fields");
+var import_core52 = require("@keystone-6/core");
+var PaymentSession = (0, import_core51.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadPayments({ session }) || permissions.canManagePayments({ session }),
@@ -14448,18 +14779,18 @@ var PaymentSession = (0, import_core50.list)({
     }
   },
   fields: {
-    isSelected: (0, import_fields51.checkbox)({
+    isSelected: (0, import_fields52.checkbox)({
       defaultValue: false
     }),
-    isInitiated: (0, import_fields51.checkbox)({
+    isInitiated: (0, import_fields52.checkbox)({
       defaultValue: false
     }),
-    amount: (0, import_fields51.integer)({
+    amount: (0, import_fields52.integer)({
       validation: { isRequired: true }
     }),
-    formattedAmount: (0, import_fields51.virtual)({
-      field: import_core51.graphql.field({
-        type: import_core51.graphql.String,
+    formattedAmount: (0, import_fields52.virtual)({
+      field: import_core52.graphql.field({
+        type: import_core52.graphql.String,
         async resolve(item, args, context) {
           const { paymentCollection } = await context.query.PaymentSession.findOne({
             where: { id: item.id },
@@ -14485,28 +14816,28 @@ var PaymentSession = (0, import_core50.list)({
         }
       })
     }),
-    data: (0, import_fields51.json)({
+    data: (0, import_fields52.json)({
       defaultValue: {}
     }),
-    idempotencyKey: (0, import_fields51.text)({
+    idempotencyKey: (0, import_fields52.text)({
       isIndexed: true
     }),
-    paymentCollection: (0, import_fields51.relationship)({
+    paymentCollection: (0, import_fields52.relationship)({
       ref: "PaymentCollection.paymentSessions"
     }),
-    paymentProvider: (0, import_fields51.relationship)({
+    paymentProvider: (0, import_fields52.relationship)({
       ref: "PaymentProvider.sessions",
       many: false
     }),
-    paymentAuthorizedAt: (0, import_fields51.timestamp)(),
+    paymentAuthorizedAt: (0, import_fields52.timestamp)(),
     ...trackingFields
   }
 });
 
 // features/keystone/models/PriceList.ts
-var import_core52 = require("@keystone-6/core");
-var import_fields52 = require("@keystone-6/core/fields");
-var PriceList = (0, import_core52.list)({
+var import_core53 = require("@keystone-6/core");
+var import_fields53 = require("@keystone-6/core/fields");
+var PriceList = (0, import_core53.list)({
   access: {
     operation: {
       // Allow public read access
@@ -14517,17 +14848,17 @@ var PriceList = (0, import_core52.list)({
     }
   },
   fields: {
-    name: (0, import_fields52.text)({
+    name: (0, import_fields53.text)({
       validation: {
         isRequired: true
       }
     }),
-    description: (0, import_fields52.text)({
+    description: (0, import_fields53.text)({
       validation: {
         isRequired: true
       }
     }),
-    type: (0, import_fields52.select)({
+    type: (0, import_fields53.select)({
       type: "enum",
       options: [
         {
@@ -14544,7 +14875,7 @@ var PriceList = (0, import_core52.list)({
         isRequired: true
       }
     }),
-    status: (0, import_fields52.select)({
+    status: (0, import_fields53.select)({
       type: "enum",
       options: [
         {
@@ -14561,13 +14892,13 @@ var PriceList = (0, import_core52.list)({
         isRequired: true
       }
     }),
-    startsAt: (0, import_fields52.timestamp)(),
-    endsAt: (0, import_fields52.timestamp)(),
-    moneyAmounts: (0, import_fields52.relationship)({
+    startsAt: (0, import_fields53.timestamp)(),
+    endsAt: (0, import_fields53.timestamp)(),
+    moneyAmounts: (0, import_fields53.relationship)({
       ref: "MoneyAmount.priceList",
       many: true
     }),
-    customerGroups: (0, import_fields52.relationship)({
+    customerGroups: (0, import_fields53.relationship)({
       ref: "CustomerGroup.priceLists",
       many: true
     }),
@@ -14576,9 +14907,9 @@ var PriceList = (0, import_core52.list)({
 });
 
 // features/keystone/models/PriceRule.ts
-var import_core53 = require("@keystone-6/core");
-var import_fields53 = require("@keystone-6/core/fields");
-var PriceRule = (0, import_core53.list)({
+var import_core54 = require("@keystone-6/core");
+var import_fields54 = require("@keystone-6/core/fields");
+var PriceRule = (0, import_core54.list)({
   access: {
     operation: {
       query: () => true,
@@ -14588,7 +14919,7 @@ var PriceRule = (0, import_core53.list)({
     }
   },
   fields: {
-    type: (0, import_fields53.select)({
+    type: (0, import_fields54.select)({
       type: "enum",
       options: [
         { label: "Fixed", value: "fixed" },
@@ -14596,20 +14927,20 @@ var PriceRule = (0, import_core53.list)({
       ],
       validation: { isRequired: true }
     }),
-    value: (0, import_fields53.float)({ validation: { isRequired: true } }),
-    priority: (0, import_fields53.integer)({ defaultValue: 0 }),
-    ruleAttribute: (0, import_fields53.text)({ validation: { isRequired: true } }),
-    ruleValue: (0, import_fields53.text)({ validation: { isRequired: true } }),
-    moneyAmounts: (0, import_fields53.relationship)({ ref: "MoneyAmount.priceRules", many: true }),
-    priceSet: (0, import_fields53.relationship)({ ref: "PriceSet.priceRules" }),
+    value: (0, import_fields54.float)({ validation: { isRequired: true } }),
+    priority: (0, import_fields54.integer)({ defaultValue: 0 }),
+    ruleAttribute: (0, import_fields54.text)({ validation: { isRequired: true } }),
+    ruleValue: (0, import_fields54.text)({ validation: { isRequired: true } }),
+    moneyAmounts: (0, import_fields54.relationship)({ ref: "MoneyAmount.priceRules", many: true }),
+    priceSet: (0, import_fields54.relationship)({ ref: "PriceSet.priceRules" }),
     ...trackingFields
   }
 });
 
 // features/keystone/models/PriceSet.ts
-var import_core54 = require("@keystone-6/core");
-var import_fields54 = require("@keystone-6/core/fields");
-var PriceSet = (0, import_core54.list)({
+var import_core55 = require("@keystone-6/core");
+var import_fields55 = require("@keystone-6/core/fields");
+var PriceSet = (0, import_core55.list)({
   access: {
     operation: {
       query: () => true,
@@ -14619,18 +14950,18 @@ var PriceSet = (0, import_core54.list)({
     }
   },
   fields: {
-    prices: (0, import_fields54.relationship)({ ref: "MoneyAmount.priceSet", many: true }),
-    priceRules: (0, import_fields54.relationship)({ ref: "PriceRule.priceSet", many: true }),
-    ruleTypes: (0, import_fields54.relationship)({ ref: "RuleType.priceSets", many: true }),
+    prices: (0, import_fields55.relationship)({ ref: "MoneyAmount.priceSet", many: true }),
+    priceRules: (0, import_fields55.relationship)({ ref: "PriceRule.priceSet", many: true }),
+    ruleTypes: (0, import_fields55.relationship)({ ref: "RuleType.priceSets", many: true }),
     ...trackingFields
   }
 });
 
 // features/keystone/models/Product.ts
-var import_core55 = require("@keystone-6/core");
-var import_fields55 = require("@keystone-6/core/fields");
+var import_core56 = require("@keystone-6/core");
+var import_fields56 = require("@keystone-6/core/fields");
 var import_fields_document = require("@keystone-6/fields-document");
-var Product = (0, import_core55.list)({
+var Product = (0, import_core56.list)({
   access: {
     operation: {
       query: () => true,
@@ -14652,7 +14983,7 @@ var Product = (0, import_core55.list)({
     }
   },
   fields: {
-    title: (0, import_fields55.text)({
+    title: (0, import_fields56.text)({
       validation: {
         isRequired: true
       }
@@ -14667,14 +14998,14 @@ var Product = (0, import_core55.list)({
         [2, 1]
       ]
     }),
-    handle: (0, import_fields55.text)({
+    handle: (0, import_fields56.text)({
       isIndexed: "unique"
     }),
-    subtitle: (0, import_fields55.text)(),
-    isGiftcard: (0, import_fields55.checkbox)(),
-    thumbnail: (0, import_fields55.virtual)({
-      field: import_core55.graphql.field({
-        type: import_core55.graphql.String,
+    subtitle: (0, import_fields56.text)(),
+    isGiftcard: (0, import_fields56.checkbox)(),
+    thumbnail: (0, import_fields56.virtual)({
+      field: import_core56.graphql.field({
+        type: import_core56.graphql.String,
         resolve: async (item, args, context) => {
           const product = await context.query.Product.findOne({
             where: { id: item.id },
@@ -14684,9 +15015,9 @@ var Product = (0, import_core55.list)({
         }
       })
     }),
-    dimensionsRange: (0, import_fields55.virtual)({
-      field: import_core55.graphql.field({
-        type: import_core55.graphql.JSON,
+    dimensionsRange: (0, import_fields56.virtual)({
+      field: import_core56.graphql.field({
+        type: import_core56.graphql.JSON,
         resolve: async (item, args, context) => {
           const product = await context.query.Product.findOne({
             where: { id: item.id },
@@ -14724,9 +15055,9 @@ var Product = (0, import_core55.list)({
         }
       })
     }),
-    defaultDimensions: (0, import_fields55.virtual)({
-      field: import_core55.graphql.field({
-        type: import_core55.graphql.JSON,
+    defaultDimensions: (0, import_fields56.virtual)({
+      field: import_core56.graphql.field({
+        type: import_core56.graphql.JSON,
         resolve: async (item, args, context) => {
           const product = await context.query.Product.findOne({
             where: { id: item.id },
@@ -14752,11 +15083,11 @@ var Product = (0, import_core55.list)({
         }
       })
     }),
-    metadata: (0, import_fields55.json)(),
-    discountable: (0, import_fields55.checkbox)({
+    metadata: (0, import_fields56.json)(),
+    discountable: (0, import_fields56.checkbox)({
       defaultValue: true
     }),
-    status: (0, import_fields55.select)({
+    status: (0, import_fields56.select)({
       type: "enum",
       options: [
         {
@@ -14781,30 +15112,30 @@ var Product = (0, import_core55.list)({
         isRequired: true
       }
     }),
-    externalId: (0, import_fields55.text)(),
-    productCollections: (0, import_fields55.relationship)({
+    externalId: (0, import_fields56.text)(),
+    productCollections: (0, import_fields56.relationship)({
       ref: "ProductCollection.products",
       many: true
     }),
-    productCategories: (0, import_fields55.relationship)({
+    productCategories: (0, import_fields56.relationship)({
       ref: "ProductCategory.products",
       many: true
     }),
-    shippingProfile: (0, import_fields55.relationship)({
+    shippingProfile: (0, import_fields56.relationship)({
       ref: "ShippingProfile.products"
     }),
-    productType: (0, import_fields55.relationship)({
+    productType: (0, import_fields56.relationship)({
       ref: "ProductType.products"
     }),
-    discountConditions: (0, import_fields55.relationship)({
+    discountConditions: (0, import_fields56.relationship)({
       ref: "DiscountCondition.products",
       many: true
     }),
-    discountRules: (0, import_fields55.relationship)({
+    discountRules: (0, import_fields56.relationship)({
       ref: "DiscountRule.products",
       many: true
     }),
-    productImages: (0, import_fields55.relationship)({
+    productImages: (0, import_fields56.relationship)({
       ref: "ProductImage.products",
       many: true,
       ui: {
@@ -14817,19 +15148,19 @@ var Product = (0, import_core55.list)({
         linkToItem: false
       }
     }),
-    productOptions: (0, import_fields55.relationship)({
+    productOptions: (0, import_fields56.relationship)({
       ref: "ProductOption.product",
       many: true
     }),
-    productTags: (0, import_fields55.relationship)({
+    productTags: (0, import_fields56.relationship)({
       ref: "ProductTag.products",
       many: true
     }),
-    taxRates: (0, import_fields55.relationship)({
+    taxRates: (0, import_fields56.relationship)({
       ref: "TaxRate.products",
       many: true
     }),
-    productVariants: (0, import_fields55.relationship)({
+    productVariants: (0, import_fields56.relationship)({
       ref: "ProductVariant.product",
       many: true
     }),
@@ -14864,9 +15195,9 @@ var Product = (0, import_core55.list)({
 });
 
 // features/keystone/models/ProductCategory.ts
-var import_core56 = require("@keystone-6/core");
-var import_fields56 = require("@keystone-6/core/fields");
-var ProductCategory = (0, import_core56.list)({
+var import_core57 = require("@keystone-6/core");
+var import_fields57 = require("@keystone-6/core/fields");
+var ProductCategory = (0, import_core57.list)({
   access: {
     operation: {
       query: () => true,
@@ -14888,37 +15219,37 @@ var ProductCategory = (0, import_core56.list)({
     }
   },
   fields: {
-    title: (0, import_fields56.text)({
+    title: (0, import_fields57.text)({
       validation: {
         isRequired: true
       }
     }),
-    handle: (0, import_fields56.text)({
+    handle: (0, import_fields57.text)({
       isIndexed: "unique",
       validation: {
         isRequired: true
       }
     }),
-    metadata: (0, import_fields56.json)(),
-    isInternal: (0, import_fields56.checkbox)({
+    metadata: (0, import_fields57.json)(),
+    isInternal: (0, import_fields57.checkbox)({
       defaultValue: false
     }),
-    isActive: (0, import_fields56.checkbox)({
+    isActive: (0, import_fields57.checkbox)({
       defaultValue: true
     }),
-    discountConditions: (0, import_fields56.relationship)({
+    discountConditions: (0, import_fields57.relationship)({
       ref: "DiscountCondition.productCategories",
       many: true
     }),
-    products: (0, import_fields56.relationship)({
+    products: (0, import_fields57.relationship)({
       ref: "Product.productCategories",
       many: true
     }),
-    parentCategory: (0, import_fields56.relationship)({
+    parentCategory: (0, import_fields57.relationship)({
       ref: "ProductCategory.categoryChildren",
       many: false
     }),
-    categoryChildren: (0, import_fields56.relationship)({
+    categoryChildren: (0, import_fields57.relationship)({
       ref: "ProductCategory.parentCategory",
       many: true
     }),
@@ -14942,9 +15273,9 @@ var ProductCategory = (0, import_core56.list)({
 });
 
 // features/keystone/models/ProductCollection.ts
-var import_core57 = require("@keystone-6/core");
-var import_fields57 = require("@keystone-6/core/fields");
-var ProductCollection = (0, import_core57.list)({
+var import_core58 = require("@keystone-6/core");
+var import_fields58 = require("@keystone-6/core/fields");
+var ProductCollection = (0, import_core58.list)({
   access: {
     operation: {
       // Allow public read access
@@ -14955,23 +15286,23 @@ var ProductCollection = (0, import_core57.list)({
     }
   },
   fields: {
-    title: (0, import_fields57.text)({
+    title: (0, import_fields58.text)({
       validation: {
         isRequired: true
       }
     }),
-    handle: (0, import_fields57.text)({
+    handle: (0, import_fields58.text)({
       isIndexed: "unique",
       validation: {
         isRequired: true
       }
     }),
-    metadata: (0, import_fields57.json)(),
-    discountConditions: (0, import_fields57.relationship)({
+    metadata: (0, import_fields58.json)(),
+    discountConditions: (0, import_fields58.relationship)({
       ref: "DiscountCondition.productCollections",
       many: true
     }),
-    products: (0, import_fields57.relationship)({
+    products: (0, import_fields58.relationship)({
       ref: "Product.productCollections",
       many: true
     }),
@@ -14995,9 +15326,9 @@ var ProductCollection = (0, import_core57.list)({
 });
 
 // features/keystone/models/ProductImage.ts
-var import_core58 = require("@keystone-6/core");
-var import_fields58 = require("@keystone-6/core/fields");
-var ProductImage = (0, import_core58.list)({
+var import_core59 = require("@keystone-6/core");
+var import_fields59 = require("@keystone-6/core/fields");
+var ProductImage = (0, import_core59.list)({
   access: {
     operation: {
       // query: ({ session }) =>
@@ -15010,15 +15341,15 @@ var ProductImage = (0, import_core58.list)({
     }
   },
   fields: {
-    image: (0, import_fields58.image)({ storage: "my_images" }),
-    imagePath: (0, import_fields58.text)(),
-    altText: (0, import_fields58.text)(),
-    order: (0, import_fields58.integer)({
+    image: (0, import_fields59.image)({ storage: "my_images" }),
+    imagePath: (0, import_fields59.text)(),
+    altText: (0, import_fields59.text)(),
+    order: (0, import_fields59.integer)({
       defaultValue: 0
     }),
-    products: (0, import_fields58.relationship)({ ref: "Product.productImages", many: true }),
-    productVariants: (0, import_fields58.relationship)({ ref: "ProductVariant.primaryImage", many: true }),
-    metadata: (0, import_fields58.json)(),
+    products: (0, import_fields59.relationship)({ ref: "Product.productImages", many: true }),
+    productVariants: (0, import_fields59.relationship)({ ref: "ProductVariant.primaryImage", many: true }),
+    metadata: (0, import_fields59.json)(),
     ...trackingFields
   },
   ui: {
@@ -15029,9 +15360,9 @@ var ProductImage = (0, import_core58.list)({
 });
 
 // features/keystone/models/ProductOption.ts
-var import_core59 = require("@keystone-6/core");
-var import_fields59 = require("@keystone-6/core/fields");
-var ProductOption = (0, import_core59.list)({
+var import_core60 = require("@keystone-6/core");
+var import_fields60 = require("@keystone-6/core/fields");
+var ProductOption = (0, import_core60.list)({
   access: {
     operation: {
       // query: ({ session }) =>
@@ -15044,16 +15375,16 @@ var ProductOption = (0, import_core59.list)({
     }
   },
   fields: {
-    title: (0, import_fields59.text)({
+    title: (0, import_fields60.text)({
       validation: {
         isRequired: true
       }
     }),
-    metadata: (0, import_fields59.json)(),
-    product: (0, import_fields59.relationship)({
+    metadata: (0, import_fields60.json)(),
+    product: (0, import_fields60.relationship)({
       ref: "Product.productOptions"
     }),
-    productOptionValues: (0, import_fields59.relationship)({
+    productOptionValues: (0, import_fields60.relationship)({
       ref: "ProductOptionValue.productOption",
       many: true
     }),
@@ -15062,48 +15393,15 @@ var ProductOption = (0, import_core59.list)({
 });
 
 // features/keystone/models/ProductOptionValue.ts
-var import_core60 = require("@keystone-6/core");
-var import_fields60 = require("@keystone-6/core/fields");
-var ProductOptionValue = (0, import_core60.list)({
+var import_core61 = require("@keystone-6/core");
+var import_fields61 = require("@keystone-6/core/fields");
+var ProductOptionValue = (0, import_core61.list)({
   access: {
     operation: {
       // query: ({ session }) =>
       //   permissions.canReadProducts({ session }) ||
       //   permissions.canManageProducts({ session }),
       query: () => true,
-      create: permissions.canManageProducts,
-      update: permissions.canManageProducts,
-      delete: permissions.canManageProducts
-    }
-  },
-  fields: {
-    value: (0, import_fields60.text)({
-      validation: {
-        isRequired: true
-      }
-    }),
-    metadata: (0, import_fields60.json)(),
-    productVariants: (0, import_fields60.relationship)({
-      ref: "ProductVariant.productOptionValues",
-      many: true
-    }),
-    productOption: (0, import_fields60.relationship)({
-      ref: "ProductOption.productOptionValues"
-    }),
-    ...trackingFields
-  },
-  ui: {
-    labelField: "value"
-  }
-});
-
-// features/keystone/models/ProductTag.ts
-var import_core61 = require("@keystone-6/core");
-var import_fields61 = require("@keystone-6/core/fields");
-var ProductTag = (0, import_core61.list)({
-  access: {
-    operation: {
-      query: ({ session }) => permissions.canReadProducts({ session }) || permissions.canManageProducts({ session }),
       create: permissions.canManageProducts,
       update: permissions.canManageProducts,
       delete: permissions.canManageProducts
@@ -15116,19 +15414,24 @@ var ProductTag = (0, import_core61.list)({
       }
     }),
     metadata: (0, import_fields61.json)(),
-    discountConditions: (0, import_fields61.relationship)({
-      ref: "DiscountCondition.productTags",
+    productVariants: (0, import_fields61.relationship)({
+      ref: "ProductVariant.productOptionValues",
       many: true
     }),
-    products: (0, import_fields61.relationship)({ ref: "Product.productTags", many: true }),
+    productOption: (0, import_fields61.relationship)({
+      ref: "ProductOption.productOptionValues"
+    }),
     ...trackingFields
+  },
+  ui: {
+    labelField: "value"
   }
 });
 
-// features/keystone/models/ProductType.ts
+// features/keystone/models/ProductTag.ts
 var import_core62 = require("@keystone-6/core");
 var import_fields62 = require("@keystone-6/core/fields");
-var ProductType = (0, import_core62.list)({
+var ProductTag = (0, import_core62.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadProducts({ session }) || permissions.canManageProducts({ session }),
@@ -15145,14 +15448,42 @@ var ProductType = (0, import_core62.list)({
     }),
     metadata: (0, import_fields62.json)(),
     discountConditions: (0, import_fields62.relationship)({
+      ref: "DiscountCondition.productTags",
+      many: true
+    }),
+    products: (0, import_fields62.relationship)({ ref: "Product.productTags", many: true }),
+    ...trackingFields
+  }
+});
+
+// features/keystone/models/ProductType.ts
+var import_core63 = require("@keystone-6/core");
+var import_fields63 = require("@keystone-6/core/fields");
+var ProductType = (0, import_core63.list)({
+  access: {
+    operation: {
+      query: ({ session }) => permissions.canReadProducts({ session }) || permissions.canManageProducts({ session }),
+      create: permissions.canManageProducts,
+      update: permissions.canManageProducts,
+      delete: permissions.canManageProducts
+    }
+  },
+  fields: {
+    value: (0, import_fields63.text)({
+      validation: {
+        isRequired: true
+      }
+    }),
+    metadata: (0, import_fields63.json)(),
+    discountConditions: (0, import_fields63.relationship)({
       ref: "DiscountCondition.productTypes",
       many: true
     }),
-    products: (0, import_fields62.relationship)({
+    products: (0, import_fields63.relationship)({
       ref: "Product.productType",
       many: true
     }),
-    taxRates: (0, import_fields62.relationship)({
+    taxRates: (0, import_fields63.relationship)({
       ref: "TaxRate.productTypes",
       many: true
     }),
@@ -15161,9 +15492,9 @@ var ProductType = (0, import_core62.list)({
 });
 
 // features/keystone/models/ProductVariant.ts
-var import_core63 = require("@keystone-6/core");
-var import_fields63 = require("@keystone-6/core/fields");
-var ProductVariant = (0, import_core63.list)({
+var import_core64 = require("@keystone-6/core");
+var import_fields64 = require("@keystone-6/core/fields");
+var ProductVariant = (0, import_core64.list)({
   access: {
     operation: {
       query: () => true,
@@ -15173,9 +15504,9 @@ var ProductVariant = (0, import_core63.list)({
     }
   },
   fields: {
-    fullTitle: (0, import_fields63.virtual)({
-      field: import_core63.graphql.field({
-        type: import_core63.graphql.String,
+    fullTitle: (0, import_fields64.virtual)({
+      field: import_core64.graphql.field({
+        type: import_core64.graphql.String,
         resolve: async (item, args, context) => {
           const { product } = await context.query.ProductVariant.findOne({
             where: { id: item.id.toString() },
@@ -15185,63 +15516,63 @@ var ProductVariant = (0, import_core63.list)({
         }
       })
     }),
-    title: (0, import_fields63.text)({
+    title: (0, import_fields64.text)({
       validation: {
         isRequired: true
       }
     }),
-    sku: (0, import_fields63.text)(),
-    barcode: (0, import_fields63.text)(),
-    ean: (0, import_fields63.text)(),
-    upc: (0, import_fields63.text)(),
-    inventoryQuantity: (0, import_fields63.integer)({
+    sku: (0, import_fields64.text)(),
+    barcode: (0, import_fields64.text)(),
+    ean: (0, import_fields64.text)(),
+    upc: (0, import_fields64.text)(),
+    inventoryQuantity: (0, import_fields64.integer)({
       validation: {
         isRequired: true
       }
     }),
-    allowBackorder: (0, import_fields63.checkbox)(),
-    manageInventory: (0, import_fields63.checkbox)({
+    allowBackorder: (0, import_fields64.checkbox)(),
+    manageInventory: (0, import_fields64.checkbox)({
       defaultValue: true
     }),
-    hsCode: (0, import_fields63.text)(),
-    originCountry: (0, import_fields63.text)(),
-    midCode: (0, import_fields63.text)(),
-    material: (0, import_fields63.text)(),
-    metadata: (0, import_fields63.json)(),
-    variantRank: (0, import_fields63.integer)({
+    hsCode: (0, import_fields64.text)(),
+    originCountry: (0, import_fields64.text)(),
+    midCode: (0, import_fields64.text)(),
+    material: (0, import_fields64.text)(),
+    metadata: (0, import_fields64.json)(),
+    variantRank: (0, import_fields64.integer)({
       defaultValue: 0
     }),
-    product: (0, import_fields63.relationship)({
+    product: (0, import_fields64.relationship)({
       ref: "Product.productVariants"
     }),
-    claimItems: (0, import_fields63.relationship)({
+    claimItems: (0, import_fields64.relationship)({
       ref: "ClaimItem.productVariant",
       many: true
     }),
-    lineItems: (0, import_fields63.relationship)({
+    lineItems: (0, import_fields64.relationship)({
       ref: "LineItem.productVariant",
       many: true
     }),
-    prices: (0, import_fields63.relationship)({
+    prices: (0, import_fields64.relationship)({
       ref: "MoneyAmount.productVariant",
       many: true
     }),
-    productOptionValues: (0, import_fields63.relationship)({
+    productOptionValues: (0, import_fields64.relationship)({
       ref: "ProductOptionValue.productVariants",
       many: true
     }),
-    location: (0, import_fields63.relationship)({
+    location: (0, import_fields64.relationship)({
       ref: "Location.variants"
     }),
-    stockMovements: (0, import_fields63.relationship)({
+    stockMovements: (0, import_fields64.relationship)({
       ref: "StockMovement.variant",
       many: true
     }),
-    measurements: (0, import_fields63.relationship)({
+    measurements: (0, import_fields64.relationship)({
       ref: "Measurement.productVariant",
       many: true
     }),
-    primaryImage: (0, import_fields63.relationship)({
+    primaryImage: (0, import_fields64.relationship)({
       ref: "ProductImage.productVariants",
       many: false
     }),
@@ -15253,9 +15584,9 @@ var ProductVariant = (0, import_core63.list)({
 });
 
 // features/keystone/models/Refund.ts
-var import_core64 = require("@keystone-6/core");
-var import_fields64 = require("@keystone-6/core/fields");
-var Refund = (0, import_core64.list)({
+var import_core65 = require("@keystone-6/core");
+var import_fields65 = require("@keystone-6/core/fields");
+var Refund = (0, import_core65.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadReturns({ session }) || permissions.canManageReturns({ session }),
@@ -15265,13 +15596,13 @@ var Refund = (0, import_core64.list)({
     }
   },
   fields: {
-    amount: (0, import_fields64.integer)({
+    amount: (0, import_fields65.integer)({
       validation: {
         isRequired: true
       }
     }),
-    note: (0, import_fields64.text)(),
-    reason: (0, import_fields64.select)({
+    note: (0, import_fields65.text)(),
+    reason: (0, import_fields65.select)({
       type: "enum",
       options: [
         {
@@ -15299,9 +15630,9 @@ var Refund = (0, import_core64.list)({
         isRequired: true
       }
     }),
-    metadata: (0, import_fields64.json)(),
-    idempotencyKey: (0, import_fields64.text)(),
-    payment: (0, import_fields64.relationship)({
+    metadata: (0, import_fields65.json)(),
+    idempotencyKey: (0, import_fields65.text)(),
+    payment: (0, import_fields65.relationship)({
       ref: "Payment.refunds"
     }),
     ...trackingFields
@@ -15309,9 +15640,9 @@ var Refund = (0, import_core64.list)({
 });
 
 // features/keystone/models/Region.ts
-var import_core65 = require("@keystone-6/core");
-var import_fields65 = require("@keystone-6/core/fields");
-var Region = (0, import_core65.list)({
+var import_core66 = require("@keystone-6/core");
+var import_fields66 = require("@keystone-6/core/fields");
+var Region = (0, import_core66.list)({
   access: {
     operation: {
       // Allow public read access
@@ -15322,81 +15653,81 @@ var Region = (0, import_core65.list)({
     }
   },
   fields: {
-    code: (0, import_fields65.text)({
+    code: (0, import_fields66.text)({
       isIndexed: "unique",
       validation: {
         isRequired: true
       }
     }),
-    name: (0, import_fields65.text)({
+    name: (0, import_fields66.text)({
       validation: {
         isRequired: true
       }
     }),
-    taxRate: (0, import_fields65.float)({
+    taxRate: (0, import_fields66.float)({
       validation: {
         isRequired: true
       }
     }),
-    taxCode: (0, import_fields65.text)(),
-    metadata: (0, import_fields65.json)(),
-    giftCardsTaxable: (0, import_fields65.checkbox)({
+    taxCode: (0, import_fields66.text)(),
+    metadata: (0, import_fields66.json)(),
+    giftCardsTaxable: (0, import_fields66.checkbox)({
       defaultValue: true
     }),
-    automaticTaxes: (0, import_fields65.checkbox)({
+    automaticTaxes: (0, import_fields66.checkbox)({
       defaultValue: true
     }),
-    currency: (0, import_fields65.relationship)({
+    currency: (0, import_fields66.relationship)({
       ref: "Currency.regions"
     }),
-    carts: (0, import_fields65.relationship)({
+    carts: (0, import_fields66.relationship)({
       ref: "Cart.region",
       many: true
     }),
-    countries: (0, import_fields65.relationship)({
+    countries: (0, import_fields66.relationship)({
       ref: "Country.region",
       many: true
     }),
-    discounts: (0, import_fields65.relationship)({
+    discounts: (0, import_fields66.relationship)({
       ref: "Discount.regions",
       many: true
     }),
-    giftCards: (0, import_fields65.relationship)({
+    giftCards: (0, import_fields66.relationship)({
       ref: "GiftCard.region",
       many: true
     }),
-    moneyAmounts: (0, import_fields65.relationship)({
+    moneyAmounts: (0, import_fields66.relationship)({
       ref: "MoneyAmount.region",
       many: true
     }),
-    orders: (0, import_fields65.relationship)({
+    orders: (0, import_fields66.relationship)({
       ref: "Order.region",
       many: true
     }),
-    taxProvider: (0, import_fields65.relationship)({
+    taxProvider: (0, import_fields66.relationship)({
       ref: "TaxProvider.regions"
     }),
-    fulfillmentProviders: (0, import_fields65.relationship)({
+    fulfillmentProviders: (0, import_fields66.relationship)({
       ref: "FulfillmentProvider.regions",
       many: true
     }),
-    paymentProviders: (0, import_fields65.relationship)({
+    paymentProviders: (0, import_fields66.relationship)({
       ref: "PaymentProvider.regions",
       many: true
     }),
-    shippingOptions: (0, import_fields65.relationship)({
+    shippingOptions: (0, import_fields66.relationship)({
       ref: "ShippingOption.region",
       many: true
     }),
-    taxRates: (0, import_fields65.relationship)({
+    taxRates: (0, import_fields66.relationship)({
       ref: "TaxRate.region",
       many: true
     }),
-    shippingProviders: (0, import_fields65.relationship)({
+    shippingProviders: (0, import_fields66.relationship)({
       ref: "ShippingProvider.regions",
       many: true
     }),
-    accountLineItems: (0, import_fields65.relationship)({
+    accountLineItems: (0, import_fields66.relationship)({
       ref: "AccountLineItem.region",
       many: true
     }),
@@ -15405,9 +15736,9 @@ var Region = (0, import_core65.list)({
 });
 
 // features/keystone/models/Return.ts
-var import_core66 = require("@keystone-6/core");
-var import_fields66 = require("@keystone-6/core/fields");
-var Return = (0, import_core66.list)({
+var import_core67 = require("@keystone-6/core");
+var import_fields67 = require("@keystone-6/core/fields");
+var Return = (0, import_core67.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadReturns({ session }) || permissions.canManageReturns({ session }),
@@ -15417,7 +15748,7 @@ var Return = (0, import_core66.list)({
     }
   },
   fields: {
-    status: (0, import_fields66.select)({
+    status: (0, import_fields67.select)({
       type: "enum",
       options: [
         {
@@ -15445,30 +15776,30 @@ var Return = (0, import_core66.list)({
         isRequired: true
       }
     }),
-    shippingData: (0, import_fields66.json)(),
-    refundAmount: (0, import_fields66.integer)({
+    shippingData: (0, import_fields67.json)(),
+    refundAmount: (0, import_fields67.integer)({
       validation: {
         isRequired: true
       }
     }),
-    receivedAt: (0, import_fields66.timestamp)(),
-    metadata: (0, import_fields66.json)(),
-    idempotencyKey: (0, import_fields66.text)(),
-    noNotification: (0, import_fields66.checkbox)(),
-    claimOrder: (0, import_fields66.relationship)({
+    receivedAt: (0, import_fields67.timestamp)(),
+    metadata: (0, import_fields67.json)(),
+    idempotencyKey: (0, import_fields67.text)(),
+    noNotification: (0, import_fields67.checkbox)(),
+    claimOrder: (0, import_fields67.relationship)({
       ref: "ClaimOrder.return"
     }),
-    swap: (0, import_fields66.relationship)({
+    swap: (0, import_fields67.relationship)({
       ref: "Swap.return"
     }),
-    order: (0, import_fields66.relationship)({
+    order: (0, import_fields67.relationship)({
       ref: "Order.returns"
     }),
-    returnItems: (0, import_fields66.relationship)({
+    returnItems: (0, import_fields67.relationship)({
       ref: "ReturnItem.return",
       many: true
     }),
-    shippingMethod: (0, import_fields66.relationship)({
+    shippingMethod: (0, import_fields67.relationship)({
       ref: "ShippingMethod.return"
     }),
     ...trackingFields
@@ -15476,9 +15807,9 @@ var Return = (0, import_core66.list)({
 });
 
 // features/keystone/models/ReturnItem.ts
-var import_core67 = require("@keystone-6/core");
-var import_fields67 = require("@keystone-6/core/fields");
-var ReturnItem = (0, import_core67.list)({
+var import_core68 = require("@keystone-6/core");
+var import_fields68 = require("@keystone-6/core/fields");
+var ReturnItem = (0, import_core68.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadReturns({ session }) || permissions.canManageReturns({ session }),
@@ -15488,25 +15819,25 @@ var ReturnItem = (0, import_core67.list)({
     }
   },
   fields: {
-    quantity: (0, import_fields67.integer)({
+    quantity: (0, import_fields68.integer)({
       validation: {
         isRequired: true
       }
     }),
-    isRequested: (0, import_fields67.checkbox)({
+    isRequested: (0, import_fields68.checkbox)({
       defaultValue: true
     }),
-    requestedQuantity: (0, import_fields67.integer)(),
-    receivedQuantity: (0, import_fields67.integer)(),
-    metadata: (0, import_fields67.json)(),
-    note: (0, import_fields67.text)(),
-    return: (0, import_fields67.relationship)({
+    requestedQuantity: (0, import_fields68.integer)(),
+    receivedQuantity: (0, import_fields68.integer)(),
+    metadata: (0, import_fields68.json)(),
+    note: (0, import_fields68.text)(),
+    return: (0, import_fields68.relationship)({
       ref: "Return.returnItems"
     }),
-    lineItem: (0, import_fields67.relationship)({
+    lineItem: (0, import_fields68.relationship)({
       ref: "LineItem.returnItems"
     }),
-    returnReason: (0, import_fields67.relationship)({
+    returnReason: (0, import_fields68.relationship)({
       ref: "ReturnReason.returnItems"
     }),
     ...trackingFields
@@ -15514,9 +15845,9 @@ var ReturnItem = (0, import_core67.list)({
 });
 
 // features/keystone/models/ReturnReason.ts
-var import_core68 = require("@keystone-6/core");
-var import_fields68 = require("@keystone-6/core/fields");
-var ReturnReason = (0, import_core68.list)({
+var import_core69 = require("@keystone-6/core");
+var import_fields69 = require("@keystone-6/core/fields");
+var ReturnReason = (0, import_core69.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadReturns({ session }) || permissions.canManageReturns({ session }),
@@ -15526,23 +15857,23 @@ var ReturnReason = (0, import_core68.list)({
     }
   },
   fields: {
-    value: (0, import_fields68.text)({
+    value: (0, import_fields69.text)({
       isIndexed: "unique",
       validation: {
         isRequired: true
       }
     }),
-    label: (0, import_fields68.text)({
+    label: (0, import_fields69.text)({
       validation: {
         isRequired: true
       }
     }),
-    description: (0, import_fields68.text)(),
-    metadata: (0, import_fields68.json)(),
-    parentReturnReason: (0, import_fields68.relationship)({
+    description: (0, import_fields69.text)(),
+    metadata: (0, import_fields69.json)(),
+    parentReturnReason: (0, import_fields69.relationship)({
       ref: "ReturnReason"
     }),
-    returnItems: (0, import_fields68.relationship)({
+    returnItems: (0, import_fields69.relationship)({
       ref: "ReturnItem.returnReason",
       many: true
     }),
@@ -15551,9 +15882,9 @@ var ReturnReason = (0, import_core68.list)({
 });
 
 // features/keystone/models/Role.ts
-var import_fields69 = require("@keystone-6/core/fields");
-var import_core69 = require("@keystone-6/core");
-var Role = (0, import_core69.list)({
+var import_fields70 = require("@keystone-6/core/fields");
+var import_core70 = require("@keystone-6/core");
+var Role = (0, import_core70.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadRoles({ session }) || permissions.canManageRoles({ session }),
@@ -15568,9 +15899,9 @@ var Role = (0, import_core69.list)({
     isHidden: (args) => !permissions.canManageRoles(args)
   },
   fields: {
-    name: (0, import_fields69.text)({ validation: { isRequired: true } }),
+    name: (0, import_fields70.text)({ validation: { isRequired: true } }),
     ...permissionFields,
-    assignedTo: (0, import_fields69.relationship)({
+    assignedTo: (0, import_fields70.relationship)({
       ref: "User.role",
       // TODO: Add this to the User
       many: true
@@ -15583,9 +15914,9 @@ var Role = (0, import_core69.list)({
 });
 
 // features/keystone/models/RuleType.ts
-var import_core70 = require("@keystone-6/core");
-var import_fields71 = require("@keystone-6/core/fields");
-var RuleType = (0, import_core70.list)({
+var import_core71 = require("@keystone-6/core");
+var import_fields72 = require("@keystone-6/core/fields");
+var RuleType = (0, import_core71.list)({
   access: {
     operation: {
       query: () => true,
@@ -15595,17 +15926,17 @@ var RuleType = (0, import_core70.list)({
     }
   },
   fields: {
-    name: (0, import_fields71.text)({ validation: { isRequired: true } }),
-    ruleAttribute: (0, import_fields71.text)({ validation: { isRequired: true }, isIndexed: "unique" }),
-    priceSets: (0, import_fields71.relationship)({ ref: "PriceSet.ruleTypes", many: true }),
+    name: (0, import_fields72.text)({ validation: { isRequired: true } }),
+    ruleAttribute: (0, import_fields72.text)({ validation: { isRequired: true }, isIndexed: "unique" }),
+    priceSets: (0, import_fields72.relationship)({ ref: "PriceSet.ruleTypes", many: true }),
     ...trackingFields
   }
 });
 
 // features/keystone/models/SalesChannel.ts
-var import_core71 = require("@keystone-6/core");
-var import_fields72 = require("@keystone-6/core/fields");
-var SalesChannel = (0, import_core71.list)({
+var import_core72 = require("@keystone-6/core");
+var import_fields73 = require("@keystone-6/core/fields");
+var SalesChannel = (0, import_core72.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadSalesChannels({ session }) || permissions.canManageSalesChannels({ session }),
@@ -15615,17 +15946,17 @@ var SalesChannel = (0, import_core71.list)({
     }
   },
   fields: {
-    name: (0, import_fields72.text)(),
-    description: (0, import_fields72.text)(),
-    isDisabled: (0, import_fields72.checkbox)(),
+    name: (0, import_fields73.text)(),
+    description: (0, import_fields73.text)(),
+    isDisabled: (0, import_fields73.checkbox)(),
     ...trackingFields
   }
 });
 
 // features/keystone/models/ShippingLabel.ts
-var import_core72 = require("@keystone-6/core");
-var import_fields73 = require("@keystone-6/core/fields");
-var ShippingLabel = (0, import_core72.list)({
+var import_core73 = require("@keystone-6/core");
+var import_fields74 = require("@keystone-6/core/fields");
+var ShippingLabel = (0, import_core73.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadFulfillments({ session }) || permissions.canManageFulfillments({ session }),
@@ -15635,7 +15966,7 @@ var ShippingLabel = (0, import_core72.list)({
     }
   },
   fields: {
-    status: (0, import_fields73.select)({
+    status: (0, import_fields74.select)({
       type: "enum",
       options: [
         { label: "Created", value: "created" },
@@ -15646,29 +15977,29 @@ var ShippingLabel = (0, import_core72.list)({
       defaultValue: "created"
     }),
     // Label information
-    labelUrl: (0, import_fields73.text)(),
-    carrier: (0, import_fields73.text)(),
-    service: (0, import_fields73.text)(),
-    rate: (0, import_fields73.json)(),
+    labelUrl: (0, import_fields74.text)(),
+    carrier: (0, import_fields74.text)(),
+    service: (0, import_fields74.text)(),
+    rate: (0, import_fields74.json)(),
     // Tracking information
-    trackingNumber: (0, import_fields73.text)(),
-    trackingUrl: (0, import_fields73.text)(),
+    trackingNumber: (0, import_fields74.text)(),
+    trackingUrl: (0, import_fields74.text)(),
     // Relationships
-    order: (0, import_fields73.relationship)({
+    order: (0, import_fields74.relationship)({
       ref: "Order.shippingLabels",
       many: false
     }),
-    provider: (0, import_fields73.relationship)({
+    provider: (0, import_fields74.relationship)({
       ref: "ShippingProvider.labels",
       many: false
     }),
-    fulfillment: (0, import_fields73.relationship)({
+    fulfillment: (0, import_fields74.relationship)({
       ref: "Fulfillment.shippingLabels",
       many: false
     }),
     // Additional data
-    data: (0, import_fields73.json)(),
-    metadata: (0, import_fields73.json)(),
+    data: (0, import_fields74.json)(),
+    metadata: (0, import_fields74.json)(),
     ...trackingFields
   },
   hooks: {
@@ -15683,9 +16014,9 @@ var ShippingLabel = (0, import_core72.list)({
 });
 
 // features/keystone/models/ShippingMethod.ts
-var import_core73 = require("@keystone-6/core");
-var import_fields74 = require("@keystone-6/core/fields");
-var ShippingMethod = (0, import_core73.list)({
+var import_core74 = require("@keystone-6/core");
+var import_fields75 = require("@keystone-6/core/fields");
+var ShippingMethod = (0, import_core74.list)({
   access: {
     operation: {
       // Allow public read access
@@ -15717,31 +16048,31 @@ var ShippingMethod = (0, import_core73.list)({
     }
   },
   fields: {
-    price: (0, import_fields74.integer)({
+    price: (0, import_fields75.integer)({
       validation: {
         isRequired: true
       }
     }),
-    data: (0, import_fields74.json)(),
-    return: (0, import_fields74.relationship)({
+    data: (0, import_fields75.json)(),
+    return: (0, import_fields75.relationship)({
       ref: "Return.shippingMethod"
     }),
-    order: (0, import_fields74.relationship)({
+    order: (0, import_fields75.relationship)({
       ref: "Order.shippingMethods"
     }),
-    claimOrder: (0, import_fields74.relationship)({
+    claimOrder: (0, import_fields75.relationship)({
       ref: "ClaimOrder.shippingMethods"
     }),
-    cart: (0, import_fields74.relationship)({
+    cart: (0, import_fields75.relationship)({
       ref: "Cart.shippingMethods"
     }),
-    swap: (0, import_fields74.relationship)({
+    swap: (0, import_fields75.relationship)({
       ref: "Swap.shippingMethods"
     }),
-    shippingOption: (0, import_fields74.relationship)({
+    shippingOption: (0, import_fields75.relationship)({
       ref: "ShippingOption.shippingMethods"
     }),
-    shippingMethodTaxLines: (0, import_fields74.relationship)({
+    shippingMethodTaxLines: (0, import_fields75.relationship)({
       ref: "ShippingMethodTaxLine.shippingMethod",
       many: true
     }),
@@ -15750,9 +16081,9 @@ var ShippingMethod = (0, import_core73.list)({
 });
 
 // features/keystone/models/ShippingMethodTaxLine.ts
-var import_core74 = require("@keystone-6/core");
-var import_fields75 = require("@keystone-6/core/fields");
-var ShippingMethodTaxLine = (0, import_core74.list)({
+var import_core75 = require("@keystone-6/core");
+var import_fields76 = require("@keystone-6/core/fields");
+var ShippingMethodTaxLine = (0, import_core75.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -15762,19 +16093,19 @@ var ShippingMethodTaxLine = (0, import_core74.list)({
     }
   },
   fields: {
-    rate: (0, import_fields75.float)({
+    rate: (0, import_fields76.float)({
       validation: {
         isRequired: true
       }
     }),
-    name: (0, import_fields75.text)({
+    name: (0, import_fields76.text)({
       validation: {
         isRequired: true
       }
     }),
-    code: (0, import_fields75.text)(),
-    metadata: (0, import_fields75.json)(),
-    shippingMethod: (0, import_fields75.relationship)({
+    code: (0, import_fields76.text)(),
+    metadata: (0, import_fields76.json)(),
+    shippingMethod: (0, import_fields76.relationship)({
       ref: "ShippingMethod.shippingMethodTaxLines"
     }),
     ...trackingFields
@@ -15782,16 +16113,16 @@ var ShippingMethodTaxLine = (0, import_core74.list)({
 });
 
 // features/keystone/models/ShippingOption.ts
-var import_core75 = require("@keystone-6/core");
-var import_fields76 = require("@keystone-6/core/fields");
 var import_core76 = require("@keystone-6/core");
+var import_fields77 = require("@keystone-6/core/fields");
+var import_core77 = require("@keystone-6/core");
 function formatCurrency4(amount, currencyCode = "USD") {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: currencyCode
   }).format(amount);
 }
-var ShippingOption = (0, import_core75.list)({
+var ShippingOption = (0, import_core76.list)({
   access: {
     operation: {
       query: () => true,
@@ -15801,16 +16132,16 @@ var ShippingOption = (0, import_core75.list)({
     }
   },
   fields: {
-    name: (0, import_fields76.text)({
+    name: (0, import_fields77.text)({
       validation: {
         isRequired: true
       }
     }),
-    uniqueKey: (0, import_fields76.text)({
+    uniqueKey: (0, import_fields77.text)({
       validation: { isRequired: true },
       isIndexed: "unique"
     }),
-    priceType: (0, import_fields76.select)({
+    priceType: (0, import_fields77.select)({
       type: "enum",
       options: [
         {
@@ -15830,43 +16161,43 @@ var ShippingOption = (0, import_core75.list)({
         isRequired: true
       }
     }),
-    amount: (0, import_fields76.integer)({
+    amount: (0, import_fields77.integer)({
       validation: {
         isRequired: false
       }
     }),
-    isReturn: (0, import_fields76.checkbox)(),
-    data: (0, import_fields76.json)(),
-    metadata: (0, import_fields76.json)(),
-    adminOnly: (0, import_fields76.checkbox)(),
-    region: (0, import_fields76.relationship)({
+    isReturn: (0, import_fields77.checkbox)(),
+    data: (0, import_fields77.json)(),
+    metadata: (0, import_fields77.json)(),
+    adminOnly: (0, import_fields77.checkbox)(),
+    region: (0, import_fields77.relationship)({
       ref: "Region.shippingOptions"
     }),
-    fulfillmentProvider: (0, import_fields76.relationship)({
+    fulfillmentProvider: (0, import_fields77.relationship)({
       ref: "FulfillmentProvider.shippingOptions"
     }),
-    shippingProfile: (0, import_fields76.relationship)({
+    shippingProfile: (0, import_fields77.relationship)({
       ref: "ShippingProfile.shippingOptions"
     }),
-    customShippingOptions: (0, import_fields76.relationship)({
+    customShippingOptions: (0, import_fields77.relationship)({
       ref: "CustomShippingOption.shippingOption",
       many: true
     }),
-    shippingMethods: (0, import_fields76.relationship)({
+    shippingMethods: (0, import_fields77.relationship)({
       ref: "ShippingMethod.shippingOption",
       many: true
     }),
-    shippingOptionRequirements: (0, import_fields76.relationship)({
+    shippingOptionRequirements: (0, import_fields77.relationship)({
       ref: "ShippingOptionRequirement.shippingOption",
       many: true
     }),
-    taxRates: (0, import_fields76.relationship)({
+    taxRates: (0, import_fields77.relationship)({
       ref: "TaxRate.shippingOptions",
       many: true
     }),
-    calculatedAmount: (0, import_fields76.virtual)({
-      field: import_core76.graphql.field({
-        type: import_core76.graphql.String,
+    calculatedAmount: (0, import_fields77.virtual)({
+      field: import_core77.graphql.field({
+        type: import_core77.graphql.String,
         async resolve(item, args, context) {
           const sudoContext = context.sudo();
           const shippingOption = await sudoContext.query.ShippingOption.findOne({
@@ -15893,9 +16224,9 @@ var ShippingOption = (0, import_core75.list)({
         }
       })
     }),
-    isTaxInclusive: (0, import_fields76.virtual)({
-      field: import_core76.graphql.field({
-        type: import_core76.graphql.Boolean,
+    isTaxInclusive: (0, import_fields77.virtual)({
+      field: import_core77.graphql.field({
+        type: import_core77.graphql.Boolean,
         resolve() {
           return true;
         }
@@ -15906,9 +16237,9 @@ var ShippingOption = (0, import_core75.list)({
 });
 
 // features/keystone/models/ShippingOptionRequirement.ts
-var import_core77 = require("@keystone-6/core");
-var import_fields77 = require("@keystone-6/core/fields");
-var ShippingOptionRequirement = (0, import_core77.list)({
+var import_core78 = require("@keystone-6/core");
+var import_fields78 = require("@keystone-6/core/fields");
+var ShippingOptionRequirement = (0, import_core78.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -15918,7 +16249,7 @@ var ShippingOptionRequirement = (0, import_core77.list)({
     }
   },
   fields: {
-    type: (0, import_fields77.select)({
+    type: (0, import_fields78.select)({
       type: "enum",
       options: [
         {
@@ -15934,12 +16265,12 @@ var ShippingOptionRequirement = (0, import_core77.list)({
         isRequired: true
       }
     }),
-    amount: (0, import_fields77.integer)({
+    amount: (0, import_fields78.integer)({
       validation: {
         isRequired: true
       }
     }),
-    shippingOption: (0, import_fields77.relationship)({
+    shippingOption: (0, import_fields78.relationship)({
       ref: "ShippingOption.shippingOptionRequirements"
     }),
     ...trackingFields
@@ -15947,9 +16278,9 @@ var ShippingOptionRequirement = (0, import_core77.list)({
 });
 
 // features/keystone/models/ShippingProfile.ts
-var import_core78 = require("@keystone-6/core");
-var import_fields78 = require("@keystone-6/core/fields");
-var ShippingProfile = (0, import_core78.list)({
+var import_core79 = require("@keystone-6/core");
+var import_fields79 = require("@keystone-6/core/fields");
+var ShippingProfile = (0, import_core79.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -15959,12 +16290,12 @@ var ShippingProfile = (0, import_core78.list)({
     }
   },
   fields: {
-    name: (0, import_fields78.text)({
+    name: (0, import_fields79.text)({
       validation: {
         isRequired: true
       }
     }),
-    type: (0, import_fields78.select)({
+    type: (0, import_fields79.select)({
       type: "enum",
       options: [
         {
@@ -15984,12 +16315,12 @@ var ShippingProfile = (0, import_core78.list)({
         isRequired: true
       }
     }),
-    metadata: (0, import_fields78.json)(),
-    products: (0, import_fields78.relationship)({
+    metadata: (0, import_fields79.json)(),
+    products: (0, import_fields79.relationship)({
       ref: "Product.shippingProfile",
       many: true
     }),
-    shippingOptions: (0, import_fields78.relationship)({
+    shippingOptions: (0, import_fields79.relationship)({
       ref: "ShippingOption.shippingProfile",
       many: true
     }),
@@ -15998,9 +16329,9 @@ var ShippingProfile = (0, import_core78.list)({
 });
 
 // features/keystone/models/ShippingProvider.ts
-var import_core79 = require("@keystone-6/core");
-var import_fields79 = require("@keystone-6/core/fields");
-var ShippingProvider = (0, import_core79.list)({
+var import_core80 = require("@keystone-6/core");
+var import_fields80 = require("@keystone-6/core/fields");
+var ShippingProvider = (0, import_core80.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -16010,64 +16341,64 @@ var ShippingProvider = (0, import_core79.list)({
     }
   },
   fields: {
-    name: (0, import_fields79.text)({
+    name: (0, import_fields80.text)({
       validation: { isRequired: true }
     }),
-    isActive: (0, import_fields79.checkbox)({
+    isActive: (0, import_fields80.checkbox)({
       defaultValue: false
     }),
-    accessToken: (0, import_fields79.text)({
+    accessToken: (0, import_fields80.text)({
       validation: { isRequired: true },
       ui: {
         itemView: { fieldMode: "hidden" }
       }
     }),
     // Adapter function fields
-    createLabelFunction: (0, import_fields79.text)({
+    createLabelFunction: (0, import_fields80.text)({
       validation: { isRequired: true },
       ui: {
         description: "Either an adapter name (e.g. 'shippo') or an HTTP endpoint that will be called with the order data"
       }
     }),
-    getRatesFunction: (0, import_fields79.text)({
+    getRatesFunction: (0, import_fields80.text)({
       validation: { isRequired: true },
       ui: {
         description: "Either an adapter name (e.g. 'shippo') or an HTTP endpoint that will be called with the order data"
       }
     }),
-    validateAddressFunction: (0, import_fields79.text)({
+    validateAddressFunction: (0, import_fields80.text)({
       validation: { isRequired: true },
       ui: {
         description: "Either an adapter name (e.g. 'shippo') or an HTTP endpoint that will be called with the address data"
       }
     }),
-    trackShipmentFunction: (0, import_fields79.text)({
+    trackShipmentFunction: (0, import_fields80.text)({
       validation: { isRequired: true },
       ui: {
         description: "Either an adapter name (e.g. 'shippo') or an HTTP endpoint that will be called with the tracking number"
       }
     }),
-    cancelLabelFunction: (0, import_fields79.text)({
+    cancelLabelFunction: (0, import_fields80.text)({
       validation: { isRequired: true },
       ui: {
         description: "Either an adapter name (e.g. 'shippo') or an HTTP endpoint that will be called with the label ID"
       }
     }),
-    metadata: (0, import_fields79.json)(),
+    metadata: (0, import_fields80.json)(),
     // Relationships
-    regions: (0, import_fields79.relationship)({
+    regions: (0, import_fields80.relationship)({
       ref: "Region.shippingProviders",
       many: true
     }),
-    labels: (0, import_fields79.relationship)({
+    labels: (0, import_fields80.relationship)({
       ref: "ShippingLabel.provider",
       many: true
     }),
-    fulfillmentProvider: (0, import_fields79.relationship)({
+    fulfillmentProvider: (0, import_fields80.relationship)({
       ref: "FulfillmentProvider.shippingProviders",
       many: false
     }),
-    fromAddress: (0, import_fields79.relationship)({
+    fromAddress: (0, import_fields80.relationship)({
       ref: "Address.shippingProviders",
       many: false
       // ui: {
@@ -16083,9 +16414,9 @@ var ShippingProvider = (0, import_core79.list)({
 });
 
 // features/keystone/models/StockMovement.ts
-var import_core80 = require("@keystone-6/core");
-var import_fields80 = require("@keystone-6/core/fields");
-var StockMovement = (0, import_core80.list)({
+var import_core81 = require("@keystone-6/core");
+var import_fields81 = require("@keystone-6/core/fields");
+var StockMovement = (0, import_core81.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadProducts({ session }) || permissions.canManageProducts({ session }),
@@ -16095,7 +16426,7 @@ var StockMovement = (0, import_core80.list)({
     }
   },
   fields: {
-    type: (0, import_fields80.select)({
+    type: (0, import_fields81.select)({
       type: "enum",
       options: [
         { label: "Receive", value: "RECEIVE" },
@@ -16103,12 +16434,12 @@ var StockMovement = (0, import_core80.list)({
       ],
       validation: { isRequired: true }
     }),
-    quantity: (0, import_fields80.integer)({
+    quantity: (0, import_fields81.integer)({
       validation: { isRequired: true }
     }),
-    reason: (0, import_fields80.text)(),
-    note: (0, import_fields80.text)(),
-    variant: (0, import_fields80.relationship)({
+    reason: (0, import_fields81.text)(),
+    note: (0, import_fields81.text)(),
+    variant: (0, import_fields81.relationship)({
       ref: "ProductVariant.stockMovements",
       many: false
     }),
@@ -16117,9 +16448,9 @@ var StockMovement = (0, import_core80.list)({
 });
 
 // features/keystone/models/Store.ts
-var import_core81 = require("@keystone-6/core");
-var import_fields81 = require("@keystone-6/core/fields");
 var import_core82 = require("@keystone-6/core");
+var import_fields82 = require("@keystone-6/core/fields");
+var import_core83 = require("@keystone-6/core");
 
 // features/platform/store-settings/lib/store-logo.ts
 var DEFAULT_STORE_LOGO_ICON = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" height="100%" width="100%" viewBox="0 0 42 48"><path fill="#155eef" fill-rule="evenodd" d="m22.102 20.86 9.9-9.9L29.88 8.84l-7.339 7.339V3h-3v13.178l-7.339-7.34-2.121 2.122 9.9 9.9 1.06 1.06zm2.12 2.121 9.9-9.9 2.121 2.122-7.339 7.339H42v3H28.904l7.34 7.339L34.121 35l-9.9-9.899-1.06-1.06zM7.96 35.001l9.9-9.899 1.06-1.06-1.06-1.061-9.9-9.9-2.121 2.122 7.339 7.339H.002v3h13.176l-7.34 7.339zm12.02-7.777-9.9 9.9 2.122 2.12 7.339-7.338V45h3V31.906l7.339 7.338L32 37.124l-9.9-9.9-1.06-1.061z" clip-rule="evenodd"/></svg>';
@@ -16227,7 +16558,7 @@ function sanitizeStoreLogoSvg(svg) {
 }
 
 // features/keystone/models/Store.ts
-var Store = (0, import_core81.list)({
+var Store = (0, import_core82.list)({
   access: {
     operation: {
       // Allow public read access
@@ -16238,25 +16569,25 @@ var Store = (0, import_core81.list)({
     }
   },
   fields: {
-    name: (0, import_fields81.text)({
+    name: (0, import_fields82.text)({
       defaultValue: "Openfront Store",
       validation: {
         isRequired: true
       }
     }),
-    defaultCurrencyCode: (0, import_fields81.text)({
+    defaultCurrencyCode: (0, import_fields82.text)({
       defaultValue: "usd",
       validation: {
         isRequired: true
       }
     }),
-    homepageTitle: (0, import_fields81.text)({
+    homepageTitle: (0, import_fields82.text)({
       defaultValue: "Openfront Next.js Starter"
     }),
-    homepageDescription: (0, import_fields81.text)({
+    homepageDescription: (0, import_fields82.text)({
       defaultValue: "A performant frontend e-commerce starter template with Next.js 15 and Openfront."
     }),
-    logoIcon: (0, import_fields81.text)({
+    logoIcon: (0, import_fields82.text)({
       defaultValue: DEFAULT_STORE_LOGO_ICON,
       hooks: {
         resolveInput: ({ resolvedData, fieldKey }) => {
@@ -16272,7 +16603,7 @@ var Store = (0, import_core81.list)({
         }
       }
     }),
-    logoColor: (0, import_fields81.text)({
+    logoColor: (0, import_fields82.text)({
       defaultValue: DEFAULT_STORE_LOGO_COLOR,
       hooks: {
         resolveInput: ({ resolvedData, fieldKey }) => {
@@ -16281,25 +16612,25 @@ var Store = (0, import_core81.list)({
         }
       }
     }),
-    metadata: (0, import_fields81.json)(),
-    swapLinkTemplate: (0, import_fields81.text)(),
-    paymentLinkTemplate: (0, import_fields81.text)(),
-    inviteLinkTemplate: (0, import_fields81.text)(),
+    metadata: (0, import_fields82.json)(),
+    swapLinkTemplate: (0, import_fields82.text)(),
+    paymentLinkTemplate: (0, import_fields82.text)(),
+    inviteLinkTemplate: (0, import_fields82.text)(),
     // currency: relationship({
     //   ref: "Currency.stores",
     // }),
-    currencies: (0, import_fields81.relationship)({
+    currencies: (0, import_fields82.relationship)({
       ref: "Currency.stores",
       many: true
     }),
-    paymentProviders: (0, import_fields81.virtual)({
-      field: import_core82.graphql.field({
-        type: import_core82.graphql.list(
-          import_core82.graphql.object()({
+    paymentProviders: (0, import_fields82.virtual)({
+      field: import_core83.graphql.field({
+        type: import_core83.graphql.list(
+          import_core83.graphql.object()({
             name: "PaymentProviderConfig",
             fields: {
-              provider: import_core82.graphql.field({ type: import_core82.graphql.String }),
-              publishableKey: import_core82.graphql.field({ type: import_core82.graphql.String })
+              provider: import_core83.graphql.field({ type: import_core83.graphql.String }),
+              publishableKey: import_core83.graphql.field({ type: import_core83.graphql.String })
             }
           })
         ),
@@ -16318,9 +16649,9 @@ var Store = (0, import_core81.list)({
 });
 
 // features/keystone/models/Swap.ts
-var import_core83 = require("@keystone-6/core");
-var import_fields82 = require("@keystone-6/core/fields");
-var Swap = (0, import_core83.list)({
+var import_core84 = require("@keystone-6/core");
+var import_fields83 = require("@keystone-6/core/fields");
+var Swap = (0, import_core84.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadOrders({ session }) || permissions.canManageOrders({ session }),
@@ -16330,7 +16661,7 @@ var Swap = (0, import_core83.list)({
     }
   },
   fields: {
-    fulfillmentStatus: (0, import_fields82.select)({
+    fulfillmentStatus: (0, import_fields83.select)({
       type: "enum",
       options: [
         {
@@ -16362,7 +16693,7 @@ var Swap = (0, import_core83.list)({
         isRequired: true
       }
     }),
-    paymentStatus: (0, import_fields82.select)({
+    paymentStatus: (0, import_fields83.select)({
       type: "enum",
       options: [
         {
@@ -16406,37 +16737,37 @@ var Swap = (0, import_core83.list)({
         isRequired: true
       }
     }),
-    differenceDue: (0, import_fields82.integer)(),
-    confirmedAt: (0, import_fields82.timestamp)(),
-    metadata: (0, import_fields82.json)(),
-    idempotencyKey: (0, import_fields82.text)(),
-    noNotification: (0, import_fields82.checkbox)(),
-    canceledAt: (0, import_fields82.timestamp)(),
-    allowBackorder: (0, import_fields82.checkbox)(),
-    cart: (0, import_fields82.relationship)({
+    differenceDue: (0, import_fields83.integer)(),
+    confirmedAt: (0, import_fields83.timestamp)(),
+    metadata: (0, import_fields83.json)(),
+    idempotencyKey: (0, import_fields83.text)(),
+    noNotification: (0, import_fields83.checkbox)(),
+    canceledAt: (0, import_fields83.timestamp)(),
+    allowBackorder: (0, import_fields83.checkbox)(),
+    cart: (0, import_fields83.relationship)({
       ref: "Cart.swap"
     }),
-    order: (0, import_fields82.relationship)({
+    order: (0, import_fields83.relationship)({
       ref: "Order.swaps"
     }),
-    address: (0, import_fields82.relationship)({
+    address: (0, import_fields83.relationship)({
       ref: "Address.swaps"
     }),
-    lineItems: (0, import_fields82.relationship)({
+    lineItems: (0, import_fields83.relationship)({
       ref: "LineItem.swap",
       many: true
     }),
-    fulfillments: (0, import_fields82.relationship)({
+    fulfillments: (0, import_fields83.relationship)({
       ref: "Fulfillment.swap",
       many: true
     }),
-    payment: (0, import_fields82.relationship)({
+    payment: (0, import_fields83.relationship)({
       ref: "Payment.swap"
     }),
-    return: (0, import_fields82.relationship)({
+    return: (0, import_fields83.relationship)({
       ref: "Return.swap"
     }),
-    shippingMethods: (0, import_fields82.relationship)({
+    shippingMethods: (0, import_fields83.relationship)({
       ref: "ShippingMethod.swap",
       many: true
     }),
@@ -16445,9 +16776,9 @@ var Swap = (0, import_core83.list)({
 });
 
 // features/keystone/models/TaxProvider.ts
-var import_core84 = require("@keystone-6/core");
-var import_fields83 = require("@keystone-6/core/fields");
-var TaxProvider = (0, import_core84.list)({
+var import_core85 = require("@keystone-6/core");
+var import_fields84 = require("@keystone-6/core/fields");
+var TaxProvider = (0, import_core85.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadUsers({ session }) || permissions.canManageUsers({ session }),
@@ -16457,10 +16788,10 @@ var TaxProvider = (0, import_core84.list)({
     }
   },
   fields: {
-    isInstalled: (0, import_fields83.checkbox)({
+    isInstalled: (0, import_fields84.checkbox)({
       defaultValue: true
     }),
-    regions: (0, import_fields83.relationship)({
+    regions: (0, import_fields84.relationship)({
       ref: "Region.taxProvider",
       many: true
     })
@@ -16468,9 +16799,9 @@ var TaxProvider = (0, import_core84.list)({
 });
 
 // features/keystone/models/TaxRate.ts
-var import_core85 = require("@keystone-6/core");
-var import_fields84 = require("@keystone-6/core/fields");
-var TaxRate = (0, import_core85.list)({
+var import_core86 = require("@keystone-6/core");
+var import_fields85 = require("@keystone-6/core/fields");
+var TaxRate = (0, import_core86.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadUsers({ session }) || permissions.canManageUsers({ session }),
@@ -16480,26 +16811,26 @@ var TaxRate = (0, import_core85.list)({
     }
   },
   fields: {
-    rate: (0, import_fields84.float)(),
-    code: (0, import_fields84.text)(),
-    name: (0, import_fields84.text)({
+    rate: (0, import_fields85.float)(),
+    code: (0, import_fields85.text)(),
+    name: (0, import_fields85.text)({
       validation: {
         isRequired: true
       }
     }),
-    metadata: (0, import_fields84.json)(),
-    products: (0, import_fields84.relationship)({
+    metadata: (0, import_fields85.json)(),
+    products: (0, import_fields85.relationship)({
       ref: "Product.taxRates",
       many: true
     }),
-    productTypes: (0, import_fields84.relationship)({
+    productTypes: (0, import_fields85.relationship)({
       ref: "ProductType.taxRates",
       many: true
     }),
-    region: (0, import_fields84.relationship)({
+    region: (0, import_fields85.relationship)({
       ref: "Region.taxRates"
     }),
-    shippingOptions: (0, import_fields84.relationship)({
+    shippingOptions: (0, import_fields85.relationship)({
       ref: "ShippingOption.taxRates",
       many: true
     }),
@@ -16508,8 +16839,8 @@ var TaxRate = (0, import_core85.list)({
 });
 
 // features/keystone/models/Team.ts
-var import_core86 = require("@keystone-6/core");
-var import_fields85 = require("@keystone-6/core/fields");
+var import_core87 = require("@keystone-6/core");
+var import_fields86 = require("@keystone-6/core/fields");
 var canManageTeams = ({ session }) => {
   if (!isSignedIn({ session })) {
     return false;
@@ -16519,7 +16850,7 @@ var canManageTeams = ({ session }) => {
   }
   return { id: { equals: session?.itemId } };
 };
-var Team = (0, import_core86.list)({
+var Team = (0, import_core87.list)({
   access: {
     operation: {
       create: isSignedIn,
@@ -16538,15 +16869,15 @@ var Team = (0, import_core86.list)({
     hideDelete: (args) => !permissions.canManageUsers(args)
   },
   fields: {
-    name: (0, import_fields85.text)({
+    name: (0, import_fields86.text)({
       validation: { isRequired: true }
     }),
-    description: (0, import_fields85.text)(),
-    members: (0, import_fields85.relationship)({
+    description: (0, import_fields86.text)(),
+    members: (0, import_fields86.relationship)({
       ref: "User.team",
       many: true
     }),
-    leader: (0, import_fields85.relationship)({
+    leader: (0, import_fields86.relationship)({
       ref: "User.teamLead",
       many: false
     }),
@@ -16582,8 +16913,8 @@ var Team = (0, import_core86.list)({
 });
 
 // features/keystone/models/User.ts
-var import_core87 = require("@keystone-6/core");
-var import_fields86 = require("@keystone-6/core/fields");
+var import_core88 = require("@keystone-6/core");
+var import_fields87 = require("@keystone-6/core/fields");
 
 // features/keystone/security/user-create.ts
 var canCreateUserRole = permissions.canManageUsers;
@@ -16623,7 +16954,7 @@ var canManageUsers = ({ session }) => {
   }
   return { id: { equals: session?.itemId } };
 };
-var User = (0, import_core87.list)({
+var User = (0, import_core88.list)({
   access: {
     operation: {
       create: () => true,
@@ -16650,18 +16981,18 @@ var User = (0, import_core87.list)({
     hideDelete: (args) => !permissions.canManageUsers(args)
   },
   fields: {
-    name: (0, import_fields86.text)({
+    name: (0, import_fields87.text)({
       validation: { isRequired: true }
     }),
-    email: (0, import_fields86.text)({ isIndexed: "unique", validation: { isRequired: true } }),
-    password: (0, import_fields86.password)({
+    email: (0, import_fields87.text)({ isIndexed: "unique", validation: { isRequired: true } }),
+    password: (0, import_fields87.password)({
       validation: {
         length: { min: 10, max: 1e3 },
         isRequired: true,
         rejectCommon: true
       }
     }),
-    role: (0, import_fields86.relationship)({
+    role: (0, import_fields87.relationship)({
       ref: "Role.assignedTo",
       access: {
         create: canCreateUserRole,
@@ -16673,54 +17004,54 @@ var User = (0, import_core87.list)({
         }
       }
     }),
-    apiKeys: (0, import_fields86.relationship)({ ref: "ApiKey.user", many: true }),
-    phone: (0, import_fields86.text)(),
-    hasAccount: (0, import_fields86.checkbox)(),
-    addresses: (0, import_fields86.relationship)({
+    apiKeys: (0, import_fields87.relationship)({ ref: "ApiKey.user", many: true }),
+    phone: (0, import_fields87.text)(),
+    hasAccount: (0, import_fields87.checkbox)(),
+    addresses: (0, import_fields87.relationship)({
       ref: "Address.user",
       many: true
     }),
-    orders: (0, import_fields86.relationship)({
+    orders: (0, import_fields87.relationship)({
       ref: "Order.user",
       many: true
     }),
-    orderEvents: (0, import_fields86.relationship)({
+    orderEvents: (0, import_fields87.relationship)({
       ref: "OrderEvent.user",
       many: true
     }),
-    carts: (0, import_fields86.relationship)({
+    carts: (0, import_fields87.relationship)({
       ref: "Cart.user",
       many: true
     }),
-    customerGroups: (0, import_fields86.relationship)({
+    customerGroups: (0, import_fields87.relationship)({
       ref: "CustomerGroup.users",
       many: true
     }),
-    notifications: (0, import_fields86.relationship)({
+    notifications: (0, import_fields87.relationship)({
       ref: "Notification.user",
       many: true
     }),
-    payments: (0, import_fields86.relationship)({
+    payments: (0, import_fields87.relationship)({
       ref: "Payment.user",
       many: true
     }),
-    batchJobs: (0, import_fields86.relationship)({
+    batchJobs: (0, import_fields87.relationship)({
       ref: "BatchJob.createdBy",
       many: true
     }),
-    team: (0, import_fields86.relationship)({
+    team: (0, import_fields87.relationship)({
       ref: "Team.members",
       many: false
     }),
-    teamLead: (0, import_fields86.relationship)({
+    teamLead: (0, import_fields87.relationship)({
       ref: "Team.leader",
       many: true
     }),
-    userField: (0, import_fields86.relationship)({
+    userField: (0, import_fields87.relationship)({
       ref: "UserField.user",
       many: false
     }),
-    onboardingStatus: (0, import_fields86.select)({
+    onboardingStatus: (0, import_fields87.select)({
       options: [
         { label: "Not Started", value: "not_started" },
         { label: "In Progress", value: "in_progress" },
@@ -16730,19 +17061,24 @@ var User = (0, import_core87.list)({
       defaultValue: "not_started"
     }),
     // Account system fields
-    accounts: (0, import_fields86.relationship)({
+    accounts: (0, import_fields87.relationship)({
       ref: "Account.user",
       many: true
     }),
-    invoices: (0, import_fields86.relationship)({
+    webhookEndpoints: (0, import_fields87.relationship)({
+      ref: "WebhookEndpoint.user",
+      many: true,
+      ui: { displayMode: "count" }
+    }),
+    invoices: (0, import_fields87.relationship)({
       ref: "Invoice.user",
       many: true
     }),
-    businessAccountRequest: (0, import_fields86.relationship)({
+    businessAccountRequest: (0, import_fields87.relationship)({
       ref: "BusinessAccountRequest.user",
       many: false
     }),
-    customerToken: (0, import_fields86.text)({
+    customerToken: (0, import_fields87.text)({
       access: {
         read: () => false,
         create: () => false,
@@ -16757,19 +17093,14 @@ var User = (0, import_core87.list)({
         isNullable: true
       }
     }),
-    tokenGeneratedAt: (0, import_fields86.timestamp)(),
-    orderWebhookUrl: (0, import_fields86.text)({
-      ui: {
-        description: "Webhook URL to call when orders are created/updated (for Openship integration)"
-      }
-    }),
-    ...(0, import_core87.group)({
+    tokenGeneratedAt: (0, import_fields87.timestamp)(),
+    ...(0, import_core88.group)({
       label: "Virtual Fields",
       description: "Calculated fields for user display and cart status",
       fields: {
-        firstName: (0, import_fields86.virtual)({
-          field: import_core87.graphql.field({
-            type: import_core87.graphql.String,
+        firstName: (0, import_fields87.virtual)({
+          field: import_core88.graphql.field({
+            type: import_core88.graphql.String,
             resolve(item) {
               if (!item.name) return "";
               const parts = item.name.trim().split(/\s+/);
@@ -16777,9 +17108,9 @@ var User = (0, import_core87.list)({
             }
           })
         }),
-        lastName: (0, import_fields86.virtual)({
-          field: import_core87.graphql.field({
-            type: import_core87.graphql.String,
+        lastName: (0, import_fields87.virtual)({
+          field: import_core88.graphql.field({
+            type: import_core88.graphql.String,
             resolve(item) {
               if (!item.name) return "";
               const parts = item.name.trim().split(/\s+/);
@@ -16791,9 +17122,9 @@ var User = (0, import_core87.list)({
             }
           })
         }),
-        activeCartId: (0, import_fields86.virtual)({
-          field: import_core87.graphql.field({
-            type: import_core87.graphql.String,
+        activeCartId: (0, import_fields87.virtual)({
+          field: import_core88.graphql.field({
+            type: import_core88.graphql.String,
             async resolve(item, args, context) {
               const sudoContext = context.sudo();
               const activeCarts = await sudoContext.query.Cart.findMany({
@@ -16819,8 +17150,8 @@ var User = (0, import_core87.list)({
             }
           })
         }),
-        billingAddress: (0, import_fields86.virtual)({
-          field: (lists) => import_core87.graphql.field({
+        billingAddress: (0, import_fields87.virtual)({
+          field: (lists) => import_core88.graphql.field({
             type: lists.Address.types.output,
             async resolve(item, args, context) {
               const address = await context.db.Address.findMany({
@@ -16859,9 +17190,9 @@ var User = (0, import_core87.list)({
 });
 
 // features/keystone/models/UserField.ts
-var import_core88 = require("@keystone-6/core");
-var import_fields87 = require("@keystone-6/core/fields");
-var UserField = (0, import_core88.list)({
+var import_core89 = require("@keystone-6/core");
+var import_fields88 = require("@keystone-6/core/fields");
+var UserField = (0, import_core89.list)({
   access: {
     operation: {
       query: ({ session }) => permissions.canReadUsers({ session }) || permissions.canManageUsers({ session }),
@@ -16871,25 +17202,25 @@ var UserField = (0, import_core88.list)({
     }
   },
   fields: {
-    user: (0, import_fields87.relationship)({
+    user: (0, import_fields88.relationship)({
       ref: "User.userField",
       many: false
     }),
-    lastLoginIp: (0, import_fields87.text)(),
-    lastLoginUserAgent: (0, import_fields87.text)(),
-    loginHistory: (0, import_fields87.json)({
+    lastLoginIp: (0, import_fields88.text)(),
+    lastLoginUserAgent: (0, import_fields88.text)(),
+    loginHistory: (0, import_fields88.json)({
       defaultValue: []
     }),
-    preferences: (0, import_fields87.json)({
+    preferences: (0, import_fields88.json)({
       defaultValue: {
         theme: "light",
         notifications: true,
         emailNotifications: true
       }
     }),
-    notes: (0, import_fields87.text)(),
-    lastPasswordChange: (0, import_fields87.timestamp)(),
-    failedLoginAttempts: (0, import_fields87.json)({
+    notes: (0, import_fields88.text)(),
+    lastPasswordChange: (0, import_fields88.timestamp)(),
+    failedLoginAttempts: (0, import_fields88.json)({
       defaultValue: {
         count: 0,
         lastAttempt: null,
@@ -16914,88 +17245,6 @@ var UserField = (0, import_core88.list)({
       }
       return resolvedData;
     }
-  }
-});
-
-// features/keystone/models/WebhookEndpoint.ts
-var import_core89 = require("@keystone-6/core");
-var import_fields88 = require("@keystone-6/core/fields");
-var import_crypto2 = __toESM(require("crypto"));
-var WebhookEndpoint = (0, import_core89.list)({
-  access: {
-    operation: {
-      query: permissions.canReadWebhooks,
-      create: permissions.canManageWebhooks,
-      update: permissions.canManageWebhooks,
-      delete: permissions.canManageWebhooks
-    }
-  },
-  ui: {
-    hideCreate: (args) => !permissions.canManageWebhooks(args),
-    hideDelete: (args) => !permissions.canManageWebhooks(args),
-    listView: {
-      initialColumns: ["url", "isActive", "events", "lastTriggered", "failureCount"]
-    }
-  },
-  fields: {
-    url: (0, import_fields88.text)({
-      validation: { isRequired: true },
-      ui: { description: "The URL where webhook events will be sent" }
-    }),
-    events: (0, import_fields88.json)({
-      defaultValue: [],
-      ui: {
-        description: 'Events to subscribe to, e.g., ["order.created", "product.updated", "cart.completed"]'
-      }
-    }),
-    isActive: (0, import_fields88.checkbox)({
-      defaultValue: true,
-      ui: { description: "Whether this webhook endpoint is currently active" }
-    }),
-    secret: (0, import_fields88.text)({
-      ui: {
-        itemView: { fieldMode: "hidden" },
-        description: "Secret key for webhook signature verification (auto-generated)"
-      },
-      hooks: {
-        resolveInput: ({ resolvedData, operation }) => {
-          if (operation === "create" && !resolvedData.secret) {
-            return import_crypto2.default.randomBytes(32).toString("hex");
-          }
-          return resolvedData.secret;
-        }
-      }
-    }),
-    lastTriggered: (0, import_fields88.timestamp)({
-      ui: {
-        itemView: { fieldMode: "read" },
-        description: "Last time this webhook was triggered"
-      }
-    }),
-    failureCount: (0, import_fields88.integer)({
-      defaultValue: 0,
-      ui: {
-        itemView: { fieldMode: "read" },
-        description: "Number of consecutive delivery failures"
-      }
-    }),
-    // Removed user relationship - webhooks are system-wide based on permissions
-    webhookEvents: (0, import_fields88.relationship)({
-      ref: "WebhookEvent.endpoint",
-      many: true,
-      ui: {
-        displayMode: "count",
-        description: "Events sent to this endpoint"
-      }
-    }),
-    createdAt: (0, import_fields88.timestamp)({
-      defaultValue: { kind: "now" },
-      ui: { itemView: { fieldMode: "read" } }
-    }),
-    updatedAt: (0, import_fields88.timestamp)({
-      db: { updatedAt: true },
-      ui: { itemView: { fieldMode: "read" } }
-    })
   }
 });
 
@@ -17066,6 +17315,12 @@ var WebhookEvent = (0, import_core90.list)({
         description: "Timestamp for the next retry attempt"
       }
     }),
+    deadLetteredAt: (0, import_fields89.timestamp)({
+      ui: {
+        itemView: { fieldMode: "read" },
+        description: "Set when the delivery exhausted its retry budget"
+      }
+    }),
     responseStatus: (0, import_fields89.integer)({
       ui: {
         itemView: { fieldMode: "read" },
@@ -17087,6 +17342,12 @@ var WebhookEvent = (0, import_core90.list)({
       defaultValue: { kind: "now" },
       ui: { itemView: { fieldMode: "read" } }
     })
+  },
+  db: {
+    extendPrismaSchema: (schema) => schema.replace(
+      /(model [^}]+)}/g,
+      '$1@@index([delivered, deadLetteredAt, nextAttempt], map: "WebhookEvent_retry_queue_idx")\n}'
+    )
   }
 });
 

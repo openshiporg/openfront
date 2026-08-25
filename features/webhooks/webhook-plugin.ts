@@ -1,6 +1,12 @@
 import { BaseKeystoneTypeInfo, KeystoneConfig, KeystoneContext } from '@keystone-6/core/types';
 import crypto from 'crypto';
 import { webhookEnricherRegistry } from './enrichers';
+import {
+  nextWebhookAttempt,
+  WEBHOOK_DELIVERY_MAX_ATTEMPTS,
+  WEBHOOK_DELIVERY_TIMEOUT_MS,
+  webhookDeliveryLease,
+} from './delivery-policy';
 
 // No more hardcoded URLs - we'll query from the database
 
@@ -86,7 +92,8 @@ async function triggerWebhook({ listKey, operation, item, originalItem, context 
     // 1. Query active webhooks (can't filter by JSON events array in GraphQL)
     const webhooks = await context.query.WebhookEndpoint.findMany({
       where: {
-        isActive: { equals: true }
+        isActive: { equals: true },
+        scope: { equals: 'STORE' },
       },
       query: 'id url secret events failureCount'
     });
@@ -138,7 +145,7 @@ async function deliverWebhook(
           payload,
           endpoint: { connect: { id: webhook.id } },
           deliveryAttempts: 0,
-          nextAttempt: new Date(),
+          nextAttempt: webhookDeliveryLease(),
         },
         query: 'id deliveryAttempts'
       });
@@ -172,6 +179,7 @@ async function deliverWebhook(
         'X-OpenFront-Delivery-ID': webhookEvent.id,
       },
       body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(WEBHOOK_DELIVERY_TIMEOUT_MS),
     });
 
     // Update WebhookEvent with delivery status
@@ -209,9 +217,9 @@ async function deliverWebhook(
     }
 
   } catch (error) {
-
-    // Update WebhookEvent with failure
     try {
+      const attempts = Number(webhookEvent?.deliveryAttempts || 0) + 1;
+      const nextAttempt = nextWebhookAttempt(attempts);
       await context.query.WebhookEvent.updateOne({
         where: { id: webhookEvent?.id },
         data: {
@@ -219,10 +227,8 @@ async function deliverWebhook(
           responseStatus: 0,
           responseBody: error instanceof Error ? error.message : String(error),
           lastAttempt: new Date(),
-          // Schedule retry (exponential backoff)
-          nextAttempt: new Date(
-            Date.now() + Math.min(Math.pow(2, (webhookEvent?.deliveryAttempts || 0) + 1) * 60000, 24 * 60 * 60 * 1000)
-          ),
+          nextAttempt,
+          ...(nextAttempt ? {} : { deadLetteredAt: new Date() }),
         }
       });
 
@@ -345,30 +351,47 @@ export async function retryPendingWebhookDeliveries(
   limit = 25
 ) {
   const boundedLimit = Math.max(1, Math.min(limit, 100));
-  const events = await context.sudo().query.WebhookEvent.findMany({
+  const sudo = context.sudo();
+  const now = new Date();
+  const candidates = await sudo.prisma.webhookEvent.findMany({
     where: {
-      delivered: { equals: false },
-      nextAttempt: { lte: new Date().toISOString() },
+      delivered: false,
+      deadLetteredAt: null,
+      nextAttempt: { lte: now },
+      deliveryAttempts: { lt: WEBHOOK_DELIVERY_MAX_ATTEMPTS },
+      endpointId: { not: null },
     },
     orderBy: { nextAttempt: 'asc' },
     take: boundedLimit,
-    query: `
-      id eventType payload deliveryAttempts
-      endpoint { id url secret failureCount }
-    `,
+    select: { id: true },
   });
 
-  for (const event of events) {
-    if (!event.endpoint) continue;
-    await deliverWebhook(
-      event.endpoint,
-      event.eventType,
-      event.payload,
-      context.sudo(),
-      event
-    );
+  let claimed = 0;
+  for (const candidate of candidates) {
+    const claim = await sudo.prisma.webhookEvent.updateMany({
+      where: {
+        id: candidate.id,
+        delivered: false,
+        deadLetteredAt: null,
+        nextAttempt: { lte: now },
+        deliveryAttempts: { lt: WEBHOOK_DELIVERY_MAX_ATTEMPTS },
+      },
+      data: { nextAttempt: webhookDeliveryLease() },
+    });
+    if (claim.count !== 1) continue;
+
+    const event = await sudo.query.WebhookEvent.findOne({
+      where: { id: candidate.id },
+      query: `
+        id eventType payload deliveryAttempts
+        endpoint { id url secret failureCount }
+      `,
+    });
+    if (!event?.endpoint) continue;
+    claimed += 1;
+    await deliverWebhook(event.endpoint, event.eventType, event.payload, sudo, event);
   }
-  return events.length;
+  return claimed;
 }
 
 // Export utility to manually trigger webhooks if needed

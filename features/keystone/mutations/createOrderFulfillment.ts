@@ -57,9 +57,15 @@ async function createOrderFulfillment(
     .digest("hex")}`;
 
   const sudo = context.sudo();
+  const orderIdentity = await sudo.query.Order.findOne({
+    where: { id: orderId },
+    query: 'id user { id }',
+  });
+  if (!orderIdentity) throw new Error('Order not found');
   const fulfillmentWebhookEndpointIds = await subscribedWebhookEndpointIds(
     sudo,
-    "fulfillment.created"
+    'fulfillment.created',
+    orderIdentity.user?.id
   );
   const fulfillmentResult = await sudo.prisma.$transaction(async (tx: any) => {
     const existing = await tx.fulfillment.findFirst({
@@ -76,7 +82,7 @@ async function createOrderFulfillment(
     }
     const orderLines = await tx.orderLineItem.findMany({
       where: { orderId, id: { in: normalized.map(([id]) => id) } },
-      select: { id: true, quantity: true },
+      select: { id: true, quantity: true, metadata: true },
     });
     if (orderLines.length !== normalized.length) throw new Error("Order line item not found");
     const fulfilled = await tx.fulfillmentItem.groupBy({
@@ -95,6 +101,18 @@ async function createOrderFulfillment(
         throw new Error(`Fulfillment exceeds remaining quantity for line ${line.id}`);
       }
     }
+    const orderLinesById = new Map<string, any>(
+      orderLines.map((line: any): [string, any] => [line.id, line])
+    );
+    const webhookLineItems = normalized.map(([lineItemId, quantity]) => {
+      const metadata = orderLinesById.get(lineItemId)?.metadata as any;
+      const cartItemId = String(metadata?.openshipCartItemId || '').trim();
+      return {
+        lineItemId,
+        quantity,
+        ...(cartItemId ? { cartItemId } : {}),
+      };
+    });
     const fulfillmentProvider = await tx.fulfillmentProvider.findUnique({
       where: { code: "fp_manual" },
       select: { id: true },
@@ -144,7 +162,7 @@ async function createOrderFulfillment(
             id: fulfillment.id,
             orderId,
             order: { id: orderId },
-            lineItems: normalized,
+            lineItems: webhookLineItems,
             trackingNumber: trackingNumber || null,
             trackingCompany: carrier || null,
           }

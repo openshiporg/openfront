@@ -153,7 +153,7 @@ model Cart {
   email                 String                 @default("")
   type                  CartTypeType           @default(default)
   metadata              Json?
-  idempotencyKey        String                 @default("")
+  idempotencyKey        String?                @unique
   context               Json?
   paymentAuthorizedAt   DateTime?
   abandonedEmailSent    Boolean                @default(false)
@@ -1609,11 +1609,11 @@ model User {
   userFieldId                            String?                  @unique @map("userField")
   onboardingStatus                       String?                  @default("not_started")
   accounts                               Account[]                @relation("Account_user")
+  webhookEndpoints                       WebhookEndpoint[]        @relation("WebhookEndpoint_user")
   invoices                               Invoice[]                @relation("Invoice_user")
   businessAccountRequest                 BusinessAccountRequest?  @relation("BusinessAccountRequest_user")
   customerToken                          String?
   tokenGeneratedAt                       DateTime?
-  orderWebhookUrl                        String                   @default("")
   createdAt                              DateTime                 @default(now())
   updatedAt                              DateTime                 @default(now()) @updatedAt
   passwordResetToken                     String?
@@ -1642,16 +1642,23 @@ model UserField {
 }
 
 model WebhookEndpoint {
-  id            String         @id @default(cuid())
-  url           String         @default("")
-  events        Json?          @default("[]")
-  isActive      Boolean        @default(true)
-  secret        String         @default("")
-  lastTriggered DateTime?
-  failureCount  Int?           @default(0)
-  webhookEvents WebhookEvent[] @relation("WebhookEvent_endpoint")
-  createdAt     DateTime?      @default(now())
-  updatedAt     DateTime?      @updatedAt
+  id              String         @id @default(cuid())
+  url             String         @default("")
+  registrationKey String?
+  subscriptionKey String?        @unique
+  events          Json?          @default("[]")
+  scope           String         @default("STORE")
+  user            User?          @relation("WebhookEndpoint_user", fields: [userId], references: [id])
+  userId          String?        @map("user")
+  isActive        Boolean        @default(true)
+  secret          String         @default("")
+  lastTriggered   DateTime?
+  failureCount    Int?           @default(0)
+  webhookEvents   WebhookEvent[] @relation("WebhookEvent_endpoint")
+  createdAt       DateTime?      @default(now())
+  updatedAt       DateTime?      @updatedAt
+
+  @@index([userId])
 }
 
 model WebhookEvent {
@@ -1664,6 +1671,7 @@ model WebhookEvent {
   delivered        Boolean          @default(false)
   lastAttempt      DateTime?
   nextAttempt      DateTime?
+  deadLetteredAt   DateTime?
   responseStatus   Int?
   responseBody     String           @default("")
   endpoint         WebhookEndpoint? @relation("WebhookEvent_endpoint", fields: [endpointId], references: [id])
@@ -1671,6 +1679,7 @@ model WebhookEvent {
   createdAt        DateTime?        @default(now())
 
   @@index([endpointId])
+  @@index([delivered, deadLetteredAt, nextAttempt], map: "WebhookEvent_retry_queue_idx")
 }
 
 enum ApiKeyStatusType {

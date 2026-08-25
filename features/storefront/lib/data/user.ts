@@ -32,7 +32,6 @@ export async function getUser() {
               lastName
               phone
               tokenGeneratedAt
-              orderWebhookUrl
               billingAddress {
                 id
                 firstName

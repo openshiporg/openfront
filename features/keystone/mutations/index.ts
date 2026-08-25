@@ -49,6 +49,7 @@ import getCustomerPaidInvoices from './getCustomerPaidInvoices';
 import getProductsSortedByPrice from '../queries/getProductsSortedByPrice';
 import processReturnRefund from './processReturnRefund';
 import retryWebhookDeliveries from './retryWebhookDeliveries';
+import registerWebhookEndpoint from './registerWebhookEndpoint';
 import getFinanceClose from '../queries/getFinanceClose';
 import {
   getMyPrivacyData,
@@ -171,7 +172,6 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         billingAddress: String
         password: String
         onboardingStatus: String
-        orderWebhookUrl: String
       }
 
       type WebhookResult {
@@ -289,6 +289,13 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         completeInvoicePayment(paymentSessionId: ID!): InvoicePaymentResult!
         processReturnRefund(returnId: ID!, paymentId: ID!, idempotencyKey: String!): Refund
         retryWebhookDeliveries(limit: Int): Int!
+        registerWebhookEndpoint(
+          registrationKey: String!
+          url: String!
+          events: [String!]!
+          secret: String!
+          requiredScope: String
+        ): WebhookEndpoint!
         updatePrivacyPreferences(preferences: JSON!): JSON!
         requestPrivacyAction(action: String!, details: String): Notification
       }
@@ -348,6 +355,7 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         completeInvoicePayment,
         processReturnRefund,
         retryWebhookDeliveries,
+        registerWebhookEndpoint,
         updatePrivacyPreferences,
         requestPrivacyAction,
       }

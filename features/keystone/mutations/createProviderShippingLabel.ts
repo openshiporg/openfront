@@ -27,9 +27,11 @@ async function createProviderShippingLabel(
     where: { id: orderId },
     query: `
       id
+      user { id }
       lineItems {
         id
         quantity
+        metadata
       }
       fulfillments {
         canceledAt
@@ -135,7 +137,8 @@ async function createProviderShippingLabel(
 
     const fulfillmentWebhookEndpointIds = await subscribedWebhookEndpointIds(
       sudo,
-      "fulfillment.created"
+      'fulfillment.created',
+      order.user?.id
     );
 
     // Reserve fulfillment quantities transactionally before the external label
@@ -227,7 +230,15 @@ async function createProviderShippingLabel(
           id: fulfillment.id,
           orderId,
           order: { id: orderId },
-          lineItems: lineItems.map((item: any) => [item.lineItemId, item.quantity]),
+          lineItems: lineItems.map((item: any) => {
+            const sourceLine = order.lineItems.find((line: any) => line.id === item.lineItemId);
+            const cartItemId = String(sourceLine?.metadata?.openshipCartItemId || '').trim();
+            return {
+              lineItemId: item.lineItemId,
+              quantity: item.quantity,
+              ...(cartItemId ? { cartItemId } : {}),
+            };
+          }),
           trackingNumber: labelData.trackingNumber || null,
           trackingCompany: labelData.carrier || null,
         }

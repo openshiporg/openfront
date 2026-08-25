@@ -348,54 +348,6 @@ export async function sendOrderConfirmationEmail(order: any, baseUrl?: string): 
     } else {
       console.log(`📧 Order confirmation email sent to ${order.email}`);
     }
-
-    // Call user webhook if configured
-    if (order.user?.orderWebhookUrl) {
-      try {
-        const webhookPayload = {
-          event: 'order.created',
-          data: {
-            order: {
-              id: order.id,
-              displayId: order.displayId,
-              status: order.status,
-              total: order.total,
-              formattedTotal: order.formattedTotal || order.total,
-              createdAt: order.createdAt,
-              email: order.email,
-              customer: {
-                id: order.user.id,
-                email: order.user.email
-              },
-              shippingAddress: order.shippingAddress,
-              lineItems: order.lineItems || []
-            }
-          },
-          timestamp: new Date().toISOString()
-        };
-
-        console.log(`🪝 Calling webhook for order ${order.displayId}: ${order.user.orderWebhookUrl}`);
-        
-        const webhookResponse = await fetch(order.user.orderWebhookUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'User-Agent': 'OpenFront-Webhook/1.0',
-            'X-OpenFront-Event': 'order.created',
-            'X-OpenFront-Order-ID': order.id
-          },
-          body: JSON.stringify(webhookPayload)
-        });
-
-        if (webhookResponse.ok) {
-          // Webhook called successfully
-        } else {
-          // Webhook call failed
-        }
-      } catch (webhookError) {
-        // Webhook call error
-      }
-    }
   } catch (error) {
     console.error('Failed to send order confirmation email:', error);
   }
@@ -427,60 +379,6 @@ export async function sendOrderFulfillmentEmail(order: any, fulfillment: any, ba
       console.log(`📧 Order fulfillment email sent! Preview it at ${getTestMessageUrl(info as any)}`);
     } else {
       console.log(`📧 Order fulfillment email sent to ${order.email}`);
-    }
-
-    // Call user webhook if configured
-    if (order.user?.orderWebhookUrl) {
-      try {
-        const webhookPayload = {
-          event: 'order.shipped',
-          data: {
-            order: {
-              id: order.id,
-              displayId: order.displayId,
-              status: order.status,
-              total: order.total,
-              formattedTotal: order.formattedTotal || order.total,
-              createdAt: order.createdAt,
-              email: order.email,
-              customer: {
-                id: order.user.id,
-                email: order.user.email
-              },
-              shippingAddress: order.shippingAddress,
-              lineItems: order.lineItems || []
-            },
-            fulfillment: {
-              id: fulfillment.id,
-              trackingNumber: fulfillment.trackingNumber,
-              trackingCompany: fulfillment.trackingCompany,
-              shippingLabels: fulfillment.shippingLabels || []
-            }
-          },
-          timestamp: new Date().toISOString()
-        };
-
-        console.log(`🪝 Calling webhook for shipped order ${order.displayId}: ${order.user.orderWebhookUrl}`);
-        
-        const webhookResponse = await fetch(order.user.orderWebhookUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'User-Agent': 'OpenFront-Webhook/1.0',
-            'X-OpenFront-Event': 'order.shipped',
-            'X-OpenFront-Order-ID': order.id
-          },
-          body: JSON.stringify(webhookPayload)
-        });
-
-        if (webhookResponse.ok) {
-          // Webhook called successfully for shipped order
-        } else {
-          // Webhook call failed for shipped order
-        }
-      } catch (webhookError) {
-        // Webhook call error for shipped order
-      }
     }
   } catch (error) {
     console.error('Failed to send order fulfillment email:', error);

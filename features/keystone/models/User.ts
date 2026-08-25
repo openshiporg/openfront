@@ -142,6 +142,11 @@ export const User = list({
       ref: 'Account.user',
       many: true,
     }),
+    webhookEndpoints: relationship({
+      ref: 'WebhookEndpoint.user',
+      many: true,
+      ui: { displayMode: 'count' },
+    }),
     invoices: relationship({
       ref: 'Invoice.user',
       many: true,
@@ -166,11 +171,6 @@ export const User = list({
       },
     }),
     tokenGeneratedAt: timestamp(),
-    orderWebhookUrl: text({
-      ui: {
-        description: 'Webhook URL to call when orders are created/updated (for Openship integration)'
-      }
-    }),
     ...group({
       label: 'Virtual Fields',
       description: 'Calculated fields for user display and cart status',

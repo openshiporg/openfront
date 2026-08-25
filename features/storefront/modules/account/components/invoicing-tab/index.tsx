@@ -3,7 +3,7 @@
 import { User } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Copy, RefreshCw, Info, Mail, Zap, Bot, TicketCheck, Clock, Webhook, CheckIcon, List, CheckCircle, AlertCircle, MoreVertical } from "lucide-react"
+import { Copy, RefreshCw, Info, Mail, Zap, Bot, TicketCheck, Clock, CheckIcon, List, CheckCircle, AlertCircle, MoreVertical } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -16,7 +16,7 @@ import { toast } from "@/components/ui/use-toast"
 import PaymentDialog from "./invoice-payment-dialog"
 import OrderCard from "../order-card"
 import { useState, useActionState, useEffect } from "react"
-import { updateWebhookUrl, regenerateCustomerToken } from "@/features/storefront/lib/data/business-accounts"
+import { regenerateCustomerToken } from "@/features/storefront/lib/data/business-accounts"
 
 type BusinessAccountTabProps = {
   customer: User
@@ -27,11 +27,8 @@ type BusinessAccountTabProps = {
 }
 
 const InvoicingTab = ({ customer, businessAccount, businessAccountRequest, orders, unpaidLineItems }: BusinessAccountTabProps) => {
-  const [webhookUrl, setWebhookUrl] = useState<string>(customer.orderWebhookUrl || '')
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
   const [tokenCopied, setTokenCopied] = useState(false)
-  const [webhookUpdated, setWebhookUpdated] = useState(false)
-  const [webhookLoading, setWebhookLoading] = useState(false)
   
   // Server actions with useActionState
   const [tokenState, tokenAction] = useActionState(regenerateCustomerToken, { success: false, error: '' })
@@ -110,51 +107,6 @@ const InvoicingTab = ({ customer, businessAccount, businessAccountRequest, order
       await navigator.clipboard.writeText(currentToken)
       setTokenCopied(true)
       setTimeout(() => setTokenCopied(false), 1500)
-    }
-  }
-
-  const handleWebhookUpdate = async () => {
-    // Allow empty webhook URL to clear it
-    // if (!webhookUrl.trim()) {
-    //   toast({
-    //     title: "Invalid URL", 
-    //     description: "Please enter a valid webhook URL.",
-    //     variant: "destructive"
-    //   })
-    //   return
-    // }
-    
-    setWebhookLoading(true)
-    
-    try {
-      const formData = new FormData()
-      formData.append('webhookUrl', webhookUrl.trim())
-      
-      const result = await updateWebhookUrl({ success: false, error: '' }, formData)
-      
-      setWebhookLoading(false)
-      
-      if (result.success) {
-        setWebhookUpdated(true)
-        setTimeout(() => setWebhookUpdated(false), 2000)
-        toast({
-          title: "Webhook Updated",
-          description: "Your order webhook URL has been updated successfully.",
-        })
-      } else {
-        toast({
-          title: "Error",
-          description: result.error || "Failed to update webhook URL",
-          variant: "destructive"
-        })
-      }
-    } catch (error) {
-      setWebhookLoading(false)
-      toast({
-        title: "Error", 
-        description: "Failed to update webhook URL",
-        variant: "destructive"
-      })
     }
   }
 
@@ -433,63 +385,6 @@ const InvoicingTab = ({ customer, businessAccount, businessAccountRequest, order
                         </Tooltip>
                       </TooltipProvider>
                     </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium text-foreground">Order Webhook URL</Label>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    URL to notify when orders are created or updated (for Openship integration)
-                  </p>
-                  <div className="relative">
-                    <Input 
-                      placeholder="https://your-openship.com/api/webhook" 
-                      className="bg-muted/30 pe-9"
-                      value={webhookUrl}
-                      onChange={(e) => setWebhookUrl(e.target.value)}
-                    />
-                    <TooltipProvider delayDuration={0}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={handleWebhookUpdate}
-                            disabled={webhookLoading || webhookUpdated}
-                            className="text-muted-foreground/80 hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 absolute inset-y-0 end-0 flex h-full w-9 items-center justify-center rounded-e-md transition-[color,box-shadow] outline-none focus:z-10 focus-visible:ring-[3px] disabled:pointer-events-none disabled:cursor-not-allowed"
-                            aria-label={webhookUpdated ? "Webhook updated" : webhookLoading ? "Updating webhook" : "Update webhook URL"}
-                          >
-                            {webhookLoading ? (
-                              <RefreshCw className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <>
-                                <div
-                                  className={cn(
-                                    "transition-all",
-                                    webhookUpdated ? "scale-100 opacity-100" : "scale-0 opacity-0"
-                                  )}
-                                >
-                                  <CheckIcon
-                                    className="stroke-emerald-500"
-                                    size={16}
-                                    aria-hidden="true"
-                                  />
-                                </div>
-                                <div
-                                  className={cn(
-                                    "absolute transition-all",
-                                    webhookUpdated ? "scale-0 opacity-0" : "scale-100 opacity-100"
-                                  )}
-                                >
-                                  <Webhook size={16} aria-hidden="true" />
-                                </div>
-                              </>
-                            )}
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent className="px-2 py-1 text-xs">
-                          Update webhook URL
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
                   </div>
                 </div>
               </div>
