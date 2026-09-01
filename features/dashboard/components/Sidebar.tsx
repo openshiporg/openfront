@@ -117,13 +117,13 @@ export function Sidebar({ adminMeta, user, onOpenDialog }: SidebarProps) {
     <SidebarComponent collapsible="icon">
       <SidebarHeader>
         <SidebarMenuButton asChild>
-          <div className="group-has-[[data-collapsible=icon]]/sidebar-wrapper:hidden p-2">
-            <Logo />
+          <div className="group-has-[[data-collapsible=icon]]/sidebar-wrapper:hidden p-1.5">
+            <Logo variant="sidebar" />
           </div>
         </SidebarMenuButton>
         <SidebarMenuButton asChild>
           <div className="hidden group-has-[[data-collapsible=icon]]/sidebar-wrapper:block">
-            <LogoIcon />
+            <LogoIcon className="size-5 text-indigo-500" color="#6366f1" suffix="-full-header" />
           </div>
         </SidebarMenuButton>
       </SidebarHeader>
