@@ -5,6 +5,15 @@ import {
 } from "../../webhooks/outbox";
 import { deliverWebhookEventsById } from "../../webhooks/webhook-plugin";
 
+// Checkout writes the order through Prisma, so Keystone hooks (and the Order webhook
+// enricher) never run for it: order.created is built here and must carry everything
+// receivers such as Openship read, including the full shipping address.
+const WEBHOOK_ADDRESS_SELECT = {
+  id: true, firstName: true, lastName: true, company: true, address1: true, address2: true,
+  city: true, province: true, postalCode: true, phone: true,
+  country: { select: { id: true, iso2: true } },
+};
+
 export async function createOrderFromCartAtomically(cart: any, sudo: any) {
   const prepared: Array<{ line: any; price: any; thumbnail: any }> = [];
   for (const line of cart.lineItems) {
@@ -41,6 +50,10 @@ export async function createOrderFromCartAtomically(cart: any, sudo: any) {
     },
     acceptedAt: new Date().toISOString(),
   };
+  // Formatted totals as the Order shows them; never worth failing checkout over.
+  const webhookTotals = orderWebhookEndpointIds.length
+    ? await sudo.query.Cart.findOne({ where: { id: cart.id }, query: "subtotal shipping discount tax total" }).catch(() => null)
+    : null;
 
   const commit = await sudo.prisma.$transaction(async (tx: any) => {
     const existing = await tx.order.findFirst({ where: { cart: { id: cart.id } }, select: { id: true } });
@@ -141,6 +154,9 @@ export async function createOrderFromCartAtomically(cart: any, sudo: any) {
       },
     });
     await tx.cart.update({ where: { id: cart.id }, data: { orderId: order.id } });
+    const webhookAddress = (id: string) => orderWebhookEndpointIds.length ? tx.address.findUnique({ where: { id }, select: WEBHOOK_ADDRESS_SELECT }) : null;
+    const shippingAddress = await webhookAddress(cart.shippingAddress.id);
+    const billingAddress = await webhookAddress(cart.billingAddress.id);
     const webhookEventIds = await enqueueWebhookOutbox(
       tx,
       orderWebhookEndpointIds,
@@ -154,8 +170,14 @@ export async function createOrderFromCartAtomically(cart: any, sudo: any) {
         email: order.email,
         status: order.status,
         rawTotal: cart.rawTotal,
+        subtotal: webhookTotals?.subtotal ?? null,
+        shipping: webhookTotals?.shipping ?? null,
+        discount: webhookTotals?.discount ?? null,
+        tax: webhookTotals?.tax ?? null,
+        total: webhookTotals?.total ?? null,
         currency: { id: cart.region.currency.id, code: cart.region.currency.code },
-        shippingAddress: cart.shippingAddress,
+        shippingAddress,
+        billingAddress,
         lineItems: webhookLineItems,
       }
     );

@@ -100,7 +100,7 @@ export function OnboardingCards({
     return null;
   }
 
-  if (onboardingStatus === "completed") {
+  if (onboardingStatus === "completed" || onboardingStatus === "dismissed") {
     return null;
   }
 
