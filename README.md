@@ -103,7 +103,7 @@ Openfront includes 78+ sophisticated data models covering:
 
 1. **Clone and install dependencies:**
    ```bash
-   git clone https://github.com/openship-org/openfront.git
+   git clone https://github.com/openshiporg/openfront.git
    cd openfront
    npm install
    ```
