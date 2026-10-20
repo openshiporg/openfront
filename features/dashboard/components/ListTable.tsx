@@ -109,7 +109,7 @@ export function ListTable({
         });
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      const errorMessage = 'Unable to delete the selected items. Please try again.';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -172,7 +172,7 @@ export function ListTable({
           );
         }
       } catch (err) {
-        console.warn(`Failed to render cell for field ${fieldKey}:`, err);
+        console.warn("Dashboard operation failed (details redacted).");
       }
     }
 

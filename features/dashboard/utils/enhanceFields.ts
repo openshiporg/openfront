@@ -73,7 +73,7 @@ export function enhanceFields(rawFields: Record<string, any>, listKey: string) {
         }),
       }
     } catch (error) {
-      console.error(`Error enhancing field ${fieldPath}:`, error)
+      console.error("Dashboard operation failed (details redacted).")
     }
   }
   

@@ -126,7 +126,7 @@ function insertOption(editor: Editor, text: Text, option: Option) {
   try {
     // Safety check for text node
     if (!text || typeof text.text !== 'string') {
-      console.warn('Invalid text node in insertOption:', text)
+      console.warn("Dashboard operation failed (details redacted).")
       return
     }
 
@@ -139,20 +139,20 @@ function insertOption(editor: Editor, text: Text, option: Option) {
     })
     option.insert(editor)
   } catch (error) {
-    console.error('Error in insertOption:', error, { text, option })
+    console.error("Dashboard operation failed (details redacted).")
   }
 }
 
 export function InsertMenu({ children, text }: { children: ReactNode; text: Text }) {
   // Safety check for text node
   if (!text || typeof text.text !== 'string') {
-    console.warn('InsertMenu received invalid text node:', text)
+    console.warn("Dashboard operation failed (details redacted).")
     return <>{children}</>
   }
 
   // Safety check for children
   if (children === undefined || children === null) {
-    console.warn('InsertMenu received invalid children:', children)
+    console.warn("Dashboard operation failed (details redacted).")
     return <span>{text.text}</span>
   }
 

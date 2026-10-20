@@ -37,7 +37,7 @@ export async function updateItemAction(listKey: string, id: string, data: Record
   } catch (error) {
     // Return error in Apollo format
     return {
-      errors: [{ message: error instanceof Error ? error.message : 'Update failed', path: undefined }],
+      errors: [{ message: "Update failed", path: undefined }],
       data: null
     }
   }
@@ -77,7 +77,7 @@ export async function createItemAction(listKey: string, data: Record<string, unk
   } catch (error) {
     // Return error in Apollo format
     return {
-      errors: [{ message: error instanceof Error ? error.message : 'Create failed', path: undefined }],
+      errors: [{ message: "Create failed", path: undefined }],
       data: null
     }
   }
@@ -115,7 +115,7 @@ export async function deleteItemAction(listKey: string, id: string) {
   } catch (error) {
     // Return error in Apollo format
     return {
-      errors: [{ message: error instanceof Error ? error.message : 'Delete failed', path: undefined }],
+      errors: [{ message: "Delete failed", path: undefined }],
       data: null
     }
   }
@@ -159,7 +159,7 @@ export async function deleteManyItemsAction(
   } catch (error) {
     // Return error in Apollo format
     return {
-      errors: [{ message: error instanceof Error ? error.message : 'Bulk delete failed', path: undefined }],
+      errors: [{ message: "Bulk delete failed", path: undefined }],
       data: null
     }
   }

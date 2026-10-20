@@ -22,7 +22,7 @@ type ActionState = {
   success: string | null;
   formData: {
     email: string;
-    password: string;
+
   };
 };
 
@@ -31,7 +31,7 @@ const initialState: ActionState = {
   success: null,
   formData: {
     email: '',
-    password: ''
+
   }
 };
 
@@ -117,7 +117,7 @@ export function ResetForm({ mode, token }: ResetFormProps) {
                 autoComplete="new-password"
                 placeholder="••••••••"
                 className="pr-10 bg-muted/40"
-                defaultValue={state.formData.password}
+
                 required
               />
               <button

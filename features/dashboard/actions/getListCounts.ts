@@ -45,11 +45,9 @@ export async function getListCounts(
 
     return response
   } catch (error: unknown) {
-    console.error('Error fetching list counts:', error)
+    console.error("Dashboard operation failed (details redacted).")
     const errorMessage =
-      error instanceof Error
-        ? error.message
-        : 'Unknown error fetching list counts'
+      "Unknown error fetching list counts"
     return { success: false, error: errorMessage }
   }
 }

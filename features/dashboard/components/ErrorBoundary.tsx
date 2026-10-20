@@ -30,7 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Dashboard ErrorBoundary caught an error:', error, errorInfo)
+    console.error("Dashboard operation failed (details redacted).")
   }
 
   render() {
@@ -61,15 +61,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </Button>
             </div>
             
-            {process.env.NODE_ENV === 'development' && this.state.error && (
-              <details className="mt-4 text-sm">
-                <summary className="cursor-pointer font-medium">Error Details</summary>
-                <pre className="mt-2 whitespace-pre-wrap text-xs text-muted-foreground">
-                  {this.state.error.toString()}
-                  {this.state.error.stack}
-                </pre>
-              </details>
-            )}
+
           </div>
         </div>
       )

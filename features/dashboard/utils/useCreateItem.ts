@@ -117,8 +117,7 @@ export function useCreateItem(list: any, enhancedFields: Record<string, any>, op
         ...prev,
         state: 'error',
         error: {
-          networkError: error.networkError,
-          graphQLErrors: error.graphQLErrors || [{ message: error.message }]
+          graphQLErrors: [{ message: 'Unable to create the item. Please try again.' }]
         }
       }))
       return null

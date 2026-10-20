@@ -69,7 +69,7 @@ function getFieldGraphQLSelection(field: any): string {
         return selectionFn(field.path, field.fieldMeta)
       }
     } catch (error) {
-      console.warn(`Could not get field type for viewsIndex ${field.viewsIndex}:`, error)
+      console.warn("Dashboard operation failed (details redacted).")
     }
   }
   
@@ -148,10 +148,10 @@ export async function getListItemsAction(
     }
     
   } catch (error) {
-    console.error(`💥 Error fetching list items for ${listKey}:`, error)
+    console.error("Dashboard operation failed (details redacted).")
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
+      error: "Unknown error occurred"
     }
   }
 }

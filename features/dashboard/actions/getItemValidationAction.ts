@@ -64,10 +64,10 @@ export async function getItemValidationAction(listKey: string, itemId: string) {
       data: validationMap
     }
   } catch (error) {
-    console.error('Error in getItemValidationAction:', error)
+    console.error("Dashboard operation failed (details redacted).")
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: "Unknown error"
     }
   }
 }

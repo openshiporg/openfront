@@ -349,7 +349,7 @@ export function DocumentEditorEditable(props: EditableProps) {
           try {
             return renderLeaf(props)
           } catch (error) {
-            console.error('Error in renderLeaf:', error, props)
+            console.error("Dashboard operation failed (details redacted).")
             // Return safe fallback
             return <span {...props.attributes}>{props.text?.text || ''}</span>
           }

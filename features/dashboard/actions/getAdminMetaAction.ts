@@ -156,10 +156,10 @@ export async function getAdminMetaAction(listKey?: string): Promise<KeystoneResp
     // Return full admin meta
     return response
   } catch (error) {
-    console.error('Error in getAdminMetaAction:', error)
+    console.error("Dashboard operation failed (details redacted).")
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: "Unknown error"
     }
   }
 }

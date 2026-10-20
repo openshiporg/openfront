@@ -207,7 +207,7 @@ function ErrorDialog({ error, onClose }: { error: Error; onClose: () => void }) 
         <AlertDialogHeader>
           <AlertDialogTitle>Error Details</AlertDialogTitle>
           <AlertDialogDescription>
-            {error.message}
+            Unable to save the item. Please try again.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -240,7 +240,7 @@ function deserializeItemToValue(
       // Call deserialize with the properly structured data
       result[fieldPath] = controller.deserialize(itemForField)
     } catch (error) {
-      console.error(`Error deserializing field ${fieldPath}:`, error)
+      console.error("Dashboard operation failed (details redacted).")
     }
   })
   
@@ -349,7 +349,7 @@ export function ItemPageClient({ list, item, itemId }: ItemPageClientProps) {
       })
 
     } catch (error: any) {
-      console.error('Save error:', error)
+      console.error("Dashboard operation failed (details redacted).")
       toast.error("Unable to save item", {
         action: {
           label: "Details",

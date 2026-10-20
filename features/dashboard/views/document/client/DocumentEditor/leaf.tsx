@@ -31,14 +31,14 @@ function Placeholder({ placeholder, children }: { placeholder: string; children:
 const Leaf = ({ leaf, text, children, attributes }: RenderLeafProps) => {
   // Safety check: ensure we have valid text content
   if (!text || typeof text.text !== 'string') {
-    console.warn('Invalid text node in Leaf component:', { leaf, text })
+    console.warn("Dashboard operation failed (details redacted).")
     // Return a safe fallback with empty string
     return <span {...attributes}></span>
   }
 
   // Safety check: ensure children is valid
   if (children === undefined || children === null) {
-    console.warn('Invalid children in Leaf component:', { children, text })
+    console.warn("Dashboard operation failed (details redacted).")
     // Return with text content directly
     return <span {...attributes}>{text.text}</span>
   }
@@ -115,7 +115,7 @@ export const renderLeaf = (props: RenderLeafProps) => {
 
   // Ensure text node is valid for normal cases
   if (!props.text || typeof props.text.text !== 'string') {
-    console.warn('Invalid text in renderLeaf:', props.text)
+    console.warn("Dashboard operation failed (details redacted).")
     const fixedProps = {
       ...props,
       text: { text: '' } as any,

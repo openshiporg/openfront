@@ -59,7 +59,7 @@ function getFieldGraphQLSelection(field: any): string {
         return selectionFn(field.path, field.fieldMeta)
       }
     } catch (error) {
-      console.warn(`Could not get field type for viewsIndex ${field.viewsIndex}:`, error)
+      console.warn("Dashboard operation failed (details redacted).")
     }
   }
   
@@ -126,10 +126,10 @@ export async function getItemAction(
       data: response.data
     }
   } catch (error) {
-    console.error('Error in getItemAction:', error)
+    console.error("Dashboard operation failed (details redacted).")
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: "Unknown error"
     }
   }
 }

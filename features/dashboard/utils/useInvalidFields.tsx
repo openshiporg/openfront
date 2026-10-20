@@ -23,7 +23,7 @@ export function useInvalidFields(
         try {
           Object.assign(serialized, field.controller.serialize(item[fieldKey]))
         } catch (error) {
-          console.error(`Error serializing field ${fieldKey}:`, error)
+          console.error("Dashboard operation failed (details redacted).")
         }
       }
     }
@@ -43,7 +43,7 @@ export function useInvalidFields(
           invalidFields.add(fieldKey)
         }
       } catch (error) {
-        console.error(`Error validating field ${fieldKey}:`, error)
+        console.error("Dashboard operation failed (details redacted).")
         // If validation throws, consider it invalid
         invalidFields.add(fieldKey)
       }

@@ -95,7 +95,7 @@ export function ClientField({
 
   // Handle auth error state
   if (authError) {
-    console.error("Error fetching authenticated user:", authError);
+    console.error("Dashboard operation failed (details redacted).");
   }
 
   const authenticatedItem =

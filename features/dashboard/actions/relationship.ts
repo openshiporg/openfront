@@ -37,11 +37,9 @@ export async function getRelationshipOptions(
     // Return the entire response object directly
     return response;
   } catch (error) {
-    console.error("Error fetching relationship options:", error);
+    console.error("Dashboard operation failed (details redacted).");
     const errorMessage =
-      error instanceof Error
-        ? error.message
-        : "An unexpected error occurred while fetching relationship options";
+      "An unexpected error occurred while fetching relationship options";
     return { success: false, error: errorMessage } as KeystoneResponse<any>;
   }
 }

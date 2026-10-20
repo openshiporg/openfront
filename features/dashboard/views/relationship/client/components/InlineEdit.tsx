@@ -40,7 +40,7 @@ function deserializeItemToValue(
       // Call deserialize with the properly structured data
       result[fieldPath] = controller.deserialize(itemForField);
     } catch (error) {
-      console.error(`Error deserializing field ${fieldPath}:`, error);
+      console.error("Dashboard operation failed (details redacted).");
     }
   });
 

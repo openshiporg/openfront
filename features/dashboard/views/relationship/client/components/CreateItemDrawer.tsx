@@ -114,7 +114,7 @@ export function CreateItemDrawer({ listKey, isOpen, onClose, onCreate }: CreateI
             <DrawerTitle>Error</DrawerTitle>
           </DrawerHeader>
           <div className="px-4 py-8 text-center text-red-600">
-            {error ? `Error loading ${listKey}: ${error.message}` : `Could not load form for ${listKey}`}
+            {`Could not load form for ${listKey}. Please try again.`}
           </div>
           <DrawerFooter>
             <Button onClick={handleCancel}>Close</Button>
