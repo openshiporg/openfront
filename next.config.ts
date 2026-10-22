@@ -1,4 +1,7 @@
 import type { NextConfig } from 'next';
+import { s3ForcePathStyle } from './features/keystone/lib/s3-storage';
+
+const s3Hostname = process.env.S3_ENDPOINT ? process.env.S3_ENDPOINT.replace(/^https?:\/\//, '').replace(/:\d+$/, '') : '/';
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
@@ -16,7 +19,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: process.env.S3_ENDPOINT ? process.env.S3_ENDPOINT.replace(/^https?:\/\//, '').replace(/:\d+$/, '') : '/',
+        // Virtual-hosted buckets serve images from <bucket>.<endpoint host>
+        hostname: s3ForcePathStyle(process.env.S3_ENDPOINT) ? s3Hostname : `${process.env.S3_BUCKET_NAME}.${s3Hostname}`,
         port: '',
         pathname: '/**',
       },

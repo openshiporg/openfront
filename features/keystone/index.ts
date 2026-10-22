@@ -13,6 +13,7 @@ import bcryptjs from "bcryptjs";
 import { withWebhooks } from "../webhooks/webhook-plugin";
 import { customerTokenDigest } from "./security/token-crypto";
 import { findOAuthToken } from "./security/oauth-credentials";
+import { s3ForcePathStyle } from "./lib/s3-storage";
 // Add rate limiting on storefront queries and mutations
 // import { ApolloArmor } from "@escape.tech/graphql-armor";
 // import { applyMiddleware } from "graphql-middleware";
@@ -453,7 +454,7 @@ export default withAuth(
           secretAccessKey,
           endpoint,
           signed: { expiry: 5000 },
-          forcePathStyle: true,
+          forcePathStyle: s3ForcePathStyle(endpoint),
         },
       },
       graphql: {
