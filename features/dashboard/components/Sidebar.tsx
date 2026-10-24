@@ -43,6 +43,7 @@ import { OnboardingCards } from '@/features/platform/onboarding/components/Onboa
 import { dismissOnboarding } from '@/features/platform/onboarding/actions/onboarding'
 import { platformNavGroups, platformStandaloneItems, getPlatformNavItemsWithBasePath } from '@/features/platform/lib/navigation'
 import { useDashboard } from '../context/DashboardProvider'
+import { visiblePlatformItems, visibleSidebarLists } from '../lib/sidebarAccess'
 
 interface User {
   id: string;
@@ -50,6 +51,7 @@ interface User {
   name?: string;
   onboardingStatus?: string;
   role?: {
+    canAccessDashboard?: boolean;
     canManageOnboarding?: boolean;
   };
 }
@@ -89,13 +91,17 @@ export function Sidebar({ adminMeta, user, onOpenDialog }: SidebarProps) {
   )
 
   // Convert lists to sidebar links format
-  const modelLinks = listsArray.map((list: any) => ({
+  const modelLinks = visibleSidebarLists(listsArray as any[], user).map((list: any) => ({
     title: list.label,
     href: `/dashboard/${list.path}`
   }))
 
   // Platform navigation groups with proper basePath
-  const platformItemsWithBasePath = getPlatformNavItemsWithBasePath(basePath)
+  const platformItemsWithBasePath = visiblePlatformItems(
+    getPlatformNavItemsWithBasePath(basePath),
+    listsArray as any[],
+    user
+  )
   const platformItems = platformNavGroups.map((group) => ({
     title: group.title,
     items: platformItemsWithBasePath.filter(item => item.group === group.id).map(item => ({
@@ -105,10 +111,10 @@ export function Sidebar({ adminMeta, user, onOpenDialog }: SidebarProps) {
     })),
     isActive: platformItemsWithBasePath.filter(item => item.group === group.id).some(item => isLinkActive(item.href)),
     icon: group.icon,
-  }))
+  })).filter((group) => group.items.length > 0)
 
   // Standalone platform items with proper basePath
-  const standaloneItemsWithBasePath = platformStandaloneItems.map(item => ({
+  const standaloneItemsWithBasePath = visiblePlatformItems(platformStandaloneItems, listsArray as any[], user).map(item => ({
     ...item,
     href: `${basePath}${item.href}`,
   }))

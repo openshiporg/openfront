@@ -84,6 +84,7 @@ function DeleteButton({
       const error = errors?.find((x: any) => x.path === undefined || x.path?.length === 1)
       if (error) {
         toast.error('Unable to delete item.', {
+          description: error.message,
           action: {
             label: 'Details',
             onClick: () => onError(new Error(error.message))
@@ -206,8 +207,8 @@ function ErrorDialog({ error, onClose }: { error: Error; onClose: () => void }) 
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Error Details</AlertDialogTitle>
-          <AlertDialogDescription>
-            Unable to save the item. Please try again.
+          <AlertDialogDescription className="whitespace-pre-line break-words">
+            {error.message || 'Unable to save the item. Please try again.'}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -324,6 +325,7 @@ export function ItemPageClient({ list, item, itemId }: ItemPageClientProps) {
       const error = errors?.find((x: any) => x.path === undefined || x.path?.length === 1)
       if (error) {
         toast.error('Unable to save item', {
+          description: error.message,
           action: {
             label: 'Details',
             onClick: () => setErrorDialogValue(new Error(error.message))
@@ -461,7 +463,7 @@ export function ItemPageClient({ list, item, itemId }: ItemPageClientProps) {
         }
       />
       
-      <main className="w-full max-w-5xl p-4 md:p-6">
+      <div className="w-full max-w-5xl p-4 md:p-6">
         <div className="grid lg:grid-cols-[minmax(240px,2fr)_3fr] gap-6 gap-y-8">
           {/* Sidebar */}
           <aside className="lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7.5rem)] flex flex-col h-full">
@@ -548,7 +550,7 @@ export function ItemPageClient({ list, item, itemId }: ItemPageClientProps) {
             )}
           </div>
         </div>
-      </main>
+      </div>
 
       {/* Error Dialog */}
       {errorDialogValue && (

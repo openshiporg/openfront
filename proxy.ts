@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { handleDashboardRoutes, getAuthenticatedUser } from "@/features/dashboard/middleware";
 import { handleStorefrontRoutes } from "@/features/storefront/middleware";
 import { NextResponse } from "next/server";
+import { isDashboardRoute } from "@/features/dashboard/lib/authFlow";
 
 const dashboardPath = "/dashboard";
 
@@ -11,7 +12,7 @@ export async function proxy(request: NextRequest) {
   const { user, redirectToInit } = await getAuthenticatedUser(request);
 
   // If redirectToInit is true (no users exist) and user is on storefront, redirect to dashboard init
-  if (redirectToInit && !request.nextUrl.pathname.startsWith(`${dashboardPath}/init`)) {
+  if (redirectToInit && !isDashboardRoute(request.nextUrl.pathname, "init")) {
     return NextResponse.redirect(new URL(`${dashboardPath}/init`, request.url));
   }
 
