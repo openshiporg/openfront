@@ -47,7 +47,8 @@ export const OAuthApp = list({
       },
       hooks: {
         resolveInput: ({ operation, resolvedData }) => {
-          if (operation === "create" && !resolvedData.clientSecret) {
+          // Public MCP clients (PKCE, no secret) register through /oauth/register.
+          if (operation === "create" && !resolvedData.clientSecret && resolvedData.tokenEndpointAuthMethod !== "none") {
             throw new Error("OAuth apps must be created through the show-once credential command");
           }
           if (resolvedData.clientSecret) {
@@ -61,6 +62,17 @@ export const OAuthApp = list({
         itemView: { fieldMode: "hidden" },
         // displayMode: "textarea",
         description: "Auto-generated secret key. Keep this secure - it's used to authenticate your application.",
+      },
+    }),
+    tokenEndpointAuthMethod: select({
+      options: [
+        { label: "Client secret (POST)", value: "client_secret_post" },
+        { label: "Client secret (Basic)", value: "client_secret_basic" },
+        { label: "None (public PKCE client)", value: "none" },
+      ],
+      defaultValue: "client_secret_post",
+      ui: {
+        description: "How the app authenticates at the token endpoint. MCP clients are public (none).",
       },
     }),
     redirectUris: json({

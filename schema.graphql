@@ -4579,6 +4579,7 @@ type OAuthApp {
   name: String
   clientId: String
   clientSecret: String
+  tokenEndpointAuthMethod: String
   redirectUris: JSON
   scopes: JSON
   webhookUrl: String
@@ -4608,6 +4609,7 @@ input OAuthAppWhereInput {
   name: StringFilter
   clientId: StringFilter
   clientSecret: StringFilter
+  tokenEndpointAuthMethod: StringNullableFilter
   webhookUrl: StringFilter
   status: StringNullableFilter
   installUrl: StringFilter
@@ -4626,6 +4628,7 @@ input OAuthAppOrderByInput {
   name: OrderDirection
   clientId: OrderDirection
   clientSecret: OrderDirection
+  tokenEndpointAuthMethod: OrderDirection
   webhookUrl: OrderDirection
   status: OrderDirection
   installUrl: OrderDirection
@@ -4643,6 +4646,7 @@ input OAuthAppUpdateInput {
   name: String
   clientId: String
   clientSecret: String
+  tokenEndpointAuthMethod: String
   redirectUris: JSON
   scopes: JSON
   webhookUrl: String
@@ -4668,6 +4672,7 @@ input OAuthAppCreateInput {
   name: String
   clientId: String
   clientSecret: String
+  tokenEndpointAuthMethod: String
   redirectUris: JSON
   scopes: JSON
   webhookUrl: String
@@ -4692,6 +4697,7 @@ type OAuthToken {
   user: User
   scopes: JSON
   redirectUri: String
+  resource: String
   expiresAt: DateTime
   isRevoked: String
   authorizationCode: String
@@ -4719,6 +4725,7 @@ input OAuthTokenWhereInput {
   clientId: StringFilter
   user: UserWhereInput
   redirectUri: StringFilter
+  resource: StringFilter
   expiresAt: DateTimeNullableFilter
   isRevoked: StringNullableFilter
   authorizationCode: StringFilter
@@ -4737,6 +4744,7 @@ input OAuthTokenOrderByInput {
   token: OrderDirection
   clientId: OrderDirection
   redirectUri: OrderDirection
+  resource: OrderDirection
   expiresAt: OrderDirection
   isRevoked: OrderDirection
   authorizationCode: OrderDirection
@@ -4756,6 +4764,7 @@ input OAuthTokenUpdateInput {
   user: UserRelateToOneForUpdateInput
   scopes: JSON
   redirectUri: String
+  resource: String
   expiresAt: DateTime
   isRevoked: String
   authorizationCode: String
@@ -4780,6 +4789,7 @@ input OAuthTokenCreateInput {
   user: UserRelateToOneForCreateInput
   scopes: JSON
   redirectUri: String
+  resource: String
   expiresAt: DateTime
   isRevoked: String
   authorizationCode: String

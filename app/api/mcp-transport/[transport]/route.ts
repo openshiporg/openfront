@@ -44,6 +44,8 @@ import {
   isInputObjectType,
 } from 'graphql';
 import { getBaseUrl } from '@/features/dashboard/lib/getBaseUrl';
+import { keystoneContext } from '@/features/keystone/context';
+import { authorizeMcpRequest } from '@/features/keystone/mcp-oauth/http';
 
 // Get simple type name for display
 function getSimpleTypeName(type: any): string {
@@ -56,13 +58,13 @@ function getSimpleTypeName(type: any): string {
   return type.name || type.toString();
 }
 
-// Execute GraphQL query with authentication
-async function executeGraphQL(query: string, graphqlEndpoint: string, cookie: string, variables?: any): Promise<any> {
+// Execute GraphQL query as the caller: their session cookie, or their MCP OAuth bearer token
+async function executeGraphQL(query: string, graphqlEndpoint: string, auth: Record<string, string>, variables?: any): Promise<any> {
   const response = await fetch(graphqlEndpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Cookie': cookie,
+      ...auth,
     },
     body: JSON.stringify({ query, variables }),
   });
@@ -75,12 +77,12 @@ async function executeGraphQL(query: string, graphqlEndpoint: string, cookie: st
 }
 
 // Get GraphQL schema from introspection
-async function getGraphQLSchema(graphqlEndpoint: string, cookie: string): Promise<GraphQLSchema> {
+async function getGraphQLSchema(graphqlEndpoint: string, auth: Record<string, string>): Promise<GraphQLSchema> {
   const response = await fetch(graphqlEndpoint, {
     method: 'POST',
     headers: { 
       'Content-Type': 'application/json',
-      'Cookie': cookie,
+      ...auth,
     },
     body: JSON.stringify({ query: getIntrospectionQuery() }),
   });
@@ -108,14 +110,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
     const baseUrl = await getBaseUrl();
     const graphqlEndpoint = `${baseUrl}/api/graphql`;
     
-    // Extract cookie from request
-    const cookie = request.headers.get('cookie') || ''
-  
-    // Get the GraphQL schema
-    const schema = await getGraphQLSchema(graphqlEndpoint, cookie);
-    
     // Parse the JSON-RPC request
     const body = await request.json();
+
+    // Every call runs as one Keystone user: the session cookie (built-in assistant)
+    // or an MCP OAuth token. Without either, answer with the OAuth challenge.
+    const authorization = await authorizeMcpRequest(keystoneContext, request, body);
+    if (authorization instanceof Response) return authorization;
+    const auth = authorization.forwardHeaders;
+
+    // Notifications have no response body (Streamable HTTP: 202 Accepted)
+    if (typeof body.method === 'string' && body.method.startsWith('notifications/')) {
+      return new Response(null, { status: 202 });
+    }
+
+    // Get the GraphQL schema
+    const schema = await getGraphQLSchema(graphqlEndpoint, auth);
     
     // Handle the request based on method
     if (body.method === 'initialize') {
@@ -136,7 +146,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
-    } else if (body.method === 'notifications/initialized') {
+    } else if (body.method === 'ping') {
       return new Response(JSON.stringify({
         jsonrpc: '2.0',
         id: body.id,
@@ -795,7 +805,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
           `.trim();
           
           // Execute the query
-          const result = await executeGraphQL(queryString, graphqlEndpoint, cookie || '');
+          const result = await executeGraphQL(queryString, graphqlEndpoint, auth);
           
           return new Response(JSON.stringify({
             jsonrpc: '2.0',
@@ -1048,7 +1058,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
           `.trim();
           
           // Execute the mutation
-          const result = await executeGraphQL(mutationString, graphqlEndpoint, cookie || '');
+          const result = await executeGraphQL(mutationString, graphqlEndpoint, auth);
           
           // Mark that data has changed
           dataHasChanged = true;
@@ -1087,7 +1097,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
           `.trim();
           
           // Execute the mutation
-          const result = await executeGraphQL(mutationString, graphqlEndpoint, cookie || '');
+          const result = await executeGraphQL(mutationString, graphqlEndpoint, auth);
           
           // Mark that data has changed
           dataHasChanged = true;
@@ -1125,7 +1135,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
           `.trim();
           
           // Execute the mutation
-          const result = await executeGraphQL(mutationString, graphqlEndpoint, cookie || '');
+          const result = await executeGraphQL(mutationString, graphqlEndpoint, auth);
           
           // Mark that data has changed
           dataHasChanged = true;
@@ -1278,7 +1288,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
           `.trim();
           
           // Execute the search query
-          const result = await executeGraphQL(queryString, graphqlEndpoint, cookie || '');
+          const result = await executeGraphQL(queryString, graphqlEndpoint, auth);
           
           return new Response(JSON.stringify({
             jsonrpc: '2.0',
@@ -1358,7 +1368,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             }
           `;
 
-          const result = await executeGraphQL(queryString, graphqlEndpoint, cookie || '');
+          const result = await executeGraphQL(queryString, graphqlEndpoint, auth);
           const products = result.data?.products || [];
 
           // Generate beautiful HTML for products using MCP UI
@@ -1523,7 +1533,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             }
           `;
 
-          const result = await executeGraphQL(queryString, graphqlEndpoint, cookie || '', { where: whereClause });
+          const result = await executeGraphQL(queryString, graphqlEndpoint, auth, { where: whereClause });
           const product = result.data?.product;
 
           if (!product) {
@@ -1671,7 +1681,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             }
           `;
           
-          const regionResult = await executeGraphQL(regionQuery, graphqlEndpoint, cookie || '');
+          const regionResult = await executeGraphQL(regionQuery, graphqlEndpoint, auth);
           const region = regionResult.data?.regions?.[0];
           
           if (!region) {
@@ -1711,7 +1721,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             }
           `;
           
-          const cartResult = await executeGraphQL(createCartMutation, graphqlEndpoint, cookie || '');
+          const cartResult = await executeGraphQL(createCartMutation, graphqlEndpoint, auth);
           
           return new Response(JSON.stringify({
             jsonrpc: '2.0',
@@ -1742,7 +1752,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             }
           `;
           
-          const result = await executeGraphQL(queryString, graphqlEndpoint, cookie || '', { cartId });
+          const result = await executeGraphQL(queryString, graphqlEndpoint, auth, { cartId });
           
           return new Response(JSON.stringify({
             jsonrpc: '2.0',
@@ -1788,7 +1798,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
           `;
           
           // Copy EXACT data structure from cart.ts  
-          const result = await executeGraphQL(addToCartMutation, graphqlEndpoint, cookie || '', {
+          const result = await executeGraphQL(addToCartMutation, graphqlEndpoint, auth, {
             cartId,
             data: {
               lineItems: {
@@ -1889,7 +1899,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             }
           };
           
-          const result = await executeGraphQL(setShippingAddressMutation, graphqlEndpoint, cookie || '', {
+          const result = await executeGraphQL(setShippingAddressMutation, graphqlEndpoint, auth, {
             cartId,
             email,
             shippingAddress: addressData,
@@ -1938,7 +1948,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             }
           `;
           
-          const result = await executeGraphQL(queryString, graphqlEndpoint, cookie || '');
+          const result = await executeGraphQL(queryString, graphqlEndpoint, auth);
           
           // Create a flat list of countries for customer-friendly display
           const allCountries = result.data?.regions?.flatMap((region: any) => 
@@ -1996,7 +2006,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             }
           `;
           
-          const result = await executeGraphQL(queryString, graphqlEndpoint, cookie || '');
+          const result = await executeGraphQL(queryString, graphqlEndpoint, auth);
           
           // Create a flat list of countries for customer-facing display
           const allCountries = result.data?.regions?.flatMap((region: any) => 
@@ -2046,7 +2056,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             }
           `;
           
-          const cartResult = await executeGraphQL(cartQuery, graphqlEndpoint, cookie || '');
+          const cartResult = await executeGraphQL(cartQuery, graphqlEndpoint, auth);
           const regionId = cartResult.data?.activeCart?.region?.id;
           
           if (!regionId) {
@@ -2064,7 +2074,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             }
           `;
           
-          const result = await executeGraphQL(paymentProvidersQuery, graphqlEndpoint, cookie || '');
+          const result = await executeGraphQL(paymentProvidersQuery, graphqlEndpoint, auth);
           
           return new Response(JSON.stringify({
             jsonrpc: '2.0',
@@ -2104,7 +2114,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             }
           `;
           
-          const result = await executeGraphQL(createSessionsMutation, graphqlEndpoint, cookie || '');
+          const result = await executeGraphQL(createSessionsMutation, graphqlEndpoint, auth);
           
           // Mark that data has changed
           dataHasChanged = true;
@@ -2154,7 +2164,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             }
           `;
           
-          const addressResult = await executeGraphQL(createAddressMutation, graphqlEndpoint, cookie || '');
+          const addressResult = await executeGraphQL(createAddressMutation, graphqlEndpoint, auth);
           const addressId = addressResult.data?.createAddress?.id;
           
           if (!addressId) {
@@ -2187,7 +2197,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             }
           `;
           
-          const result = await executeGraphQL(updateCartMutation, graphqlEndpoint, cookie || '');
+          const result = await executeGraphQL(updateCartMutation, graphqlEndpoint, auth);
           
           // Mark that data has changed
           dataHasChanged = true;
@@ -2241,7 +2251,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
           `;
           
           try {
-            const result = await executeGraphQL(completeOrderMutation, graphqlEndpoint, cookie || '');
+            const result = await executeGraphQL(completeOrderMutation, graphqlEndpoint, auth);
             
             // Mark that data has changed
             dataHasChanged = true;
@@ -2301,7 +2311,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             }
           `;
           
-          const cartResult = await executeGraphQL(cartQuery, graphqlEndpoint, cookie || '', { cartId });
+          const cartResult = await executeGraphQL(cartQuery, graphqlEndpoint, auth, { cartId });
           const cart = cartResult.data?.activeCart;
           
           if (!cart) {
@@ -2416,18 +2426,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
   }
 }
 
-export async function GET(request: Request, { params }: { params: Promise<{ transport: string }> }) {
-  const { transport } = await params;
-  
-  const baseUrl = await getBaseUrl();
-  const graphqlEndpoint = `${baseUrl}/api/graphql`;
-  
-  return new Response(JSON.stringify({ 
-    message: 'Simple MCP Server is running',
-    transport: transport,
-    graphqlEndpoint
-  }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
+// Stateless Streamable HTTP: no server-initiated SSE stream, so GET is 405 (MCP spec).
+export async function GET() {
+  return new Response(JSON.stringify({ error: 'Method not allowed. POST JSON-RPC to this endpoint.' }), {
+    status: 405,
+    headers: { 'Content-Type': 'application/json', Allow: 'POST' },
   });
 }

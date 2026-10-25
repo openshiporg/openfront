@@ -1409,7 +1409,7 @@ module.exports = __toCommonJS(keystone_exports);
 
 // features/keystone/index.ts
 var import_auth = require("@keystone-6/auth");
-var import_core91 = require("@keystone-6/core");
+var import_core92 = require("@keystone-6/core");
 
 // features/keystone/models/fields.ts
 var import_fields = require("@keystone-6/core/fields");
@@ -1703,20 +1703,20 @@ var import_node_crypto = __toESM(require("node:crypto"));
 var CART_PROOF_VERSION = "v1";
 var DEFAULT_CART_PROOF_TTL_SECONDS = 60 * 60 * 24 * 7;
 function requireSecret(purpose, explicitSecret) {
-  const secret = explicitSecret || process.env.CREDENTIAL_PEPPER || process.env.SESSION_SECRET;
-  if (!secret || secret.length < 32) {
+  const secret2 = explicitSecret || process.env.CREDENTIAL_PEPPER || process.env.SESSION_SECRET;
+  if (!secret2 || secret2.length < 32) {
     throw new Error(
       `${purpose} requires CREDENTIAL_PEPPER or SESSION_SECRET with at least 32 characters`
     );
   }
-  return secret;
+  return secret2;
 }
 function generateOpaqueToken(prefix) {
   return `${prefix}${import_node_crypto.default.randomBytes(32).toString("base64url")}`;
 }
 function digestCredential(value, purpose, explicitSecret) {
-  const secret = requireSecret(purpose, explicitSecret);
-  return import_node_crypto.default.createHmac("sha256", secret).update(`${purpose}\0${value}`, "utf8").digest("hex");
+  const secret2 = requireSecret(purpose, explicitSecret);
+  return import_node_crypto.default.createHmac("sha256", secret2).update(`${purpose}\0${value}`, "utf8").digest("hex");
 }
 function verifyCredentialDigest(value, expectedDigest, purpose, explicitSecret) {
   if (!value || !expectedDigest) return false;
@@ -1756,8 +1756,8 @@ function customerTokenDigest(token) {
 function oauthTokenDigest(token) {
   return digestCredential(token, "oauth-token");
 }
-function oauthClientSecretDigest(secret) {
-  return digestCredential(secret, "oauth-client-secret");
+function oauthClientSecretDigest(secret2) {
+  return digestCredential(secret2, "oauth-client-secret");
 }
 
 // features/keystone/security/cart-access.ts
@@ -3263,8 +3263,8 @@ async function deliverWebhook(webhook, eventType, payload, context, existingEven
     if (!webhook.secret) {
       throw new Error("Webhook endpoint secret is required");
     }
-    const secret = webhook.secret;
-    const signature = import_crypto.default.createHmac("sha256", secret).update(JSON.stringify(payload)).digest("hex");
+    const secret2 = webhook.secret;
+    const signature = import_crypto.default.createHmac("sha256", secret2).update(JSON.stringify(payload)).digest("hex");
     const response = await fetch(webhook.url, {
       method: "POST",
       headers: {
@@ -3455,6 +3455,19 @@ async function retryPendingWebhookDeliveries(context, limit = 25) {
 }
 
 // features/keystone/checkout/order-commit.ts
+var WEBHOOK_ADDRESS_SELECT = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  company: true,
+  address1: true,
+  address2: true,
+  city: true,
+  province: true,
+  postalCode: true,
+  phone: true,
+  country: { select: { id: true, iso2: true } }
+};
 async function createOrderFromCartAtomically(cart, sudo) {
   const prepared = [];
   for (const line of cart.lineItems) {
@@ -3488,6 +3501,7 @@ async function createOrderFromCartAtomically(cart, sudo) {
     },
     acceptedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
+  const webhookTotals = orderWebhookEndpointIds.length ? await sudo.query.Cart.findOne({ where: { id: cart.id }, query: "subtotal shipping discount tax total" }).catch(() => null) : null;
   const commit = await sudo.prisma.$transaction(async (tx) => {
     const existing = await tx.order.findFirst({ where: { cart: { id: cart.id } }, select: { id: true } });
     if (existing) return { orderId: existing.id, webhookEventIds: [] };
@@ -3585,6 +3599,9 @@ async function createOrderFromCartAtomically(cart, sudo) {
       }
     });
     await tx.cart.update({ where: { id: cart.id }, data: { orderId: order.id } });
+    const webhookAddress = (id) => orderWebhookEndpointIds.length ? tx.address.findUnique({ where: { id }, select: WEBHOOK_ADDRESS_SELECT }) : null;
+    const shippingAddress = await webhookAddress(cart.shippingAddress.id);
+    const billingAddress = await webhookAddress(cart.billingAddress.id);
     const webhookEventIds = await enqueueWebhookOutbox(
       tx,
       orderWebhookEndpointIds,
@@ -3598,8 +3615,14 @@ async function createOrderFromCartAtomically(cart, sudo) {
         email: order.email,
         status: order.status,
         rawTotal: cart.rawTotal,
+        subtotal: webhookTotals?.subtotal ?? null,
+        shipping: webhookTotals?.shipping ?? null,
+        discount: webhookTotals?.discount ?? null,
+        tax: webhookTotals?.tax ?? null,
+        total: webhookTotals?.total ?? null,
         currency: { id: cart.region.currency.id, code: cart.region.currency.code },
-        shippingAddress: cart.shippingAddress,
+        shippingAddress,
+        billingAddress,
         lineItems: webhookLineItems
       }
     );
@@ -8020,8 +8043,8 @@ async function registerWebhookEndpoint(_root, {
   const subscriptionKey = webhookSubscriptionKey(scope, ownerId, registrationKey);
   const url = normalizeWebhookUrl(urlInput);
   const events = normalizeWebhookEvents(eventsInput);
-  const secret = String(secretInput || "").trim();
-  if (!secret) throw new Error("Webhook signing secret is required");
+  const secret2 = String(secretInput || "").trim();
+  if (!secret2) throw new Error("Webhook signing secret is required");
   if (customerSession && events.some((event) => !CUSTOMER_WEBHOOK_EVENTS2.has(event))) {
     throw new Error("Customer tokens may subscribe only to fulfillment.created");
   }
@@ -8037,14 +8060,14 @@ async function registerWebhookEndpoint(_root, {
         scope,
         userId: session.itemId,
         isActive: true,
-        secret,
+        secret: secret2,
         failureCount: 0
       },
       update: {
         url,
         events,
         isActive: true,
-        secret
+        secret: secret2
       },
       select: { id: true }
     });
@@ -13139,7 +13162,7 @@ var OAuthApp = (0, import_core40.list)({
       },
       hooks: {
         resolveInput: ({ operation, resolvedData }) => {
-          if (operation === "create" && !resolvedData.clientSecret) {
+          if (operation === "create" && !resolvedData.clientSecret && resolvedData.tokenEndpointAuthMethod !== "none") {
             throw new Error("OAuth apps must be created through the show-once credential command");
           }
           if (resolvedData.clientSecret) {
@@ -13153,6 +13176,17 @@ var OAuthApp = (0, import_core40.list)({
         itemView: { fieldMode: "hidden" },
         // displayMode: "textarea",
         description: "Auto-generated secret key. Keep this secure - it's used to authenticate your application."
+      }
+    }),
+    tokenEndpointAuthMethod: (0, import_fields43.select)({
+      options: [
+        { label: "Client secret (POST)", value: "client_secret_post" },
+        { label: "Client secret (Basic)", value: "client_secret_basic" },
+        { label: "None (public PKCE client)", value: "none" }
+      ],
+      defaultValue: "client_secret_post",
+      ui: {
+        description: "How the app authenticates at the token endpoint. MCP clients are public (none)."
       }
     }),
     redirectUris: (0, import_fields43.json)({
@@ -13291,6 +13325,11 @@ var OAuthToken = (0, import_core41.list)({
     redirectUri: (0, import_fields44.text)({
       ui: {
         description: "The redirect URI used during authorization"
+      }
+    }),
+    resource: (0, import_fields44.text)({
+      ui: {
+        description: "The MCP endpoint (RFC 8707 resource) this grant is for"
       }
     }),
     expiresAt: (0, import_fields44.timestamp)({
@@ -17510,6 +17549,77 @@ async function sendPasswordResetEmail(resetToken, to, baseUrl) {
 var import_iron = __toESM(require("@hapi/iron"));
 var cookie = __toESM(require("cookie"));
 var import_bcryptjs = __toESM(require("bcryptjs"));
+
+// features/keystone/lib/s3-storage.ts
+function s3ForcePathStyle(endpoint2) {
+  let hostname = "";
+  try {
+    hostname = endpoint2 ? new URL(endpoint2).hostname : "";
+  } catch {
+  }
+  return !(hostname === "storageapi.dev" || hostname.endsWith(".storageapi.dev"));
+}
+
+// features/keystone/mcp-oauth/core.ts
+var import_node_crypto9 = __toESM(require("node:crypto"));
+var MCP_SCOPES = ["mcp:read", "mcp:write"];
+var MCP_ACCESS_PREFIX = "mcp_at_";
+var ACCESS_TOKEN_TTL_SECONDS = 60 * 60;
+var REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1e3;
+var AUTHORIZATION_CODE_TTL_MS = 5 * 60 * 1e3;
+var CONSENT_TICKET_TTL_MS = 10 * 60 * 1e3;
+var DEVELOPMENT_SECRET = "this secret should only be used in testing";
+function secret() {
+  return process.env.SESSION_SECRET || DEVELOPMENT_SECRET;
+}
+function digestToken(token, purpose = "mcp-oauth-token") {
+  return import_node_crypto9.default.createHmac("sha256", secret()).update(`${purpose}\0${token}`, "utf8").digest("hex");
+}
+function bearerToken(header) {
+  const value = Array.isArray(header) ? header[0] : header;
+  if (typeof value !== "string") return null;
+  const match = /^Bearer\s+(\S+)\s*$/i.exec(value);
+  return match ? match[1] : null;
+}
+function isMcpAccessToken(token) {
+  return typeof token === "string" && token.startsWith(MCP_ACCESS_PREFIX) && token.length > MCP_ACCESS_PREFIX.length;
+}
+function storedScopes(value) {
+  return Array.isArray(value) ? MCP_SCOPES.filter((scope) => value.includes(scope)) : [];
+}
+
+// features/keystone/mcp-oauth/session.ts
+async function resolveMcpAccessToken(context, token, listKey2 = "User") {
+  try {
+    const sudo = context.sudo();
+    const record = await sudo.db.OAuthToken.findOne({ where: { token: digestToken(token) } });
+    if (!record || record.tokenType !== "access_token" || record.isRevoked !== "false" || !record.userId || !record.expiresAt || new Date(record.expiresAt).getTime() <= Date.now()) {
+      return void 0;
+    }
+    const app = await sudo.db.OAuthApp.findOne({ where: { clientId: record.clientId } });
+    if (!app || app.status !== "active") return void 0;
+    const mcp = {
+      clientId: record.clientId,
+      scopes: storedScopes(record.scopes),
+      tokenId: String(record.id)
+    };
+    return { itemId: String(record.userId), listKey: listKey2, mcp };
+  } catch {
+    return void 0;
+  }
+}
+function withMcpBearerSessions(strategy, listKey2 = "User") {
+  return {
+    ...strategy,
+    async get({ context }) {
+      const token = bearerToken(context?.req?.headers?.authorization);
+      if (isMcpAccessToken(token)) return resolveMcpAccessToken(context, token, listKey2);
+      return strategy.get({ context });
+    }
+  };
+}
+
+// features/keystone/index.ts
 function requiredEnv(name) {
   const value = process.env[name];
   if (!value) throw new Error(`${name} is required`);
@@ -17557,7 +17667,7 @@ var accessKeyId = productionEnv("S3_ACCESS_KEY_ID", "keystone");
 var secretAccessKey = productionEnv("S3_SECRET_ACCESS_KEY", "keystone");
 var endpoint = productionEnv("S3_ENDPOINT", "https://sfo3.digitaloceanspaces.com");
 function statelessSessions({
-  secret,
+  secret: secret2,
   maxAge = 60 * 60 * 24 * 360,
   path = "/",
   secure = process.env.NODE_ENV === "production",
@@ -17566,10 +17676,10 @@ function statelessSessions({
   sameSite = "lax",
   cookieName = "keystonejs-session"
 }) {
-  if (!secret) {
+  if (!secret2) {
     throw new Error("You must specify a session secret to use sessions");
   }
-  if (secret.length < 32) {
+  if (secret2.length < 32) {
     throw new Error("The session secret must be at least 32 characters long");
   }
   return {
@@ -17731,7 +17841,7 @@ function statelessSessions({
           }
         }
         try {
-          return await import_iron.default.unseal(accessToken, secret, ironOptions);
+          return await import_iron.default.unseal(accessToken, secret2, ironOptions);
         } catch (err) {
         }
       }
@@ -17739,7 +17849,7 @@ function statelessSessions({
       const token = cookies[cookieName];
       if (!token) return;
       try {
-        return await import_iron.default.unseal(token, secret, ironOptions);
+        return await import_iron.default.unseal(token, secret2, ironOptions);
       } catch (err) {
       }
     },
@@ -17760,7 +17870,7 @@ function statelessSessions({
     },
     async start({ context, data }) {
       if (!context?.res) return;
-      const sealedData = await import_iron.default.seal(data, secret, {
+      const sealedData = await import_iron.default.seal(data, secret2, {
         ...ironOptions,
         ttl: maxAge * 1e3
       });
@@ -17839,7 +17949,7 @@ var { withAuth } = (0, import_auth.createAuth)({
 });
 var keystone_default = withAuth(
   withWebhooks(
-    (0, import_core91.config)({
+    (0, import_core92.config)({
       db: {
         provider: "postgresql",
         url: databaseURL
@@ -17855,7 +17965,7 @@ var keystone_default = withAuth(
           secretAccessKey,
           endpoint,
           signed: { expiry: 5e3 },
-          forcePathStyle: true
+          forcePathStyle: s3ForcePathStyle(endpoint)
         }
       },
       graphql: {
@@ -17876,7 +17986,8 @@ var keystone_default = withAuth(
         isAccessAllowed: ({ session }) => permissions.canAccessDashboard({ session }),
         basePath
       },
-      session: statelessSessions(sessionConfig)
+      // MCP OAuth bearer tokens resolve to the approving user; everything else is unchanged.
+      session: withMcpBearerSessions(statelessSessions(sessionConfig))
     })
   )
 );

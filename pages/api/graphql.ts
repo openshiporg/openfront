@@ -1,4 +1,5 @@
 import { keystoneContext } from '../../features/keystone/context'
+import { useMcpScopeGuard } from '../../features/keystone/mcp-oauth/guard'
 import { createYoga } from "graphql-yoga";
 import processRequest from "graphql-upload/processRequest.js";
 import { type NextApiRequest, type NextApiResponse } from 'next'
@@ -45,5 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return keystoneContext.withRequest(req, res);
     },
     multipart: false,
+    // MCP OAuth scopes only narrow: read-only tokens can't mutate, no token can manage credentials.
+    plugins: [useMcpScopeGuard()],
   })(req, res);
 }

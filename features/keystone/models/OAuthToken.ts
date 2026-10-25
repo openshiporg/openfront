@@ -62,6 +62,11 @@ export const OAuthToken = list({
         description: "The redirect URI used during authorization",
       },
     }),
+    resource: text({
+      ui: {
+        description: "The MCP endpoint (RFC 8707 resource) this grant is for",
+      },
+    }),
     expiresAt: timestamp({
       ui: {
         description: "When this token expires",

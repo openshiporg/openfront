@@ -736,24 +736,25 @@ model NotificationProvider {
 }
 
 model OAuthApp {
-  id                String   @id @default(cuid())
-  name              String   @default("")
-  clientId          String   @unique @default("")
-  clientSecret      String   @default("")
-  redirectUris      Json?    @default("[]")
-  scopes            Json?    @default("[\"read_products\",\"read_orders\"]")
-  webhookUrl        String   @default("")
-  status            String?  @default("active")
-  installUrl        String   @default("")
-  uninstallUrl      String   @default("")
-  description       String   @default("")
-  metadata          Json?    @default("{}")
-  developerEmail    String   @default("")
-  privacyPolicyUrl  String   @default("")
-  termsOfServiceUrl String   @default("")
-  supportUrl        String   @default("")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @default(now()) @updatedAt
+  id                      String   @id @default(cuid())
+  name                    String   @default("")
+  clientId                String   @unique @default("")
+  clientSecret            String   @default("")
+  tokenEndpointAuthMethod String?  @default("client_secret_post")
+  redirectUris            Json?    @default("[]")
+  scopes                  Json?    @default("[\"read_products\",\"read_orders\"]")
+  webhookUrl              String   @default("")
+  status                  String?  @default("active")
+  installUrl              String   @default("")
+  uninstallUrl            String   @default("")
+  description             String   @default("")
+  metadata                Json?    @default("{}")
+  developerEmail          String   @default("")
+  privacyPolicyUrl        String   @default("")
+  termsOfServiceUrl       String   @default("")
+  supportUrl              String   @default("")
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @default(now()) @updatedAt
 }
 
 model OAuthToken {
@@ -765,6 +766,7 @@ model OAuthToken {
   userId              String?   @map("user")
   scopes              Json?     @default("[]")
   redirectUri         String    @default("")
+  resource            String    @default("")
   expiresAt           DateTime?
   isRevoked           String?   @default("false")
   authorizationCode   String    @default("")

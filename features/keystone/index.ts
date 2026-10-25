@@ -14,6 +14,7 @@ import { withWebhooks } from "../webhooks/webhook-plugin";
 import { customerTokenDigest } from "./security/token-crypto";
 import { findOAuthToken } from "./security/oauth-credentials";
 import { s3ForcePathStyle } from "./lib/s3-storage";
+import { withMcpBearerSessions } from "./mcp-oauth/session";
 // Add rate limiting on storefront queries and mutations
 // import { ApolloArmor } from "@escape.tech/graphql-armor";
 // import { applyMiddleware } from "graphql-middleware";
@@ -475,7 +476,8 @@ export default withAuth(
         isAccessAllowed: ({ session }) => permissions.canAccessDashboard({ session }),
         basePath
       },
-      session: statelessSessions(sessionConfig),
+      // MCP OAuth bearer tokens resolve to the approving user; everything else is unchanged.
+      session: withMcpBearerSessions(statelessSessions(sessionConfig)),
     })
   )
 );
