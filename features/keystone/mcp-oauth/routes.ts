@@ -149,6 +149,7 @@ export async function authorizeGET(keystoneContext: any, request: Request): Prom
   const screen = params.screen === 'signup' ? 'signup' : params.screen === 'signin' ? 'signin' : null
   if (!session?.itemId || screen) return signInPage(url, name, target, screen ?? 'signin')
 
+  const label = roleLabel(session)
   const nonce = newNonce()
   return html(
     renderConsent({
@@ -157,7 +158,7 @@ export async function authorizeGET(keystoneContext: any, request: Request): Prom
       callbackHost: target.callbackHost,
       userName: session.data?.name || '',
       userEmail: session.data?.email || '',
-      accountLabel: isStaffSession(session) ? `Staff · ${roleLabel(session)}` : roleLabel(session),
+      accountLabel: isStaffSession(session) && label !== 'Staff' ? `Staff · ${label}` : label,
       capabilities: capabilityLines(session, authorization.scopes.includes('mcp:write')),
       offerWrite: authorization.scopes.includes('mcp:write'),
       ticket: consentTicket(authorization, String(session.itemId)),
