@@ -9,12 +9,12 @@ Openfront is a comprehensive e-commerce platform that provides everything you ne
 
 ## Demo
 
-<a href="https://impossible-tees.openship.org"><img src="https://github.com/user-attachments/assets/c0cf0110-a79e-4b1c-8ba7-2a9ca09947cf" alt="Openfront Demo" width="600"></a>
+<a href="https://e-commerce.openship.org"><img src="https://github.com/user-attachments/assets/c0cf0110-a79e-4b1c-8ba7-2a9ca09947cf" alt="Openfront Demo" width="600"></a>
 
 | | |
 |---|---|
-| **Storefront** | [impossible-tees.openship.org](https://impossible-tees.openship.org) |
-| **Dashboard** | [impossible-tees.openship.org/dashboard](https://impossible-tees.openship.org/dashboard) |
+| **Storefront** | [e-commerce.openship.org](https://e-commerce.openship.org) |
+| **Dashboard** | [e-commerce.openship.org/dashboard](https://e-commerce.openship.org/dashboard) |
 | **User** | `impossible@openship.org` |
 | **Password** | `UBaamC6WA*vL9dP46Lcrip2S52V4yNJ*6Xu` |
 
