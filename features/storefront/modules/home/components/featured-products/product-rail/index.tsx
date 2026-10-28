@@ -26,7 +26,7 @@ export default async function ProductRail({
   }
 
   return (
-    <div className="max-w-[1440px] w-full mx-auto px-6 py-12 sm:py-24">
+    <div className="max-w-[1440px] w-full mx-auto px-6 py-10 sm:py-16">
       <div className="flex justify-between mb-8">
         <span className="text-lg leading-8 font-normal">{collection.title}</span>
         <InteractiveLink href={`/collections/${collection.handle}`}>

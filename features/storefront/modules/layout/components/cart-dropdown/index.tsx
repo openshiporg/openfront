@@ -94,7 +94,7 @@ const CartDropdown = ({
         <div className="relative h-full" onMouseEnter={openAndCancel} onMouseLeave={close}>
           <PopoverTrigger asChild>
             <button className="h-full" suppressHydrationWarning>
-              <LocalizedClientLink className="flex items-center hover:text-foreground" href="/cart">
+              <LocalizedClientLink className="flex h-full items-center -mr-2 px-2 hover:text-foreground" href="/cart">
                 {`Cart`}
                 {totalItems > 0 && (
                   <span className="ml-2 inline-flex items-center justify-center rounded-full bg-muted text-foreground/60 border text-[.5rem] font-bold h-4 w-4">

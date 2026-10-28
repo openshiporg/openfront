@@ -44,7 +44,7 @@ export default async function ProductPreview({
         <div className="aspect-square overflow-hidden rounded-lg bg-muted">
           <Thumbnail thumbnail={productPreview.thumbnail} size="square" isFeatured={isFeatured} />
         </div>
-        <div className="flex items-baseline justify-between gap-2">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-2">
           <h3 className="text-base font-medium text-foreground">
             {productPreview.title}
           </h3>

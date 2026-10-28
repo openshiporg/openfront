@@ -78,7 +78,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
         </div>
       </div>
       <div
-        className="max-w-[1440px] w-full mx-auto px-6 my-16 sm:my-32"
+        className="max-w-[1440px] w-full mx-auto px-6 mt-10 mb-16 sm:mt-16 sm:mb-24"
         data-testid="related-products-container"
       >
         <Suspense fallback={<SkeletonRelatedProducts />}>

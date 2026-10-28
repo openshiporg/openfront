@@ -14,7 +14,7 @@ export default async function Footer() {
   return (
     <footer className="border-t border-border w-full">
       <div className="max-w-[1440px] mx-auto px-6 flex flex-col">
-        <div className="flex flex-col gap-y-6 sm:flex-row items-start justify-between py-40">
+        <div className="flex flex-col gap-y-6 sm:flex-row items-start justify-between pt-16 pb-12 sm:pt-20 sm:pb-16">
           <div>
             <Logo />
           </div>
@@ -115,7 +115,7 @@ export default async function Footer() {
             </div>
           </div>
         </div>
-        <div className="flex w-full mb-16 justify-center text-muted-foreground">
+        <div className="flex w-full border-t border-border pt-6 mb-10 justify-center text-muted-foreground">
           <p className="text-[0.8125rem] leading-5 font-normal">
             <span suppressHydrationWarning>
               © {new Date().getFullYear()} {storeName}. All rights reserved.

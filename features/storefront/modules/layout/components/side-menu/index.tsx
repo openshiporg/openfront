@@ -36,7 +36,7 @@ const SideMenu = ({ regions }: { regions: StoreRegion[] | null }) => {
           <SheetTrigger asChild>
             <button
               data-testid="nav-menu-button"
-              className="relative h-full flex items-center transition-all ease-out duration-200 focus:outline-none hover:text-foreground cursor-pointer"
+              className="relative h-full flex items-center -ml-2 px-2 transition-all ease-out duration-200 focus:outline-none hover:text-foreground cursor-pointer"
               suppressHydrationWarning
             >
               Menu

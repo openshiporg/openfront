@@ -70,18 +70,29 @@ const Payment = ({ cart, availablePaymentMethods }: PaymentProps) => {
 
   const useOptions = useMemo(() => {
     return {
+      // Match the storefront Input: system sans, 14px/20px, foreground and
+      // muted-foreground tokens (the Stripe iframe can't read CSS variables).
       style: {
         base: {
-          fontFamily: "Inter, sans-serif",
-          fontSize: "16px",
-          color: "#424270",
+          fontFamily:
+            'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+          fontSize: "14px",
+          lineHeight: "20px",
+          color: "#0a0a0a",
+          iconColor: "#71717a",
           "::placeholder": {
-            color: "rgb(107 114 128)",
+            color: "#71717a",
           },
+        },
+        invalid: {
+          color: "#dc2626",
+          iconColor: "#dc2626",
         },
       },
       classes: {
-        base: "pt-3 pb-1 block w-full h-12 px-4 mt-0 bg-background border rounded-md appearance-none focus:outline-none focus:ring-0 focus:shadow-borders-interactive-with-active border-border hover:bg-muted transition-all duration-300 ease-in-out text-[50px]",
+        base: "block w-full px-4 py-3 bg-background border border-border rounded-md hover:bg-accent transition-colors duration-200",
+        focus: "border-foreground/40",
+        invalid: "border-destructive",
       },
       // Hide postal code since we already collect it in the billing address form
       hidePostalCode: true,
@@ -237,8 +248,8 @@ const Payment = ({ cart, availablePaymentMethods }: PaymentProps) => {
               </RadioGroup>
               {isStripePayment && stripeReady && (
                 <div className="mt-5 transition-all duration-150 ease-in-out">
-                  <p className="text-base font-semibold mb-1">
-                    Enter your card details:
+                  <p className="mb-2 text-sm font-medium leading-5">
+                    Card details
                   </p>
                   <CardElement
                     options={useOptions}

@@ -23,7 +23,7 @@ export default function PreviewPrice({ price, region }: PreviewPriceProps) {
   const isOnSale = price.calculatedAmount < price.originalAmount;
 
   return (
-    <div className="flex flex-col items-end gap-0.5">
+    <div className="flex flex-col items-start sm:items-end gap-0.5 tabular-nums">
       {isOnSale && (
         <span
           className="text-xs line-through text-muted-foreground/60"
