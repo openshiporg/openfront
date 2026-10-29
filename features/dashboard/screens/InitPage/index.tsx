@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useActionState } from "react";
 import { RiLoader2Fill } from "@remixicon/react";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { createInitialUser, signIn } from "@/features/dashboard/actions";
+import { createInitialUser, setupTokenRequired, signIn } from "@/features/dashboard/actions";
 import { Logo } from "@/features/dashboard/components/Logo";
 
 type ActionState = {
@@ -51,6 +51,11 @@ const initialState: ActionState = {
 
 export function InitPage() {
   const [showPassword, setShowPassword] = useState(false);
+  // Deployments with SETUP_TOKEN ask for it so only the deployer can claim the site.
+  const [needsToken, setNeedsToken] = useState(false);
+  useEffect(() => {
+    setupTokenRequired().then(setNeedsToken).catch(() => undefined);
+  }, []);
   const [state, formAction] = useActionState(
     async (prevState: ActionState, formData: FormData) => {
       const result = await createInitialUser(prevState, formData);
@@ -168,6 +173,28 @@ export function InitPage() {
               </button>
             </div>
           </div>
+          {needsToken && (
+            <div>
+              <Label
+                htmlFor="setupToken"
+                className="text-sm font-medium text-foreground dark:text-foreground"
+              >
+                Setup token
+              </Label>
+              <Input
+                type="password"
+                id="setupToken"
+                name="setupToken"
+                autoComplete="off"
+                placeholder="SETUP_TOKEN from your deployment"
+                className="mt-2 bg-muted/40"
+                required
+              />
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Find SETUP_TOKEN in your deployment&apos;s variables. It proves you deployed this site.
+              </p>
+            </div>
+          )}
           <SubmitButton />
         </form>
 

@@ -27,15 +27,18 @@ const formatCurrency = (amount, currencyCode) => {
 export const Order = list({
   access: {
     operation: {
+      // read_orders (canReadOrders) can read orders; writes stay closed here.
       query: ({ session }) =>
-        permissions.canManageOrders({ session }) || Boolean(session?.customerToken),
+        permissions.canReadOrders({ session }) ||
+        permissions.canManageOrders({ session }) ||
+        Boolean(session?.customerToken),
       create: () => false,
       update: () => false,
       delete: () => false,
     },
     filter: {
       query: ({ session }) => {
-        if (permissions.canManageOrders({ session })) return true;
+        if (permissions.canReadOrders({ session }) || permissions.canManageOrders({ session })) return true;
         if (session?.customerToken && session?.itemId) {
           return { user: { id: { equals: session.itemId } } };
         }

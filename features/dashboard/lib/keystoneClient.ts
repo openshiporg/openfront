@@ -15,13 +15,13 @@ export type KeystoneResponse<T = any> =
 /**
  * Create a GraphQL client with authentication headers
  */
-async function createGraphQLClient(): Promise<GraphQLClient> {
+async function createGraphQLClient(extraHeaders?: HeadersInit): Promise<GraphQLClient> {
   const endpoint = await getGraphQLEndpoint();
   const authHeaders = await getAuthHeaders();
   return new GraphQLClient(endpoint, {
     credentials: 'include',
     redirect: 'error',
-    headers: authHeaders || {},
+    headers: { ...(authHeaders || {}), ...Object.fromEntries(new Headers(extraHeaders).entries()) },
   });
 }
 
@@ -49,7 +49,7 @@ export async function keystoneClient<T = any>(
     }
 
     // Create GraphQL client with auth headers
-    const client = await createGraphQLClient();
+    const client = await createGraphQLClient(requestOptions?.headers);
 
     // Make the request
     const data = await client.request<T>(query, variables);
