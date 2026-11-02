@@ -11,7 +11,9 @@ export default async function ListLayout({ children }: { children: React.ReactNo
   ]);
   
   const adminMeta = adminMetaResponse.success ? adminMetaResponse.data : null;
-  const user = userResponse.success ? userResponse.data?.authenticatedItem : null;
+  const user = userResponse.success && userResponse.data?.authenticatedItem
+    ? { ...userResponse.data.authenticatedItem, productsCount: userResponse.data.productsCount ?? null }
+    : null;
 
   return (
     <DashboardLayout adminMeta={adminMeta} authenticatedItem={user}>

@@ -1,5 +1,6 @@
 "use client";
 
+import { shouldShowOnboardingCard } from "../lib/onboarding-visibility";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Rocket } from "lucide-react";
@@ -76,9 +77,11 @@ export function OnboardingCards({
   onDismiss,
   onOpenDialog,
   userRole,
+  productsCount,
 }: {
   steps: OnboardingStep[];
   onboardingStatus?: string;
+  productsCount?: number | null;
   onDismiss: () => void;
   onOpenDialog: () => void;
   userRole?: any;
@@ -95,12 +98,7 @@ export function OnboardingCards({
     return () => clearTimeout(timeout);
   }, [cardCount]);
 
-  // Don't show onboarding if user doesn't have permission
-  if (!userRole?.canManageOnboarding) {
-    return null;
-  }
-
-  if (onboardingStatus === "completed" || onboardingStatus === "dismissed") {
+  if (!shouldShowOnboardingCard({ canManageOnboarding: userRole?.canManageOnboarding, onboardingStatus, productsCount })) {
     return null;
   }
 

@@ -50,6 +50,7 @@ interface User {
   email: string;
   name?: string;
   onboardingStatus?: string;
+  productsCount?: number | null;
   role?: {
     canAccessDashboard?: boolean;
     canManageOnboarding?: boolean;
@@ -368,6 +369,7 @@ export function Sidebar({ adminMeta, user, onOpenDialog }: SidebarProps) {
               description: 'Your store is empty. Click get started to configure your store with products, categories, and regions.',
             }]}
             onboardingStatus={user?.onboardingStatus}
+            productsCount={user?.productsCount}
             userRole={user?.role}
             onDismiss={async () => {
               try {

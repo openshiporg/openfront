@@ -157,6 +157,7 @@ export async function getAuthenticatedUser() {
           role { canAccessDashboard canManageOnboarding }
         }
       }
+      productsCount
     }
   `);
 }
