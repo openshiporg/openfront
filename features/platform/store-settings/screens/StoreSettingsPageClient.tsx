@@ -22,6 +22,7 @@ import { updateStoreSettings } from '../actions';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Code } from 'lucide-react';
+import { StoreSettingsSaveBar } from '../components/StoreSettingsSaveBar';
 
 interface StoreSettingsPageClientProps {
   initialData: {
@@ -89,7 +90,7 @@ export function StoreSettingsPageClient({
   const selectedIcon = LOGO_ICONS.find((icon) => icon.lightSvg === logoIcon);
 
   return (
-    <div className="p-6 max-w-2xl">
+    <div className="p-6 max-w-2xl pb-24 md:pb-6">
       <h1 className="text-2xl font-bold mb-6">Store Settings</h1>
 
       <div className="space-y-6">
@@ -158,7 +159,7 @@ export function StoreSettingsPageClient({
                   <Code className="h-4 w-4" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[500px]" align="start">
+              <PopoverContent className="w-[min(500px,calc(100vw-2rem))]" align="start">
                 <div className="space-y-4">
                   <div>
                     <h4 className="font-medium mb-2">Edit SVG Code</h4>
@@ -252,9 +253,7 @@ export function StoreSettingsPageClient({
           />
         </div>
 
-        <Button onClick={handleSave} disabled={isLoading}>
-          {isLoading ? 'Saving...' : 'Save Settings'}
-        </Button>
+        <StoreSettingsSaveBar onSave={handleSave} isSaving={isLoading} />
       </div>
     </div>
   );
