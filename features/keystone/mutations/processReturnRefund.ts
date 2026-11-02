@@ -180,6 +180,11 @@ async function processReturnRefund(
         metadata: { providerId: provider.id, providerResult },
       },
     });
+    const settled = await tx.payment.findUnique({ where: { id: paymentId }, select: { amount: true, amountRefunded: true } });
+    await tx.payment.update({
+      where: { id: paymentId },
+      data: { status: settled.amountRefunded >= settled.amount ? "refunded" : "partially_refunded" },
+    });
     await tx.return.update({
       where: { id: returnId },
       data: {

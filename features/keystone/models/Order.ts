@@ -957,7 +957,7 @@ export const Order = list({
     
               // Check direct order payments first (normal checkout)
               let totalPaid = order.payments?.reduce((total, payment) => {
-                if (payment.status === 'captured') {
+                if (['captured', 'partially_refunded', 'refunded'].includes(payment.status)) {
                   return total + payment.amount;
                 }
                 return total;
@@ -1011,7 +1011,7 @@ export const Order = list({
     
               // Check direct order payments first (normal checkout)
               let totalPaid = order.payments?.reduce((total, payment) => {
-                if (payment.status === 'captured') {
+                if (['captured', 'partially_refunded', 'refunded'].includes(payment.status)) {
                   return total + payment.amount;
                 }
                 return total;

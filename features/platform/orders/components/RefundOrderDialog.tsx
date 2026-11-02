@@ -17,7 +17,7 @@ export interface RefundablePayment {
 
 export function RefundOrderDialog({ orderId, payments }: { orderId: string; payments: RefundablePayment[] }) {
   const router = useRouter()
-  const available = payments.filter(p => p.status === 'captured' && p.amount > p.amountRefunded)
+  const available = payments.filter(p => (p.status === 'captured' || p.status === 'partially_refunded') && p.amount > p.amountRefunded)
   const [paymentId, setPaymentId] = useState(available[0]?.id || '')
   const payment = available.find(p => p.id === paymentId)
   const [open, setOpen] = useState(false)

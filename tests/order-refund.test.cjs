@@ -26,7 +26,7 @@ function fixture({ amount = 3940, refunded = 0, allowed = true, status = 'captur
       update: async ({where,data}) => { const row = [...attempts.values()].find(a => a.id === where.id); Object.assign(row,data); return {...row}; },
       updateMany: async ({where,data}) => { const row = [...attempts.values()].find(a => a.id === where.id); if (row.lockedAt && new Date(row.lockedAt) >= where.OR[1].lockedAt.lt) return {count:0}; Object.assign(row,data); return {count:1}; },
     },
-    payment: { updateMany: async ({where,data}) => { if (payment.amountRefunded > where.amountRefunded.lte) return {count:0}; payment.amountRefunded += data.amountRefunded.increment; return {count:1}; } },
+    payment: { findUnique: async () => ({ amount: payment.amount, amountRefunded: payment.amountRefunded }), update: async ({data}) => { Object.assign(payment,data); return payment; }, updateMany: async ({where,data}) => { if (payment.amountRefunded > where.amountRefunded.lte) return {count:0}; payment.amountRefunded += data.amountRefunded.increment; return {count:1}; } },
     refund: { findFirst: async ({where}) => refunds.find(r => r.idempotencyKey === where.idempotencyKey), create: async ({data}) => { if ('paymentId' in data || 'createdById' in data || data.payment?.connect?.id !== 'p1') throw new Error('Unknown argument `paymentId`'); const r = {...data,id:`r${refunds.length}`}; refunds.push(r); payment.refunds.push(r); return r; } },
     orderEvent: { create: async ({data}) => { events.push(data); return data; } },
   };
@@ -50,10 +50,11 @@ test('full refund uses the provider, preserves reason and records audit/outbox w
   assert.equal(f.calls(),1); assert.equal(f.refunds.length,1); assert.equal(f.refunds[0].amount,3940);
   assert.equal(f.refunds[0].note,'Customer request'); assert.equal(f.payment.amountRefunded,3940);
   assert.equal(f.events[0].type,'REFUND_PROCESSED'); assert.equal(f.outbox.length,1);
+  assert.equal(f.payment.status,'refunded');
 });
 test('partial amount is capped at captured minus already-refunded/reserved', async () => {
   const f = fixture({refunded:1000}); await assert.rejects(f.run({amount:2941}),/exceeds/); assert.equal(f.calls(),0);
-  await f.run({amount:2940}); assert.equal(f.payment.amountRefunded,3940);
+  await f.run({amount:2940}); assert.equal(f.payment.amountRefunded,3940); assert.equal(f.payment.status,'refunded');
 });
 test('same request retry and double-click cannot call provider or refund twice', async () => {
   const f = fixture(); const results = await Promise.allSettled([f.run(),f.run()]);
@@ -98,4 +99,9 @@ test('replay of an attempt that already holds a provider result finalizes withou
   const row = f.attempts.get('refund:request1'); f.refunds.length = 0; f.payment.refunds.length = 0;
   row.recoveryPoint = 'completed'; row.responseBody = {providerResult:{status:'succeeded',amount:3940,currency:'USD',data:{id:'re_test'}}};
   await f.run(); assert.equal(f.calls(),1); assert.equal(f.refunds.length,1);
+});
+test('partial refund marks partially_refunded and a second partial is still allowed', async () => {
+  const f = fixture(); await f.run({amount:1000,idempotencyKey:'a'});
+  assert.equal(f.payment.status,'partially_refunded');
+  await f.run({amount:500,idempotencyKey:'b'}); assert.equal(f.payment.amountRefunded,1500); assert.equal(f.payment.status,'partially_refunded');
 });

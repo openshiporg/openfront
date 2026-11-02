@@ -1803,6 +1803,8 @@ enum PaymentStatusType {
   pending
   authorized
   captured
+  partially_refunded
+  refunded
   failed
   canceled
 }

@@ -32,6 +32,8 @@ export const Payment = list({
         { label: "Pending", value: "pending" },
         { label: "Authorized", value: "authorized" },
         { label: "Captured", value: "captured" },
+        { label: "Partially refunded", value: "partially_refunded" },
+        { label: "Refunded", value: "refunded" },
         { label: "Failed", value: "failed" },
         { label: "Canceled", value: "canceled" },
       ],

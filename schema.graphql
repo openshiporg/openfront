@@ -5372,6 +5372,8 @@ enum PaymentStatusType {
   pending
   authorized
   captured
+  partially_refunded
+  refunded
   failed
   canceled
 }
@@ -10267,6 +10269,7 @@ type Mutation {
   setInvoicePaymentSession(invoiceId: ID!, providerId: ID!): Invoice
   completeInvoicePayment(paymentSessionId: ID!): InvoicePaymentResult!
   processReturnRefund(returnId: ID!, paymentId: ID!, idempotencyKey: String!): Refund
+  refundOrderPayment(orderId: ID!, paymentId: ID!, amount: Int!, reason: String!, idempotencyKey: String!): Refund
   retryWebhookDeliveries(limit: Int): Int!
   registerWebhookEndpoint(registrationKey: String!, url: String!, events: [String!]!, secret: String!, requiredScope: String): WebhookEndpoint!
   updatePrivacyPreferences(preferences: JSON!): JSON!

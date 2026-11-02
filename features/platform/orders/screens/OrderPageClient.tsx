@@ -125,6 +125,22 @@ export function OrderPageClient({
   }
 
   const { lineItems = [] } = order;
+  const payments = order.payments || [];
+  const refundedCents = payments.reduce((sum, p) => sum + (p.amountRefunded || 0), 0);
+  const paidCents = payments
+    .filter((p) => ["captured", "partially_refunded", "refunded"].includes(p.status))
+    .reduce((sum, p) => sum + p.amount, 0);
+  const currencySymbol = (order.total || "").replace(/[0-9.,\s-]/g, "");
+  const money = (cents: number) => `${currencySymbol}${(cents / 100).toFixed(2)}`;
+  const paymentStatus = order.paymentDetails?.[0]?.status;
+  const paymentHeader =
+    paidCents > 0 && refundedCents >= paidCents
+      ? "Refunded"
+      : refundedCents > 0
+        ? "Partially refunded"
+        : paymentStatus === "captured"
+          ? "Payment Complete"
+          : "Payment Processing";
 
   return (
     <div className="bg-muted/5">
@@ -246,9 +262,7 @@ export function OrderPageClient({
               <CardHeader className="flex flex-row items-center justify-between px-4 py-3 border-b bg-muted/40">
                 <CardTitle className="font-medium uppercase text-xs tracking-wider text-muted-foreground flex items-center gap-2">
                   <Calculator className="size-3.5 opacity-70" />
-                  {order.paymentDetails?.[0]?.status === "captured"
-                    ? "Payment Complete"
-                    : "Payment Processing"}
+                  {paymentHeader}
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-3 text-sm">
@@ -275,6 +289,18 @@ export function OrderPageClient({
                     <span>Total Paid</span>
                     <span>{order.formattedTotalPaid}</span>
                   </div>
+                  {refundedCents > 0 && (
+                    <>
+                      <div className="flex justify-between text-sm text-muted-foreground">
+                        <span>Refunded</span>
+                        <span>−{money(refundedCents)}</span>
+                      </div>
+                      <div className="flex justify-between font-medium">
+                        <span>Net paid</span>
+                        <span>{money(Math.max(paidCents - refundedCents, 0))}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>

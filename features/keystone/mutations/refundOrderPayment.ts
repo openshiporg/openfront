@@ -68,7 +68,7 @@ async function refundOrderPayment(
     `,
   });
   if (!payment || payment.order?.id !== orderId) throw new Error("Payment does not belong to order");
-  if (payment.status !== "captured") throw refundRuleError("Only captured payments can be refunded", "PAYMENT_NOT_CAPTURED");
+  if (!priorAttempt && payment.status !== "captured" && payment.status !== "partially_refunded") throw refundRuleError("Only captured payments can be refunded", "PAYMENT_NOT_CAPTURED");
   const alreadyRefunded = payment.refunds?.reduce((sum: number, refund: any) => sum + refund.amount, 0) || 0;
   // A replay already owns its reservation. New requests must include all in-flight reservations.
   const reserved = Math.max(alreadyRefunded, payment.amountRefunded || 0);
@@ -185,6 +185,11 @@ async function refundOrderPayment(
         payment: { connect: { id: paymentId } },
         metadata: { providerId: provider.id, providerResult, createdById: context.session.itemId },
       },
+    });
+    const settled = await tx.payment.findUnique({ where: { id: paymentId }, select: { amount: true, amountRefunded: true } });
+    await tx.payment.update({
+      where: { id: paymentId },
+      data: { status: settled.amountRefunded >= settled.amount ? "refunded" : "partially_refunded" },
     });
     await tx.orderEvent.create({
       data: {

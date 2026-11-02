@@ -40,7 +40,7 @@ async function getFinanceClose(
 
   const rows = payments.map((payment: any) => {
     const captured = payment.captures?.reduce((sum: number, item: any) => sum + item.amount, 0) ||
-      (payment.status === "captured" ? payment.amount : 0);
+      (["captured", "partially_refunded", "refunded"].includes(payment.status) ? payment.amount : 0);
     const refunded = payment.refunds?.reduce((sum: number, item: any) => sum + item.amount, 0) || 0;
     const providerReference =
       payment.data?.paymentIntentId || payment.data?.orderId || payment.data?.id || null;
@@ -58,7 +58,7 @@ async function getFinanceClose(
       accountingPolicyVersion:
         payment.order?.metadata?.commercialSnapshot?.accountingPolicyVersion || null,
       exception:
-        payment.status === "captured" && (!providerReference || captured !== payment.amount)
+        ["captured", "partially_refunded", "refunded"].includes(payment.status) && (!providerReference || captured !== payment.amount)
           ? "CAPTURE_EVIDENCE_MISMATCH"
           : null,
     };
