@@ -95,7 +95,7 @@ async function refundOrderPayment(
     });
   }
   if (replay) {
-    if (Date.now() - new Date(attempt.createdAt).getTime() > 60 * 60 * 1000 && attempt.recoveryPoint !== "provider_refunded") {
+    if (Date.now() - new Date(attempt.createdAt).getTime() > 60 * 60 * 1000 && !attempt.responseBody?.providerResult) {
       throw refundRuleError("Refund requires provider reconciliation before retrying", "REFUND_IN_PROGRESS");
     }
     const acquired = await sudo.prisma.idempotencyKey.updateMany({
@@ -132,7 +132,7 @@ async function refundOrderPayment(
   }
 
   let providerResult = attempt.responseBody?.providerResult;
-  if (attempt.recoveryPoint !== "provider_refunded" || !providerResult) {
+  if (!providerResult) {
     providerResult = await refundPayment({
       provider,
       paymentId: providerReference,

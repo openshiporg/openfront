@@ -99,3 +99,10 @@ test('dashboard shows coded refund messages and the Refund row connects the paym
   assert.equal(sec.publicGraphQLErrorMessage(err), 'Refund exceeds captured payment amount');
   assert.doesNotMatch(fs.readFileSync(path.join(root,'features/platform/orders/components/RefundOrderDialog.tsx'),'utf8'), /rounded-full bg-muted/);
 });
+
+test('replay of an attempt that already holds a provider result finalizes without a second provider call', async () => {
+  const f = fixture(); await f.run();
+  const row = f.attempts.get('refund:request1'); f.refunds.length = 0; f.payment.refunds.length = 0;
+  row.recoveryPoint = 'completed'; row.responseBody = {providerResult:{status:'succeeded',amount:3940,currency:'USD',data:{id:'re_test'}}};
+  await f.run(); assert.equal(f.calls(),1); assert.equal(f.refunds.length,1);
+});
