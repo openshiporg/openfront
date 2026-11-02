@@ -26,7 +26,7 @@ export type DemoListPolicy =
    * (default email, password, role, name), so onboarding state and addresses still save.
    */
   | { kind: 'identity'; protectedFields?: string[] }
-  /** Create and delete are refused unless allowed; updates are refused only when they touch `fields`. */
+  /** Create and delete are refused unless allowed; updates are refused only when they change a value in `fields`. */
   | { kind: 'fields'; fields: string[]; allowCreateDelete?: boolean }
 
 export type DemoGuardPolicy = Record<string, DemoListPolicy>
@@ -92,6 +92,26 @@ function touches(inputData: Record<string, unknown> | undefined, fields: string[
   return !!inputData && fields.some((field) => Object.hasOwn(inputData, field) && inputData[field] !== undefined)
 }
 
+function normalise(value: unknown) {
+  if (value === undefined || value === null) return null
+  if (typeof value === 'string') return value.trim() || null
+  return value
+}
+
+/**
+ * True when a protected field is sent with a value that differs from the stored item.
+ * Full-form saves resend unchanged values, which pass. Without the stored item, any
+ * present field counts as a change.
+ */
+function changes(inputData: Record<string, unknown> | undefined, fields: string[], item?: Record<string, unknown> | null) {
+  if (!inputData) return false
+  return fields.some((field) => {
+    if (!Object.hasOwn(inputData, field) || inputData[field] === undefined) return false
+    if (!item) return true
+    return normalise(inputData[field]) !== normalise(item[field])
+  })
+}
+
 /** Whether `policy` refuses this operation for a demo session. */
 export function demoRefuses(
   policy: DemoListPolicy,
@@ -111,7 +131,7 @@ export function demoRefuses(
     return touches(inputData, policy.protectedFields ?? IDENTITY_FIELDS)
   }
   if (operation !== 'update') return !policy.allowCreateDelete
-  return touches(inputData, policy.fields)
+  return changes(inputData, policy.fields, item as Record<string, unknown> | null | undefined)
 }
 
 function runHook(hook: any, operation: string, args: any) {

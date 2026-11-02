@@ -80,6 +80,17 @@ test('4. a demo user cannot change the store name, logo or URL settings', async 
   await refused(run('Store', 'delete', DEMO, { item: { id: 's' } }));
 });
 
+test('4b. unchanged protected values pass, changed ones are refused', async () => {
+  const item = { id: 's', name: 'Impossible', logoIcon: 'a', logoColor: '#111111', swapLinkTemplate: null, paymentLinkTemplate: 'https://p/{id}', inviteLinkTemplate: null };
+  await run('Store', 'update', DEMO, { item, inputData: { name: ' Impossible ', logoIcon: 'a', logoColor: '#111111', swapLinkTemplate: '', paymentLinkTemplate: 'https://p/{id}', defaultCurrencyCode: 'usd', taxRate: 8 } });
+  await refused(run('Store', 'update', DEMO, { item, inputData: { name: 'Other', defaultCurrencyCode: 'usd' } }));
+  await refused(run('Store', 'update', DEMO, { item, inputData: { name: 'Impossible', logoColor: '#000000' } }));
+  await refused(run('Store', 'update', DEMO, { item, inputData: { paymentLinkTemplate: 'https://evil/{id}' } }));
+  await refused(run('Store', 'update', DEMO, { item, inputData: { inviteLinkTemplate: 'https://x' } }));
+  await refused(run('Store', 'update', DEMO, { inputData: { name: 'Impossible' } }));
+  await refused(run('User', 'update', DEMO, { item: { id: 'demo', password: 'x' }, inputData: { password: 'x' } }));
+});
+
 test('a demo user can still edit a product and its own onboarding state', async () => {
   await run('Product', 'update', DEMO, { item: { id: 'p' }, inputData: { title: 'Edited' } });
   assert.equal(productHookRan, 1, 'the existing Product hook still runs');
