@@ -4,7 +4,7 @@
 
 'use client'
 
-import React, { useState, useSyncExternalStore } from 'react'
+import React, { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,6 @@ import { FieldContainer } from '@/components/ui/field-container'
 import { FieldLabel } from '@/components/ui/field-label'
 import { FieldDescription } from '@/components/ui/field-description'
 import { CalendarIcon } from 'lucide-react'
-import { format } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { Calendar } from '@/components/ui/calendar'
 import {
@@ -21,6 +20,14 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { entriesTyped } from '../../lib/entriesTyped'
+import {
+  calendarDayForZone,
+  formatInZone,
+  formatTimeInputInZone,
+  withCalendarDayInZone,
+  withTimeInZone,
+} from '../../lib/storeTime'
+import { useIsMounted } from '../../lib/useViewerTime'
 import type {
   FieldController,
   FieldControllerConfig,
@@ -62,17 +69,9 @@ interface CellProps {
   field: any
 }
 
-const subscribeNoop = () => () => {}
-
-// false during SSR and hydration, true afterwards, so local-time text never mismatches
-function useIsClient() {
-  return useSyncExternalStore(subscribeNoop, () => true, () => false)
-}
-
-// The server cannot know the browser's time zone; render UTC until mounted
-export function formatTimestamp(date: Date, pattern: string, isClient: boolean) {
-  if (isClient) return format(date, pattern)
-  return `${date.toISOString().slice(0, 16).replace('T', ' ')} UTC`
+// Viewer's browser zone with a short label. Empty until mounted so SSR/hydration match.
+export function formatTimestamp(date: Date, timeZone?: string | null, mounted = true) {
+  return mounted ? formatInZone(date, timeZone, 'datetime') : ''
 }
 
 function validate(
@@ -118,7 +117,8 @@ export function Field({
     ? validate(value, field.fieldMeta, isRequired, field.label)
     : undefined
 
-  const isClient = useIsClient()
+  const timeZone = undefined
+  const mounted = useIsMounted()
   const dateValue = value.value ? new Date(value.value) : undefined
   const inputId = `field-${field.path}`
 
@@ -135,7 +135,7 @@ export function Field({
           tabIndex={-1}
           value={
             dateValue
-              ? formatTimestamp(dateValue, 'PPP p', isClient)
+              ? formatTimestamp(dateValue, timeZone, mounted)
               : 'yyyy-mm-dd --:--:--'
           }
           className="bg-muted cursor-default"
@@ -167,26 +167,18 @@ export function Field({
             onBlur={() => setDirty(true)}
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
-            {dateValue ? formatTimestamp(dateValue, "PPP p", isClient) : <span>Pick a date and time</span>}
+            {dateValue ? formatTimestamp(dateValue, timeZone, mounted) : <span>Pick a date and time</span>}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar
             mode="single"
-            selected={dateValue}
+            selected={dateValue ? calendarDayForZone(dateValue, timeZone) : undefined}
             onSelect={(date) => {
               if (date && onChange) {
-                // Preserve existing time if date has one, otherwise use current time
-                const existingDate = dateValue
-                if (existingDate) {
-                  // Keep the existing time when changing date
-                  date.setHours(existingDate.getHours(), existingDate.getMinutes(), existingDate.getSeconds(), existingDate.getMilliseconds())
-                } else {
-                  // Set time to current time if not set
-                  const now = new Date()
-                  date.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0)
-                }
-                onChange({ ...value, value: date.toISOString() })
+                // Keep the existing store-zone time of day, otherwise use the current one
+                const picked = withCalendarDayInZone(date, dateValue, timeZone)
+                onChange({ ...value, value: picked.toISOString() })
               } else if (!date && onChange) {
                 onChange({ ...value, value: null })
               }
@@ -200,14 +192,13 @@ export function Field({
               <Input
                 type="time"
                 step="1"
-                value={dateValue ? format(dateValue, "HH:mm:ss") : ""}
+                value={dateValue ? formatTimeInputInZone(dateValue, timeZone) : ""}
                 onChange={(e) => {
                   if (onChange && dateValue) {
                     const timeValue = e.target.value
                     if (timeValue) {
                       const [hours, minutes, seconds] = timeValue.split(':').map(Number)
-                      const newDate = new Date(dateValue)
-                      newDate.setHours(hours, minutes || 0, seconds || 0, 0)
+                      const newDate = withTimeInZone(dateValue, hours, minutes || 0, seconds || 0, timeZone)
                       onChange({ ...value, value: newDate.toISOString() })
                       setDirty(true)
                     }
@@ -227,23 +218,25 @@ export function Field({
 }
 
 export function Cell({ item, field }: CellProps) {
-  const isClient = useIsClient()
+  const timeZone = undefined
+  const mounted = useIsMounted()
   const value = item[field.path]
   return (
     <span className="text-sm">
-      {value ? formatTimestamp(new Date(value), "MMM d, yyyy p", isClient) : <span className="text-muted-foreground">—</span>}
+      {value ? formatTimestamp(new Date(value), timeZone, mounted) : <span className="text-muted-foreground">—</span>}
     </span>
   )
 }
 
 export function CardValue({ item, field }: CellProps) {
-  const isClient = useIsClient()
+  const timeZone = undefined
+  const mounted = useIsMounted()
   const value = item[field.path]
   return (
     <div>
       <div className="text-sm font-medium">{field.label}</div>
       <div className="text-sm text-muted-foreground">
-        {value ? formatTimestamp(new Date(value), "MMM d, yyyy p", isClient) : '—'}
+        {value ? formatTimestamp(new Date(value), timeZone, mounted) : '—'}
       </div>
     </div>
   )
@@ -283,6 +276,8 @@ export function controller(config: FieldControllerConfig<TimestampFieldMeta>): F
     filter: {
       Filter: ({ value, onChange, type, autoFocus }: any) => {
         const [isDirty, setDirty] = useState(false)
+        const timeZone = undefined
+  const mounted = useIsMounted()
 
         if (type === 'empty' || type === 'not_empty') return null
         const dateValue = value ? new Date(value) : undefined
@@ -300,26 +295,17 @@ export function controller(config: FieldControllerConfig<TimestampFieldMeta>): F
                 onBlur={() => setDirty(true)}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateValue ? format(dateValue, "PPP p") : <span>Pick a date and time</span>}
+                {dateValue ? formatTimestamp(dateValue, timeZone, mounted) : <span>Pick a date and time</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
-                selected={dateValue}
+                selected={dateValue ? calendarDayForZone(dateValue, timeZone) : undefined}
                 onSelect={(date) => {
                   if (date) {
-                    // Preserve existing time if date has one, otherwise use current time
-                    const existingDate = dateValue
-                    if (existingDate) {
-                      // Keep the existing time when changing date
-                      date.setHours(existingDate.getHours(), existingDate.getMinutes(), existingDate.getSeconds(), existingDate.getMilliseconds())
-                    } else {
-                      // Set time to current time if not set
-                      const now = new Date()
-                      date.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), 0)
-                    }
-                    onChange(date.toISOString())
+                    const picked = withCalendarDayInZone(date, dateValue, timeZone)
+                    onChange(picked.toISOString())
                   } else {
                     onChange(null)
                   }
@@ -333,14 +319,13 @@ export function controller(config: FieldControllerConfig<TimestampFieldMeta>): F
                   <Input
                     type="time"
                     step="1"
-                    value={dateValue ? format(dateValue, "HH:mm:ss") : ""}
+                    value={dateValue ? formatTimeInputInZone(dateValue, timeZone) : ""}
                     onChange={(e) => {
                       if (dateValue) {
                         const timeValue = e.target.value
                         if (timeValue) {
                           const [hours, minutes, seconds] = timeValue.split(':').map(Number)
-                          const newDate = new Date(dateValue)
-                          newDate.setHours(hours, minutes || 0, seconds || 0, 0)
+                          const newDate = withTimeInZone(dateValue, hours, minutes || 0, seconds || 0, timeZone)
                           onChange(newDate.toISOString())
                           setDirty(true)
                         }
@@ -382,7 +367,7 @@ export function controller(config: FieldControllerConfig<TimestampFieldMeta>): F
           return label.toLowerCase()
         }
 
-        return `${label.toLowerCase()} ${format(new Date(value), "MMM d, yyyy p")}`
+        return `${label.toLowerCase()} ${formatInZone(new Date(value), undefined, "datetime")}`
       },
       types: {
         equals: {

@@ -167,10 +167,41 @@ test('sidebar shows only lists and platform pages the session can see', () => {
   assert.equal(access.visibleSidebarLists(lists, null).length, 1);
 });
 
-test('timestamps render the same text on the server and during hydration', () => {
-  const { formatTimestamp } = sandbox({ stubUnknown: true, mocks: { 'date-fns': require('date-fns'), react: require('react') } })
+test('formatInZone: viewer zone by default, explicit zone when given, labelled', () => {
+  const t = sandbox().load('features/dashboard/lib/storeTime.ts');
+  const d = new Date('2026-11-02T18:00:00Z');
+  assert.equal(t.formatInZone(d, 'America/Los_Angeles'), 'Nov 2, 2026, 10:00 AM PST');
+  assert.equal(t.formatInZone(d, 'America/New_York'), 'Nov 2, 2026, 1:00 PM EST');
+  assert.equal(t.formatInZone(new Date('2026-07-01T14:00:00Z'), 'America/New_York'), 'Jul 1, 2026, 10:00 AM EDT');
+  assert.equal(t.formatInZone(d, 'America/New_York', 'long'), 'November 2, 2026 at 1:00 PM EST');
+  assert.equal(t.formatInZone(d, 'America/New_York', 'date'), 'Nov 2, 2026');
+  assert.equal(t.formatInZone(d, 'America/New_York', 'dateLong'), 'November 2, 2026');
+  assert.equal(t.formatInZone('2026-11-02T18:00:00Z', 'UTC'), 'Nov 2, 2026, 6:00 PM UTC');
+  // undefined / invalid zone => viewer (process) zone, still labelled
+  assert.equal(t.formatInZone(d), new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }).format(d));
+  assert.equal(t.formatInZone(d, 'Not/AZone'), t.formatInZone(d));
+  assert.equal(t.formatInZone(null), '');
+  assert.equal(t.formatInZone('nope'), '');
+});
+
+test('timestamp view renders nothing until mounted, then viewer-zone text', () => {
+  const { formatTimestamp } = sandbox({ stubUnknown: true, mocks: { react: require('react') } })
     .load('features/dashboard/views/timestamp/index.tsx');
-  const date = new Date('2026-10-24T18:05:09.000Z');
-  assert.equal(formatTimestamp(date, 'PPP p', false), '2026-10-24 18:05 UTC');
-  assert.equal(formatTimestamp(date, 'yyyy', true), require('date-fns').format(date, 'yyyy'));
+  const d = new Date('2026-11-02T18:00:00Z');
+  assert.equal(formatTimestamp(d, undefined, false), '');
+  assert.equal(formatTimestamp(d, 'America/Los_Angeles', true), 'Nov 2, 2026, 10:00 AM PST');
+});
+
+test('timestamp picker round-trips in the viewer zone and keeps the same instant', () => {
+  const t = sandbox().load('features/dashboard/lib/storeTime.ts');
+  for (const zone of [undefined, 'America/New_York', 'America/Los_Angeles', 'Asia/Kolkata']) {
+    for (const iso of ['2026-11-02T15:00:00.000Z', '2026-07-01T14:30:15.000Z', '2026-03-08T07:30:00.000Z', '2026-11-01T05:59:59.000Z']) {
+      const d = new Date(iso);
+      const [h, m, sec] = t.formatTimeInputInZone(d, zone).split(':').map(Number);
+      assert.equal(t.withTimeInZone(d, h, m, sec, zone).toISOString(), iso);
+      assert.equal(t.withCalendarDayInZone(t.calendarDayForZone(d, zone), d, zone).toISOString(), iso);
+    }
+  }
+  // typed 10:00 means 10:00 in the zone
+  assert.equal(t.withTimeInZone(new Date('2026-11-02T20:00:00Z'), 10, 0, 0, 'America/New_York').toISOString(), '2026-11-02T15:00:00.000Z');
 });
