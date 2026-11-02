@@ -34,6 +34,9 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   render() {
+    // notFound()/redirect() are control flow, not failures: hand them to Next's boundaries.
+    const digest = String((this.state.error as any)?.digest || '')
+    if (this.state.hasError && /^NEXT_(HTTP_ERROR_FALLBACK|NOT_FOUND|REDIRECT)/.test(digest)) throw this.state.error
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center p-4">
