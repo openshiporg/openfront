@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 
 /**
  * Phone-only assistant trigger that sits in the page header. While it is on
- * screen the floating corner button is hidden on phones (see globals.css), so
+ * screen the floating corner button is hidden on phones (see DashboardLayout), so
  * the assistant never covers row actions, prices or statuses.
  */
 export function AssistantHeaderButton({ className }: { className?: string }) {

@@ -182,11 +182,3 @@ h3.tiptap-heading + h2.tiptap-heading {
 	margin: 1.5rem 0;
 	padding-left: 1rem;
 }
-
-/* Phones: when the page header carries the assistant button, hide the floating
-   corner one so it never sits on top of row actions, statuses or prices. */
-@media (max-width: 767px) {
-  body:has([data-assistant-header]) [data-assistant-floating] {
-    display: none;
-  }
-}
