@@ -4,7 +4,6 @@ import {
   subscribedWebhookEndpointIds,
 } from "../../webhooks/outbox";
 import { deliverWebhookEventsById } from "../../webhooks/webhook-plugin";
-import { sendOrderConfirmationEmail } from "../lib/mail";
 
 // Checkout writes the order through Prisma, so Keystone hooks (and the Order webhook
 // enricher) never run for it: order.created is built here and must carry everything
@@ -64,6 +63,8 @@ async function deliverOrderConfirmation(sudo: any, orderId: string) {
         shippingAddress { firstName lastName company address1 address2 city province postalCode phone country { iso2 displayName } }
       `,
     });
+    // Loaded lazily: lib/mail imports the keystone index, which imports this module.
+    const { sendOrderConfirmationEmail } = await import("../lib/mail");
     const result = await sendOrderConfirmationEmail(order);
     if (result?.sent) await mark("sent", { sentAt: new Date().toISOString() });
     else await mark("failed", { error: result?.error || "send_failed" });
