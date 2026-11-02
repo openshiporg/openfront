@@ -92,12 +92,13 @@ export function useOnboardingApi({
     const storeData = {
       name: 'Impossible Tees',
       defaultCurrencyCode: 'usd',
-      homepageTitle: 'Modern Apparel Store',
       homepageDescription: 'Quality clothing and unique designs.',
       logoIcon: DEFAULT_STORE_LOGO_ICON,
       logoColor: DEFAULT_STORE_LOGO_COLOR,
       ...(data.store || {}),
     };
+    // The homepage title is the store's own name unless the setup data names one.
+    storeData.homepageTitle = data.store?.homepageTitle || storeData.name;
 
     // Set the store as loading
     setItemLoading('store', storeData.name);

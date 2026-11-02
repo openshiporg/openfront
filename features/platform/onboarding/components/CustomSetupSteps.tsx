@@ -83,7 +83,7 @@ function getCompleteSetupJson() {
     store: {
       name: "Impossible Tees",
       defaultCurrencyCode: "usd",
-      homepageTitle: "Modern Apparel Store",
+      homepageTitle: "Impossible Tees",
       homepageDescription: "Quality clothing and unique designs.",
     },
     regions: (seedData.regions as any[]).filter((r: any) =>
@@ -143,7 +143,7 @@ Start by telling me what this JSON configuration currently contains:
 **STORE INFORMATION:**
 - Store Name: Impossible Tees
 - Default Currency: USD
-- Homepage Title: Modern Apparel Store
+- Homepage Title: Impossible Tees
 - Homepage Description: Quality clothing and unique designs.
 
 **REGIONS & CURRENCIES:**

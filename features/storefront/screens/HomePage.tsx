@@ -11,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const store = await getStore()
 
   return {
-    title: store?.homepageTitle || "Openfront Next.js Starter",
+    title: store?.homepageTitle || store?.name || "Openfront Next.js Starter",
     description: store?.homepageDescription || "A performant frontend e-commerce starter template with Next.js 16 and Openfront.",
   }
 }
@@ -37,7 +37,7 @@ export async function HomePage(props: {
   return (
     <>
       <Hero
-        title={store?.homepageTitle}
+        title={store?.homepageTitle || store?.name}
         description={store?.homepageDescription}
         logoColor={store?.logoColor}
       />
