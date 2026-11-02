@@ -10,10 +10,11 @@ import { EditItemDrawerClientWrapper } from "@/features/platform/components/Edit
 import type { ApiKey } from "../actions/getApiKeys";
 import {
   differenceInHours,
-  format,
   parseISO,
   differenceInMinutes,
 } from "date-fns";
+import { ViewerTime } from "@/features/dashboard/components/ViewerTime";
+import { useIsMounted } from "@/features/dashboard/lib/useViewerTime";
 
 interface ApiKeyDetailsComponentProps {
   apiKey: ApiKey;
@@ -43,10 +44,13 @@ export const ApiKeyDetailsComponent = ({
     }
   };
 
+  const mounted = useIsMounted();
   const usageCount = apiKey.usageCount?.total || 0;
   const isExpired = apiKey.expiresAt && new Date() > new Date(apiKey.expiresAt);
 
   function formatDate(dateString: string) {
+    // Relative text depends on "now", so render it only after mount (no SSR/client mismatch)
+    if (!mounted) return null;
     const date = parseISO(dateString);
     const now = new Date();
     const minutesDifference = differenceInMinutes(now, date);
@@ -57,7 +61,7 @@ export const ApiKeyDetailsComponent = ({
     } else if (hoursDifference < 24) {
       return `${hoursDifference} hours ago`;
     } else {
-      return format(date, "PPP");
+      return <ViewerTime value={date} style="dateLong" />;
     }
   }
 
@@ -118,7 +122,7 @@ export const ApiKeyDetailsComponent = ({
                 <span className="hidden sm:block size-1 rounded-full bg-muted-foreground/50" />
                 <p className="text-muted-foreground text-sm font-light">
                   {apiKey.lastUsedAt 
-                    ? `Last used ${formatDate(apiKey.lastUsedAt)}`
+                    ? <>Last used {formatDate(apiKey.lastUsedAt)}</>
                     : "Never used"
                   }
                 </p>

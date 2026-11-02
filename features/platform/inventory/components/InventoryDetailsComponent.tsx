@@ -11,7 +11,7 @@ import { MoreVertical, Package, AlertTriangle, TrendingUp, TrendingDown } from '
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EditItemDrawerClientWrapper } from '../../components/EditItemDrawerClientWrapper';
-import { format } from 'date-fns';
+import { ViewerTime } from '@/features/dashboard/components/ViewerTime';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
@@ -72,7 +72,7 @@ export function InventoryDetailsComponent({ inventory, list }: InventoryDetailsC
                   <span>‧</span>
                   <span className="text-sm font-medium">
                     <span className="text-muted-foreground/75">
-                      {format(new Date(inventory.updatedAt), 'MMM d, yyyy')}
+                      <ViewerTime value={inventory.updatedAt} style="date" />
                     </span>
                   </span>
                 </div>
@@ -186,7 +186,7 @@ export function InventoryDetailsComponent({ inventory, list }: InventoryDetailsC
                   <div>
                     <span className="text-muted-foreground">Last Updated:</span>
                     <span className="ml-2 font-medium">
-                      {format(new Date(inventory.updatedAt), 'MMM d, yyyy h:mm a')}
+                      <ViewerTime value={inventory.updatedAt} style="datetime" />
                     </span>
                   </div>
                 </div>
