@@ -45,8 +45,10 @@ export function Field(props: FieldProps<typeof controller>) {
   )
 }
 
-export const Cell: CellComponent<typeof controller> = ({ value }: { value: any; field: any; item: Record<string, unknown> }) => {
-  return value != null ? <span>{stringify(value)}</span> : null
+// The list table passes the row (`item`) and `field`, not a `value`: read the field off the row.
+export const Cell: CellComponent<typeof controller> = ({ value, field, item }: { value?: any; field: any; item: Record<string, unknown> }) => {
+  const shown = value !== undefined ? value : item?.[field?.path]
+  return shown != null ? <span className="text-sm tabular-nums">{stringify(shown)}</span> : null
 }
 
 const createViewValue = Symbol('create view virtual field value')
