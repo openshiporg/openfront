@@ -42,7 +42,7 @@ function fixture({ amount = 3940, refunded = 0, allowed = true, status = 'captur
     '../../webhooks/outbox': {subscribedWebhookEndpointIds: async () => ['endpoint'], enqueueWebhookOutbox: async (...args) => { outbox.push(args); }},
   }).default;
   const args = {orderId:'o1',paymentId:'p1',amount:3940,reason:'Customer request',idempotencyKey:'request1'};
-  return {run: overrides => fn(null,{...args,...overrides},context), payment, refunds, events, outbox, attempts, calls:()=>calls};
+  return {prisma, run: overrides => fn(null,{...args,...overrides},context), payment, refunds, events, outbox, attempts, calls:()=>calls};
 }
 
 test('full refund uses the provider, preserves reason and records audit/outbox without a return', async () => {
@@ -104,4 +104,11 @@ test('partial refund marks partially_refunded and a second partial is still allo
   const f = fixture(); await f.run({amount:1000,idempotencyKey:'a'});
   assert.equal(f.payment.status,'partially_refunded');
   await f.run({amount:500,idempotencyKey:'b'}); assert.equal(f.payment.amountRefunded,1500); assert.equal(f.payment.status,'partially_refunded');
+});
+test('failed Refund row create writes no REFUND_PROCESSED event and leaves status untouched', async () => {
+  const f = fixture();
+  f.prisma.refund.create = async () => { throw new Error('insert failed'); };
+  await assert.rejects(f.run(), /insert failed/);
+  assert.equal(f.events.length, 0); assert.equal(f.refunds.length, 0); assert.equal(f.outbox.length, 0);
+  assert.equal(f.payment.status, 'captured');
 });
