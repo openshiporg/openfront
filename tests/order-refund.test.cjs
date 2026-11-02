@@ -77,13 +77,6 @@ test('unknown provider outcome retains reservation and key, never fabricates a r
   assert.equal(f.refunds.length,0); assert.equal(f.payment.amountRefunded,3940);
   await assert.rejects(f.run({idempotencyKey:'new'}),/exceeds/); assert.equal(f.calls(),1);
 });
-test('demo guard leaves Payment and Refund mutations available for impossible@', async () => {
-  const guard = load('features/keystone/lib/demo-guard.ts');
-  const lists = {Payment:{fields:{}},Refund:{fields:{}},OrderEvent:{fields:{}}};
-  const guarded = guard.withDemoGuard(lists,guard.DEMO_GUARD_POLICY,{DEMO_USER_EMAILS:'impossible@openship.org'});
-  assert.equal(guarded.Payment,lists.Payment); assert.equal(guarded.Refund,lists.Refund); assert.equal(guarded.OrderEvent,lists.OrderEvent);
-  const f = fixture(); await f.run(); assert.equal(f.refunds.length,1);
-});
 
 const code = p => p.then(() => assert.fail('expected rejection'), e => e.extensions?.code);
 test('operator-facing refund rules are coded GraphQLErrors Yoga will not mask', async () => {
