@@ -134,6 +134,7 @@ export function OrderPageClient({
   const currencySymbol = (order.total || "").replace(/[0-9.,\s-]/g, "");
   const money = (cents: number) => `${currencySymbol}${(cents / 100).toFixed(2)}`;
   const paymentStatus = order.paymentDetails?.[0]?.status;
+  const netPaidZero = paidCents > 0 && refundedCents >= paidCents;
   const paymentHeader =
     paidCents > 0 && refundedCents >= paidCents
       ? "Refunded"
@@ -233,20 +234,29 @@ export function OrderPageClient({
                     </div>
                   ))}
                 </div>
-                <div className="flex justify-end p-4 border-t">
-                  <Link href={`/dashboard/platform/orders/${order.id}/fulfill`}>
-                    <Button className="group relative pe-11" size="sm">
+                <div className="flex items-center justify-end gap-3 p-4 border-t">
+                  {netPaidZero && (
+                    <span className="text-xs text-muted-foreground">
+                      Fully refunded. Nothing left to fulfil.
+                    </span>
+                  )}
+                  {netPaidZero ? (
+                    <Button className="group relative pe-11" size="sm" disabled>
                       Fulfill Items
                       <span className="pointer-events-none absolute inset-y-0 end-0 flex w-8 items-center justify-center bg-primary-foreground/15">
-                        <Container
-                          className="opacity-60"
-                          size={14}
-                          strokeWidth={2}
-                          aria-hidden="true"
-                        />
+                        <Container className="opacity-60" size={14} strokeWidth={2} aria-hidden="true" />
                       </span>
                     </Button>
-                  </Link>
+                  ) : (
+                    <Link href={`/dashboard/platform/orders/${order.id}/fulfill`}>
+                      <Button className="group relative pe-11" size="sm">
+                        Fulfill Items
+                        <span className="pointer-events-none absolute inset-y-0 end-0 flex w-8 items-center justify-center bg-primary-foreground/15">
+                          <Container className="opacity-60" size={14} strokeWidth={2} aria-hidden="true" />
+                        </span>
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               </CardContent>
             </Card>
