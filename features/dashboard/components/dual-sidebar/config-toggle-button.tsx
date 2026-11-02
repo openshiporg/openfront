@@ -53,13 +53,13 @@ export function ConfigToggleButton({
                   Using environment variables set by the application deployer
                 </p>
                 <div className="space-y-1">
-                  <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px] font-mono">
+                  <code className="block bg-muted px-1.5 py-0.5 rounded text-xs font-mono">
                     OPENROUTER_API_KEY
                   </code>
-                  <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px] font-mono">
+                  <code className="block bg-muted px-1.5 py-0.5 rounded text-xs font-mono">
                     OPENROUTER_MODEL
                   </code>
-                  <code className="block bg-muted px-1.5 py-0.5 rounded text-[10px] font-mono">
+                  <code className="block bg-muted px-1.5 py-0.5 rounded text-xs font-mono">
                     OPENROUTER_MAX_TOKENS
                   </code>
                 </div>

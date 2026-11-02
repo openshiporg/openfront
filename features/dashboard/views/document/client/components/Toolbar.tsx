@@ -168,7 +168,7 @@ ToolbarButton.displayName = 'ToolbarButton'
 
 export function KeyboardInTooltip({ children }: { children: ReactNode }) {
   return (
-    <kbd className="ml-auto px-1 py-0 text-[10px] font-sans font-medium bg-muted text-foreground/80 rounded">
+    <kbd className="ml-auto px-1 py-0 text-xs font-sans font-medium bg-muted text-foreground/80 rounded">
       {children}
     </kbd>
   )

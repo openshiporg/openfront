@@ -269,7 +269,7 @@ export function formatFieldValue(
   switch (field.fieldMeta?.kind) {
     case 'relation':
       if (field.fieldMeta.many) {
-        return Array.isArray(value) ? `${value.length} items` : '0 items'
+        return Array.isArray(value) ? `${value.length} ${value.length === 1 ? 'item' : 'items'}` : '0 items'
       } else {
         return value?.[field.fieldMeta.labelField || 'name'] || value?.id || '—'
       }

@@ -4,7 +4,6 @@ import { useState, ReactNode } from 'react'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ChevronDown, ChevronUp, ArrowUpDown } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -121,13 +120,13 @@ export function SortSelection({ listMeta, children }: SortSelectionProps) {
         <DropdownMenuContent align="end" className="w-[200px]">
           <div className="flex items-center justify-between py-1.5">
             <DropdownMenuLabel className="py-0">Sort by</DropdownMenuLabel>
-            <Badge
-              variant="destructive"
+            <button
+              type="button"
               onClick={resetSort}
-              className="rounded-sm mr-2 text-[10px] uppercase border tracking-wide font-medium py-0 px-1.5 cursor-pointer"
+              className="mr-1 rounded-[6px] px-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               Clear
-            </Badge>
+            </button>
           </div>
           <DropdownMenuSeparator />
           <div className="max-h-72 overflow-y-auto">
@@ -141,9 +140,9 @@ export function SortSelection({ listMeta, children }: SortSelectionProps) {
                   <span className="flex items-center justify-between w-full">
                     {fieldMeta.label}
                     {fieldPath === field && (
-                      <Badge className="rounded-sm border py-0 px-1.5 text-[10px] uppercase tracking-wide font-medium">
+                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         {direction}
-                      </Badge>
+                      </span>
                     )}
                   </span>
                 </DropdownMenuItem>
@@ -156,7 +155,7 @@ export function SortSelection({ listMeta, children }: SortSelectionProps) {
         className="rounded-l-none pl-3 pr-2"
         onClick={() => handleSortChange(field)}
       >
-        <span className="text-[10px] tracking-wide font-semibold uppercase">
+        <span className="text-xs tracking-wide font-semibold uppercase">
           {direction}
         </span>
         <div className="-space-y-2">
