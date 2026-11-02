@@ -4,7 +4,8 @@
  *   1. change any user's password or email (their own included),
  *   2. change roles or permissions,
  *   3. create, delete or update users,
- *   4. change domain or URL settings.
+ *   4. change domain or URL settings, payment/shipping provider credentials, API keys, webhook URLs,
+ *   5. delete orders, products, payments, refunds, returns or invoices.
  *
  * Enforced server-side as a `beforeOperation` hook wrapped around the lists named in
  * DEMO_GUARD_POLICY. List hooks also run for `context.sudo()` writes (the session is
@@ -27,13 +28,15 @@ export type DemoListPolicy =
    */
   | { kind: 'identity'; protectedFields?: string[] }
   /** Create and delete are refused unless allowed; updates are refused only when they change a value in `fields`. */
-  | { kind: 'fields'; fields: string[]; allowCreateDelete?: boolean }
+  | { kind: 'fields'; fields: string[]; allowCreateDelete?: boolean; refuseDelete?: boolean }
 
 export type DemoGuardPolicy = Record<string, DemoListPolicy>
 
 export const IDENTITY_FIELDS = ['email', 'password', 'role', 'name']
 
 // E-commerce (openfront). Product, Order and every other list are not listed: unaffected.
+const NO_DELETE: DemoListPolicy = { kind: 'fields', fields: [], allowCreateDelete: true, refuseDelete: true }
+
 export const DEMO_GUARD_POLICY: DemoGuardPolicy = {
   User: { kind: 'identity' },
   Role: { kind: 'locked' },
@@ -42,6 +45,24 @@ export const DEMO_GUARD_POLICY: DemoGuardPolicy = {
     kind: 'fields',
     fields: ['swapLinkTemplate', 'paymentLinkTemplate', 'inviteLinkTemplate'],
   },
+  PaymentProvider: { kind: 'fields', fields: ['code', 'credentials', 'createPaymentFunction', 'capturePaymentFunction', 'refundPaymentFunction', 'getPaymentStatusFunction', 'generatePaymentLinkFunction', 'handleWebhookFunction'] },
+  ApiKey: { kind: 'locked' },
+  WebhookEndpoint: { kind: 'fields', fields: ['url', 'secret', 'registrationKey', 'subscriptionKey'] },
+  OAuthApp: { kind: 'fields', fields: ['clientSecret', 'redirectUris', 'webhookUrl'] },
+  ShippingProvider: { kind: 'fields', fields: ['accessToken', 'createLabelFunction', 'getRatesFunction', 'validateAddressFunction', 'trackShipmentFunction', 'cancelLabelFunction'] },
+  FulfillmentProvider: { kind: 'fields', fields: ['code', 'credentials'] },
+  Order: NO_DELETE,
+  DraftOrder: NO_DELETE,
+  Product: NO_DELETE,
+  ProductVariant: NO_DELETE,
+  Payment: NO_DELETE,
+  Refund: NO_DELETE,
+  Return: NO_DELETE,
+  Invoice: NO_DELETE,
+  Fulfillment: NO_DELETE,
+  ClaimOrder: NO_DELETE,
+  Swap: NO_DELETE,
+  GiftCard: NO_DELETE,
 }
 
 export function demoUserEmails(env: Record<string, string | undefined> = process.env): Set<string> {
@@ -130,6 +151,7 @@ export function demoRefuses(
     if (!own) return true
     return touches(inputData, policy.protectedFields ?? IDENTITY_FIELDS)
   }
+  if (operation === 'delete' && policy.refuseDelete) return true
   if (operation !== 'update') return !policy.allowCreateDelete
   return changes(inputData, policy.fields, item as Record<string, unknown> | null | undefined)
 }

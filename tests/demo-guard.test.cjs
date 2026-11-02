@@ -137,3 +137,36 @@ test('the guard is wired into the Keystone config and the GraphQL route', () => 
   const route = fs.readFileSync(path.join(root, 'pages/api/graphql.ts'), 'utf8');
   assert.match(route, /useDemoGuardErrors\(\)/);
 });
+
+test('fleet policy: provider credentials, API keys and webhooks protected; business records cannot be deleted', async () => {
+  const spec = {"PaymentProvider": {"fields": ["code", "credentials", "createPaymentFunction", "capturePaymentFunction", "refundPaymentFunction", "getPaymentStatusFunction", "generatePaymentLinkFunction", "handleWebhookFunction"]}, "ApiKey": "locked", "WebhookEndpoint": {"fields": ["url", "secret", "registrationKey", "subscriptionKey"]}, "OAuthApp": {"fields": ["clientSecret", "redirectUris", "webhookUrl"]}, "ShippingProvider": {"fields": ["accessToken", "createLabelFunction", "getRatesFunction", "validateAddressFunction", "trackShipmentFunction", "cancelLabelFunction"]}, "FulfillmentProvider": {"fields": ["code", "credentials"]}, "Order": "nodelete", "DraftOrder": "nodelete", "Product": "nodelete", "ProductVariant": "nodelete", "Payment": "nodelete", "Refund": "nodelete", "Return": "nodelete", "Invoice": "nodelete", "Fulfillment": "nodelete", "ClaimOrder": "nodelete", "Swap": "nodelete", "GiftCard": "nodelete"};
+  const fleet = withDemoGuard(Object.fromEntries(Object.keys(DEMO_GUARD_POLICY).map((key) => [key, { fields: {} }])), DEMO_GUARD_POLICY, env);
+  const call = (listKey, operation, session, args = {}) => {
+    const hook = fleet[listKey].hooks.beforeOperation;
+    const context = { session, sudo: () => context };
+    return (typeof hook === 'function' ? hook : hook[operation])({ listKey, operation, context, resolvedData: args.inputData, ...args });
+  };
+  const denied = (promise) => assert.rejects(promise, (error) => error.message === DEMO_GUARD_MESSAGE);
+  for (const [key, rule] of Object.entries(spec)) {
+    if (rule === 'locked') {
+      await denied(call(key, 'create', DEMO, { inputData: { name: 'x' } }));
+      await denied(call(key, 'update', DEMO, { item: { id: 'i' }, inputData: { name: 'x' } }));
+      await denied(call(key, 'delete', DEMO, { item: { id: 'i' } }));
+      await call(key, 'update', ADMIN, { item: { id: 'i' }, inputData: { name: 'x' } });
+    } else if (rule === 'nodelete') {
+      await denied(call(key, 'delete', DEMO, { item: { id: 'i' } }));
+      await call(key, 'create', DEMO, { inputData: { name: 'x' } });
+      await call(key, 'update', DEMO, { item: { id: 'i' }, inputData: { name: 'x' } });
+      await call(key, 'delete', ADMIN, { item: { id: 'i' } });
+    } else {
+      await denied(call(key, 'create', DEMO, { inputData: { name: 'x' } }));
+      await denied(call(key, 'delete', DEMO, { item: { id: 'i' } }));
+      for (const field of rule.fields) {
+        await denied(call(key, 'update', DEMO, { item: { id: 'i', [field]: 'old' }, inputData: { [field]: 'changed' } }));
+        await call(key, 'update', DEMO, { item: { id: 'i', [field]: 'old' }, inputData: { [field]: 'old' } });
+        await call(key, 'update', ADMIN, { item: { id: 'i' }, inputData: { [field]: 'changed' } });
+      }
+      await call(key, 'update', DEMO, { item: { id: 'i' }, inputData: { name: 'Renamed', isInstalled: false, metadataNote: 1 } });
+    }
+  }
+});
