@@ -12,6 +12,7 @@ import {
 } from '@keystone-6/core/fields';
 import { isSignedIn, permissions, rules } from '../access';
 import { trackingFields } from './trackingFields';
+import { retireReturningGuest } from '../security/guest-user';
 import {
   canCreateUserRole,
   resolvePublicUserCreateData,
@@ -41,8 +42,11 @@ export const User = list({
     },
   },
   hooks: {
-    resolveInput: ({ operation, inputData, resolvedData, context }) => {
+    resolveInput: async ({ operation, inputData, resolvedData, context }) => {
       if (operation === 'create' && !permissions.canManageUsers({ session: context.session })) {
+        // A returning guest frees the email held by their earlier guest record.
+        // Registered customers (hasAccount true) are never touched.
+        await retireReturningGuest(context.prisma, resolvedData.email);
         return resolvePublicUserCreateData({ inputData, resolvedData });
       }
       return resolvedData;
