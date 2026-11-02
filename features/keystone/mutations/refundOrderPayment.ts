@@ -183,8 +183,7 @@ async function refundOrderPayment(
         note: reason.trim(),
         idempotencyKey: businessKey,
         payment: { connect: { id: paymentId } },
-        metadata: { providerId: provider.id, providerResult },
-        createdById: context.session.itemId,
+        metadata: { providerId: provider.id, providerResult, createdById: context.session.itemId },
       },
     });
     await tx.orderEvent.create({
