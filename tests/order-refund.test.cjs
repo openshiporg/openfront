@@ -27,7 +27,7 @@ function fixture({ amount = 3940, refunded = 0, allowed = true, status = 'captur
       updateMany: async ({where,data}) => { const row = [...attempts.values()].find(a => a.id === where.id); if (row.lockedAt && new Date(row.lockedAt) >= where.OR[1].lockedAt.lt) return {count:0}; Object.assign(row,data); return {count:1}; },
     },
     payment: { updateMany: async ({where,data}) => { if (payment.amountRefunded > where.amountRefunded.lte) return {count:0}; payment.amountRefunded += data.amountRefunded.increment; return {count:1}; } },
-    refund: { findFirst: async ({where}) => refunds.find(r => r.idempotencyKey === where.idempotencyKey), create: async ({data}) => { const r = {...data,id:`r${refunds.length}`}; refunds.push(r); payment.refunds.push(r); return r; } },
+    refund: { findFirst: async ({where}) => refunds.find(r => r.idempotencyKey === where.idempotencyKey), create: async ({data}) => { if ('paymentId' in data || data.payment?.connect?.id !== 'p1') throw new Error('Unknown argument `paymentId`'); const r = {...data,id:`r${refunds.length}`}; refunds.push(r); payment.refunds.push(r); return r; } },
     orderEvent: { create: async ({data}) => { events.push(data); return data; } },
   };
   prisma.$transaction = async fn => fn(prisma);
@@ -83,4 +83,19 @@ test('demo guard leaves Payment and Refund mutations available for impossible@',
   const guarded = guard.withDemoGuard(lists,guard.DEMO_GUARD_POLICY,{DEMO_USER_EMAILS:'impossible@openship.org'});
   assert.equal(guarded.Payment,lists.Payment); assert.equal(guarded.Refund,lists.Refund); assert.equal(guarded.OrderEvent,lists.OrderEvent);
   const f = fixture(); await f.run(); assert.equal(f.refunds.length,1);
+});
+
+const code = p => p.then(() => assert.fail('expected rejection'), e => e.extensions?.code);
+test('operator-facing refund rules are coded GraphQLErrors Yoga will not mask', async () => {
+  assert.equal(await code(fixture().run({amount:3941})), 'REFUND_EXCEEDS_BALANCE');
+  assert.equal(await code(fixture({status:'pending'}).run()), 'PAYMENT_NOT_CAPTURED');
+  const racing = fixture(); const [a, b] = await Promise.allSettled([racing.run(), racing.run({idempotencyKey:'other'})]);
+  const rejected = [a, b].find(r => r.status === 'rejected');
+  assert.ok(['REFUND_EXCEEDS_BALANCE', 'REFUND_IN_PROGRESS'].includes(rejected.reason.extensions?.code));
+});
+test('dashboard shows coded refund messages and the Refund row connects the payment relation', () => {
+  const sec = load('features/dashboard/lib/security.ts');
+  const err = {response:{errors:[{message:'Refund exceeds captured payment amount',extensions:{code:'REFUND_EXCEEDS_BALANCE'}}]}};
+  assert.equal(sec.publicGraphQLErrorMessage(err), 'Refund exceeds captured payment amount');
+  assert.doesNotMatch(fs.readFileSync(path.join(root,'features/platform/orders/components/RefundOrderDialog.tsx'),'utf8'), /rounded-full bg-muted/);
 });

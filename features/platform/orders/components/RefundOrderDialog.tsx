@@ -33,7 +33,7 @@ export function RefundOrderDialog({ orderId, payments }: { orderId: string; paym
   return <div className="space-y-3 text-sm">
     {refunded > 0 && <p className="font-medium">{available.length ? 'Partially refunded' : 'Refunded'} · {payments.filter(p => p.refunds?.length).map(p => money((p.refunds || []).reduce((n, r) => n + r.amount, 0), p.currencyCode)).join(' + ')}</p>}
     {!!available.length && <Dialog open={open} onOpenChange={value => { if (!busy) setOpen(value) }}>
-      <DialogTrigger asChild><div className="inline-flex rounded-full bg-muted/40 p-1"><Button variant="outline" size="sm" className="rounded-full shadow-sm">Refund</Button></div></DialogTrigger>
+      <DialogTrigger asChild><Button variant="outline" size="sm">Refund</Button></DialogTrigger>
       <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md text-sm">
         <DialogHeader><DialogTitle>Refund payment</DialogTitle><DialogDescription>Refund to the original payment method.</DialogDescription></DialogHeader>
         <form className="space-y-4" onSubmit={async event => {

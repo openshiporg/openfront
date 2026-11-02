@@ -1,3 +1,4 @@
+import { GraphQLError } from "graphql";
 import { permissions } from "../access";
 import { refundPayment } from "../utils/paymentProviderAdapter";
 import {
@@ -5,6 +6,10 @@ import {
   subscribedWebhookEndpointIds,
 } from "../../webhooks/outbox";
 import { findIdempotencyAttempt, getOrCreateIdempotencyAttempt } from "../utils/idempotency";
+
+function refundRuleError(message: string, code: "REFUND_EXCEEDS_BALANCE" | "PAYMENT_NOT_CAPTURED" | "REFUND_IN_PROGRESS") {
+  return new GraphQLError(message, { extensions: { code } });
+}
 
 function providerPaymentReference(payment: any): string | undefined {
   return (
@@ -63,12 +68,12 @@ async function refundOrderPayment(
     `,
   });
   if (!payment || payment.order?.id !== orderId) throw new Error("Payment does not belong to order");
-  if (payment.status !== "captured") throw new Error("Only captured payments can be refunded");
+  if (payment.status !== "captured") throw refundRuleError("Only captured payments can be refunded", "PAYMENT_NOT_CAPTURED");
   const alreadyRefunded = payment.refunds?.reduce((sum: number, refund: any) => sum + refund.amount, 0) || 0;
   // A replay already owns its reservation. New requests must include all in-flight reservations.
   const reserved = Math.max(alreadyRefunded, payment.amountRefunded || 0);
   if (!priorAttempt && reserved + amount > payment.amount) {
-    throw new Error("Refund exceeds captured payment amount");
+    throw refundRuleError("Refund exceeds captured payment amount", "REFUND_EXCEEDS_BALANCE");
   }
 
   const provider =
@@ -91,7 +96,7 @@ async function refundOrderPayment(
   }
   if (replay) {
     if (Date.now() - new Date(attempt.createdAt).getTime() > 60 * 60 * 1000 && attempt.recoveryPoint !== "provider_refunded") {
-      throw new Error("Refund requires provider reconciliation before retrying");
+      throw refundRuleError("Refund requires provider reconciliation before retrying", "REFUND_IN_PROGRESS");
     }
     const acquired = await sudo.prisma.idempotencyKey.updateMany({
       where: {
@@ -103,7 +108,7 @@ async function refundOrderPayment(
       },
       data: { lockedAt: new Date() },
     });
-    if (acquired.count !== 1) throw new Error("Refund is already in progress");
+    if (acquired.count !== 1) throw refundRuleError("Refund is already in progress", "REFUND_IN_PROGRESS");
   }
 
   if (attempt.recoveryPoint === "started") {
@@ -116,7 +121,7 @@ async function refundOrderPayment(
         data: { amountRefunded: { increment: amount } },
       });
       if (reserved.count !== 1) {
-        throw new Error("Concurrent refund exceeds captured payment amount");
+        throw refundRuleError("Concurrent refund exceeds captured payment amount", "REFUND_EXCEEDS_BALANCE");
       }
       await tx.idempotencyKey.update({
         where: { id: attempt.id },
@@ -177,7 +182,7 @@ async function refundOrderPayment(
         reason: "other",
         note: reason.trim(),
         idempotencyKey: businessKey,
-        paymentId,
+        payment: { connect: { id: paymentId } },
         metadata: { providerId: provider.id, providerResult },
         createdById: context.session.itemId,
       },
