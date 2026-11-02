@@ -5,6 +5,7 @@ import {
   enqueueWebhookOutbox,
   subscribedWebhookEndpointIds,
 } from "../../webhooks/outbox";
+import { applyOrderStatusTransition } from "../utils/orderStatusTransition";
 import { findIdempotencyAttempt, getOrCreateIdempotencyAttempt } from "../utils/idempotency";
 
 function refundRuleError(message: string, code: "REFUND_EXCEEDS_BALANCE" | "PAYMENT_NOT_CAPTURED" | "REFUND_IN_PROGRESS") {
@@ -23,7 +24,7 @@ function providerPaymentReference(payment: any): string | undefined {
 
 async function refundOrderPayment(
   root: any,
-  { orderId, paymentId, amount, reason, idempotencyKey }: { orderId: string; paymentId: string; amount: number; reason: string; idempotencyKey: string },
+  { orderId, paymentId, amount, reason, idempotencyKey, restock }: { orderId: string; paymentId: string; amount: number; reason: string; idempotencyKey: string; restock?: boolean | null },
   context: any
 ) {
   if (
@@ -216,9 +217,48 @@ async function refundOrderPayment(
     return created;
   });
 
+  // Optional: once the order is fully refunded, return its items to stock through the
+  // same cancel path as transitionOrderStatus. A failure here never undoes the refund.
+  if (restock === true) {
+    let outcome: { restocked: boolean; reason?: string };
+    try {
+      const payments = await sudo.prisma.payment.findMany({
+        where: { order: { id: orderId } },
+        select: { status: true, amount: true, refunds: { select: { amount: true } } },
+      });
+      const fullyRefunded = payments.every(
+        (p: any) =>
+          p.status === "pending" ||
+          p.status === "canceled" ||
+          p.refunds.reduce((sum: number, r: any) => sum + r.amount, 0) >= p.amount
+      );
+      if (!fullyRefunded) {
+        outcome = { restocked: false, reason: "the order is not fully refunded" };
+      } else {
+        await applyOrderStatusTransition(sudo, {
+          orderId,
+          status: "canceled",
+          reason: `Full refund: ${reason.trim()}`.slice(0, 1000),
+          userId: context.session.itemId,
+        });
+        outcome = { restocked: true };
+      }
+    } catch (error: any) {
+      outcome = { restocked: false, reason: String(error?.message || "unknown error").slice(0, 300) };
+    }
+    try {
+      await sudo.prisma.refund.update({
+        where: { id: refund.id },
+        data: { metadata: { ...(refund.metadata || {}), restock: outcome } },
+      });
+    } catch {
+      // The outcome note is informational; the refund itself is already final.
+    }
+  }
+
   return sudo.query.Refund.findOne({
     where: { id: refund.id },
-    query: "id amount reason idempotencyKey payment { id amount amountRefunded }",
+    query: "id amount reason idempotencyKey metadata payment { id amount amountRefunded }",
   });
 }
 

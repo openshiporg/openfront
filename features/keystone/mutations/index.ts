@@ -289,7 +289,7 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         setInvoicePaymentSession(invoiceId: ID!, providerId: ID!): Invoice
         completeInvoicePayment(paymentSessionId: ID!): InvoicePaymentResult!
         processReturnRefund(returnId: ID!, paymentId: ID!, idempotencyKey: String!): Refund
-        refundOrderPayment(orderId: ID!, paymentId: ID!, amount: Int!, reason: String!, idempotencyKey: String!): Refund
+        refundOrderPayment(orderId: ID!, paymentId: ID!, amount: Int!, reason: String!, idempotencyKey: String!, restock: Boolean): Refund
         retryWebhookDeliveries(limit: Int): Int!
         registerWebhookEndpoint(
           registrationKey: String!

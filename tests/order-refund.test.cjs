@@ -38,6 +38,7 @@ function fixture({ amount = 3940, refunded = 0, allowed = true, status = 'captur
   const fn = load('features/keystone/mutations/refundOrderPayment.ts', {
     '../access': {permissions: {canManagePayments: () => allowed, canManageReturns: () => allowed}},
     '../utils/idempotency': idempotency,
+    '../utils/orderStatusTransition': {applyOrderStatusTransition: async () => ({changed: true})},
     '../utils/paymentProviderAdapter': {refundPayment: async input => { calls++; if(providerFails) throw new Error('network outcome unknown'); return {status:'succeeded',amount:input.amount,currency:'USD',data:{id:'re_test'}}; }},
     '../../webhooks/outbox': {subscribedWebhookEndpointIds: async () => ['endpoint'], enqueueWebhookOutbox: async (...args) => { outbox.push(args); }},
   }).default;
