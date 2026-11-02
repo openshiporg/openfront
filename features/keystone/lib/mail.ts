@@ -324,7 +324,7 @@ function orderFulfillmentEmail({ order, fulfillment, orderUrl }: { order: any; f
 export async function sendOrderConfirmationEmail(
   order: any,
   baseUrl?: string
-): Promise<{ sent: boolean; error?: string; messageId?: string }> {
+): Promise<{ sent: boolean; error?: string; messageId?: string; response?: string }> {
   if (!order.email) {
     console.warn('No email address found for order', order.id);
     return { sent: false, error: 'no_recipient' };
@@ -351,7 +351,11 @@ export async function sendOrderConfirmationEmail(
     } else {
       console.log(`📧 Order confirmation email sent to ${order.email}`);
     }
-    return { sent: true, messageId: typeof (info as any)?.messageId === 'string' ? (info as any).messageId : undefined };
+    return {
+      sent: true,
+      messageId: typeof (info as any)?.messageId === 'string' ? (info as any).messageId : undefined,
+      response: typeof (info as any)?.response === 'string' ? (info as any).response.slice(0, 500) : undefined,
+    };
   } catch (error) {
     console.error('Failed to send order confirmation email:', error);
     return { sent: false, error: error instanceof Error ? error.message : 'send_failed' };
