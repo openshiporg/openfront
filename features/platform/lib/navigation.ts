@@ -56,6 +56,22 @@ export const platformNavItems: PlatformNavItem[] = [
     group: 'standalone'
   },
   {
+    title: 'Payments',
+    href: '/platform/payments',
+    color: 'blue',
+    description: 'Review captured payments and refunded balances.',
+    icon: CreditCard,
+    group: 'standalone'
+  },
+  {
+    title: 'Refunds',
+    href: '/platform/refunds',
+    color: 'blue',
+    description: 'Review refunds to original payment methods.',
+    icon: Receipt,
+    group: 'standalone'
+  },
+  {
     title: 'Analytics',
     href: '/platform/analytics',
     color: 'indigo',

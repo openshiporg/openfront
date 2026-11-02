@@ -27,6 +27,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 
 
+import { RefundOrderDialog, type RefundablePayment } from "../components/RefundOrderDialog";
+
 const Card = "div";
 
 interface ExtendedOrder {
@@ -40,6 +42,7 @@ interface ExtendedOrder {
   tax?: string;
   total?: string;
   formattedTotalPaid?: string;
+  payments?: RefundablePayment[];
   paymentDetails?: Array<{
     status: string;
   }>;
@@ -185,7 +188,7 @@ export function OrderPageClient({
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-col">
                           <div className="flex flex-col">
-                            <div className="flex items-start justify-between">
+                            <div className="flex flex-wrap items-start justify-between gap-2">
                               <div className="space-y-2">
                                 <div>
                                   <span className="font-medium text-sm">
@@ -249,6 +252,7 @@ export function OrderPageClient({
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-3 text-sm">
+                <div className="mb-4"><RefundOrderDialog orderId={order.id} payments={order.payments || []} /></div>
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Items Subtotal</span>
@@ -363,7 +367,7 @@ export function OrderPageClient({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-muted-foreground h-6 font-semibold text-[11px] uppercase px-1.5 tracking-wide"
+                  className="text-muted-foreground h-6 font-semibold text-xs uppercase px-1.5 tracking-wide"
                   onClick={() => setEditDrawerConfig({
                     open: true,
                     listKey: "users",
@@ -378,7 +382,7 @@ export function OrderPageClient({
                 <div className="space-y-2">
                   <div className="flex items-center space-x-3 text-foreground/75">
                     <Mail className="h-4 w-4" />
-                    <span className="text-sm">{order.email}</span>
+                    <span className="min-w-0 break-all text-sm">{order.email}</span>
                   </div>
                 </div>
               </CardContent>
@@ -395,7 +399,7 @@ export function OrderPageClient({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-muted-foreground h-6 font-semibold text-[11px] uppercase px-1.5 tracking-wide"
+                    className="text-muted-foreground h-6 font-semibold text-xs uppercase px-1.5 tracking-wide"
                     onClick={() => setEditDrawerConfig({
                       open: true,
                       listKey: "addresses",
