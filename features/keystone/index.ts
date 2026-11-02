@@ -5,6 +5,7 @@ import { permissionsList } from "./models/fields";
 import "dotenv/config";
 import { extendGraphqlSchema } from "./mutations";
 import { models } from "./models";
+import { withDemoGuard } from "./lib/demo-guard";
 import { sendPasswordResetEmail } from "./lib/mail";
 import Iron from "@hapi/iron";
 import * as cookie from "cookie";
@@ -444,7 +445,7 @@ export default withAuth(
         provider: "postgresql",
         url: databaseURL,
       },
-      lists: models,
+      lists: withDemoGuard(models),
       storage: {
         my_images: {
           kind: "s3",
