@@ -34,6 +34,12 @@ function fixture({ amount = 3940, refunded = 0, allowed = true, status = 'captur
   const context = { session: { itemId:'demo', data: {email:'impossible@openship.org'} }, prisma,
     query: { Payment: {findOne: async () => JSON.parse(JSON.stringify(payment))}, Refund: {findOne: async ({where}) => refunds.find(r => r.id === where.id)} }
   };
+  context.db = { Refund: { findOne: async ({where}) => {
+    const refund = refunds.find(r => r.id === where.id);
+    return refund && { ...refund, paymentId: refund.payment.connect.id };
+  } } };
+  // Query API projections are output DTOs, not Keystone internal list items.
+  context.query.Refund.findOne = async () => { throw new Error('Do not return a GraphQL projection as a Refund item'); };
   context.sudo = () => context;
   const fn = load('features/keystone/mutations/refundOrderPayment.ts', {
     '../access': {permissions: {canManagePayments: () => allowed, canManageReturns: () => allowed}},
@@ -52,6 +58,25 @@ test('full refund uses the provider, preserves reason and records audit/outbox w
   assert.equal(f.refunds[0].note,'Customer request'); assert.equal(f.payment.amountRefunded,3940);
   assert.equal(f.events[0].type,'REFUND_PROCESSED'); assert.equal(f.outbox.length,1);
   assert.equal(f.payment.status,'refunded');
+});
+test('fresh and completed replay return internal Refund items for nested payment resolution', async () => {
+  const { graphql, buildSchema } = require('graphql');
+  const schema = buildSchema('type Payment { id: ID!, amount: Int!, amountRefunded: Int! } type Refund { id: ID!, amount: Int!, payment: Payment } type Query { refund: Refund }');
+  const f = fixture();
+  for (let i = 0; i < 2; i++) {
+    const refund = await f.run();
+    assert.equal(refund.paymentId, 'p1');
+    const result = await graphql({ schema, source: '{ refund { id amount payment { id amount amountRefunded } } }', rootValue: { refund }, fieldResolver(source, args, context, info) {
+      if (info.parentType.name === 'Refund' && info.fieldName === 'payment') {
+        assert.equal(source.paymentId, 'p1');
+        return f.payment;
+      }
+      return source[info.fieldName];
+    } });
+    assert.equal(result.errors, undefined);
+    assert.equal(result.data.refund.payment.amountRefunded, 3940);
+  }
+  assert.equal(f.calls(), 1);
 });
 test('partial amount is capped at captured minus already-refunded/reserved', async () => {
   const f = fixture({refunded:1000}); await assert.rejects(f.run({amount:2941}),/exceeds/); assert.equal(f.calls(),0);

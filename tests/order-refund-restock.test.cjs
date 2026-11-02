@@ -61,6 +61,7 @@ function fixture({ amount = 5000, transitionFails = false } = {}) {
     Refund: { findOne: async ({ where }) => refunds.find(r => r.id === where.id) },
     Order: { findOne: async () => ({ id: 'o1', status: order.status }) },
   } };
+  context.db = { Refund: { findOne: async ({ where }) => refunds.find(r => r.id === where.id) } };
   context.sudo = () => context;
   context.query.Payment = { findOne: async () => JSON.parse(JSON.stringify(payment)) };
   const refundFn = load('features/keystone/mutations/refundOrderPayment.ts', {

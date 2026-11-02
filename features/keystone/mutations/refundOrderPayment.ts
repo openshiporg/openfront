@@ -47,9 +47,8 @@ async function refundOrderPayment(
   };
   const priorAttempt = await findIdempotencyAttempt(sudo.prisma, idempotencyRequest);
   if (priorAttempt?.recoveryPoint === "completed" && priorAttempt.responseBody?.refundId) {
-    return sudo.query.Refund.findOne({
+    return sudo.db.Refund.findOne({
       where: { id: priorAttempt.responseBody.refundId },
-      query: "id amount reason idempotencyKey payment { id amount amountRefunded }",
     });
   }
 
@@ -90,9 +89,8 @@ async function refundOrderPayment(
     ? { attempt: priorAttempt, replay: true }
     : await getOrCreateIdempotencyAttempt(sudo.prisma, idempotencyRequest);
   if (attempt.recoveryPoint === "completed" && attempt.responseBody?.refundId) {
-    return sudo.query.Refund.findOne({
+    return sudo.db.Refund.findOne({
       where: { id: attempt.responseBody.refundId },
-      query: "id amount reason idempotencyKey payment { id amount amountRefunded }",
     });
   }
   if (replay) {
@@ -256,9 +254,8 @@ async function refundOrderPayment(
     }
   }
 
-  return sudo.query.Refund.findOne({
+  return sudo.db.Refund.findOne({
     where: { id: refund.id },
-    query: "id amount reason idempotencyKey metadata payment { id amount amountRefunded }",
   });
 }
 
