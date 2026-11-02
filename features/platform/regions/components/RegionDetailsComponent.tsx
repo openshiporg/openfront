@@ -1,4 +1,5 @@
 "use client";
+import { ViewerTime } from '@/features/dashboard/components/ViewerTime';
 
 import React, { useState } from "react";
 import {
@@ -268,11 +269,7 @@ export function RegionDetailsComponent({
                   <span>‧</span>
                   <span className="text-sm font-medium">
                     <span className="text-muted-foreground/75">
-                      {new Date(region.createdAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
+                      <ViewerTime value={region.createdAt} style="dateLong" />
                     </span>
                   </span>
                 </div>

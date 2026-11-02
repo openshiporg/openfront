@@ -1,3 +1,4 @@
+import { ViewerTime } from '@/features/dashboard/components/ViewerTime';
 import Link from 'next/link'
 import { keystoneClient } from '@/features/dashboard/lib/keystoneClient'
 import { PageBreadcrumbs } from '@/features/dashboard/components/PageBreadcrumbs'
@@ -39,7 +40,7 @@ async function Ledger({ searchParams, refunds = false }: Props & { refunds?: boo
                 {order ? <Link className="font-medium underline underline-offset-4" href={`/dashboard/platform/orders/${order.id}`}>Order #{order.displayId}</Link> : <p className="font-medium">Unassigned payment</p>}
                 <p className="capitalize">{status}</p>
                 {refunds && <p className="break-words">{item.note || item.reason}</p>}
-                <p className="text-xs text-muted-foreground">{new Date(item.createdAt).toLocaleString('en-US')}</p>
+                <p className="text-xs text-muted-foreground"><ViewerTime value={item.createdAt} style="datetime" /></p>
               </div>
               <div className="space-y-1 sm:text-right"><p className="font-medium">{money(item.amount, currency)}</p>{!refunds && item.amountRefunded > 0 && <p className="text-muted-foreground">{money(item.amountRefunded, currency)} refunded or reserved</p>}</div>
             </article>

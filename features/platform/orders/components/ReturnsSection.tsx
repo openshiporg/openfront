@@ -1,4 +1,5 @@
 "use client";
+import { ViewerTime } from '@/features/dashboard/components/ViewerTime';
 
 import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -104,7 +105,7 @@ export const ReturnsSection = ({ order, returns, totalItems }: ReturnsSectionPro
                     </div>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <span>
-                        {new Date(returnItem.createdAt).toLocaleDateString()}
+                        <ViewerTime value={returnItem.createdAt} style="date" />
                       </span>
                       {returnItem.refundAmount > 0 && (
                         <span>

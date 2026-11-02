@@ -1,4 +1,5 @@
 "use client";
+import { ViewerTime } from '@/features/dashboard/components/ViewerTime';
 
 import React, { useState } from "react";
 import {
@@ -56,11 +57,7 @@ export function StoreDetailsComponent({
                   <span>‧</span>
                   <span className="text-sm font-medium">
                     <span className="text-muted-foreground/75">
-                      {new Date(store.createdAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
+                      <ViewerTime value={store.createdAt} style="dateLong" />
                     </span>
                   </span>
                 </div>
@@ -114,14 +111,14 @@ export function StoreDetailsComponent({
                   <div>
                     <span className="text-muted-foreground">Created:</span>
                     <span className="ml-2 font-medium">
-                      {new Date(store.createdAt).toLocaleDateString()}
+                      <ViewerTime value={store.createdAt} style="date" />
                     </span>
                   </div>
                   {store.updatedAt && (
                     <div>
                       <span className="text-muted-foreground">Updated:</span>
                       <span className="ml-2 font-medium">
-                        {new Date(store.updatedAt).toLocaleDateString()}
+                        <ViewerTime value={store.updatedAt} style="date" />
                       </span>
                     </div>
                   )}

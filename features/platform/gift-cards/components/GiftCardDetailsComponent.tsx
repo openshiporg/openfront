@@ -1,4 +1,5 @@
 "use client";
+import { ViewerTime } from '@/features/dashboard/components/ViewerTime';
 
 import React, { useState } from "react";
 import {
@@ -101,11 +102,7 @@ export function GiftCardDetailsComponent({
                 </Link>
                 <span className="text-sm font-medium">
                   <span className="text-muted-foreground/75">
-                    {new Date(giftcard.createdAt).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                    <ViewerTime value={giftcard.createdAt} style="dateLong" />
                   </span>
                   {giftcard.order && giftcard.order.user && (
                     <>
@@ -155,7 +152,7 @@ export function GiftCardDetailsComponent({
                   <>
                     <span>‧</span>
                     <span className="text-muted-foreground">
-                      Expires {new Date(giftcard.endsAt).toLocaleDateString()}
+                      Expires <ViewerTime value={giftcard.endsAt} style="date" />
                     </span>
                   </>
                 )}
@@ -292,11 +289,7 @@ export function GiftCardDetailsComponent({
                                         #{transaction.order.displayId}
                                       </Link>
                                       <div className="text-xs text-muted-foreground">
-                                        {new Date(transaction.createdAt).toLocaleDateString("en-US", {
-                                          year: "numeric",
-                                          month: "short",
-                                          day: "numeric",
-                                        })}
+                                        <ViewerTime value={transaction.createdAt} style="date" />
                                       </div>
                                     </div>
                                   </div>

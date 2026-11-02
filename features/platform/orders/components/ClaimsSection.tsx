@@ -1,4 +1,5 @@
 "use client";
+import { ViewerTime } from '@/features/dashboard/components/ViewerTime';
 
 import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -157,7 +158,7 @@ export const ClaimsSection = ({ order, claims, totalItems }: ClaimsSectionProps)
                     </div>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <span>
-                        {new Date(claim.createdAt).toLocaleDateString()}
+                        <ViewerTime value={claim.createdAt} style="date" />
                       </span>
                       {claim.refundAmount > 0 && (
                         <span>

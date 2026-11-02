@@ -4,6 +4,7 @@
  */
 
 import { useMemo, useState, useRef, useEffect } from 'react'
+import { formatInZone } from '../lib/storeTime'
 
 // Type definitions
 export type DataGetter = (data: Record<string, any>) => any
@@ -274,9 +275,9 @@ export function formatFieldValue(
         return value?.[field.fieldMeta.labelField || 'name'] || value?.id || '—'
       }
     case 'datetime':
-      return new Date(value).toLocaleString()
+      return formatInZone(value, undefined, 'datetime')
     case 'date':
-      return new Date(value).toLocaleDateString()
+      return formatInZone(value, undefined, 'date')
     case 'password':
       return value ? '••••••••' : 'Not set'
     case 'file':

@@ -1,4 +1,5 @@
 "use client";
+import { ViewerTime } from '@/features/dashboard/components/ViewerTime';
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -188,7 +189,7 @@ export function BusinessAccountRequestDetailsComponent({
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                <span>Submitted {new Date(businessAccountRequest.submittedAt).toLocaleDateString()}</span>
+                <span>Submitted <ViewerTime value={businessAccountRequest.submittedAt} style="date" /></span>
               </div>
               {businessAccountRequest.reviewNotes && (
                 <div className="mt-3 p-3 bg-muted/50 rounded-md">
@@ -284,7 +285,7 @@ export function BusinessAccountRequestDetailsComponent({
               </div>
               <div>
                 <Label className="font-medium">Submitted</Label>
-                <p className="text-sm">{new Date(businessAccountRequest.submittedAt).toLocaleString()}</p>
+                <p className="text-sm"><ViewerTime value={businessAccountRequest.submittedAt} style="datetime" /></p>
               </div>
             </div>
 

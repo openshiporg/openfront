@@ -1,4 +1,5 @@
 "use client";
+import { ViewerTime } from '@/features/dashboard/components/ViewerTime';
 
 import React, { useState } from "react";
 import {
@@ -136,11 +137,7 @@ export function InvoiceDetailsComponent({
                   <span>‧</span>
                   <span className="text-sm font-medium">
                     <span className="text-muted-foreground/75">
-                      {new Date(invoice.createdAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
+                      <ViewerTime value={invoice.createdAt} style="dateLong" />
                     </span>
                   </span>
                 </div>
@@ -169,7 +166,7 @@ export function InvoiceDetailsComponent({
                       <span className="text-muted-foreground">‧</span>
                       <div className="flex items-center gap-1">
                         <Calendar className="w-3 h-3 text-muted-foreground" />
-                        <span className="text-muted-foreground">Due {new Date(invoice.dueDate).toLocaleDateString()}</span>
+                        <span className="text-muted-foreground">Due <ViewerTime value={invoice.dueDate} style="date" /></span>
                       </div>
                     </>
                   )}

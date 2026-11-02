@@ -1,4 +1,5 @@
 "use client";
+import { ViewerTime } from '@/features/dashboard/components/ViewerTime';
 
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -98,13 +99,7 @@ export function OrderListItem({ order }: OrderListItemProps) {
             </div>
 
             <div className="text-sm text-muted-foreground mt-1">
-              {new Date(order.createdAt).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-              })}
+              <ViewerTime value={order.createdAt} style="long" />
               {order.user && (
                 <span className="ml-2">
                   • {order.user.name || order.user.email}

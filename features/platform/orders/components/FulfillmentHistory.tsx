@@ -1,4 +1,5 @@
 'use client';
+import { ViewerTime } from '@/features/dashboard/components/ViewerTime';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -84,15 +85,7 @@ export function FulfillmentHistory({
   const fulfilledPercentage = (lineItemStats.fulfilled / total) * 100;
   const openPercentage = 100 - fulfilledPercentage;
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  };
+
 
   // Filter fulfillments based on search and sort by status and date
   const filteredFulfillments = fulfillments
@@ -287,7 +280,7 @@ export function FulfillmentHistory({
                       Created
                     </div>
                     <div className="text-left text-sm text-foreground/70 sm:pl-4">
-                      {formatDate(fulfillment.createdAt.toString())}
+                      <ViewerTime value={fulfillment.createdAt.toString()} style="long" />
                     </div>
                   </div>
                   <div className="space-y-0.5 sm:space-y-0 w-full sm:w-[25%]">

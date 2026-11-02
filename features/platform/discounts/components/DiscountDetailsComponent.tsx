@@ -1,4 +1,5 @@
 "use client";
+import { ViewerTime } from '@/features/dashboard/components/ViewerTime';
 
 import { useState } from "react";
 import {
@@ -51,11 +52,7 @@ export function DiscountDetailsComponent({ discount, list }: DiscountDetailsComp
                   </Link>
                   <span>‧</span>
                   <span className="text-sm text-muted-foreground">
-                    {new Date(discount.createdAt).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
+                    <ViewerTime value={discount.createdAt} style="date" />
                   </span>
                 </div>
 
@@ -172,7 +169,7 @@ export function DiscountDetailsComponent({ discount, list }: DiscountDetailsComp
                   <div>
                     <span className="text-muted-foreground">Starts:</span>
                     <span className="ml-2 font-medium">
-                      {new Date(discount.startsAt).toLocaleDateString()}
+                      <ViewerTime value={discount.startsAt} style="date" />
                     </span>
                   </div>
                 )}
@@ -180,7 +177,7 @@ export function DiscountDetailsComponent({ discount, list }: DiscountDetailsComp
                   <div>
                     <span className="text-muted-foreground">Ends:</span>
                     <span className="ml-2 font-medium">
-                      {new Date(discount.endsAt).toLocaleDateString()}
+                      <ViewerTime value={discount.endsAt} style="date" />
                     </span>
                   </div>
                 )}

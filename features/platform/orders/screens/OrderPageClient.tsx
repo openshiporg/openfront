@@ -1,4 +1,5 @@
 "use client";
+import { ViewerTime } from '@/features/dashboard/components/ViewerTime';
 
 import { useState } from "react";
 import Link from "next/link";
@@ -160,14 +161,7 @@ export function OrderPageClient({
           <h1 className="text-2xl font-semibold">Order Details</h1>
           <p className="text-sm text-muted-foreground">
             Order #{order.displayId} •{" "}
-            {order.createdAt ? new Date(order.createdAt).toLocaleString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-              hour12: true,
-            }) : "No date"}
+            <ViewerTime value={order.createdAt} style="long" fallback="No date" />
           </p>
         </div>
 
@@ -333,14 +327,7 @@ export function OrderPageClient({
                       <div className="min-w-0">
                         <p className="font-medium">{event.type}</p>
                         <p className="text-sm text-muted-foreground">
-                          {event.createdAt ? new Date(event.createdAt).toLocaleString("en-US", {
-                            month: "long",
-                            day: "numeric",
-                            year: "numeric",
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          }) : "No date"}
+                          <ViewerTime value={event.createdAt} style="long" fallback="No date" />
                           {event.user?.name && ` by ${event.user.name}`}
                         </p>
                       </div>

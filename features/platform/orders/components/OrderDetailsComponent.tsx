@@ -1,4 +1,5 @@
 "use client";
+import { ViewerTime } from '@/features/dashboard/components/ViewerTime';
 
 import React, { useState } from "react";
 import {
@@ -80,13 +81,7 @@ export const OrderDetailsComponent = ({
                 </Link>
                 <span className="text-xs font-medium">
                   <span className="text-muted-foreground/75">
-                    {new Date(order.createdAt).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}
+                    <ViewerTime value={order.createdAt} style="long" />
                   </span>
                   {order.user && (
                     <>
