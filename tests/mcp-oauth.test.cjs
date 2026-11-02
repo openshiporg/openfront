@@ -436,3 +436,19 @@ test('the sign-in screen signs people in through Keystone and returns to the sam
   assert.equal(signup.status, 303);
   assert.deepEqual(plain(created), [{ name: 'N', email: 'n@example.invalid', password: 'pw' }], 'no role or other fields can be sent');
 });
+
+test('isSameOrigin: Origin "null" is decided by Sec-Fetch-Site, everything else stays strict', () => {
+  const h = harness();
+  const { isSameOrigin } = h.load('features/keystone/mcp-oauth/http.ts');
+  const issuer = 'https://shop.example';
+  const check = headers => isSameOrigin(new Request(`${issuer}/oauth/authorize`, { method: 'POST', headers }), issuer);
+  assert.equal(check({ origin: issuer }), true, 'matching Origin');
+  assert.equal(check({ origin: 'https://evil.example' }), false, 'foreign Origin');
+  assert.equal(check({ origin: 'https://evil.example', 'sec-fetch-site': 'same-origin' }), false, 'foreign Origin is never rescued by Sec-Fetch-Site');
+  assert.equal(check({ origin: 'null', 'sec-fetch-site': 'same-origin' }), true, 'Origin null + same-origin');
+  assert.equal(check({ origin: 'null', 'sec-fetch-site': 'cross-site' }), false, 'Origin null + cross-site');
+  assert.equal(check({ origin: 'null', 'sec-fetch-site': 'same-site' }), false, 'Origin null + same-site');
+  assert.equal(check({ origin: 'null' }), false, 'Origin null + no Sec-Fetch-Site');
+  assert.equal(check({ 'sec-fetch-site': 'same-origin' }), true, 'no Origin + same-origin');
+  assert.equal(check({}), false, 'no Origin and no Sec-Fetch-Site');
+});

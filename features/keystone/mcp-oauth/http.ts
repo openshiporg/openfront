@@ -60,7 +60,9 @@ export async function readParams(request: Request): Promise<Record<string, unkno
 /** Browser POSTs to our own pages must come from our own origin (blocks login and consent CSRF). */
 export function isSameOrigin(request: Request, issuer: string): boolean {
   const origin = request.headers.get('origin')
-  if (origin) return origin === new URL(issuer).origin
+  // Our pages send Referrer-Policy: no-referrer, so browsers serialise a same-site
+  // form POST's Origin as "null"; then the browser-set Sec-Fetch-Site decides.
+  if (origin && origin !== 'null') return origin === new URL(issuer).origin
   return request.headers.get('sec-fetch-site') === 'same-origin'
 }
 
