@@ -344,6 +344,7 @@ export async function signUp(_currentState: any, formData: FormData) {
           password: customer.password,
           name: `${customer.firstName} ${customer.lastName}`,
           phone: customer.phone,
+          hasAccount: true,
         },
       }
     );
