@@ -72,8 +72,8 @@ test('3. a demo user cannot create, delete or update users, including the real a
   await refused(run('User', 'update', DEMO, { item: { id: 'admin' }, inputData: { name: 'Hacked' } }));
 });
 
-test('4. a demo user cannot change the store name, logo or URL settings', async () => {
-  for (const field of ['name', 'logoIcon', 'logoColor', 'inviteLinkTemplate']) {
+test('4. a demo user cannot change the store URL settings', async () => {
+  for (const field of ['swapLinkTemplate', 'paymentLinkTemplate', 'inviteLinkTemplate']) {
     await refused(run('Store', 'update', DEMO, { item: { id: 's' }, inputData: { [field]: 'x' } }));
   }
   await refused(run('Store', 'create', DEMO, { inputData: {} }));
@@ -83,12 +83,16 @@ test('4. a demo user cannot change the store name, logo or URL settings', async 
 test('4b. unchanged protected values pass, changed ones are refused', async () => {
   const item = { id: 's', name: 'Impossible', logoIcon: 'a', logoColor: '#111111', swapLinkTemplate: null, paymentLinkTemplate: 'https://p/{id}', inviteLinkTemplate: null };
   await run('Store', 'update', DEMO, { item, inputData: { name: ' Impossible ', logoIcon: 'a', logoColor: '#111111', swapLinkTemplate: '', paymentLinkTemplate: 'https://p/{id}', defaultCurrencyCode: 'usd', taxRate: 8 } });
-  await refused(run('Store', 'update', DEMO, { item, inputData: { name: 'Other', defaultCurrencyCode: 'usd' } }));
-  await refused(run('Store', 'update', DEMO, { item, inputData: { name: 'Impossible', logoColor: '#000000' } }));
   await refused(run('Store', 'update', DEMO, { item, inputData: { paymentLinkTemplate: 'https://evil/{id}' } }));
   await refused(run('Store', 'update', DEMO, { item, inputData: { inviteLinkTemplate: 'https://x' } }));
-  await refused(run('Store', 'update', DEMO, { inputData: { name: 'Impossible' } }));
+  await refused(run('Store', 'update', DEMO, { inputData: { paymentLinkTemplate: 'https://p/{id}' } }));
   await refused(run('User', 'update', DEMO, { item: { id: 'demo', password: 'x' }, inputData: { password: 'x' } }));
+});
+
+test('changed name, tagline and logo ALLOWED', async () => {
+  const item = { id: 's', name: 'Impossible', logoIcon: 'a', logoColor: '#111111' };
+  await run('Store', 'update', DEMO, { item, inputData: { name: 'Impossible QA', tagline: 'New line', logoIcon: 'b', logoColor: '#000000' } });
+  await run('Store', 'update', DEMO, { inputData: { name: 'No stored item' } });
 });
 
 test('a demo user can still edit a product and its own onboarding state', async () => {
