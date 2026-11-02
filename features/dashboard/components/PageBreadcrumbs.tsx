@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { AssistantHeaderButton } from "./AssistantHeaderButton";
 import { basePath } from "../lib/config";
 
 interface BreadcrumbItem {
@@ -55,11 +56,10 @@ export function PageBreadcrumbs({ items, actions }: PageBreadcrumbsProps) {
             </BreadcrumbList>
           </Breadcrumb>
         </div>
-        {actions && (
-          <div className="flex items-center gap-3">
-            {actions}
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {actions}
+          <AssistantHeaderButton />
+        </div>
       </div>
     </header>
   );

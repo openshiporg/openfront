@@ -69,6 +69,8 @@ function FloatingChatButton() {
     <Button
       onClick={toggleSidebar}
       size="icon"
+      aria-label={showChevron ? 'Close assistant' : 'Open assistant'}
+      data-assistant-floating=""
       className={cn(
         "fixed bottom-3 z-40 h-12 w-12 rounded-full shadow-lg hover:shadow-xl transition-all duration-300",
         showChevron

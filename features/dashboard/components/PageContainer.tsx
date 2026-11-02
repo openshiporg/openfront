@@ -15,6 +15,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { MessagesSquare, Sparkles } from 'lucide-react'
+import { AssistantHeaderButton } from './AssistantHeaderButton'
 
 interface BreadcrumbItem {
   type: 'link' | 'page'
@@ -34,7 +35,7 @@ export function PageContainer({ children, title, header, breadcrumbs }: PageCont
     <div className="flex flex-col space-y-4">
       {/* Header with breadcrumbs */}
       <header className="flex h-16 shrink-0 items-center justify-between gap-2 border-b">
-        <div className="flex items-center gap-2 px-4">
+        <div className="flex min-w-0 items-center gap-2 px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
           
@@ -43,7 +44,8 @@ export function PageContainer({ children, title, header, breadcrumbs }: PageCont
               <BreadcrumbList>
                 {breadcrumbs.map((item, index) => (
                   <React.Fragment key={index}>
-                    <BreadcrumbItem>
+                    {/* Phones keep the last two crumbs so the trail stays on one line next to the header buttons. */}
+                    <BreadcrumbItem className={index < breadcrumbs.length - 2 ? 'max-sm:hidden' : undefined}>
                       {item.type === 'link' && item.href ? (
                         <BreadcrumbLink href={item.href}>
                           {item.label}
@@ -52,14 +54,14 @@ export function PageContainer({ children, title, header, breadcrumbs }: PageCont
                         <BreadcrumbPage>{item.label}</BreadcrumbPage>
                       )}
                     </BreadcrumbItem>
-                    {index < breadcrumbs.length - 1 && <BreadcrumbSeparator />}
+                    {index < breadcrumbs.length - 1 && <BreadcrumbSeparator className={index < breadcrumbs.length - 2 ? 'max-sm:hidden' : undefined} />}
                   </React.Fragment>
                 ))}
               </BreadcrumbList>
             </Breadcrumb>
           )}
         </div>
-        
+        <AssistantHeaderButton className="mr-4" />
       </header>
 
       {/* Page header section */}
