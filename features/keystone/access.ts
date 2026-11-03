@@ -45,18 +45,17 @@ const generatedPermissions = Object.fromEntries(
   permissionsList.map((permission) => [
     permission,
     function ({ session }: { session?: any }) {
-      // Check API key scopes first
-      if (hasApiKeyPermission(session, permission)) {
-        return true;
-      }
-      
-      // Check OAuth scopes second
-      if (hasOAuthPermission(session, permission)) {
-        return true;
-      }
-      
-      // Finally check role-based permissions
       const rolePermission = !!session?.data?.role?.[permission];
+      // API key and OAuth token sessions are narrowed to their scopes: the
+      // permission must be in a granted scope AND in the owner's role, so a
+      // key never exceeds what it was issued for or what its owner holds.
+      // The owner's role must not leak through for unscoped permissions.
+      if (session?.apiKeyScopes) {
+        return rolePermission && hasApiKeyPermission(session, permission);
+      }
+      if (session?.oauthScopes) {
+        return rolePermission && hasOAuthPermission(session, permission);
+      }
       return rolePermission;
     },
   ])
