@@ -83,6 +83,7 @@ export const Order = list({
       validation: {
         isRequired: true,
       },
+      defaultValue: { kind: 'autoincrement' },
     }),
     email: text({
       validation: {

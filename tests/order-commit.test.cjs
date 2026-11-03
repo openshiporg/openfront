@@ -93,6 +93,12 @@ test('signed-in checkout: linked, isGuestOrder false, no secretKey', async () =>
   assert.equal(state.orderData.secretKey, '');
 });
 
+test('display id is left to the database, not taken from the clock', async () => {
+  const { state, sudo, mod } = env();
+  await mod.createOrderFromCartAtomically(cart({ user: MEMBER, shippingAddress: { id: 's', user: MEMBER } }), sudo);
+  assert.equal('displayId' in state.orderData, false);
+});
+
 test('legacy member (hasAccount false but account older than the cart) stays linked', () => {
   const { mod } = env();
   const r = mod.resolveOrderCustomer(cart({ user: { id: 'u3', hasAccount: false, createdAt: T_OLD } }));
