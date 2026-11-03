@@ -1,3 +1,4 @@
+import { shopperError } from "../lib/shopperError";
 import { permissions } from "../access";
 import { verifyCartProof } from "./token-crypto";
 
@@ -57,7 +58,7 @@ export async function assertCartAccess(
   }
 
   if (!options.allowCompleted && cart.order?.id) {
-    throw new Error("Cart has already been completed");
+    throw shopperError("Cart has already been completed", "CART_COMPLETED");
   }
 
   return cart;
@@ -73,7 +74,7 @@ export async function assertLineItemBelongsToCart(
     where: { id: lineItemId },
     query: "id cart { id }",
   });
-  if (lineItem?.cart?.id !== cartId) throw new Error("Line item not found");
+  if (lineItem?.cart?.id !== cartId) throw shopperError("Line item not found", "LINE_ITEM_NOT_FOUND");
 }
 
 export async function assertAddressAccess(

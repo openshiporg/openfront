@@ -1,3 +1,4 @@
+import { shopperError } from "../lib/shopperError";
 import { createCartProof } from "../security/token-crypto";
 
 async function createActiveCart(
@@ -5,13 +6,13 @@ async function createActiveCart(
   { regionId }: { regionId: string },
   context: any,
 ) {
-  if (!regionId) throw new Error("Region ID is required");
+  if (!regionId) throw shopperError("Region ID is required", "REGION_REQUIRED");
 
   const region = await context.query.Region.findOne({
     where: { id: regionId },
     query: "id",
   });
-  if (!region) throw new Error("Region not found");
+  if (!region) throw shopperError("Region not found", "REGION_NOT_FOUND");
 
   const cart = await context.sudo().query.Cart.createOne({
     data: {

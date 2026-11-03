@@ -1,3 +1,4 @@
+import { shopperError } from "../lib/shopperError";
 import {
   assertAddressAccess,
   assertCartAccess,
@@ -31,7 +32,7 @@ async function updateActiveCart(
     throw new Error("Cart not found");
   }
   if (data?.region && existingCart.lineItems?.length) {
-    throw new Error("Region cannot change after items are added; start a new cart");
+    throw shopperError("Region cannot change after items are added; start a new cart", "CART_REGION_LOCKED");
   }
 
   // Ownership, payment collection, order linkage, and cart identity are server-owned.
@@ -42,10 +43,10 @@ async function updateActiveCart(
     delete data.payment;
     delete data.idempotencyKey;
     if (data.metadata || data.context) {
-      throw new Error("Cart tax and commercial context are server-owned");
+      throw shopperError("Cart tax and commercial context are server-owned", "INVALID_CART_INPUT");
     }
     if (data.giftCards) {
-      throw new Error("Gift-card redemption is outside the bounded launch boundary");
+      throw shopperError("Gift-card redemption is outside the bounded launch boundary", "GIFT_CARD_UNSUPPORTED");
     }
     if (
       data.email !== undefined ||
@@ -62,7 +63,7 @@ async function updateActiveCart(
   for (const relation of [data?.shippingAddress, data?.billingAddress]) {
     const addressId = relation?.connect?.id;
     if (addressId) await assertAddressAccess(context, addressId);
-    if (relation?.connect && !addressId) throw new Error("Address ID is required");
+    if (relation?.connect && !addressId) throw shopperError("Address ID is required", "ADDRESS_REQUIRED");
   }
 
   const existingLineItemIds = [
@@ -78,7 +79,7 @@ async function updateActiveCart(
 
   // Existing line items may only be changed through their validated parent cart.
   if (data?.lineItems?.connect || data?.lineItems?.set) {
-    throw new Error("Existing line items cannot be attached to a cart");
+    throw shopperError("Existing line items cannot be attached to a cart", "INVALID_CART_INPUT");
   }
 
   for (const entry of data?.lineItems?.update || []) {
@@ -86,7 +87,7 @@ async function updateActiveCart(
       entry.data?.quantity !== undefined &&
       (!Number.isInteger(entry.data.quantity) || entry.data.quantity <= 0)
     ) {
-      throw new Error("Line item quantity must be a positive integer");
+      throw shopperError("Line item quantity must be a positive integer", "INVALID_QUANTITY");
     }
   }
 
@@ -98,7 +99,7 @@ async function updateActiveCart(
         !Number.isInteger(newItem.quantity) ||
         newItem.quantity <= 0
       ) {
-        throw new Error("A variant and positive integer quantity are required");
+        throw shopperError("A variant and positive integer quantity are required", "INVALID_QUANTITY");
       }
       const variantId = newItem.productVariant.connect.id;
       const existingLineItem = existingCart.lineItems?.find(

@@ -1,3 +1,4 @@
+import { shopperError } from "../lib/shopperError";
 import { assertCartAccess } from "../security/cart-access";
 
 async function removeDiscountFromActiveCart(root, { cartId, code }, context) {
@@ -10,7 +11,7 @@ async function removeDiscountFromActiveCart(root, { cartId, code }, context) {
   });
 
   if (!discount) {
-    throw new Error(`No discount found with code: ${code}`);
+    throw shopperError(`No discount found with code: ${code}`, "INVALID_DISCOUNT_CODE");
   }
 
   return await sudoContext.db.Cart.updateOne({

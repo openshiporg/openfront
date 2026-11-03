@@ -1,3 +1,4 @@
+import { shopperError } from "../lib/shopperError";
 "use server";
 
 import { createPayment } from "../utils/paymentProviderAdapter";
@@ -54,7 +55,7 @@ async function initiatePaymentSession(
   }
 
   if (!cart.shippingAddress?.id || !cart.billingAddress?.id || cart.rawTotal <= 0) {
-    throw new Error("A positive cart with billing and shipping addresses is required");
+    throw shopperError("A positive cart with billing and shipping addresses is required", "CHECKOUT_INCOMPLETE");
   }
 
   // Get payment provider with all required fields

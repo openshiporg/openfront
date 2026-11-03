@@ -1,3 +1,4 @@
+import { shopperError } from "../lib/shopperError";
 import { assertCartAccess } from "../security/cart-access";
 
 async function setActiveCartPaymentSession(root, { cartId, providerId }, context) {
@@ -26,7 +27,7 @@ async function setActiveCartPaymentSession(root, { cartId, providerId }, context
   }
 
   if (!cart.paymentCollection) {
-    throw new Error("Cart has no payment collection");
+    throw shopperError("Cart has no payment collection", "PAYMENT_NOT_STARTED");
   }
 
   // Update all payment sessions to not selected

@@ -1,3 +1,4 @@
+import { shopperError } from "../lib/shopperError";
 import { assertCartAccess } from "../security/cart-access";
 
 async function addActiveCartShippingMethod(
@@ -22,7 +23,7 @@ async function addActiveCartShippingMethod(
     option.adminOnly ||
     option.isReturn
   ) {
-    throw new Error("Shipping option not found");
+    throw shopperError("Shipping option not found", "SHIPPING_OPTION_NOT_FOUND");
   }
 
   await sudo.prisma.$transaction(async (tx: any) => {

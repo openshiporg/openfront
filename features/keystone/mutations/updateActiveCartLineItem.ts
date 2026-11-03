@@ -1,8 +1,9 @@
+import { shopperError } from "../lib/shopperError";
 import { assertLineItemBelongsToCart } from "../security/cart-access";
 
 async function updateActiveCartLineItem(root, { cartId, lineId, quantity }, context) {
   if (!Number.isInteger(quantity) || quantity <= 0) {
-    throw new Error("Quantity must be a positive integer");
+    throw shopperError("Quantity must be a positive integer", "INVALID_QUANTITY");
   }
   await assertLineItemBelongsToCart(context, cartId, lineId);
   const sudoContext = context.sudo();

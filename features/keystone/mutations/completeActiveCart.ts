@@ -1,3 +1,4 @@
+import { shopperError } from "../lib/shopperError";
 import {
   assertCartAccess,
   assertPaymentSessionBelongsToCart,
@@ -359,7 +360,7 @@ async function handlePaidOrder(cart: any, paymentSessionId: string, sudoContext:
     throw new Error("Payment provider code is missing");
   }
   if (selectedSession.amount !== cart.rawTotal) {
-    throw new Error("Payment session amount no longer matches cart total");
+    throw shopperError("Payment session amount no longer matches cart total", "PAYMENT_SESSION_STALE");
   }
 
   let paymentResult = attempt.responseBody?.paymentResult;

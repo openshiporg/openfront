@@ -1,3 +1,4 @@
+import { shopperError } from "../lib/shopperError";
 /**
  * addDiscountToActiveCart - Apply a discount code to a cart
  * 
@@ -46,7 +47,7 @@ async function addDiscountToActiveCart(root, { cartId, code }, context) {
   }
 
   if (!cart.lineItems || cart.lineItems.length === 0) {
-    throw new Error(`Cannot apply discount to an empty cart`);
+    throw shopperError(`Cannot apply discount to an empty cart`, "CART_EMPTY");
   }
 
   // Find the discount with full details
@@ -83,38 +84,38 @@ async function addDiscountToActiveCart(root, { cartId, code }, context) {
   });
 
   if (!discount) {
-    throw new Error(`Invalid discount code: ${code}`);
+    throw shopperError(`Invalid discount code: ${code}`, "INVALID_DISCOUNT_CODE");
   }
 
   // Check if discount is already applied
   if (cart.discounts?.some(d => d.id === discount.id)) {
-    throw new Error(`Discount ${code} is already applied to this cart`);
+    throw shopperError(`Discount ${code} is already applied to this cart`, "DISCOUNT_ALREADY_APPLIED");
   }
 
   // Validate discount is enabled
   if (discount.isDisabled) {
-    throw new Error(`Discount ${code} is no longer available`);
+    throw shopperError(`Discount ${code} is no longer available`, "DISCOUNT_UNAVAILABLE");
   }
 
   // Check date validity
   const now = new Date();
   if (discount.startsAt && new Date(discount.startsAt) > now) {
-    throw new Error(`Discount ${code} is not yet active`);
+    throw shopperError(`Discount ${code} is not yet active`, "DISCOUNT_NOT_ACTIVE");
   }
   if (discount.endsAt && new Date(discount.endsAt) < now) {
-    throw new Error(`Discount ${code} has expired`);
+    throw shopperError(`Discount ${code} has expired`, "DISCOUNT_EXPIRED");
   }
 
   // Check usage limits
   if (discount.usageLimit && discount.usageCount >= discount.usageLimit) {
-    throw new Error(`Discount ${code} has reached its usage limit`);
+    throw shopperError(`Discount ${code} has reached its usage limit`, "DISCOUNT_USAGE_LIMIT");
   }
 
   // Validate region eligibility (if discount has region restrictions)
   if (discount.regions && discount.regions.length > 0 && cart.region) {
     const isValidForRegion = discount.regions.some(r => r.id === cart.region.id);
     if (!isValidForRegion) {
-      throw new Error(`Discount ${code} is not available in your region`);
+      throw shopperError(`Discount ${code} is not available in your region`, "DISCOUNT_NOT_ELIGIBLE");
     }
   }
 
@@ -134,10 +135,10 @@ async function addDiscountToActiveCart(root, { cartId, code }, context) {
       const hasMatch = customerGroupIds.some(id => conditionGroupIds.includes(id));
 
       if (condition.operator === 'in' && !hasMatch) {
-        throw new Error(`Discount ${code} is not available for your customer group`);
+        throw shopperError(`Discount ${code} is not available for your customer group`, "DISCOUNT_NOT_ELIGIBLE");
       }
       if (condition.operator === 'not_in' && hasMatch) {
-        throw new Error(`Discount ${code} is not available for your customer group`);
+        throw shopperError(`Discount ${code} is not available for your customer group`, "DISCOUNT_NOT_ELIGIBLE");
       }
     }
   }
