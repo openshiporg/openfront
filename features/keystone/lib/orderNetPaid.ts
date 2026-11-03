@@ -1,3 +1,5 @@
+import { GraphQLError } from "graphql";
+
 // Net-paid rule shared with the order page (OrderPageClient.tsx, a33a307):
 // paid = amount of captured / partially_refunded / refunded payments,
 // refunded = sum of amountRefunded across all payments.
@@ -25,5 +27,5 @@ export async function assertOrderNotFullyRefunded(db: any, orderId: string) {
     where: { orderId },
     select: { amount: true, amountRefunded: true, status: true },
   });
-  if (isFullyRefunded(computeNetPaid(payments))) throw new Error(FULLY_REFUNDED_MESSAGE);
+  if (isFullyRefunded(computeNetPaid(payments))) throw new GraphQLError(FULLY_REFUNDED_MESSAGE, { extensions: { code: "ORDER_FULLY_REFUNDED" } });
 }
