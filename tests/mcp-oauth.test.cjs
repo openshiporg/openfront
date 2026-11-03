@@ -434,7 +434,7 @@ test('the sign-in screen signs people in through Keystone and returns to the sam
   } } });
   const signup = await h.routes.authorizePOST(h.keystoneContext, req(`/oauth/authorize?${query}`, { method: 'POST', form: { intent: 'signup', email: 'n@example.invalid', password: 'pw', name: 'N' } }));
   assert.equal(signup.status, 303);
-  assert.deepEqual(plain(created), [{ name: 'N', email: 'n@example.invalid', password: 'pw' }], 'no role or other fields can be sent');
+  assert.deepEqual(plain(created), [{ name: 'N', email: 'n@example.invalid', password: 'pw', hasAccount: true }], 'no role or other fields can be sent (members only)');
 });
 
 test('isSameOrigin: Origin "null" is decided by Sec-Fetch-Site, everything else stays strict', () => {
