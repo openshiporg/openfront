@@ -157,7 +157,7 @@ export async function createAccount(
     const context = await keystoneContext.withRequest(nodeRequest({}, '/oauth/authorize'))
     const result = await context.graphql.raw({
       query: `mutation($data: UserCreateInput!) { createUser(data: $data) { id } }`,
-      variables: { data: { name: name || email.split('@')[0], email, password } },
+      variables: { data: { name: name || email.split('@')[0], email, password, hasAccount: true } },
     })
     if (!result?.errors?.length && result?.data?.createUser?.id) return { ok: true }
     const error = result?.errors?.[0]

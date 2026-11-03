@@ -61,7 +61,7 @@ export async function signUp(prevState: AuthState, formData: FormData) {
   try {
     const response = await keystoneClient(`
       mutation($email: String!, $name: String!, $password: String!) {
-        createUser(data: { email: $email, name: $name, password: $password }) { id }
+        createUser(data: { email: $email, name: $name, password: $password, hasAccount: true }) { id }
       }
     `, { email, name, password });
     if (!response.success) {

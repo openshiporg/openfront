@@ -19,12 +19,16 @@ type GuestCandidate = {
   createdAt: Date | string | null;
   roleId?: string | null;
   accounts?: unknown[];
+  carts?: unknown[];
+  orders?: unknown[];
 };
 
 export function isRetirableGuest(user: GuestCandidate | null | undefined, epoch: Date = GUEST_FLAG_EPOCH): boolean {
   if (!user || user.hasAccount !== false) return false;
   if (user.roleId) return false;
   if (user.accounts && user.accounts.length) return false;
+  // The guest flow creates the user for a cart/order; a sign-up has neither.
+  if (!(user.carts && user.carts.length) && !(user.orders && user.orders.length)) return false;
   const created = user.createdAt ? new Date(user.createdAt).getTime() : NaN;
   return Number.isFinite(created) && created >= epoch.getTime();
 }
@@ -39,7 +43,7 @@ export async function retireReturningGuest(prisma: any, email: unknown): Promise
   if (!normalized) return false;
   const existing = await prisma.user.findFirst({
     where: { email: { equals: normalized, mode: "insensitive" } },
-    select: { id: true, hasAccount: true, createdAt: true, roleId: true, accounts: { select: { id: true }, take: 1 } },
+    select: { id: true, hasAccount: true, createdAt: true, roleId: true, accounts: { select: { id: true }, take: 1 }, carts: { select: { id: true }, take: 1 }, orders: { select: { id: true }, take: 1 } },
   });
   if (!isRetirableGuest(existing)) return false;
   await prisma.user.update({ where: { id: existing.id }, data: { email: retiredGuestEmail(existing.id) } });

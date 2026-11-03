@@ -39,8 +39,9 @@ export function resolvePublicUserCreateData({
     }
   }
 
-  // hasAccount only marks a customer as registered (storefront signUp sends true;
-  // guest checkout sends false). It grants no privileges, so it is not forced.
-  restrictedData.hasAccount = inputData?.hasAccount === true;
+  // Public creates are members unless the guest checkout explicitly sends false.
+  // A missing hasAccount (dashboard sign-up, MCP OAuth, older clients) must never
+  // look like a guest, or retireReturningGuest could tombstone the member's email.
+  restrictedData.hasAccount = inputData?.hasAccount !== false;
   return restrictedData;
 }
