@@ -112,7 +112,7 @@ export function CustomSelect({
           aria-haspopup="listbox"
           aria-expanded={open}
         >
-          <span className="text-base self-start text-left w-full">{value ? value.label : placeholder}</span>
+          <span className="text-base self-start text-left w-full min-w-0 truncate">{value ? value.label : placeholder}</span>
           
           {/* This exactly matches the SelectTrigger's chevron area */}
           <div className="flex items-center">
