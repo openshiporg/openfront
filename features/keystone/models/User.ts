@@ -44,12 +44,18 @@ export const User = list({
   hooks: {
     resolveInput: async ({ operation, inputData, resolvedData, context }) => {
       if (operation === 'create' && !permissions.canManageUsers({ session: context.session })) {
-        // A returning guest frees the email held by their earlier guest record.
-        // Registered customers (hasAccount true) are never touched.
-        await retireReturningGuest(context.prisma, resolvedData.email);
         return resolvePublicUserCreateData({ inputData, resolvedData });
       }
       return resolvedData;
+    },
+    // Runs only after resolveInput and all field/list validation passed, right
+    // before the DB write. A returning guest frees the email held by their earlier
+    // guest record here, so a create that fails validation never retires anyone.
+    // Registered customers (hasAccount true) are never touched.
+    beforeOperation: async ({ operation, resolvedData, context }) => {
+      if (operation === 'create' && !permissions.canManageUsers({ session: context.session })) {
+        await retireReturningGuest(context.prisma, resolvedData?.email);
+      }
     },
   },
   ui: {

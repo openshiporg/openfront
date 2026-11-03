@@ -100,3 +100,46 @@ test('anonymous createUser with a member email never retires it (create then fai
   for (const e of ['a@x.com', 'b@x.com']) assert.equal(await retireReturningGuest(prisma, e), false);
   assert.deepEqual(prisma.rows.map((r) => r.email), ['a@x.com', 'b@x.com']);
 });
+
+// Hook ordering: load the real User list with stubbed Keystone, then replay Keystone's
+// create pipeline (resolveInput -> validation -> beforeOperation -> write).
+function loadUserList() {
+  const file = path.join(root, 'features/keystone/models/User.ts');
+  const out = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText;
+  const mod = { exports: {} };
+  const stub = () => ({});
+  const mocks = {
+    '@keystone-6/core': { list: (c) => c, graphql: { field: stub, object: stub, String: {}, Int: {}, Boolean: {} }, group: (c) => c },
+    '@keystone-6/core/access': { denyAll: () => false },
+    '@keystone-6/core/fields': new Proxy({}, { get: () => stub }),
+    '../access': { isSignedIn: ({ session }) => !!session, permissions: { canManageUsers: ({ session }) => !!session?.manager }, rules: new Proxy({}, { get: () => stub }) },
+    './trackingFields': { trackingFields: {} },
+    '../security/guest-user': m.exports,
+    '../security/user-create': um.exports,
+  };
+  vm.runInNewContext(out, { module: mod, exports: mod.exports, require: (n) => (n in mocks ? mocks[n] : {}), process, Object, Set }, { filename: file });
+  return mod.exports.User;
+}
+async function createPipeline(User, prisma, input) {
+  const context = { session: undefined, prisma };
+  const resolved = await User.hooks.resolveInput({ operation: 'create', inputData: input, resolvedData: { ...input }, context });
+  if (!input.password || input.password.length < 10) return 'validation-failed'; // Keystone rejects before beforeOperation
+  await User.hooks.beforeOperation({ operation: 'create', resolvedData: resolved, context });
+  return 'written';
+}
+test('invalid create (short password) does NOT retire the guest email; valid guest create does', async () => {
+  const User = loadUserList();
+  const prisma = db([{ id: 'g1', email: 'a@x.com', hasAccount: false, createdAt: NEW }]);
+  assert.equal(await createPipeline(User, prisma, { email: 'a@x.com', name: 'n', password: 'short' }), 'validation-failed');
+  assert.equal(prisma.rows[0].email, 'a@x.com');
+  assert.equal(await createPipeline(User, prisma, { email: 'a@x.com', name: 'n', password: 'long-enough-password', hasAccount: false }), 'written');
+  assert.equal(prisma.rows[0].email, retiredGuestEmail('g1'));
+});
+test('resolveInput itself never retires; manager creates never retire', async () => {
+  const User = loadUserList();
+  const prisma = db([{ id: 'g1', email: 'a@x.com', hasAccount: false, createdAt: NEW }]);
+  await User.hooks.resolveInput({ operation: 'create', inputData: { email: 'a@x.com' }, resolvedData: { email: 'a@x.com' }, context: { session: undefined, prisma } });
+  assert.equal(prisma.rows[0].email, 'a@x.com');
+  await User.hooks.beforeOperation({ operation: 'create', resolvedData: { email: 'a@x.com' }, context: { session: { manager: true }, prisma } });
+  assert.equal(prisma.rows[0].email, 'a@x.com');
+});
