@@ -7,6 +7,7 @@
     "build": "keystone build --no-ui && next build",
     "release:migrate": "prisma migrate deploy",
     "start": "next start",
+    "test:security": "node --import tsx --test features/keystone/lib/internal-origin.test.ts",
     "lint": "eslint .",
     "migrate:gen": "keystone build --no-ui && tsx features/keystone/view-order/generate-view-order.ts && keystone prisma migrate dev",
     "migrate": "prisma migrate deploy"

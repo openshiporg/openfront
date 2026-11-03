@@ -92,7 +92,7 @@ test('GraphQL errors log only a fixed message and admitted codes; no request/var
   });
   const instance = sandbox({ mocks: {
     '@/features/dashboard/lib/cookies': { getAuthHeaders: async () => ({}) },
-    '@/features/dashboard/lib/getBaseUrl': { getGraphQLEndpoint: async () => 'https://test.invalid/api/graphql' },
+    '@/features/dashboard/lib/getBaseUrl': { getServerGraphQLTarget: async () => ({ endpoint: 'https://test.invalid/api/graphql' }) },
     'graphql-request': { GraphQLClient: class { async request() { throw error; } } },
   } });
   const result = await instance.load('features/dashboard/lib/keystoneClient.ts').keystoneClient('query', { password: 'synthetic-password' });
@@ -108,7 +108,7 @@ test('multipart GraphQL failures and thrown fetch errors are also sanitized', as
       return Response.json({ errors: [{ message: 'synthetic-password', extensions: { code: 'FORBIDDEN' } }] });
     }, mocks: {
       '@/features/dashboard/lib/cookies': { getAuthHeaders: async () => ({}) },
-      '@/features/dashboard/lib/getBaseUrl': { getGraphQLEndpoint: async () => 'https://test.invalid/api/graphql' },
+      '@/features/dashboard/lib/getBaseUrl': { getServerGraphQLTarget: async () => ({ endpoint: 'https://test.invalid/api/graphql' }) },
       'graphql-request': { GraphQLClient: class {} },
     } });
     const result = await instance.load('features/dashboard/lib/keystoneClient.ts').keystoneClient('mutation', { upload: new File(['test'], 'test.txt') });
@@ -180,6 +180,7 @@ function completionSandbox({ session, env = {}, validationStatus = 200, provider
       constructor(endpoint, options) { captures.transports.push({ endpoint, options }); }
     } },
     '@/features/dashboard/lib/getBaseUrl': { getBaseUrl: async () => 'https://trusted.invalid' },
+    '@/features/keystone/lib/internal-origin': { loopbackOrigin: () => null, internalGraphqlEndpoint: () => null, withRequestIdentity: () => fetch },
     '@/features/keystone/context': { keystoneContext: { withRequest: async request => {
       captures.sessions.push(request); return { session };
     } } },

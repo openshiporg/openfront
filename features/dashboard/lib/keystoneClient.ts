@@ -5,7 +5,7 @@
 import { getAuthHeaders } from '@/features/dashboard/lib/cookies';
 import { GraphQLClient } from 'graphql-request';
 import { PUBLIC_REQUEST_ERROR, publicGraphQLErrorMessage, safeErrorSummary } from './security';
-import { getGraphQLEndpoint } from '@/features/dashboard/lib/getBaseUrl';
+import { getServerGraphQLTarget } from '@/features/dashboard/lib/getBaseUrl';
 
 // Define response type for keystoneClient
 export type KeystoneResponse<T = any> =
@@ -16,11 +16,12 @@ export type KeystoneResponse<T = any> =
  * Create a GraphQL client with authentication headers
  */
 async function createGraphQLClient(extraHeaders?: HeadersInit): Promise<GraphQLClient> {
-  const endpoint = await getGraphQLEndpoint();
+  const { endpoint, fetch: internalFetch } = await getServerGraphQLTarget();
   const authHeaders = await getAuthHeaders();
   return new GraphQLClient(endpoint, {
     credentials: 'include',
     redirect: 'error',
+    ...(internalFetch ? { fetch: internalFetch } : {}),
     headers: { ...(authHeaders || {}), ...Object.fromEntries(new Headers(extraHeaders).entries()) },
   });
 }
@@ -74,7 +75,7 @@ async function _fetchGraphQLWithFiles(
   variables: Record<string, unknown> = {}
 ): Promise<any> {
   try {
-    const endpoint = await getGraphQLEndpoint();
+    const { endpoint, fetch: internalFetch } = await getServerGraphQLTarget();
     const authHeaders = await getAuthHeaders();
 
     // Clone the variables to avoid modifying the original
@@ -115,7 +116,7 @@ async function _fetchGraphQLWithFiles(
     }
 
     // Send the multipart request
-    const response = await fetch(endpoint, {
+    const response = await (internalFetch ?? fetch)(endpoint, {
       method: "POST",
       headers,
       credentials: "include",

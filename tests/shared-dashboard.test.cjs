@@ -73,7 +73,7 @@ function middlewareRun({ pathname, user = null, env = {} }) {
     'next/server': {
       NextResponse: { redirect: url => ({ redirect: new URL(url).pathname }), next: () => ({ next: true }) },
     },
-    '@/features/dashboard/lib/getBaseUrl': { getGraphQLEndpoint: async () => 'https://test.invalid/api/graphql' },
+    '@/features/dashboard/lib/getBaseUrl': { getServerGraphQLTarget: async () => ({ endpoint: 'https://test.invalid/api/graphql' }) },
     'graphql-request': { GraphQLClient: class {} },
   } }).load('features/dashboard/middleware.ts');
   const url = `https://shop.invalid${pathname}`;

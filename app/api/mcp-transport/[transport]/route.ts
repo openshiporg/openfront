@@ -44,6 +44,10 @@ import {
   isInputObjectType,
 } from 'graphql';
 import { getBaseUrl } from '@/features/dashboard/lib/getBaseUrl';
+import { internalGraphqlEndpoint, withRequestIdentity } from '@/features/keystone/lib/internal-origin';
+
+// Self-calls to /api/graphql carry the caller's signed identity, read from the current request per call.
+const selfFetch = withRequestIdentity();
 import { keystoneContext } from '@/features/keystone/context';
 import { authorizeMcpRequest } from '@/features/keystone/mcp-oauth/http';
 
@@ -60,7 +64,7 @@ function getSimpleTypeName(type: any): string {
 
 // Execute GraphQL query as the caller: their session cookie, or their MCP OAuth bearer token
 async function executeGraphQL(query: string, graphqlEndpoint: string, auth: Record<string, string>, variables?: any): Promise<any> {
-  const response = await fetch(graphqlEndpoint, {
+  const response = await selfFetch(graphqlEndpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -78,7 +82,7 @@ async function executeGraphQL(query: string, graphqlEndpoint: string, auth: Reco
 
 // Get GraphQL schema from introspection
 async function getGraphQLSchema(graphqlEndpoint: string, auth: Record<string, string>): Promise<GraphQLSchema> {
-  const response = await fetch(graphqlEndpoint, {
+  const response = await selfFetch(graphqlEndpoint, {
     method: 'POST',
     headers: { 
       'Content-Type': 'application/json',
@@ -107,8 +111,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
     const { transport } = await params;
     
     // Construct GraphQL endpoint
-    const baseUrl = await getBaseUrl();
-    const graphqlEndpoint = `${baseUrl}/api/graphql`;
+    const graphqlEndpoint = internalGraphqlEndpoint() ?? `${await getBaseUrl()}/api/graphql`;
     
     // Parse the JSON-RPC request
     const body = await request.json();

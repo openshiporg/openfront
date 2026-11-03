@@ -41,3 +41,25 @@ export async function getGraphQLEndpoint(): Promise<string> {
   const baseUrl = await getBaseUrl();
   return `${baseUrl}/api/graphql`;
 }
+
+/**
+ * Server-side GraphQL target. On the server this is the loopback origin with a signed per-end-user
+ * identity (so server renders don't share the public egress IP bucket). In the browser, or when the
+ * process port is unknown, it is the public endpoint exactly as before.
+ */
+export async function getServerGraphQLTarget(
+  sourceHeaders?: { get(name: string): string | null } | null,
+): Promise<{ endpoint: string; fetch?: typeof fetch }> {
+  if (typeof window === 'undefined') {
+    const { internalGraphqlEndpoint, createInternalGraphqlFetch, clientSourceFromHeaders } = await import('@/features/keystone/lib/internal-origin');
+    const endpoint = internalGraphqlEndpoint();
+    if (endpoint) {
+      let headersList = sourceHeaders ?? null;
+      if (!headersList) {
+        try { headersList = await headers(); } catch { headersList = null; }
+      }
+      return { endpoint, fetch: createInternalGraphqlFetch(clientSourceFromHeaders(headersList), endpoint) };
+    }
+  }
+  return { endpoint: await getGraphQLEndpoint() };
+}

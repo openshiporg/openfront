@@ -2,6 +2,7 @@ import { convertToModelMessages, streamText, stepCountIs } from 'ai';
 import { createMCPClient } from '@ai-sdk/mcp';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { getBaseUrl } from '@/features/dashboard/lib/getBaseUrl';
+import { loopbackOrigin } from '@/features/keystone/lib/internal-origin';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { IncomingMessage } from 'node:http';
 import { keystoneContext } from '@/features/keystone/context';
@@ -78,7 +79,7 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Unable to validate AI credentials.' }, { status: 401 });
     }
 
-    const baseUrl = await getBaseUrl();
+    const baseUrl = loopbackOrigin() ?? await getBaseUrl();
     const mcpEndpoint = `${baseUrl}/api/mcp-transport/http`;
     const cookie = req.headers.get('cookie') || '';
 
