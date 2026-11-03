@@ -6,6 +6,7 @@ import {
 } from "../../webhooks/outbox";
 import { deliverWebhookEventsById } from "../../webhooks/webhook-plugin";
 import { reconcileOrderFulfillmentStatus } from "../orders/order-lifecycle";
+import { assertOrderNotFullyRefunded } from "../lib/orderNetPaid";
 
 function trackingUrl(carrier: string, number: string) {
   const value = encodeURIComponent(number);
@@ -80,6 +81,7 @@ async function createOrderFulfillment(
     if (!order || !["pending", "completed"].includes(order.status)) {
       throw new Error("Order is not fulfillable");
     }
+    await assertOrderNotFullyRefunded(tx, orderId);
     const orderLines = await tx.orderLineItem.findMany({
       where: { orderId, id: { in: normalized.map(([id]) => id) } },
       select: { id: true, quantity: true, metadata: true },

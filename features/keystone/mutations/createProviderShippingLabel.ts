@@ -141,6 +141,8 @@ async function createProviderShippingLabel(
       order.user?.id
     );
 
+    // createOrderFulfillment refuses fully refunded orders (orderNetPaid) before any
+    // label call, while keeping idempotent replays working.
     // Reserve fulfillment quantities transactionally before the external label
     // call so concurrent operators cannot over-fulfill the order.
     const fulfillment = await createOrderFulfillment(
