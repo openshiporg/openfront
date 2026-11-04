@@ -1,6 +1,7 @@
 {
   "name": "openfront",
   "version": "0.1.0",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "keystone build --no-ui && npm run migrate && next dev",
