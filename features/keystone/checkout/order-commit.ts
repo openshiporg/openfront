@@ -205,7 +205,6 @@ export async function createOrderFromCartAtomically(cart: any, sudo: any) {
         shippingMethods: { connect: (cart.shippingMethods || []).map((item: any) => ({ id: item.id })) },
         lineItems: { connect: lineItemIds.map((id) => ({ id })) },
         status: "pending",
-        displayId: Math.floor(Date.now() / 1000),
         taxRate: cart.region.taxRate || 0,
         metadata: { ...(cart.metadata || {}), commercialSnapshot },
         secretKey,
