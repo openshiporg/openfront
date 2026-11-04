@@ -85,10 +85,6 @@ export async function signOut() {
   redirect('/dashboard/signin');
 }
 
-export async function setupTokenRequired() {
-  return Boolean(process.env.SETUP_TOKEN?.trim());
-}
-
 export async function createInitialUser(
   prevState: { message: string | null; formData: { name: string; email: string } },
   formData: FormData
@@ -96,9 +92,6 @@ export async function createInitialUser(
   const name = String(formData.get('name') || '');
   const email = String(formData.get('email') || '');
   const password = String(formData.get('password') || '');
-  // SETUP_TOKEN deployments: the token proves the person claiming the
-  // install deployed it (features/keystone/setup-token.ts).
-  const setupToken = String(formData.get('setupToken') || '').trim();
   try {
     const response = await keystoneClient(`
       mutation($data: CreateInitialUserInput!) {
@@ -106,7 +99,7 @@ export async function createInitialUser(
           ... on UserAuthenticationWithPasswordSuccess { item { id } }
         }
       }
-    `, { data: { name, email, password } }, setupToken ? { headers: { 'x-setup-token': setupToken } } : undefined);
+    `, { data: { name, email, password } });
     if (!response.success) {
       return { message: withReason(INITIAL_USER_ERROR, response.error), formData: { name, email } };
     }
