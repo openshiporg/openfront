@@ -85,6 +85,11 @@ export default async function Footer() {
               <span className="text-[0.8125rem] leading-[1.375rem] font-medium text-foreground">Openfront</span>
               <ul className="grid grid-cols-1 gap-y-2 text-muted-foreground text-[0.8125rem] leading-[1.375rem] font-normal">
                 <li>
+                  <LocalizedClientLink className="hover:text-foreground" href="/gift-cards">
+                    Gift cards
+                  </LocalizedClientLink>
+                </li>
+                <li>
                   <a
                     href="https://github.com/openshiporg"
                     target="_blank"

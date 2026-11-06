@@ -136,11 +136,19 @@ async function getCustomerOrder(root, { orderId, secretKey }, context) {
           code
         }
       }
+      giftCardTransactions { amount }
     `
   });
 
   if (!order) {
     throw new Error('Order not found');
+  }
+
+  // Gift cards are a tender: show what they paid, never their codes.
+  const giftCardCents = (order.giftCardTransactions || []).reduce((sum: number, row: any) => sum + (row.amount || 0), 0);
+  delete order.giftCardTransactions;
+  if (giftCardCents > 0) {
+    order.giftCard = new Intl.NumberFormat("en-US", { style: "currency", currency: String(order.region?.currency?.code || "usd").toUpperCase() }).format(giftCardCents / 100);
   }
 
   // If secretKey is provided, verify it matches

@@ -35,6 +35,7 @@ async function activeCart(root, { cartId }, context) {
       rawTotal
       discount
       giftCardTotal
+      giftCardApplied
       tax
       shipping
       lineItems(orderBy:  {

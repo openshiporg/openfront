@@ -8,7 +8,6 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -28,6 +27,18 @@ import Link from "next/link";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 import { ItemPagination } from "../../orders/components/ItemPagination";
 import { GiftCard } from "../actions";
+import { refundGiftCardAction, voidGiftCardAction } from "../actions/gift-card-actions";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+
+const LEDGER_LABEL: Record<string, string> = {
+  issue: "Issued",
+  hold: "Used at checkout",
+  release: "Checkout cancelled, returned",
+  return: "Returned from an order",
+  refund: "Refunded to the buyer's card",
+  void: "Voided",
+};
 
 interface GiftCardDetailsComponentProps {
   giftcard: GiftCard;
@@ -47,6 +58,26 @@ export function GiftCardDetailsComponent({
   });
   const [editItemId, setEditItemId] = useState<string>('');
   const [editItemOpen, setEditItemOpen] = useState(false);
+  const [working, setWorking] = useState(false);
+  const router = useRouter();
+  const meta = (giftcard.metadata || {}) as any;
+  const ledger: any[] = Array.isArray(meta.ledger) ? meta.ledger : [];
+  const canRefund = !!meta.paymentIntentId && !giftcard.isDisabled && giftcard.balance > 0;
+
+  const runAction = async (kind: "refund" | "void") => {
+    const amount = new Intl.NumberFormat('en-US', { style: 'currency', currency: (meta.currencyCode || giftcard.region?.currency?.code || 'USD').toUpperCase() }).format(giftcard.balance / 100);
+    const question = kind === "refund"
+      ? `Refund the remaining ${amount} to the buyer's card? The gift card stops working.`
+      : `Void this gift card? The remaining ${amount} is not refunded.`;
+    const reason = window.prompt(`${question}\n\nReason:`, kind === "refund" ? "Customer asked for a refund" : "");
+    if (!reason?.trim()) return;
+    setWorking(true);
+    const result: any = kind === "refund" ? await refundGiftCardAction(giftcard.id, reason) : await voidGiftCardAction(giftcard.id, reason);
+    setWorking(false);
+    if (!result?.success) { toast.error(result?.error || "That didn't work."); return; }
+    toast.success(kind === "refund" ? `Refunded ${amount} to the buyer's card.` : "Gift card voided.");
+    router.refresh();
+  };
   const itemsPerPage = 5;
 
   const isActive = !giftcard.isDisabled && (!giftcard.endsAt || new Date(giftcard.endsAt) > new Date());
@@ -75,7 +106,7 @@ export function GiftCardDetailsComponent({
   };
 
   const formatCurrency = (amount: number) => {
-    const currency = giftcard.region?.currency?.code || 'USD';
+    const currency = (meta.currencyCode || giftcard.region?.currency?.code || 'USD').toUpperCase();
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency,
@@ -134,6 +165,15 @@ export function GiftCardDetailsComponent({
                 </div>
               )}
 
+              {meta.purchaserEmail && (
+                <div className="text-sm text-muted-foreground break-all">
+                  Bought online by {meta.purchaserName || meta.purchaserEmail}
+                  {meta.recipientEmail && meta.recipientEmail !== meta.purchaserEmail
+                    ? ` for ${meta.recipientName || meta.recipientEmail} (${meta.recipientEmail})`
+                    : ` (${meta.purchaserEmail})`}
+                </div>
+              )}
+
               {/* Balance Information */}
               <div className="flex flex-wrap items-center gap-1.5 text-sm">
                 <span className="font-medium text-emerald-600">
@@ -161,12 +201,10 @@ export function GiftCardDetailsComponent({
 
             <div className="flex flex-col justify-between h-full">
               <div className="flex items-center gap-2">
-                <Badge
-                  color={isActive ? "emerald" : "zinc"}
-                  className="text-[.6rem] sm:text-[.7rem] py-0 px-2 sm:px-3 tracking-wide font-medium rounded-md border h-6"
-                >
-                  {isActive ? "ACTIVE" : giftcard.isDisabled ? "DISABLED" : "EXPIRED"}
-                </Badge>
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <span aria-hidden="true" className={`size-1.5 rounded-full ${isActive ? "bg-emerald-500" : "bg-zinc-400"}`} />
+                  {isActive ? "Active" : meta.refundedAt ? "Refunded" : giftcard.isDisabled ? "Voided" : giftcard.balance <= 0 ? "Used up" : "Expired"}
+                </span>
                 
                 {/* Action buttons */}
                 <div className="absolute bottom-3 right-5 sm:static flex items-center gap-2">
@@ -181,6 +219,16 @@ export function GiftCardDetailsComponent({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      {canRefund && (
+                        <DropdownMenuItem disabled={working} onClick={() => runAction("refund")}>
+                          Refund balance to buyer
+                        </DropdownMenuItem>
+                      )}
+                      {!giftcard.isDisabled && (
+                        <DropdownMenuItem disabled={working} onClick={() => runAction("void")}>
+                          Void gift card
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem onClick={() => setIsEditDrawerOpen(true)}>
                         Edit Gift Card
                       </DropdownMenuItem>
@@ -199,6 +247,26 @@ export function GiftCardDetailsComponent({
             </div>
           </div>
           <AccordionContent className="pb-0">
+            {ledger.length > 0 && (
+              <div className="px-4 md:px-6 py-3 border-b">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Balance history</p>
+                <ul className="divide-y text-sm">
+                  {ledger.slice().reverse().map((row: any, index: number) => (
+                    <li key={index} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2">
+                      <span className="min-w-0">
+                        {LEDGER_LABEL[row.type] || row.type}
+                        {row.note ? <span className="text-muted-foreground"> · {row.note}</span> : null}
+                        <span className="block text-xs text-muted-foreground"><ViewerTime value={row.at} style="long" fallback="" /></span>
+                      </span>
+                      <span className="text-right tabular-nums">
+                        {row.type === "issue" || row.type === "release" || row.type === "return" ? "+" : "−"}{formatCurrency(row.amount)}
+                        <span className="block text-xs text-muted-foreground">Balance {formatCurrency(row.balance)}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {/* Responsive Tabs Navigation */}
             <div className="bg-muted/40">
               {/* Desktop: Horizontal Tab Buttons */}

@@ -51,6 +51,19 @@ import processReturnRefund from './processReturnRefund';
 import requestOrderReturn from './requestOrderReturn';
 import refundOrderPayment from './refundOrderPayment';
 import retryWebhookDeliveries from './retryWebhookDeliveries';
+import {
+  giftCardOptions,
+  startGiftCardPurchase,
+  confirmGiftCardPurchase,
+  applyGiftCardToActiveCart,
+  removeGiftCardFromActiveCart,
+  refundGiftCard,
+  voidGiftCard,
+  returnGiftCardPayment,
+  giftCardTypeDefs,
+  giftCardQueryDefs,
+  giftCardMutationDefs,
+} from './giftCards';
 import registerWebhookEndpoint from './registerWebhookEndpoint';
 import getFinanceClose from '../queries/getFinanceClose';
 import {
@@ -65,6 +78,7 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
   mergeSchemas({
     schemas: [schema],
     typeDefs: graphql`
+      ${giftCardTypeDefs}
       input ReturnRequestItemInput {
         lineItemId: ID!
         quantity: Int!
@@ -77,6 +91,7 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
       type Query {
         redirectToInit: Boolean
         activeCart(cartId: ID!): JSON
+        ${giftCardQueryDefs}
         activeCartShippingOptions(cartId: ID!): [ShippingOption!]
         activeCartPaymentProviders(regionId: ID!): [PaymentProvider!]
         activeCartRegion(countryCode: String!): Region
@@ -298,6 +313,7 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         requestOrderReturn(orderId: ID!, secretKey: String, items: [ReturnRequestItemInput!]!, reason: String!, note: String): JSON!
         refundOrderPayment(orderId: ID!, paymentId: ID!, amount: Int!, reason: String!, idempotencyKey: String!, restock: Boolean): Refund
         retryWebhookDeliveries(limit: Int): Int!
+        ${giftCardMutationDefs}
         registerWebhookEndpoint(
           registrationKey: String!
           url: String!
@@ -311,6 +327,7 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
     `,
     resolvers: {
       Query: {
+        giftCardOptions,
         redirectToInit,
         activeCart,
         activeCartShippingOptions,
@@ -364,6 +381,13 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         completeInvoicePayment,
         processReturnRefund,
         requestOrderReturn,
+        startGiftCardPurchase,
+        confirmGiftCardPurchase,
+        applyGiftCardToActiveCart,
+        removeGiftCardFromActiveCart,
+        refundGiftCard,
+        voidGiftCard,
+        returnGiftCardPayment,
         refundOrderPayment,
         retryWebhookDeliveries,
         registerWebhookEndpoint,

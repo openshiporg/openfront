@@ -775,18 +775,30 @@ export async function applyDiscount(code: string) {
   }
 }
 
+const GIFT_CARD_CODE = /^\s*[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}\s*$/i;
+
+function shopperMessage(error: any, fallback: string) {
+  const original = error?.response?.errors?.[0]?.extensions?.originalError?.message;
+  if (original) return original;
+  const message = error?.response?.errors?.[0]?.message;
+  if (message && message !== "Unexpected error.") return message;
+  return fallback;
+}
+
 export async function applyGiftCard(code: string) {
   const cartId = await getCartId();
-
-  if (!cartId) return "No cartId cookie found";
-
+  if (!cartId) return "No cart found";
   try {
-    await updateCart({ giftCards: [{ code }] }).then(() => {
-      revalidateTag("cart");
-      revalidateTag("checkout");
-    });
-  } catch (error) {
-    throw error;
+    await openfrontClient.request(
+      gql`mutation ApplyGiftCard($cartId: ID!, $code: String!) { applyGiftCardToActiveCart(cartId: $cartId, code: $code) }`,
+      { cartId, code: code.trim() },
+      await getAuthHeaders()
+    );
+    revalidateTag("cart");
+    revalidateTag("checkout");
+    return null;
+  } catch (error: any) {
+    return shopperMessage(error, "That gift card couldn't be applied");
   }
 }
 
@@ -805,15 +817,18 @@ export async function removeDiscount(code: string) {
 
 export async function removeGiftCard(code: string) {
   const cartId = await getCartId();
-
-  if (!cartId) return "No cartId cookie found";
-
+  if (!cartId) return "No cart found";
   try {
-    await Promise.resolve().then(() => {
-      revalidateTag("cart");
-    });
-  } catch (error) {
-    throw error;
+    await openfrontClient.request(
+      gql`mutation RemoveGiftCard($cartId: ID!, $code: String!) { removeGiftCardFromActiveCart(cartId: $cartId, code: $code) }`,
+      { cartId, code },
+      await getAuthHeaders()
+    );
+    revalidateTag("cart");
+    revalidateTag("checkout");
+    return null;
+  } catch (error: any) {
+    return shopperMessage(error, "That gift card couldn't be removed");
   }
 }
 
@@ -828,6 +843,9 @@ export async function submitDiscountForm(prevState: any, formData: FormData) {
   if (!cartId) {
     return "No cart found";
   }
+
+  // One field for both, like Shopify: a gift-card-shaped code is a tender, anything else a discount.
+  if (GIFT_CARD_CODE.test(code)) return applyGiftCard(code);
 
   try {
     await addDiscountToCart(cartId, code);
@@ -847,39 +865,7 @@ export async function submitDiscountForm(prevState: any, formData: FormData) {
 }
 
 export async function submitGiftCard(code: string) {
-  const cartId = await getCartId();
-  if (!cartId) return "No cartId cookie found";
-
-  try {
-    await openfrontClient.request(
-      gql`
-        mutation UpdateActiveCart($cartId: ID!, $data: CartUpdateInput!) {
-          updateActiveCart(cartId: $cartId, data: $data) {
-            id
-            giftCards {
-              id
-              code
-              balance
-            }
-          }
-        }
-      `,
-      {
-        cartId,
-        data: {
-          giftCards: {
-            connect: [{ code }],
-          },
-        },
-      },
-      await getAuthHeaders()
-    );
-
-    revalidateTag("cart");
-  } catch (error) {
-    console.error("Error submitting gift card:", error instanceof Error ? error.message : String(error));
-    return error instanceof Error ? error.message : String(error);
-  }
+  return applyGiftCard(code);
 }
 
 const UPDATE_CART_MUTATION = gql`

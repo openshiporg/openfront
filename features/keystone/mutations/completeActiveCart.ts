@@ -17,6 +17,14 @@ import {
 } from "../checkout/recovery";
 import { createOrderFromCartAtomically, resolveOrderCustomer } from "../checkout/order-commit";
 import {
+  allocateGiftCards,
+  heldFor,
+  holdGiftCardBalances,
+  ledgerOf,
+  linkGiftCardsToOrder,
+  releaseGiftCardBalances,
+} from "../lib/gift-cards";
+import {
   enqueueWebhookOutbox,
   subscribedWebhookEndpointIds,
 } from "../../webhooks/outbox";
@@ -41,6 +49,7 @@ async function completeActiveCart(
       email
       createdAt
       rawTotal
+      giftCardApplied
       metadata
       order {
         id
@@ -189,6 +198,7 @@ async function completeActiveCart(
       if (!accounts[0]) throw new Error('Checkout requires account reconciliation');
       await addOrderToAccount(accounts[0].id, cart.order, sudoContext);
     }
+    await linkGiftCardsToOrder(sudoContext.prisma, (cart.giftCards || []).map((c: any) => c.id), checkoutKey(cartId), cart.order.id);
     if (existingAttempt) {
       await updateCheckoutAttempt(
         sudoContext.prisma,
@@ -242,10 +252,19 @@ async function completeActiveCart(
       discountsReserved = true;
       attempt.recoveryPoint = 'resources_reserved';
     }
+    if (cart.giftCards?.length && !['payment_unknown', 'order_created', 'payment_confirmed'].includes(attempt.recoveryPoint)) {
+      await holdCartGiftCards(cart, sudoContext.prisma);
+    }
 
-    const order = !paymentSessionId
-      ? await handleAccountOrder(cart, user, sudoContext, attempt)
-      : await handlePaidOrder(cart, paymentSessionId, sudoContext, attempt);
+    const giftCardOnly = cart.rawTotal === 0 && (cart.giftCardApplied || 0) > 0;
+    const order = giftCardOnly
+      ? await handleGiftCardOrder(cart, sudoContext, attempt)
+      : !paymentSessionId
+        ? await handleAccountOrder(cart, user, sudoContext, attempt)
+        : await handlePaidOrder(cart, paymentSessionId, sudoContext, attempt);
+    if (cart.giftCards?.length) {
+      await linkGiftCardsToOrder(sudoContext.prisma, cart.giftCards.map((c: any) => c.id), checkoutKey(cartId), order.id);
+    }
 
     await updateCheckoutAttempt(
       sudoContext.prisma,
@@ -271,15 +290,45 @@ async function completeActiveCart(
         attempt.id,
         error instanceof Error ? error.message : 'Checkout failed'
       );
+      if (cart.giftCards?.length) {
+        await releaseGiftCardBalances(sudoContext.prisma, cart.giftCards.map((c: any) => c.id), checkoutKey(cartId));
+      }
     }
     throw error;
   }
+}
+
+// Gift cards pay before the card: hold each card's share of the order total (tax included).
+async function holdCartGiftCards(cart: any, prisma: any) {
+  const ref = checkoutKey(cart.id);
+  const cards = await prisma.giftCard.findMany({
+    where: { id: { in: cart.giftCards.map((c: any) => c.id) } },
+    select: { id: true, balance: true, isDisabled: true, endsAt: true, metadata: true },
+    orderBy: { createdAt: 'asc' },
+  });
+  const gross = (cart.rawTotal || 0) + (cart.giftCardApplied || 0);
+  const { allocations } = allocateGiftCards(
+    cards.map((card: any) => ({ ...card, balance: card.balance + Math.max(0, heldFor(ledgerOf(card), ref)) })),
+    gross
+  );
+  await holdGiftCardBalances(prisma, allocations, ref);
+}
+
+// The gift cards cover the whole order: no card payment is taken.
+async function handleGiftCardOrder(cart: any, sudoContext: any, attempt: any) {
+  const order = await createOrderFromCartAtomically(cart, sudoContext);
+  await updateCheckoutAttempt(sudoContext.prisma, attempt.id, 'order_created', { orderId: order.id });
+  attempt.recoveryPoint = 'order_created';
+  return order;
 }
 
 // Handle orders that go to accounts (Openship customer token flow)
 async function handleAccountOrder(cart: any, user: string, sudoContext: any, attempt: any) {
   if (!user) {
     throw new Error('Authentication required for account orders');
+  }
+  if (cart.giftCards?.length) {
+    throw new Error('Gift cards can only be used with card checkout');
   }
   
   // Get cart currency for account matching

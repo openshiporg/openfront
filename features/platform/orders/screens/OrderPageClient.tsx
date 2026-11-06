@@ -27,6 +27,7 @@ import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
 import { OrderReturnsCard } from "../components/OrderReturnsCard";
+import { OrderGiftCardsPaid } from "../components/OrderGiftCardsPaid";
 
 
 import { RefundOrderDialog, type RefundablePayment } from "../components/RefundOrderDialog";
@@ -134,6 +135,8 @@ export function OrderPageClient({
     .reduce((sum, p) => sum + p.amount, 0);
   const currencySymbol = (order.total || "").replace(/[0-9.,\s-]/g, "");
   const money = (cents: number) => `${currencySymbol}${(cents / 100).toFixed(2)}`;
+  const giftCardTransactions: any[] = (order as any).giftCardTransactions || [];
+  const giftCardPaidCents = giftCardTransactions.reduce((sum, row) => sum + (row.amount || 0), 0);
   const paymentStatus = order.paymentDetails?.[0]?.status;
   const netPaidZero = paidCents > 0 && refundedCents >= paidCents;
   const paymentHeader =
@@ -141,7 +144,7 @@ export function OrderPageClient({
       ? "Refunded"
       : refundedCents > 0
         ? "Partially refunded"
-        : paymentStatus === "captured"
+        : paymentStatus === "captured" || (giftCardPaidCents > 0 && payments.length === 0)
           ? "Payment Complete"
           : "Payment Processing";
 
@@ -292,9 +295,12 @@ export function OrderPageClient({
                     <span>Total</span>
                     <span>{order.total}</span>
                   </div>
+                  {giftCardPaidCents > 0 && (
+                    <OrderGiftCardsPaid orderId={order.id} transactions={giftCardTransactions} money={money} />
+                  )}
                   <div className="flex justify-between text-sm text-muted-foreground">
-                    <span>Total Paid</span>
-                    <span>{order.formattedTotalPaid}</span>
+                    <span>{giftCardPaidCents > 0 ? "Paid by card" : "Total Paid"}</span>
+                    <span>{giftCardPaidCents > 0 ? money(paidCents) : order.formattedTotalPaid}</span>
                   </div>
                   {refundedCents > 0 && (
                     <>

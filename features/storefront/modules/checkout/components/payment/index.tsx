@@ -29,6 +29,8 @@ interface PaymentProps {
     };
     shippingMethods: any[];
     giftCards?: any[];
+    rawTotal?: number;
+    giftCardApplied?: number;
   };
   availablePaymentMethods: Array<{
     id: string;
@@ -59,7 +61,7 @@ const Payment = ({ cart, availablePaymentMethods }: PaymentProps) => {
   const stripeReady = useContext(StripeContext);
 
   const paidByGiftcard =
-    cart?.giftCards && cart?.giftCards?.length > 0 && cart?.total === 0;
+    (cart?.giftCards?.length ?? 0) > 0 && cart?.rawTotal === 0 && (cart?.giftCardApplied ?? 0) > 0;
 
   const paymentReady =
     (activeSession && cart?.shippingMethods.length !== 0) || paidByGiftcard;
@@ -112,6 +114,11 @@ const Payment = ({ cart, availablePaymentMethods }: PaymentProps) => {
 
   const handleSubmit = async () => {
     setIsLoading(true);
+    if (paidByGiftcard) {
+      router.push(pathname + "?" + createQueryString("step", "review"), { scroll: false });
+      setIsLoading(false);
+      return;
+    }
     try {
       const shouldInputCard = isStripe(selectedPaymentMethod) && !cardComplete;
 
@@ -249,15 +256,15 @@ const Payment = ({ cart, availablePaymentMethods }: PaymentProps) => {
           )}
 
           {paidByGiftcard && (
-            <div className="flex flex-col w-1/3">
-              <p className="text-base font-semibold mb-1">
+            <div className="flex flex-col w-full sm:w-1/3">
+              <p className="text-sm font-medium mb-1">
                 Payment method
               </p>
               <p
-                className="text-base font-medium text-muted-foreground"
+                className="text-sm text-muted-foreground"
                 data-testid="payment-method-summary"
               >
-                Gift card
+                Gift card covers the full total
               </p>
             </div>
           )}
@@ -322,15 +329,15 @@ const Payment = ({ cart, availablePaymentMethods }: PaymentProps) => {
               </div>
             </div>
           ) : paidByGiftcard ? (
-            <div className="flex flex-col w-1/3">
-              <p className="text-base font-semibold mb-1">
+            <div className="flex flex-col w-full sm:w-1/3">
+              <p className="text-sm font-medium mb-1">
                 Payment method
               </p>
               <p
-                className="text-base font-medium text-muted-foreground"
+                className="text-sm text-muted-foreground"
                 data-testid="payment-method-summary"
               >
-                Gift card
+                Gift card covers the full total
               </p>
             </div>
           ) : null}

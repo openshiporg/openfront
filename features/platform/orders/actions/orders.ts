@@ -114,6 +114,7 @@ export async function getOrder(orderId: string) {
         canceledAt
         paymentDetails
         payments { id status amount amountRefunded currencyCode refunds { id amount note createdAt } }
+        giftCardTransactions { id amount giftCard { id code balance metadata } }
         totalPaid
         formattedTotalPaid
         lineItems {

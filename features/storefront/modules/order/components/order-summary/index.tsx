@@ -20,12 +20,6 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
               <span>- {order.discount}</span>
             </div>
           )}
-          {order.giftCard && (
-            <div className="flex items-center justify-between">
-              <span>Gift Card</span>
-              <span>- {order.giftCard}</span>
-            </div>
-          )}
           <div className="flex items-center justify-between">
             <span>Shipping</span>
               <span>{order.shipping}</span>
@@ -40,6 +34,12 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
           <span>Total</span>
           <span>{order.total}</span>
         </div>
+        {order.giftCard && (
+          <div className="flex items-center justify-between text-sm leading-6 font-normal text-muted-foreground">
+            <span>Paid by gift card</span>
+            <span>{order.giftCard}</span>
+          </div>
+        )}
       </div>
     </div>
   )

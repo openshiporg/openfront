@@ -13,6 +13,7 @@ interface CartTotalsProps {
     subtotal?: number | string | null;
     discount?: number | string | null;
     giftCardTotal?: number | string | null;
+    giftCard?: string | null;
     shipping?: number | string | null;
     tax?: number | string | null;
     total?: number | string | null;
@@ -72,6 +73,12 @@ const CartTotals = ({ data }: CartTotalsProps) => {
         <span>Total</span>
         <span className="text-2xl font-semibold">{data.total}</span>
       </div>
+      {data.giftCard && (
+        <div className="flex items-center justify-between text-base font-medium text-muted-foreground">
+          <span>Paid by gift card</span>
+          <span>{data.giftCard}</span>
+        </div>
+      )}
       <div className="h-px w-full border-b mt-4" />
     </div>
   );

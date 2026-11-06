@@ -9,6 +9,11 @@ const PaymentDetails = ({ order }: { order: StoreOrder }) => {
     (s) => s.isSelected
   );
   const provider = paymentSession?.paymentProvider;
+  const giftCard = (order as any).giftCard as string | undefined;
+  const currency = String((order as any).region?.currency?.code || "usd").toUpperCase();
+  const cardPaid = payment
+    ? new Intl.NumberFormat("en-US", { style: "currency", currency }).format((payment.amount || 0) / 100)
+    : null;
 
   return (
     <div>
@@ -35,7 +40,7 @@ const PaymentDetails = ({ order }: { order: StoreOrder }) => {
                 <p>
                   {provider.code === "stripe" && payment.data.cardLast4
                     ? `**** **** **** ${payment.data.cardLast4}`
-                    : `${order.total} paid on ${new Date(
+                    : `${giftCard ? cardPaid : order.total} paid on ${new Date(
                         payment.createdAt
                       ).toLocaleDateString("en-US", {
                         month: "long",
@@ -45,6 +50,12 @@ const PaymentDetails = ({ order }: { order: StoreOrder }) => {
                 </p>
               </div>
             </div>
+          </div>
+        )}
+        {giftCard && (
+          <div className={`flex flex-col w-full sm:w-1/3 ${payment ? "mt-6" : ""}`}>
+            <p className="text-sm font-medium text-foreground mb-1">Gift card</p>
+            <p className="text-sm font-normal text-muted-foreground">{giftCard} paid by gift card</p>
           </div>
         )}
       </div>

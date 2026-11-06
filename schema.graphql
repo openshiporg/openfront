@@ -1017,6 +1017,7 @@ type Cart {
   rawTotalBreakdown: String
   discount: String
   giftCardTotal: String
+  giftCardApplied: Int
   tax: String
   shipping: String
   cheapestShipping: String
@@ -10269,8 +10270,16 @@ type Mutation {
   setInvoicePaymentSession(invoiceId: ID!, providerId: ID!): Invoice
   completeInvoicePayment(paymentSessionId: ID!): InvoicePaymentResult!
   processReturnRefund(returnId: ID!, paymentId: ID!, idempotencyKey: String!): Refund
-  refundOrderPayment(orderId: ID!, paymentId: ID!, amount: Int!, reason: String!, idempotencyKey: String!): Refund
+  requestOrderReturn(orderId: ID!, secretKey: String, items: [ReturnRequestItemInput!]!, reason: String!, note: String): JSON!
+  refundOrderPayment(orderId: ID!, paymentId: ID!, amount: Int!, reason: String!, idempotencyKey: String!, restock: Boolean): Refund
   retryWebhookDeliveries(limit: Int): Int!
+  startGiftCardPurchase(countryCode: String!, amount: Int!, purchaserName: String!, purchaserEmail: String!, recipientName: String, recipientEmail: String, message: String): GiftCardCheckout!
+  confirmGiftCardPurchase(ref: ID!, token: String!): GiftCardPurchase!
+  applyGiftCardToActiveCart(cartId: ID!, code: String!): JSON!
+  removeGiftCardFromActiveCart(cartId: ID!, code: String!): JSON!
+  refundGiftCard(giftCardId: ID!, reason: String!): JSON!
+  voidGiftCard(giftCardId: ID!, reason: String!): JSON!
+  returnGiftCardPayment(orderId: ID!, giftCardId: ID!, amount: Int!, reason: String!): JSON!
   registerWebhookEndpoint(registrationKey: String!, url: String!, events: [String!]!, secret: String!, requiredScope: String): WebhookEndpoint!
   updatePrivacyPreferences(preferences: JSON!): JSON!
   requestPrivacyAction(action: String!, details: String): Notification
@@ -10565,6 +10574,7 @@ type Query {
   validateUserPasswordResetToken(email: String!, token: String!): ValidateUserPasswordResetTokenResult
   redirectToInit: Boolean
   activeCart(cartId: ID!): JSON
+  giftCardOptions(countryCode: String!): GiftCardOptions!
   activeCartShippingOptions(cartId: ID!): [ShippingOption!]
   activeCartPaymentProviders(regionId: ID!): [PaymentProvider!]
   activeCartRegion(countryCode: String!): Region
@@ -10718,6 +10728,31 @@ type KeystoneAdminUISort {
 enum KeystoneAdminUISortDirection {
   ASC
   DESC
+}
+
+type GiftCardOptions {
+  online: Boolean!
+  amounts: [Int!]!
+  currencyCode: String
+}
+
+type GiftCardCheckout {
+  checkoutUrl: String!
+}
+
+type GiftCardPurchase {
+  status: String!
+  amount: Int!
+  currencyCode: String!
+  recipientName: String
+  recipientEmail: String
+  code: String
+  endsAt: String
+}
+
+input ReturnRequestItemInput {
+  lineItemId: ID!
+  quantity: Int!
 }
 
 input CartCodeInput {

@@ -47,7 +47,12 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
     (s) => s.isSelected
   )
 
+  const paidByGiftcard =
+    ((cart as any).giftCards?.length ?? 0) > 0 && (cart as any).rawTotal === 0 && ((cart as any).giftCardApplied ?? 0) > 0
+
   switch (true) {
+    case paidByGiftcard:
+      return <GiftCardPaymentButton notReady={notReady} data-testid={dataTestId} />
     case isStripe(paymentSession?.paymentProvider?.code):
       return (
         <StripePaymentButton
@@ -71,6 +76,34 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
     default:
       return <Button disabled size="lg">Select a payment method</Button>
   }
+}
+
+// The gift cards cover the whole order, so the order is placed without a card payment.
+const GiftCardPaymentButton = ({ notReady, "data-testid": dataTestId }: { notReady: boolean; "data-testid"?: string }) => {
+  const [submitting, setSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const router = useRouter()
+  const handlePayment = async () => {
+    setSubmitting(true)
+    setErrorMessage(null)
+    try {
+      const result = await placeOrder()
+      if (result && typeof result === "object" && "redirectTo" in result) router.push(result.redirectTo as string)
+    } catch (err: any) {
+      setErrorMessage(err?.message || "The order couldn't be placed. Try again.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+  return (
+    <>
+      <Button disabled={notReady || submitting} onClick={handlePayment} size="lg" data-testid={dataTestId}>
+        {submitting && <RiLoader2Fill className="mr-2 h-4 w-4 animate-spin" />}
+        Place order
+      </Button>
+      <ErrorMessage error={errorMessage} data-testid="gift-card-payment-error-message" />
+    </>
+  )
 }
 
 interface StripePaymentButtonProps {

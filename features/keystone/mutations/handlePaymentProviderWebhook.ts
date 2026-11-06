@@ -62,6 +62,17 @@ async function handlePaymentProviderWebhook(
   });
   const type = String(verified.type || "");
   const resource = verified.resource || {};
+  // A paid gift-card checkout (Stripe Checkout, not a cart) issues the card even if the buyer never returns.
+  if (type === "checkout.session.completed" && resource?.metadata?.source === "openfront-gift-card") {
+    try {
+      const { handleGiftCardCheckoutEvent } = await import("./giftCards");
+      await handleGiftCardCheckoutEvent(sudo.prisma, resource);
+    } catch (error) {
+      console.error("Gift card webhook failed:", error instanceof Error ? error.message : "unknown");
+      throw new Error("Gift card checkout could not be reconciled yet");
+    }
+    return { success: true, message: "Gift card checkout reconciled" };
+  }
   const providerEventId = String(verified.event?.id || event?.id || resource.id || "");
   if (!providerEventId) throw new Error("Provider event ID is required");
 

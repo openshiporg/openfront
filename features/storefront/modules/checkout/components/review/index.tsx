@@ -11,7 +11,7 @@ const Review = ({ cart }: { cart: any }) => {
   const isOpen = searchParams.get("step") === "review"
 
   const paidByGiftcard =
-    cart?.giftCard && cart?.giftCard?.length > 0 && cart?.total === 0
+    (cart?.giftCards?.length ?? 0) > 0 && cart?.rawTotal === 0 && (cart?.giftCardApplied ?? 0) > 0
 
   const previousStepsCompleted =
     cart?.shippingAddress && // Check shippingAddress
