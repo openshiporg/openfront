@@ -9,6 +9,7 @@ import {
 } from '@keystone-6/core/fields';
 import { trackingFields } from './trackingFields';
 import { permissions, isSignedIn } from '../access';
+import { canTransition, BUSINESS_ACCOUNT_REQUEST_TRANSITIONS } from '../lib/state-machines';
 
 export const BusinessAccountRequest = list({
   access: {
@@ -205,6 +206,9 @@ export const BusinessAccountRequest = list({
     validateInput: async ({ operation, resolvedData, item, addValidationError }) => {
       if (operation === 'create' && !resolvedData.user) {
         addValidationError('A user is required');
+      }
+      if (operation === 'update' && resolvedData.status && item && !canTransition(BUSINESS_ACCOUNT_REQUEST_TRANSITIONS, item.status as string, resolvedData.status as string)) {
+        addValidationError(`A ${item.status} request cannot become ${resolvedData.status}`);
       }
       if (operation === 'update' && resolvedData.status === 'approved' && !resolvedData.approvedCreditLimit && !item?.approvedCreditLimit) {
         addValidationError('An approved credit limit is required');

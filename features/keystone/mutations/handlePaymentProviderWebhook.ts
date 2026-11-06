@@ -2,6 +2,7 @@
 
 import { handleWebhook } from "../utils/paymentProviderAdapter";
 import { reconcileOrderFulfillmentStatus } from "../orders/order-lifecycle";
+import { canTransition, PAYMENT_TRANSITIONS } from "../lib/state-machines";
 
 const NO_DIVISION_CURRENCIES = new Set([
   "JPY", "KRW", "VND", "CLP", "PYG", "XAF", "XOF", "BIF", "DJF",
@@ -186,6 +187,9 @@ async function handlePaymentProviderWebhook(
   }
 
   await sudo.prisma.$transaction(async (tx: any) => {
+    // Provider events arrive late and out of order: a stale "failed" must not undo a capture,
+    // and a replayed "captured" must not undo a refund.
+    let paymentMoved = true;
     if (succeeded && checkoutAttemptId && checkoutPaymentResult) {
       await tx.idempotencyKey.update({
         where: { id: checkoutAttemptId },
@@ -197,7 +201,16 @@ async function handlePaymentProviderWebhook(
       });
     }
     if (paymentId) {
-      if (succeeded) {
+      const nextPaymentStatus = succeeded ? "captured" : failed ? "failed" : authorized ? "authorized" : voided ? "canceled" : null;
+      const existing = nextPaymentStatus
+        ? await tx.payment.findUnique({ where: { id: paymentId }, select: { status: true } })
+        : null;
+      if (nextPaymentStatus && existing && !canTransition(PAYMENT_TRANSITIONS, existing.status, nextPaymentStatus)) {
+        paymentMoved = false;
+      }
+      if (!paymentMoved) {
+        // Stale or duplicate event: recorded as handled, no state change.
+      } else if (succeeded) {
         const currentPayment = await tx.payment.findUnique({
           where: { id: paymentId },
           select: { amount: true, currencyCode: true },
@@ -243,7 +256,7 @@ async function handlePaymentProviderWebhook(
       }
     }
 
-    if (orderId) {
+    if (orderId && paymentMoved) {
       if (succeeded) {
         await reconcileOrderFulfillmentStatus(tx, orderId, {
           reason: "payment_provider_capture_reconciled",

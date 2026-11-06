@@ -168,7 +168,8 @@ export async function updateBusinessAccountRequestStatus(
     const variables = {
       where: { id },
       data: {
-        status,
+        // The dashboard says "reject"; the enum value is not_approved ("rejected" failed validation).
+        status: status === 'rejected' ? 'not_approved' : status,
         reviewNotes,
         ...(approvedCreditLimit && { approvedCreditLimit })
       }
