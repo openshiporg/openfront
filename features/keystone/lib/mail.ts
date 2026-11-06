@@ -237,7 +237,7 @@ function orderFulfillmentEmail({ order, fulfillment, orderUrl }: { order: any; f
         Tracking: ${label.trackingNumber}
       </td>
       <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: right;">
-        ${label.url ? `<a href="${label.url}" target="_blank" style="color: ${buttonBackgroundColor}; text-decoration: none;">Track Package</a>` : ''}
+        ${label.trackingUrl ? `<a href="${label.trackingUrl}" target="_blank" style="color: ${buttonBackgroundColor}; text-decoration: none;">Track Package</a>` : ''}
       </td>
     </tr>
   `).join('') || '';
@@ -362,10 +362,10 @@ export async function sendOrderConfirmationEmail(
   }
 }
 
-export async function sendOrderFulfillmentEmail(order: any, fulfillment: any, baseUrl?: string): Promise<void> {
+export async function sendOrderFulfillmentEmail(order: any, fulfillment: any, baseUrl?: string): Promise<{ sent: boolean; error?: string; messageId?: string; response?: string }> {
   if (!order.email) {
     console.warn('No email address found for order', order.id);
-    return;
+    return { sent: false, error: 'no_recipient' };
   }
 
   const countryCode = order.shippingAddress?.country?.iso2?.toLowerCase() || 'us';
@@ -389,7 +389,13 @@ export async function sendOrderFulfillmentEmail(order: any, fulfillment: any, ba
     } else {
       console.log(`📧 Order fulfillment email sent to ${order.email}`);
     }
+    return {
+      sent: true,
+      messageId: typeof (info as any)?.messageId === 'string' ? (info as any).messageId : undefined,
+      response: typeof (info as any)?.response === 'string' ? (info as any).response.slice(0, 500) : undefined,
+    };
   } catch (error) {
     console.error('Failed to send order fulfillment email:', error);
+    return { sent: false, error: error instanceof Error ? error.message : 'send_failed' };
   }
 }

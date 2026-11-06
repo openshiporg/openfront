@@ -219,6 +219,14 @@ async function createOrderFulfillment(
     }
   }
 
+  // The fulfillment is committed: tell the customer it shipped (unless the operator chose no notification).
+  try {
+    const { deliverFulfillmentEmail } = await import("../lib/fulfillment-email");
+    await deliverFulfillmentEmail(sudo, fulfillmentResult.fulfillmentId);
+  } catch (error) {
+    console.error("Shipping confirmation email was not attempted:", error instanceof Error ? error.message : "unknown");
+  }
+
   return sudo.query.Fulfillment.findOne({
     where: { id: fulfillmentResult.fulfillmentId },
     query: "id idempotencyKey fulfillmentItems { id quantity lineItem { id } } shippingLabels { id status trackingNumber trackingUrl carrier }",
