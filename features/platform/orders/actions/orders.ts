@@ -159,6 +159,15 @@ export async function getOrder(orderId: string) {
           }
         }
         unfulfilled
+        returns {
+          id
+          status
+          refundAmount
+          receivedAt
+          createdAt
+          metadata
+          returnItems { id quantity note lineItem { id title } returnReason { id label value } }
+        }
         user {
           id
           name
