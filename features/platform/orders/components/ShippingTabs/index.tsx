@@ -117,6 +117,12 @@ export function ShippingTabs({
 
   const handleManualFulfill = async () => {
     if (!hasSelectedItems) return;
+    if (Boolean(trackingNumber.trim()) !== Boolean(carrier)) {
+      toast.error('Add both a carrier and a tracking number', {
+        description: 'Choose a carrier and enter a tracking number, or leave both empty.',
+      });
+      return;
+    }
     setIsLoading(true);
 
     const response = await createManualFulfillment({
@@ -127,7 +133,7 @@ export function ShippingTabs({
           lineItemId: id,
           quantity: parseInt(qty),
         })),
-      trackingNumber,
+      trackingNumber: trackingNumber.trim(),
       carrier,
       noNotification,
       idempotencyKey: crypto.randomUUID(),

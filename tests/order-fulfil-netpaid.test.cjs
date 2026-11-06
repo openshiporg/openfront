@@ -39,6 +39,7 @@ function run(payments, { replay = false, status = 'pending' } = {}) {
     '../../webhooks/webhook-plugin': { deliverWebhookEventsById: async () => {} },
     '../orders/order-lifecycle': { reconcileOrderFulfillmentStatus: async () => {} },
     '../lib/orderNetPaid': net,
+    '../lib/shopperError': { shopperError: (message, code) => Object.assign(new Error(message), { extensions: { code } }) },
   });
   const call = mod.default({}, { orderId: 'o1', lineItems: [{ lineItemId: 'l1', quantity: 1 }], idempotencyKey: 'k' }, { session: { itemId: 's' }, sudo: () => sudo });
   return { call, created };
@@ -76,4 +77,17 @@ test('guard: idempotent replay still returns on a fully refunded order', async (
   const res = await call;
   assert.ok(res);
   assert.equal(created.length, 0);
+});
+
+test('guard: carrier without a tracking number is a readable, user-facing error', async () => {
+  const mod = load('features/keystone/mutations/createOrderFulfillment.ts', {
+    '../access': { permissions: { canManageFulfillments: () => true } },
+    '../../webhooks/outbox': { enqueueWebhookOutbox: async () => [], subscribedWebhookEndpointIds: async () => [] },
+    '../../webhooks/webhook-plugin': { deliverWebhookEventsById: async () => {} },
+    '../orders/order-lifecycle': { reconcileOrderFulfillmentStatus: async () => {} },
+    '../lib/orderNetPaid': net,
+    '../lib/shopperError': { shopperError: (message, code) => Object.assign(new Error(message), { extensions: { code } }) },
+  });
+  const call = mod.default({}, { orderId: 'o1', lineItems: [{ lineItemId: 'l1', quantity: 1 }], trackingNumber: 'T1', idempotencyKey: 'k' }, { session: { itemId: 's' }, sudo: () => ({}) });
+  await assert.rejects(call, (e) => e.extensions?.code === 'FULFILLMENT_TRACKING_INCOMPLETE' && /carrier/i.test(e.message));
 });

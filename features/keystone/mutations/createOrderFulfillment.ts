@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { shopperError } from "../lib/shopperError";
 import { permissions } from "../access";
 import {
   enqueueWebhookOutbox,
@@ -46,7 +47,7 @@ async function createOrderFulfillment(
     requested.set(item.lineItemId, (requested.get(item.lineItemId) || 0) + item.quantity);
   }
   if (Boolean(trackingNumber) !== Boolean(carrier)) {
-    throw new Error("Carrier and tracking number must be provided together");
+    throw shopperError("Choose a carrier and enter a tracking number, or leave both empty.", "FULFILLMENT_TRACKING_INCOMPLETE");
   }
   const normalized = [...requested.entries()].sort(([a], [b]) => a.localeCompare(b));
   if (!idempotencyKey?.trim()) throw new Error("Fulfillment idempotency key is required");
