@@ -27,8 +27,8 @@ interface PageBreadcrumbsProps {
 export function PageBreadcrumbs({ items, actions }: PageBreadcrumbsProps) {
   return (
     <header className="sticky top-0 z-30 bg-background flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 border-b">
-      <div className="flex items-center gap-2 px-4 w-full justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex min-w-0 items-center gap-2 px-4 w-full justify-between">
+        <div className="flex shrink-0 items-center gap-3">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <Breadcrumb className="hidden md:flex">
@@ -56,9 +56,10 @@ export function PageBreadcrumbs({ items, actions }: PageBreadcrumbsProps) {
             </BreadcrumbList>
           </Breadcrumb>
         </div>
-        <div className="flex items-center gap-3">
+        {/* Actions shrink (labels truncate) so long list names never push the header past a 320px screen. */}
+        <div className="flex min-w-0 items-center justify-end gap-3 [&>*]:min-w-0">
           {actions}
-          <AssistantHeaderButton />
+          <AssistantHeaderButton className="shrink-0" />
         </div>
       </div>
     </header>

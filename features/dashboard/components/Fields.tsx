@@ -165,7 +165,7 @@ export function Fields({ fields, value, onChange, forceValidation, invalidFields
   }
 
   return (
-    <div className="grid w-full grid-cols-1 items-center gap-4">
+    <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)] items-center gap-4 [&>*]:min-w-0 [overflow-wrap:anywhere]">
       {rendered.length === 0 && value && Object.keys(value).length === 0
         ? "There are no fields that you can read or edit"
         : rendered}
@@ -241,9 +241,9 @@ function FieldGroup(props: {
             </div>
           </div>
         </summary>
-        <div className="flex ml-[2.25rem] mt-2">
+        <div className="flex min-w-0 ml-[2.25rem] mt-2">
           {divider}
-          <div className="w-full">
+          <div className="w-full min-w-0">
             <div className="space-y-4">{props.children}</div>
           </div>
         </div>

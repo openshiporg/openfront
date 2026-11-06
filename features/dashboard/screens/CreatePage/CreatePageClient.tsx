@@ -128,12 +128,13 @@ export function CreatePageClient({ listKey, list }: CreatePageClientProps) {
         actions={
           <Button
             size="sm"
-            className="sm:text-sm text-xs"
+            className="max-w-full sm:text-sm text-xs"
             onClick={handleSave}
             disabled={createItem.state === 'loading'}
+            title={`Create ${list.singular}`}
           >
-            Create {list.singular}
-            <Check className="ml-1 stroke-[1.5px]" width="8" height="8" />
+            <span className="truncate">Create {list.singular}</span>
+            <Check className="ml-1 shrink-0 stroke-[1.5px]" width="8" height="8" />
           </Button>
         }
       />
