@@ -8,10 +8,10 @@ const Help = () => {
       <div className="text-sm leading-6 font-normal my-2">
         <ul className="gap-y-2 flex flex-col">
           <li>
-            <LocalizedClientLink href="/contact">Contact</LocalizedClientLink>
+            <LocalizedClientLink href="/customer-service#contact">Contact</LocalizedClientLink>
           </li>
           <li>
-            <LocalizedClientLink href="/contact">
+            <LocalizedClientLink href="/customer-service#returns">
               Returns & Exchanges
             </LocalizedClientLink>
           </li>

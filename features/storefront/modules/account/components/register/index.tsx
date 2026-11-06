@@ -5,7 +5,6 @@ import { useActionState } from "react"
 import { LOGIN_VIEW } from "@/features/storefront/modules/account/templates/login-template" 
 import ErrorMessage from "@/features/storefront/modules/checkout/components/error-message" 
 import { SubmitButton } from "@/features/storefront/modules/checkout/components/submit-button" 
-import LocalizedClientLink from "@/features/storefront/modules/common/components/localized-client-link" 
 import { signUp } from "@/features/storefront/lib/data/user" 
 import { Input } from "@/components/ui/input"
 
@@ -76,19 +75,23 @@ const Register = ({ setCurrentView }: Props) => {
         <ErrorMessage error={message} data-testid="register-error" />
         <span className="text-center text-foreground text-xs leading-5 font-normal mt-6">
           By creating an account, you agree to Openfront&apos;s{" "}
-          <LocalizedClientLink
-            href="/content/privacy-policy"
+          <a
+            href="https://www.openship.org/privacy-policy"
+            target="_blank"
+            rel="noreferrer"
             className="underline"
           >
             Privacy Policy
-          </LocalizedClientLink>{" "}
+          </a>{" "}
           and{" "}
-          <LocalizedClientLink
-            href="/content/terms-of-use"
+          <a
+            href="https://www.openship.org/terms-of-service"
+            target="_blank"
+            rel="noreferrer"
             className="underline"
           >
             Terms of Use
-          </LocalizedClientLink>
+          </a>
           .
         </span>
         <SubmitButton className="w-full mt-6" data-testid="register-button">

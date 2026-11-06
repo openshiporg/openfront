@@ -35,9 +35,13 @@ const PaymentDetails = ({ order }: { order: StoreOrder }) => {
                 <p>
                   {provider.code === "stripe" && payment.data.cardLast4
                     ? `**** **** **** ${payment.data.cardLast4}`
-                    : `${order.total} paid at ${new Date(
+                    : `${order.total} paid on ${new Date(
                         payment.createdAt
-                      ).toString()}`}
+                      ).toLocaleDateString("en-US", {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      })}`}
                 </p>
               </div>
             </div>
