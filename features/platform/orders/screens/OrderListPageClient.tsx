@@ -196,6 +196,7 @@ export function OrderListPageClient({
       id
       status
       refundAmount
+      metadata
       receivedAt
       createdAt
       updatedAt

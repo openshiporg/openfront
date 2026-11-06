@@ -48,6 +48,7 @@ import activeInvoice from './activeInvoice';
 import getCustomerPaidInvoices from './getCustomerPaidInvoices';
 import getProductsSortedByPrice from '../queries/getProductsSortedByPrice';
 import processReturnRefund from './processReturnRefund';
+import requestOrderReturn from './requestOrderReturn';
 import refundOrderPayment from './refundOrderPayment';
 import retryWebhookDeliveries from './retryWebhookDeliveries';
 import registerWebhookEndpoint from './registerWebhookEndpoint';
@@ -64,6 +65,11 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
   mergeSchemas({
     schemas: [schema],
     typeDefs: graphql`
+      input ReturnRequestItemInput {
+        lineItemId: ID!
+        quantity: Int!
+      }
+
       input CartCodeInput {
         code: String!
       }
@@ -289,6 +295,7 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         setInvoicePaymentSession(invoiceId: ID!, providerId: ID!): Invoice
         completeInvoicePayment(paymentSessionId: ID!): InvoicePaymentResult!
         processReturnRefund(returnId: ID!, paymentId: ID!, idempotencyKey: String!): Refund
+        requestOrderReturn(orderId: ID!, secretKey: String, items: [ReturnRequestItemInput!]!, reason: String!, note: String): JSON!
         refundOrderPayment(orderId: ID!, paymentId: ID!, amount: Int!, reason: String!, idempotencyKey: String!, restock: Boolean): Refund
         retryWebhookDeliveries(limit: Int): Int!
         registerWebhookEndpoint(
@@ -356,6 +363,7 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         setInvoicePaymentSession,
         completeInvoicePayment,
         processReturnRefund,
+        requestOrderReturn,
         refundOrderPayment,
         retryWebhookDeliveries,
         registerWebhookEndpoint,

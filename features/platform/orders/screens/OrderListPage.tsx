@@ -171,6 +171,7 @@ export async function OrderListPage({ searchParams }: PageProps) {
       id
       status
       refundAmount
+      metadata
       receivedAt
       createdAt
       updatedAt

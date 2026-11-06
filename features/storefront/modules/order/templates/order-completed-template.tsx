@@ -9,6 +9,7 @@ import OrderDetails from "@/features/storefront/modules/order/components/order-d
 import ShippingDetails from "@/features/storefront/modules/order/components/shipping-details"
 import PaymentDetails from "@/features/storefront/modules/order/components/payment-details"
 import FulfillmentCard from "@/features/storefront/modules/order/components/fulfillment-card"
+import ReturnRequest from "@/features/storefront/modules/order/components/return-request"
 import { StoreOrder } from "@/features/storefront/types/storefront"
 
 type OrderCompletedTemplateProps = {
@@ -42,6 +43,7 @@ export default async function OrderCompletedTemplate({
           <Items items={order.lineItems} region={order.region} />
           <CartTotals data={order} />
           <FulfillmentCard order={order} />
+          <ReturnRequest order={order} secretKey={(order as any).secretKey} />
           <ShippingDetails order={order} />
           <PaymentDetails order={order} />
           <Help />

@@ -172,6 +172,27 @@ export const ReturnsSection = ({ order, returns, totalItems }: ReturnsSectionPro
                 </div>
               </div>
               
+              {/* Customer-requested return: items and reason live in metadata */}
+              {!(returnItem.returnItems?.length) && returnItem.metadata?.orderLineItems?.length > 0 && (
+                <>
+                  <Separator className="mb-2" />
+                  <div className="space-y-1 text-xs">
+                    {returnItem.metadata.source === "customer" && (
+                      <div className="font-medium text-muted-foreground">Requested by the customer</div>
+                    )}
+                    {returnItem.metadata.orderLineItems.map((line: any) => (
+                      <div key={line.orderLineItemId} className="truncate">
+                        <span className="font-medium">{line.title || "Item"}</span>
+                        {line.variantTitle ? ` - ${line.variantTitle}` : ""} • Qty: {line.quantity}
+                      </div>
+                    ))}
+                    {returnItem.metadata.reasonLabel && (
+                      <div className="text-muted-foreground">Reason: {returnItem.metadata.reasonLabel}{returnItem.metadata.note ? ` — ${returnItem.metadata.note}` : ""}</div>
+                    )}
+                  </div>
+                </>
+              )}
+
               {/* Return Items Summary */}
               {returnItem.returnItems && returnItem.returnItems.length > 0 && (
                 <>

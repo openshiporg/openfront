@@ -76,3 +76,30 @@ export async function createTransferRequest(
 
   return { success: true, error: null, order: { id: orderId, email: email } };
 }
+
+export async function requestOrderReturn(input: {
+  orderId: string
+  secretKey?: string | null
+  items: { lineItemId: string; quantity: number }[]
+  reason: string
+  note?: string
+}): Promise<{ success: boolean; error: string | null }> {
+  try {
+    await openfrontClient.request(
+      gql`
+        mutation RequestOrderReturn($orderId: ID!, $secretKey: String, $items: [ReturnRequestItemInput!]!, $reason: String!, $note: String) {
+          requestOrderReturn(orderId: $orderId, secretKey: $secretKey, items: $items, reason: $reason, note: $note)
+        }
+      `,
+      input,
+      await getAuthHeaders()
+    )
+    const { revalidatePath } = await import("next/cache")
+    revalidatePath("/[countryCode]/(main)/account/@dashboard/orders/details/[id]", "page")
+    revalidatePath("/[countryCode]/(main)/order/confirmed/[id]", "page")
+    return { success: true, error: null }
+  } catch (error: any) {
+    const message = error?.response?.errors?.[0]?.message || "We couldn't send your return request. Please try again."
+    return { success: false, error: message }
+  }
+}

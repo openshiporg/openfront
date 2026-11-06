@@ -110,10 +110,18 @@ async function getCustomerOrder(root, { orderId, secretKey }, context) {
           }
         }
       }
+      returns {
+        id
+        status
+        refundAmount
+        createdAt
+        metadata
+      }
       lineItems {
         id
         title
         quantity
+        moneyAmount { amount }
         thumbnail
         variantTitle
         formattedUnitPrice

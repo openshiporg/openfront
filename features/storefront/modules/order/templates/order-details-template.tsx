@@ -8,6 +8,7 @@ import OrderDetails from "@/features/storefront/modules/order/components/order-d
 import OrderSummary from "@/features/storefront/modules/order/components/order-summary"
 import ShippingDetails from "@/features/storefront/modules/order/components/shipping-details"
 import FulfillmentCard from "@/features/storefront/modules/order/components/fulfillment-card"
+import ReturnRequest from "@/features/storefront/modules/order/components/return-request"
 import React from "react"
 import { StoreOrder } from "@/features/storefront/types/storefront"
 
@@ -37,6 +38,7 @@ const OrderDetailsTemplate: React.FC<OrderDetailsTemplateProps> = ({
         <OrderDetails order={order} showStatus />
         <Items items={order.lineItems} region={order.region} />
         <FulfillmentCard order={order} />
+        <ReturnRequest order={order} />
         <ShippingDetails order={order} />
         <OrderSummary order={order} />
         <Help />
