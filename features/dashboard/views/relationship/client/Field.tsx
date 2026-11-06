@@ -211,6 +211,7 @@ export function ClientField({
                 <>
                   <Button 
                     variant="outline"
+                    className="h-auto min-h-9 max-w-full whitespace-normal text-left"
                     onClick={() => setIsDrawerOpen(true)}
                   >
                     Create related {foreignList.singular}
