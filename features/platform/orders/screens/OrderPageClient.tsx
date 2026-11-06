@@ -26,6 +26,7 @@ import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EditItemDrawerClientWrapper } from "../../components/EditItemDrawerClientWrapper";
+import { OrderReturnsCard } from "../components/OrderReturnsCard";
 
 
 import { RefundOrderDialog, type RefundablePayment } from "../components/RefundOrderDialog";
@@ -260,6 +261,8 @@ export function OrderPageClient({
                 </div>
               </CardContent>
             </Card>
+
+            <OrderReturnsCard returns={(order as any).returns || []} payments={payments} money={money} />
 
             {/* Payment Card */}
             <Card className="relative rounded-xl border border-transparent bg-card shadow ring-1 ring-foreground/5 dark:ring-white/10 overflow-hidden">
