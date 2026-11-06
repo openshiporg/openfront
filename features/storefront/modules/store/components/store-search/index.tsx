@@ -42,7 +42,7 @@ export default function StoreSearch({ initialQuery = "" }: { initialQuery?: stri
           placeholder="Search products"
           maxLength={100}
           autoComplete="off"
-          className="h-11 w-full rounded-md border border-border bg-background pl-9 pr-9 text-base text-foreground outline-none focus:border-foreground"
+          className="h-11 w-full rounded-md border border-border bg-background pl-9 pr-9 text-base [&::-webkit-search-cancel-button]:appearance-none text-foreground outline-none focus:border-foreground"
           data-testid="store-search-input"
         />
         {value ? (

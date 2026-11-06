@@ -1,3 +1,4 @@
+import { Search } from "lucide-react"
 import { Suspense } from 'react';
 
 import { listRegions } from '@/features/storefront/lib/data/regions';
@@ -26,11 +27,13 @@ export default async function Nav() {
 
           <div className="flex items-center gap-x-6 h-full flex-1 basis-0 justify-end">
             <LocalizedClientLink
-              className="hover:text-foreground cursor-pointer"
+              className="hover:text-foreground cursor-pointer flex items-center"
               href="/store#store-search"
               data-testid="nav-search-link"
+              aria-label="Search"
             >
-              Search
+              <Search className="h-4 w-4 sm:hidden" aria-hidden />
+              <span className="hidden sm:inline">Search</span>
             </LocalizedClientLink>
             <div className="hidden lg:flex items-center gap-x-6 h-full">
               <LocalizedClientLink
