@@ -63,7 +63,7 @@ export function RefundOrderDialog({ orderId, payments }: { orderId: string; paym
           </div>
           <div className="space-y-2"><Label htmlFor="refund-amount">Amount ({payment?.currencyCode})</Label><Input id="refund-amount" inputMode="decimal" value={amount} disabled={busy || !!request.current} onChange={e => setAmount(e.target.value)} required /></div>
           <div className="space-y-2"><Label htmlFor="refund-reason">Reason</Label><Textarea id="refund-reason" value={reason} maxLength={1000} disabled={busy || !!request.current} onChange={e => setReason(e.target.value)} required /></div>
-          {bringsFullyRefunded && <div className="flex items-center gap-2"><Checkbox id="refund-restock" checked={request.current ? !!request.current.restock : restock} disabled={busy || !!request.current} onCheckedChange={v => setRestock(v === true)} /><Label htmlFor="refund-restock" className="text-sm font-normal">Return items to stock</Label></div>}
+          {bringsFullyRefunded && <div className="flex items-center gap-2"><Checkbox id="refund-restock" checked={request.current ? !!request.current.restock : restock} disabled={busy || !!request.current} onCheckedChange={v => setRestock(v === true)} /><Label htmlFor="refund-restock" className="text-sm font-normal">Return items to stock (cancels any fulfilment and the order)</Label></div>}
           {error && <p role="alert" className="text-sm text-destructive break-words">{error}</p>}
           <DialogFooter><Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={busy}>Cancel</Button><Button type="submit" disabled={busy}>{busy ? 'Refunding…' : request.current ? 'Retry refund' : 'Confirm refund'}</Button></DialogFooter>
         </form>}

@@ -6,6 +6,7 @@ import {
   subscribedWebhookEndpointIds,
 } from "../../webhooks/outbox";
 import { applyOrderStatusTransition } from "../utils/orderStatusTransition";
+import cancelOrderFulfillment from "./cancelOrderFulfillment";
 import { findIdempotencyAttempt, getOrCreateIdempotencyAttempt } from "../utils/idempotency";
 
 function refundRuleError(message: string, code: "REFUND_EXCEEDS_BALANCE" | "PAYMENT_NOT_CAPTURED" | "REFUND_IN_PROGRESS") {
@@ -233,6 +234,16 @@ async function refundOrderPayment(
       if (!fullyRefunded) {
         outcome = { restocked: false, reason: "the order is not fully refunded" };
       } else {
+        // Shopify-style "Restock items": shipped or packed items come back too. The order's
+        // active fulfilments are cancelled first (a purchased shipping label still has to be
+        // voided by the operator, and that reason is reported), then the order is cancelled.
+        const active = await sudo.prisma.fulfillment.findMany({
+          where: { order: { id: orderId }, canceledAt: null },
+          select: { id: true },
+        });
+        for (const fulfillment of active) {
+          await cancelOrderFulfillment(null, { fulfillmentId: fulfillment.id, reason: `Full refund, items restocked: ${reason.trim()}`.slice(0, 1000) }, context);
+        }
         await applyOrderStatusTransition(sudo, {
           orderId,
           status: "canceled",
