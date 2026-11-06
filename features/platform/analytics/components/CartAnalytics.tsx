@@ -58,8 +58,8 @@ export function CartAnalytics({ cartMetrics }: CartAnalyticsProps) {
       icon: ShoppingBag,
       label: "Avg. Cart Value",
       value: formatCurrency(cartMetrics.averageCartValue),
-      color: "text-purple-600 dark:text-purple-400",
-      bgColor: "bg-purple-100 dark:bg-purple-900/20",
+      color: "text-teal-600 dark:text-teal-400",
+      bgColor: "bg-teal-100 dark:bg-teal-900/20",
     },
   ];
 

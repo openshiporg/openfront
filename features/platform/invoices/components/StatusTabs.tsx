@@ -157,7 +157,7 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
           >
             <div className="text-sm font-medium leading-5 whitespace-nowrap flex items-center justify-center h-full gap-2">
               All Invoices
-              <span className="rounded-sm bg-background border shadow-xs px-1.5 py-0 text-[10px] leading-[14px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 inline-flex items-center h-[18px]">
+              <span className="rounded-sm bg-background border shadow-xs px-1.5 py-0 text-xs leading-[14px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 inline-flex items-center h-[18px]">
                 {statusCounts.all}
               </span>
             </div>
@@ -183,7 +183,7 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
                 <div className="text-sm font-medium leading-5 whitespace-nowrap flex items-center justify-center h-full gap-2">
                   <StatusIcon className={`h-4 w-4 ${iconColor}`} />
                   {status.label}
-                  <span className="rounded-sm bg-background border shadow-xs px-1.5 py-0 text-[10px] leading-[14px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 inline-flex items-center h-[18px]">
+                  <span className="rounded-sm bg-background border shadow-xs px-1.5 py-0 text-xs leading-[14px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 inline-flex items-center h-[18px]">
                     {status.count}
                   </span>
                 </div>

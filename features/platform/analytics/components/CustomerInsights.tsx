@@ -51,8 +51,8 @@ export function CustomerInsights({ customerMetrics }: CustomerInsightsProps) {
       icon: RefreshCw,
       label: "Retention Rate",
       value: formatPercentage(customerMetrics.retentionRate),
-      color: "text-purple-600 dark:text-purple-400",
-      bgColor: "bg-purple-100 dark:bg-purple-900/20",
+      color: "text-teal-600 dark:text-teal-400",
+      bgColor: "bg-teal-100 dark:bg-teal-900/20",
     },
     {
       icon: DollarSign,

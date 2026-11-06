@@ -72,7 +72,7 @@ export function AnalyticsCharts({
             category="revenue"
             index="name"
             valueFormatter={valueFormatter}
-            colors={["blue", "emerald", "violet", "amber", "rose", "cyan", "indigo", "pink"]}
+            colors={["blue", "emerald", "teal", "amber", "rose", "cyan", "slate", "lime"]}
           />
         </Card>
       </Grid>
