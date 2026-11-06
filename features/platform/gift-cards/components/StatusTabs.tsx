@@ -116,7 +116,7 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
           >
             <div className="text-sm font-medium leading-5 whitespace-nowrap flex items-center justify-center h-full gap-2">
               All Gift Cards
-              <span className="rounded-sm bg-background border shadow-xs px-1.5 py-0 text-xs leading-[14px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 inline-flex items-center h-[18px]">
+              <span className="text-xs leading-[14px] font-medium tabular-nums text-muted-foreground inline-flex items-center h-[18px]">
                 {statusCounts.all}
               </span>
             </div>
@@ -142,7 +142,7 @@ export function StatusTabs({ statusCounts }: StatusTabsProps) {
                     dotClass
                   )} />
                   {status.label}
-                  <span className="rounded-sm bg-background border shadow-xs px-1.5 py-0 text-xs leading-[14px] font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 inline-flex items-center h-[18px]">
+                  <span className="text-xs leading-[14px] font-medium tabular-nums text-muted-foreground inline-flex items-center h-[18px]">
                     {status.count}
                   </span>
                 </div>

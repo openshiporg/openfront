@@ -8,7 +8,6 @@
 import React, { useMemo, useId, ReactNode } from 'react'
 import { buttonVariants } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Badge } from "@/components/ui/badge"
 import { ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -226,9 +225,9 @@ function FieldGroup(props: {
                 <div id={labelId} className="relative text-lg/5 font-medium">
                   {props.label}
                 </div>
-                <Badge className="text-[.7rem] py-0.5 uppercase tracking-wide font-medium">
-                  {actualFieldCount} FIELD{actualFieldCount !== 1 && "S"}
-                </Badge>
+                <span className="text-[12px] font-medium tabular-nums text-muted-foreground">
+                  {actualFieldCount} {actualFieldCount === 1 ? "field" : "fields"}
+                </span>
               </div>
               {props.description !== null && props.description !== undefined && (
                 <p

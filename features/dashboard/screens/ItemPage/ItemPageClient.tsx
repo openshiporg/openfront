@@ -480,7 +480,7 @@ export function ItemPageClient({ list, item, itemId }: ItemPageClientProps) {
                     <div className="p-1 flex items-center gap-3">
                       <div className="flex gap-3 flex-1 min-w-0">
                         <div className="flex-shrink-0">
-                          <div className="bg-background shadow-xs border rounded-sm py-0.5 px-1 text-[.65rem] text-muted-foreground">
+                          <div className="py-0.5 text-[12px] font-medium text-muted-foreground">
                             ID
                           </div>
                         </div>

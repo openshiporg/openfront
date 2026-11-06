@@ -8,9 +8,10 @@ const standardBadgeVariants = cva(
     variants: {
       variant: {
         default: "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
-        secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        // Neutral variants are plain muted text: no grey plates or outlined chips.
+        secondary: "border-transparent bg-transparent px-0 font-medium text-muted-foreground",
         destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
-        outline: "text-foreground",
+        outline: "border-transparent bg-transparent px-0 font-medium text-muted-foreground",
       },
     },
     defaultVariants: {
@@ -24,7 +25,7 @@ const coloredBadgeVariants = cva(
   {
     variants: {
       color: {
-        white: "bg-white text-black border-muted-foreground/20 dark:border-muted-foreground/10",
+        white: "border-transparent bg-transparent px-0 font-medium text-muted-foreground",
         red: "bg-red-500/15 text-red-700 dark:bg-red-500/10 dark:text-red-400 border-red-200 dark:border-red-900/50",
         orange: "bg-orange-500/15 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400 border-orange-200 dark:border-orange-900/50",
         amber: "bg-amber-400/20 text-amber-700 dark:bg-amber-400/10 dark:text-amber-400 border-amber-200 dark:border-amber-900/50",
@@ -42,7 +43,7 @@ const coloredBadgeVariants = cva(
         fuchsia: "bg-fuchsia-400/15 text-fuchsia-700 dark:bg-fuchsia-400/10 dark:text-fuchsia-400 border-fuchsia-200 dark:border-fuchsia-900/50",
         pink: "bg-pink-400/15 text-pink-700 dark:bg-pink-400/10 dark:text-pink-400 border-pink-200 dark:border-pink-900/50",
         rose: "bg-rose-400/15 text-rose-700 dark:bg-rose-400/10 dark:text-rose-400 border-rose-200 dark:border-rose-900/50",
-        zinc: "bg-zinc-500/10 text-zinc-500/90 dark:bg-white/5 dark:text-zinc-400 border-zinc-300 dark:border-zinc-700/50",
+        zinc: "border-transparent bg-transparent px-0 font-medium text-muted-foreground",
       }
     }
   }
