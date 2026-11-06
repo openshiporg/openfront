@@ -18,6 +18,7 @@ export interface ProductWhereClause {
     }
   },
   id?: { in: any }
+  title?: { contains: string; mode: 'insensitive' }
 }
 
 export interface StorefrontProductCategory {

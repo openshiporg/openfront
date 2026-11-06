@@ -25,6 +25,13 @@ export default async function Nav() {
           </div>
 
           <div className="flex items-center gap-x-6 h-full flex-1 basis-0 justify-end">
+            <LocalizedClientLink
+              className="hover:text-foreground cursor-pointer"
+              href="/store#store-search"
+              data-testid="nav-search-link"
+            >
+              Search
+            </LocalizedClientLink>
             <div className="hidden lg:flex items-center gap-x-6 h-full">
               <LocalizedClientLink
                 className="hover:text-foreground cursor-pointer"

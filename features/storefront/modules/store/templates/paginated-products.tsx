@@ -12,6 +12,7 @@ type GetProductsListParams = {
   categoryId?: string
   id?: string[]
   isGiftcard?: boolean
+  q?: string
 }
 
 export default async function PaginatedProducts({
@@ -20,6 +21,7 @@ export default async function PaginatedProducts({
   collectionId,
   categoryId,
   productsIds,
+  query,
   countryCode,
 }: {
   sortBy?: SortOptions
@@ -27,6 +29,7 @@ export default async function PaginatedProducts({
   collectionId?: string
   categoryId?: string
   productsIds?: string[]
+  query?: string
   countryCode: string
 }) {
   const queryParams: GetProductsListParams = {
@@ -39,6 +42,10 @@ export default async function PaginatedProducts({
 
   if (categoryId) {
     queryParams["categoryId"] = categoryId
+  }
+
+  if (query) {
+    queryParams["q"] = query
   }
 
   if (productsIds) {
@@ -55,7 +62,8 @@ export default async function PaginatedProducts({
   let count = 0
 
   // Use different queries based on sort option
-  if (sortByOption === "price_asc" || sortByOption === "price_desc") {
+  // The price-sorted query has no text filter, so a search keeps the standard listing.
+  if (!query && (sortByOption === "price_asc" || sortByOption === "price_desc")) {
     // Use the custom price sorting query
     const priceOrder = sortByOption === "price_asc" ? "asc" : "desc"
     const result = await getProductsListByPrice({
@@ -79,6 +87,14 @@ export default async function PaginatedProducts({
   }
 
   const totalPages = Math.ceil(count / PRODUCT_LIMIT)
+
+  if (query && products.length === 0) {
+    return (
+      <p className="py-12 text-base text-muted-foreground" data-testid="search-no-results">
+        No products match “{query}”. Try a shorter word, or browse all products.
+      </p>
+    )
+  }
 
   return (
     <>

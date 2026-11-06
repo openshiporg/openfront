@@ -45,6 +45,11 @@ export const getProductsList = cache(async function ({
     whereClause.id = { in: queryParams.id }
   }
 
+  const search = typeof queryParams?.q === "string" ? queryParams.q.trim().slice(0, 100) : ""
+  if (search) {
+    whereClause.title = { contains: search, mode: "insensitive" }
+  }
+
   const GET_PRODUCTS_QUERY = gql`
     query GetProducts(
       $limit: Int!

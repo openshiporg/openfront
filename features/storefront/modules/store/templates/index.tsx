@@ -5,16 +5,20 @@ import RefinementList from "@/features/storefront/modules/store/components/refin
 import { SortOptions } from "@/features/storefront/modules/store/components/refinement-list/sort-products"
 
 import PaginatedProducts from "./paginated-products"
+import StoreSearch from "../components/store-search"
 
 const StoreTemplate = ({
   sortBy,
   page,
+  query,
   countryCode,
 }: {
   sortBy?: SortOptions
   page?: string
+  query?: string
   countryCode: string
 }) => {
+  const search = query?.trim().slice(0, 100) || ""
   const pageNumber = page ? parseInt(page) : 1
   const sort = sortBy || "created_at"
 
@@ -25,13 +29,15 @@ const StoreTemplate = ({
     >
       <RefinementList sortBy={sort} />
       <div className="w-full">
-        <div className="mb-8 text-3xl font-semibold">
-          <h1 data-testid="store-page-title">All products</h1>
+        <div className="mb-6 text-3xl font-semibold">
+          <h1 data-testid="store-page-title">{search ? `Results for “${search}”` : "All products"}</h1>
         </div>
-        <Suspense fallback={<SkeletonProductGrid />}>
+        <StoreSearch initialQuery={search} />
+        <Suspense key={search} fallback={<SkeletonProductGrid />}>
           <PaginatedProducts
             sortBy={sort}
             page={pageNumber}
+            query={search}
             countryCode={countryCode}
           />
         </Suspense>
