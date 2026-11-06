@@ -24,6 +24,11 @@ const transport = createTransport({
   },
 });
 
+/** Plain transactional send through the store's SMTP transport (used by the abandoned-cart loop). */
+export async function sendStoreEmail(message: { to: string; subject: string; html: string; text?: string }) {
+  return transport.sendMail({ ...message, from: process.env.SMTP_FROM });
+}
+
 function passwordResetEmail({ url }: { url: string }): string {
   const backgroundColor = "#f9f9f9";
   const textColor = "#444444";
