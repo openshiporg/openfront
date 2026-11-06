@@ -87,7 +87,7 @@ export const OrderDetailsComponent = ({
                     <>
                       <span className="mx-1.5">‧</span>
                       <Link
-                        href={`/dashboard/platform/users/${order.user.id}`}
+                        href={`/dashboard/users/${order.user.id}`}
                         className="text-muted-foreground hover:text-blue-600 dark:hover:text-blue-400 group inline-flex items-center gap-1"
                       >
                         {order.user.name || order.user.email}

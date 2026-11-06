@@ -55,7 +55,7 @@ export function CountryDetailsComponent({
               <div className="flex flex-col items-start text-left gap-2 sm:gap-1.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <Link
-                    href={`/dashboard/platform/countries/${country.id}`}
+                    href={`/dashboard/countries/${country.id}`}
                     className="font-medium text-base hover:text-blue-600 dark:hover:text-blue-400"
                   >
                     {country.name || country.displayName}

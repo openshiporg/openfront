@@ -278,7 +278,7 @@ export function PriceListDetailsComponent({
                             {tab.key === 'prices' && 'Prices'}
                             {tab.key === 'rules' && 'Rules'}
                           </span>
-                          <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
+                          <span className="rounded-sm bg-muted border px-1.5 py-0 text-xs leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
                             {tab.count}
                           </span>
                         </div>
@@ -293,7 +293,7 @@ export function PriceListDetailsComponent({
                         <SelectTrigger className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-background border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 h-auto w-auto">
                           <div className="flex items-center gap-1.5">
                             <SelectValue />
-                            <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
+                            <span className="rounded-sm bg-muted border px-1.5 py-0 text-xs leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
                               ({activeTabData?.count || 0})
                             </span>
                           </div>

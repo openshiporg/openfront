@@ -261,7 +261,7 @@ export function RegionDetailsComponent({
               <div className="flex flex-col items-start text-left gap-2 sm:gap-1.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <Link
-                    href={`/dashboard/platform/regions/${region.id}`}
+                    href={`/dashboard/regions/${region.id}`}
                     className="font-medium text-base hover:text-blue-600 dark:hover:text-blue-400"
                   >
                     {region.name} ({region.code})
@@ -347,7 +347,7 @@ export function RegionDetailsComponent({
                         {tab.key === 'payment' && 'Payment Providers'}
                         {tab.key === 'fulfillment' && 'Fulfillment Providers'}
                       </span>
-                      <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
+                      <span className="rounded-sm bg-muted border px-1.5 py-0 text-xs leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
                         {tab.count}
                       </span>
                     </div>
@@ -362,7 +362,7 @@ export function RegionDetailsComponent({
                     <SelectTrigger className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-background border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 h-auto w-auto">
                       <div className="flex items-center gap-1.5">
                         <SelectValue />
-                        <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
+                        <span className="rounded-sm bg-muted border px-1.5 py-0 text-xs leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
                           ({activeTabData?.count || 0})
                         </span>
                       </div>

@@ -101,7 +101,7 @@ export function PaymentProviderDetailsComponent({
               <div className="flex flex-col items-start text-left gap-2 sm:gap-1.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <Link
-                    href={`/dashboard/platform/payment-providers/${paymentprovider.id}`}
+                    href={`/dashboard/payment-providers/${paymentprovider.id}`}
                     className="font-medium text-base hover:text-blue-600 dark:hover:text-blue-400"
                   >
                     {paymentprovider.name}
@@ -181,7 +181,7 @@ export function PaymentProviderDetailsComponent({
                     >
                       <div className="flex items-center gap-1.5">
                         <span>Regions</span>
-                        <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
+                        <span className="rounded-sm bg-muted border px-1.5 py-0 text-xs leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
                           {tab.count}
                         </span>
                       </div>
@@ -199,7 +199,7 @@ export function PaymentProviderDetailsComponent({
                       <SelectTrigger className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-background border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 h-auto w-auto">
                         <div className="flex items-center gap-1.5">
                           <SelectValue />
-                          <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
+                          <span className="rounded-sm bg-muted border px-1.5 py-0 text-xs leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
                             ({activeTabData?.count || 0})
                           </span>
                         </div>

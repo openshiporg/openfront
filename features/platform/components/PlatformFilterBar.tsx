@@ -21,6 +21,10 @@ import Link from "next/link"
 import { useDashboard } from '../../dashboard/context/DashboardProvider'
 import { enhanceFields } from '../../dashboard/utils/enhanceFields'
 
+// Only these lists have a custom create screen under /platform; the rest use the generic
+// /dashboard/<list>/create form.
+const PLATFORM_CREATE_PAGES = new Set(["orders", "products"])
+
 interface PlatformFilterBarProps {
   list: any
   customCreateButton?: React.ReactNode
@@ -168,7 +172,11 @@ export function PlatformFilterBar({
                 </Button>
               ) : (
                 <Link
-                  href={`${basePath}/platform/${list.path}/create`}
+                  href={
+                    PLATFORM_CREATE_PAGES.has(list.path)
+                      ? `${basePath}/platform/${list.path}/create`
+                      : `${basePath}/${list.path}/create`
+                  }
                   className={cn(
                     buttonVariants({ size: "icon" }),
                     "lg:px-4 lg:py-2 lg:w-auto rounded-lg"

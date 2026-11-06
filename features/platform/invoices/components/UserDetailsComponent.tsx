@@ -208,12 +208,12 @@ export function UserDetailsComponent({
       <Accordion type="single" collapsible className="w-full">
         <AccordionItem value={user.id} className="border-0">
           <div className="px-4 md:px-6 py-3 md:py-4 flex justify-between w-full border-b relative min-h-[120px]">
-            <div className="flex items-start gap-4">
+            <div className="flex items-start gap-4 min-w-0">
               {/* User Info */}
-              <div className="flex flex-col items-start text-left gap-2 sm:gap-1.5">
+              <div className="flex flex-col items-start text-left gap-2 sm:gap-1.5 min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <Link
-                    href={`/dashboard/platform/users/${user.id}`}
+                    href={`/dashboard/users/${user.id}`}
                     className="font-medium text-base hover:text-blue-600 dark:hover:text-blue-400"
                   >
                     {user.name || `${user.firstName} ${user.lastName}`.trim() || user.email}
@@ -232,7 +232,7 @@ export function UserDetailsComponent({
                     <>
                       <div className="flex items-center gap-1">
                         <Mail className="w-3 h-3 text-muted-foreground" />
-                        <span className="text-muted-foreground">{user.email}</span>
+                        <span className="text-muted-foreground break-all">{user.email}</span>
                       </div>
                       <span className="text-muted-foreground">‧</span>
                     </>
@@ -269,7 +269,7 @@ export function UserDetailsComponent({
               </div>
             </div>
 
-            <div className="flex flex-col justify-between h-full">
+            <div className="flex flex-col justify-between h-full shrink-0">
               <div className="flex items-center gap-2">
                 <Badge
                   color={
@@ -333,7 +333,7 @@ export function UserDetailsComponent({
                         {tab.key === 'carts' && 'Carts'}
                         {tab.key === 'customerGroups' && 'Customer Groups'}
                       </span>
-                      <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
+                      <span className="rounded-sm bg-muted border px-1.5 py-0 text-xs leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
                         {tab.count}
                       </span>
                     </div>
@@ -348,7 +348,7 @@ export function UserDetailsComponent({
                     <SelectTrigger className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-background border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 h-auto w-auto">
                       <div className="flex items-center gap-1.5">
                         <SelectValue />
-                        <span className="rounded-sm bg-muted border px-1.5 py-0 text-[10px] leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
+                        <span className="rounded-sm bg-muted border px-1.5 py-0 text-xs leading-[14px] font-medium text-muted-foreground inline-flex items-center h-[18px] -mr-1">
                           ({activeTabData?.count || 0})
                         </span>
                       </div>

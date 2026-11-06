@@ -24,16 +24,16 @@ export async function FulfillOrderPage({ params }: PageProps) {
     <>
       <PageBreadcrumbs
         items={[
-          { type: "link", label: "Dashboard", href: "/dashboard" },
+          { type: "link", label: "Dashboard", href: "" },
           {
             type: "page",
             label: "Platform",
           },
-          { type: "link", label: "Orders", href: "/dashboard/platform/orders" },
+          { type: "link", label: "Orders", href: "/platform/orders" },
           {
             type: "link",
             label: `#${order.displayId}`,
-            href: `/dashboard/platform/orders/${order.id}`,
+            href: `/platform/orders/${order.id}`,
           },
           { type: "page", label: "Fulfill" },
         ]}

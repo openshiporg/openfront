@@ -93,7 +93,7 @@ export function ShippingOptionDetailsComponent({
               <div className="flex flex-col items-start text-left gap-2 sm:gap-1.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <Link
-                    href={`/platform/shipping-options/${shippingOption.id}`}
+                    href={`/dashboard/shipping-options/${shippingOption.id}`}
                     className="font-medium text-base hover:text-blue-600 dark:hover:text-blue-400"
                   >
                     {shippingOption.name}
