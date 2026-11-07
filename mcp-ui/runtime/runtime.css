@@ -1,0 +1,84 @@
+@import "tailwindcss" source(none);
+@source "./";
+@source "../vendor";
+
+/* TuffUI (https://tuffui.com, MIT) theme tokens. House rules: neutral greys (no hue in 240-300), no pills, 12px floor. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --radius: 0.75rem;
+  --background: oklch(0.975 0 0);
+  --foreground: oklch(0.2 0 0);
+  --surface: oklch(0.948 0 0);
+  --surface-inset: oklch(1 0 0);
+  --surface-raised: oklch(0.912 0 0);
+  --border: oklch(0.2 0 0 / 0.07);
+  --muted-foreground: oklch(0.5 0 0);
+  --ring: color-mix(in oklab, var(--brand) 55%, transparent);
+  --brand: #0071e3;
+  --brand-foreground: #ffffff;
+  --positive: #248a3d;
+  --negative: #d70015;
+  --warning: #c93400;
+  --button: linear-gradient(0deg, #fff 0%, #e6e6e6 100%);
+  --button-hover: linear-gradient(0deg, #fff 0%, #eeeeee 100%);
+  --button-foreground: #111111;
+  --button-edge: rgba(0, 0, 0, 0.1);
+  --button-shadow: 0 0 #0000;
+  --button-secondary: linear-gradient(180deg, #e2e2e2 0%, #ececec 100%);
+  --button-secondary-hover: linear-gradient(180deg, #dadada 0%, #e4e4e4 100%);
+}
+
+.dark {
+  --background: oklch(0.155 0 0);
+  --foreground: oklch(0.97 0 0);
+  --surface: oklch(0.212 0 0);
+  --surface-inset: oklch(0.172 0 0);
+  --surface-raised: oklch(0.265 0 0);
+  --border: oklch(1 0 0 / 0.06);
+  --muted-foreground: oklch(0.68 0 0);
+  --ring: color-mix(in oklab, var(--brand) 60%, transparent);
+  --brand: #0a84ff;
+  --positive: #30d158;
+  --negative: #ff453a;
+  --warning: #ff9f0a;
+  --button: linear-gradient(0deg, #fff 0%, #ababab 100%);
+  --button-hover: linear-gradient(0deg, #fff 0%, #c2c2c2 100%);
+  --button-edge: rgba(255, 255, 255, 0.5);
+  --button-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.1);
+  --button-secondary: linear-gradient(180deg, #1d1d1d 0%, #262626 100%);
+  --button-secondary-hover: linear-gradient(180deg, #242424 0%, #2d2d2d 100%);
+}
+
+@theme inline {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-inset: var(--surface-inset);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-warning: var(--warning);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * { border-color: var(--color-border); scrollbar-width: thin; scrollbar-color: color-mix(in oklab, var(--foreground) 18%, transparent) transparent; }
+  @media (pointer: coarse) { input, textarea, select { font-size: max(16px, 1em) !important; } }
+  html { color-scheme: light; -webkit-text-size-adjust: 100%; }
+  html.dark { color-scheme: dark; }
+  body { margin: 0; background: transparent; color: var(--color-foreground); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+  :focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
+}
+
+@utility label { font-size: 0.75rem; line-height: 1rem; font-weight: 500; }

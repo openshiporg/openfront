@@ -44,6 +44,7 @@ import {
   isInputObjectType,
 } from 'graphql';
 import { getBaseUrl } from '@/features/dashboard/lib/getBaseUrl';
+import { productsCardHtml, productCardHtml } from '@/mcp-ui/server/cards';
 import { internalGraphqlEndpoint, withRequestIdentity } from '@/features/keystone/lib/internal-origin';
 
 // Self-calls to /api/graphql carry the caller's signed identity, read from the current request per call.
@@ -1374,97 +1375,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
           const result = await executeGraphQL(queryString, graphqlEndpoint, auth);
           const products = result.data?.products || [];
 
-          // Generate beautiful HTML for products using MCP UI
-          const productsHTML = products.map((product: any) => {
-            const firstVariant = product.productVariants?.[0];
-            const price = firstVariant?.prices?.[0];
-            const formattedPrice = price ?
-              `${price.currency.symbol}${(price.calculatedPrice?.calculatedAmount || price.amount) / 100}` :
-              'Price unavailable';
-
-            const hasMultipleVariants = product.productVariants?.length > 1;
-            const variantText = hasMultipleVariants ?
-              `<p class="text-sm text-gray-600">${product.productVariants.length} variants available</p>` : '';
-
-            return `
-              <div class="product-card border rounded-lg p-4 hover:shadow-lg transition-shadow bg-white">
-                <div class="flex gap-4">
-                  ${product.thumbnail ? `
-                    <img src="${product.thumbnail}" alt="${product.title}"
-                         class="w-20 h-20 object-cover rounded-md flex-shrink-0">
-                  ` : `
-                    <div class="w-20 h-20 bg-gray-200 rounded-md flex-shrink-0 flex items-center justify-center">
-                      <span class="text-gray-400 text-xs">No image</span>
-                    </div>
-                  `}
-                  <div class="flex-1 min-w-0">
-                    <h3 class="font-semibold text-lg text-gray-900 truncate">${product.title}</h3>
-                    <p class="text-lg font-bold text-green-600">${formattedPrice}</p>
-                    ${variantText}
-                    <div class="mt-2 flex gap-2">
-                      <button onclick="getProductDetails('${product.id}')"
-                              class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
-                        View Details
-                      </button>
-                      ${!hasMultipleVariants && firstVariant ? `
-                        <button onclick="addToCart('${firstVariant.id}')"
-                                class="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700">
-                          Add to Cart
-                        </button>
-                      ` : ''}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            `;
-          }).join('');
-
-          const htmlContent = `
-            <div class="products-grid">
-              <div class="mb-4 p-3 bg-blue-50 rounded-lg">
-                <h2 class="text-xl font-bold text-gray-900">Products for ${countryCode.toUpperCase()}</h2>
-                <p class="text-gray-600">Found ${products.length} products</p>
-              </div>
-              <div class="space-y-4">
-                ${productsHTML}
-              </div>
-              <style>
-                .products-grid { max-width: 800px; margin: 0 auto; }
-                .product-card { margin-bottom: 1rem; }
-                button { cursor: pointer; transition: all 0.2s; }
-                button:hover { transform: translateY(-1px); }
-              </style>
-              <script>
-                function getProductDetails(productId) {
-                  // Send proper MCP UI action
-                  window.parent.postMessage({
-                    type: 'tool',
-                    payload: { toolName: 'getProduct', params: { productId, countryCode: '${countryCode}' } }
-                  }, '*');
-                }
-                function addToCart(variantId) {
-                  // Send proper MCP UI action
-                  window.parent.postMessage({
-                    type: 'tool',
-                    payload: { toolName: 'addToCart', params: { variantId, quantity: 1 } }
-                  }, '*');
-                }
-              </script>
-            </div>
-          `;
-
-          // Use proper MCP UI format
           const uiResource = createUIResource({
             uri: `ui://openfront/products?country=${countryCode}`,
-            content: { type: 'rawHtml', htmlString: htmlContent },
+            content: { type: 'rawHtml', htmlString: productsCardHtml(products, await getBaseUrl(), countryCode) },
             encoding: 'text',
           });
+          const summary = products.map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            variants: (p.productVariants || []).map((v: any) => ({ id: v.id, title: v.title })),
+          }));
 
           return new Response(JSON.stringify({
             jsonrpc: '2.0',
             id: body.id,
             result: {
-              content: [uiResource],
+              content: [{ type: 'text', text: JSON.stringify(summary) }, uiResource],
             }
           }), {
             status: 200,
@@ -1543,124 +1469,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             throw new Error('Product not found');
           }
 
-          // Generate HTML for product variants
-          const variantsHTML = product.productVariants?.map((variant: any) => {
-            const price = variant.prices?.[0];
-            const formattedPrice = price ?
-              `${price.currency.symbol}${(price.calculatedPrice?.calculatedAmount || price.amount) / 100}` :
-              'Price unavailable';
-
-            const options = variant.productOptionValues?.map((pov: any) =>
-              `${pov.productOption.title}: ${pov.value}`
-            ).join(', ') || '';
-
-            const inStock = variant.inventoryQuantity > 0 || variant.allowBackorder;
-            const stockText = inStock ?
-              `✅ ${variant.inventoryQuantity} in stock` :
-              '❌ Out of stock';
-
-            return `
-              <div class="variant-card border rounded p-3 ${inStock ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}">
-                <div class="flex justify-between items-start">
-                  <div>
-                    <h4 class="font-medium">${variant.title || product.title}</h4>
-                    ${options ? `<p class="text-sm text-gray-600">${options}</p>` : ''}
-                    <p class="text-sm ${inStock ? 'text-green-600' : 'text-red-600'}">${stockText}</p>
-                  </div>
-                  <div class="text-right">
-                    <p class="text-lg font-bold text-green-600">${formattedPrice}</p>
-                    ${inStock ? `
-                      <button onclick="addToCart('${variant.id}')"
-                              class="mt-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700">
-                        Add to Cart
-                      </button>
-                    ` : `
-                      <button disabled class="mt-2 px-3 py-1 bg-gray-300 text-gray-500 text-sm rounded cursor-not-allowed">
-                        Out of Stock
-                      </button>
-                    `}
-                  </div>
-                </div>
-              </div>
-            `;
-          }).join('') || '';
-
-          // Generate images gallery
-          const imagesHTML = product.productImages?.length > 0 ? `
-            <div class="images-gallery mb-6">
-              <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-                ${product.productImages.map((img: any) => `
-                  <img src="${img.image.url}" alt="${product.title}"
-                       class="w-full h-32 object-cover rounded border">
-                `).join('')}
-              </div>
-            </div>
-          ` : product.thumbnail ? `
-            <div class="images-gallery mb-6">
-              <img src="${product.thumbnail}" alt="${product.title}"
-                   class="w-full max-w-md h-64 object-cover rounded border mx-auto">
-            </div>
-          ` : '';
-
-          const htmlContent = `
-            <div class="product-details max-w-4xl mx-auto p-4">
-              <div class="mb-6">
-                <h1 class="text-3xl font-bold text-gray-900 mb-2">${product.title}</h1>
-                <p class="text-gray-600">Product ID: ${product.id}</p>
-              </div>
-
-              ${imagesHTML}
-
-              <div class="variants-section">
-                <h3 class="text-xl font-semibold mb-4">
-                  Available Options (${product.productVariants?.length || 0} variants)
-                </h3>
-                ${product.productVariants?.length > 1 ? `
-                  <div class="mb-4 p-3 bg-blue-50 rounded">
-                    <p class="text-blue-800">
-                      💡 This product has multiple variants. Choose the specific option you want below.
-                    </p>
-                  </div>
-                ` : ''}
-                <div class="space-y-3">
-                  ${variantsHTML}
-                </div>
-              </div>
-
-              <style>
-                .product-details { }
-                .variant-card { transition: all 0.2s; }
-                .variant-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-                button { transition: all 0.2s; }
-                button:hover:not(:disabled) { transform: translateY(-1px); }
-                .images-gallery img { transition: transform 0.2s; }
-                .images-gallery img:hover { transform: scale(1.05); }
-              </style>
-
-              <script>
-                function addToCart(variantId) {
-                  // Send proper MCP UI action
-                  window.parent.postMessage({
-                    type: 'tool',
-                    payload: { toolName: 'addToCart', params: { variantId, quantity: 1 } }
-                  }, '*');
-                }
-              </script>
-            </div>
-          `;
-
-          // Use proper MCP UI format
           const uiResource = createUIResource({
             uri: `ui://openfront/product/${product.id}?country=${countryCode}`,
-            content: { type: 'rawHtml', htmlString: htmlContent },
+            content: { type: 'rawHtml', htmlString: productCardHtml(product, await getBaseUrl(), countryCode) },
             encoding: 'text',
           });
+          const summary = {
+            id: product.id,
+            title: product.title,
+            variants: (product.productVariants || []).map((v: any) => ({ id: v.id, title: v.title })),
+          };
 
           return new Response(JSON.stringify({
             jsonrpc: '2.0',
             id: body.id,
             result: {
-              content: [uiResource],
+              content: [{ type: 'text', text: JSON.stringify(summary) }, uiResource],
             }
           }), {
             status: 200,
