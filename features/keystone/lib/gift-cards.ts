@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { emailButton, emailHeading, emailLayout, emailPanel, emailParagraph } from "./email-layout";
 
 /**
  * Gift cards (Shopify default): a shopper buys a fixed amount through Stripe Checkout and the card is
@@ -122,14 +123,17 @@ export function giftCardEmail(input: { storeName: string; code: string; amount: 
     `Enter the code at checkout under "Add gift card or discount code".${until}`,
     input.shopUrl ? `Shop now: ${input.shopUrl}` : "",
   ].filter(Boolean);
-  const html = `<div style="font-family:Helvetica,Arial,sans-serif;max-width:560px;margin:auto;color:#222">
-<h1 style="font-size:22px">${escapeHtml(value)} to spend at ${escapeHtml(input.storeName)}</h1>
-${from ? `<p>Hi ${escapeHtml(input.recipientName || "there")}, ${escapeHtml(from)} sent you a gift card.</p>` : ""}
-${input.message ? `<p style="font-style:italic">"${escapeHtml(input.message)}"</p>` : ""}
-<p style="font-size:20px;letter-spacing:2px;font-weight:bold;border:1px solid #ddd;padding:12px;text-align:center">${escapeHtml(input.code)}</p>
-<p>Enter the code at checkout under "Add gift card or discount code".${escapeHtml(until)}</p>
-${input.shopUrl ? `<p><a href="${escapeHtml(input.shopUrl)}">Shop now</a></p>` : ""}
-</div>`;
+  const html = emailLayout({
+    storeName: input.storeName,
+    preheader: `${value} gift card code inside.`,
+    title: `${value} to spend at ${input.storeName}`,
+    body: `${from ? emailParagraph(`Hi ${escapeHtml(input.recipientName || "there")}, ${escapeHtml(from)} sent you a gift card.`) : ""}
+${input.message ? emailPanel(`<em>&ldquo;${escapeHtml(input.message)}&rdquo;</em>`) : ""}
+${emailHeading("Your code")}
+${emailPanel(`<span class="em-text" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:22px;line-height:30px;letter-spacing:2px;font-weight:700;color:#18181b;">${escapeHtml(input.code)}</span>`, "center")}
+${emailParagraph(`Enter the code at checkout under &ldquo;Add gift card or discount code&rdquo;.${escapeHtml(until)}`)}
+${input.shopUrl ? emailButton("Start shopping", input.shopUrl) : ""}`,
+  });
   return { subject, text: lines.join("\n\n"), html };
 }
 

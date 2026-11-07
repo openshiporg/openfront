@@ -4,6 +4,7 @@
 // valid for 7 days. Reserved test domains (example.com, .test, .invalid) are never mailed. Cart.abandonedEmailSent is claimed atomically
 // before sending, so replicas and repeated passes email a cart at most once.
 import { createCartProof } from "../security/token-crypto";
+import { emailButton, emailLayout, emailMuted, emailPanel, emailParagraph } from "./email-layout";
 
 export const ABANDONED_AFTER_HOURS = 10;
 const LOOKBACK_HOURS = 48;
@@ -19,13 +20,15 @@ const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (c) => ({ "&": "
 export function abandonedCartMessage(cart: { email: string; countryCode: string; items: { title: string; quantity: number }[] }, resumeUrl: string, storeName = "our store"): AbandonedCartMessage {
   const lines = cart.items.map((item) => `${item.quantity} × ${item.title}`);
   const text = `You left something in your cart at ${storeName}.\n\n${lines.join("\n")}\n\nPick up where you left off: ${resumeUrl}`;
-  const html = `<body style="background:#f9f9f9;font-family:Helvetica,Arial,sans-serif;color:#333">
-<table width="100%" cellpadding="0" cellspacing="20" style="background:#fff;max-width:600px;margin:auto;border-radius:10px">
-<tr><td style="font-size:22px;font-weight:bold">You left something in your cart</td></tr>
-<tr><td style="font-size:16px;line-height:1.6">${lines.map(escapeHtml).join("<br>")}</td></tr>
-<tr><td><a href="${escapeHtml(resumeUrl)}" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:12px 20px;border-radius:6px;font-size:16px">Return to your cart</a></td></tr>
-<tr><td style="font-size:13px;color:#666">The link works for 7 days. If you already checked out, you can ignore this email.</td></tr>
-</table></body>`;
+  const html = emailLayout({
+    storeName: storeName === "our store" ? undefined : storeName,
+    preheader: "Your cart is saved. Pick up where you left off.",
+    title: "You left something in your cart",
+    body: `${emailParagraph("Your items are still waiting. Pick up right where you left off.")}
+${emailPanel(lines.map(escapeHtml).join("<br>"))}
+${emailButton("Return to your cart", resumeUrl)}
+${emailMuted("The link works for 7 days. If you already checked out, you can ignore this email.")}`,
+  });
   return { to: cart.email, subject: "You left something in your cart", html, text };
 }
 

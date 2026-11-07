@@ -43,12 +43,19 @@ export default async function requestOrderReturn(
   if (process.env.SMTP_HOST && order.email) {
     try {
       const { sendStoreEmail } = await import("../lib/mail");
+      const { emailLayout, emailPanel, emailParagraph, escapeHtml } = await import("../lib/email-layout");
       const lines = (created.metadata as any).orderLineItems.map((l: any) => `${l.quantity} × ${l.title}${l.variantTitle ? ` (${l.variantTitle})` : ""}`);
       await sendStoreEmail({
         to: order.email,
         subject: `Return request received - Order #${order.displayId}`,
         text: `We received your return request for order #${order.displayId}:\n\n${lines.join("\n")}\n\nWe'll review it and email you when your refund is issued. Refunds go back to your original payment method.`,
-        html: `<p>We received your return request for order #${order.displayId}:</p><p>${lines.map((l: string) => l.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]!))).join("<br>")}</p><p>We'll review it and email you when your refund is issued. Refunds go back to your original payment method.</p>`,
+        html: emailLayout({
+          preheader: `We received your return request for order #${order.displayId}.`,
+          title: "Return request received",
+          body: `${emailParagraph(`We received your return request for order <strong>#${escapeHtml(order.displayId)}</strong>.`)}
+${emailPanel(lines.map(escapeHtml).join("<br>"))}
+${emailParagraph("We'll review it and email you when your refund is issued. Refunds go back to your original payment method.")}`,
+        }),
       });
     } catch {
       console.error("Return request acknowledgement email failed");
