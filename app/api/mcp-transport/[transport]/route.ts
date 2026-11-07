@@ -1672,6 +1672,87 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
           });
         }
 
+        if (name === 'updateCartItem' || name === 'removeCartItem') {
+          const { cartId, lineItemId } = args;
+          const removing = name === 'removeCartItem' || Number(args.quantity) === 0;
+          const rpcError = (message: string) => new Response(JSON.stringify({
+            jsonrpc: '2.0',
+            id: body.id,
+            result: { isError: true, content: [{ type: 'text', text: message }] },
+          }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+          if (typeof cartId !== 'string' || !cartId || typeof lineItemId !== 'string' || !lineItemId) {
+            return rpcError('cartId and lineItemId are required');
+          }
+          if (!removing && (!Number.isInteger(args.quantity) || args.quantity < 0)) {
+            return rpcError('quantity must be a whole number, 0 or more (0 removes the item)');
+          }
+
+          const cartFields = `
+            id
+            lineItems {
+              id
+              quantity
+              productVariant { id title }
+            }
+          `;
+          try {
+            let cart;
+            if (removing) {
+              // Same mutation the storefront's deleteLineItem uses. The line must be on this cart.
+              const before = await executeGraphQL(
+                `query GetCart($cartId: ID!) { activeCart(cartId: $cartId) }`,
+                graphqlEndpoint, auth, { cartId }
+              );
+              const lines = (before.data?.activeCart?.lineItems ?? []) as Array<{ id: string }>;
+              if (!lines.some((line) => line.id === lineItemId)) {
+                return rpcError('That line item is not in this cart');
+              }
+              const result = await executeGraphQL(
+                `mutation RemoveCartItem($cartId: ID!, $data: CartUpdateInput!) {
+                  updateActiveCart(cartId: $cartId, data: $data) { ${cartFields} }
+                }`,
+                graphqlEndpoint, auth,
+                { cartId, data: { lineItems: { disconnect: [{ id: lineItemId }] } } }
+              );
+              if (result.errors?.length) return rpcError(result.errors[0].message);
+              cart = result.data?.updateActiveCart;
+            } else {
+              // Same mutation the storefront's updateLineItem uses (checks the line belongs to the cart).
+              const result = await executeGraphQL(
+                `mutation UpdateCartItem($cartId: ID!, $lineId: ID!, $quantity: Int!) {
+                  updateActiveCartLineItem(cartId: $cartId, lineId: $lineId, quantity: $quantity) { ${cartFields} }
+                }`,
+                graphqlEndpoint, auth, { cartId, lineId: lineItemId, quantity: args.quantity }
+              );
+              if (result.errors?.length) return rpcError(result.errors[0].message);
+              cart = result.data?.updateActiveCartLineItem;
+            }
+
+            dataHasChanged = true;
+            return new Response(JSON.stringify({
+              jsonrpc: '2.0',
+              id: body.id,
+              result: {
+                content: [{
+                  type: 'text',
+                  text: JSON.stringify({
+                    cart,
+                    message: removing ? 'Removed item from cart' : `Set quantity to ${args.quantity}`,
+                    lineItemId,
+                    newItemCount: cart?.lineItems?.length || 0,
+                  }, null, 2),
+                }],
+              }
+            }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json', 'X-Data-Changed': 'true' },
+            });
+          } catch (error) {
+            return rpcError(error instanceof Error ? error.message : 'Could not update the cart');
+          }
+        }
+
         if (name === 'setShippingAddress') {
           const { cartId, email, firstName, lastName, address1, city, postalCode, countryCode, province, company, phone } = args;
           
