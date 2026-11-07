@@ -75,6 +75,16 @@ export const Discount = list({
     ...trackingFields,
   },
   hooks: {
+    validateInput({ resolvedData, item, addValidationError }) {
+      const startsAt = resolvedData.startsAt ?? item?.startsAt;
+      const endsAt = resolvedData.endsAt !== undefined ? resolvedData.endsAt : item?.endsAt;
+      if (startsAt && endsAt && new Date(endsAt) <= new Date(startsAt)) {
+        addValidationError("A discount has to end after it starts.");
+      }
+      const usageLimit = resolvedData.usageLimit !== undefined ? resolvedData.usageLimit : item?.usageLimit;
+      if (typeof usageLimit === "number" && usageLimit < 0) addValidationError("A usage limit can't be negative.");
+      if (typeof resolvedData.usageCount === "number" && resolvedData.usageCount < 0) addValidationError("The usage count can't be negative.");
+    },
     async afterOperation({ operation, item, context }) {
       if (operation === "create" || operation === "update") {
         const sudoContext = context.sudo();

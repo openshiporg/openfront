@@ -280,7 +280,7 @@ export const extendGraphqlSchema = (schema: GraphQLSchema) =>
         ): PaymentSession
         handlePaymentProviderWebhook(providerId: ID!, event: JSON!, headers: JSON!): WebhookResult!
         importInventory: Boolean
-        adjustInventory(variantId: ID!, delta: Int!, reason: String!, note: String): ProductVariant
+        adjustInventory(variantId: ID!, delta: Int!, reason: String!, note: String, expectedQuantity: Int): ProductVariant
         getRatesForOrder(orderId: ID!, providerId: ID!, dimensions: DimensionsInput): [ShippingRate!]!
         validateShippingAddress(providerId: ID!, address: JSON!): AddressValidationResult!
         trackShipment(providerId: ID!, trackingNumber: String!): ShipmentTrackingResult!

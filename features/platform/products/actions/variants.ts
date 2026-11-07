@@ -239,6 +239,8 @@ export async function updateProductVariant(variantId: string, data: {
   upc?: string;
   material?: string;
   inventoryQuantity?: number;
+  /** The stock the form was showing; when set, a stock change is saved as a compare-and-set delta. */
+  previousInventoryQuantity?: number;
   manageInventory?: boolean;
   allowBackorder?: boolean;
   hsCode?: string;
@@ -283,7 +285,25 @@ export async function updateProductVariant(variantId: string, data: {
   if (data.ean !== undefined) input.ean = data.ean;
   if (data.upc !== undefined) input.upc = data.upc;
   if (data.material !== undefined) input.material = data.material;
-  if (data.inventoryQuantity !== undefined) input.inventoryQuantity = data.inventoryQuantity;
+  // A stock edit is a delta from what the form showed, applied only if stock is still that number,
+  // so a sale reserved meanwhile is never overwritten (adjustInventory compare-and-set).
+  const stockDelta =
+    data.inventoryQuantity !== undefined &&
+    data.previousInventoryQuantity !== undefined &&
+    Number.isInteger(data.inventoryQuantity) &&
+    Number.isInteger(data.previousInventoryQuantity)
+      ? data.inventoryQuantity - data.previousInventoryQuantity
+      : null;
+  if (data.inventoryQuantity !== undefined && stockDelta === null) input.inventoryQuantity = data.inventoryQuantity;
+  if (stockDelta) {
+    const adjusted = await keystoneClient(
+      `mutation AdjustInventory($variantId: ID!, $delta: Int!, $reason: String!, $expectedQuantity: Int) {
+        adjustInventory(variantId: $variantId, delta: $delta, reason: $reason, expectedQuantity: $expectedQuantity) { id inventoryQuantity }
+      }`,
+      { variantId, delta: stockDelta, reason: 'Stock edited in the dashboard', expectedQuantity: data.previousInventoryQuantity }
+    );
+    if (!adjusted.success) return adjusted;
+  }
   if (data.manageInventory !== undefined) input.manageInventory = data.manageInventory;
   if (data.allowBackorder !== undefined) input.allowBackorder = data.allowBackorder;
   if (data.hsCode !== undefined) input.hsCode = data.hsCode;

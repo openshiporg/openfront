@@ -504,6 +504,24 @@ export const Account = list({
     ...trackingFields,
   },
   hooks: {
+    // Checkout charges "the" active business account of a user (completeActiveCart takes the first
+    // match), so a user has at most one active business account. Enforced by the partial unique index
+    // Account_one_active_business_per_user; this hook gives the readable reason first.
+    async validateInput({ operation, resolvedData, item, context, addValidationError }) {
+      const status = resolvedData.status ?? item?.status;
+      const accountType = resolvedData.accountType ?? item?.accountType;
+      const userId = resolvedData.user?.connect?.id ?? (resolvedData.user === null ? null : item?.userId);
+      if (typeof resolvedData.creditLimit === 'number' && resolvedData.creditLimit < 0) {
+        addValidationError("A credit limit can't be negative.");
+      }
+      if (status !== 'active' || accountType !== 'business' || !userId) return;
+      const others = await context.sudo().prisma.account.count({
+        where: { userId, status: 'active', accountType: 'business', ...(item?.id ? { id: { not: String(item.id) } } : {}) },
+      });
+      if (others > 0) {
+        addValidationError('This customer already has an active business account. Suspend it before activating another one.');
+      }
+    },
     resolveInput({ operation, resolvedData }) {
       if (operation === 'create' && !resolvedData.accountNumber) {
         const timestamp = Date.now();

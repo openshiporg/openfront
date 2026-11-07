@@ -480,7 +480,9 @@ export function VariantsTab({ product: initialProduct }: VariantsTab2Props) {
   // Handle updating variant
   const handleVariantUpdate = async (variant: any) => {
     try {
+      const shown = (currentProduct?.productVariants || []).find((v: any) => v.id === variant.id);
       const response = await updateProductVariant(variant.id, {
+        previousInventoryQuantity: shown?.inventoryQuantity,
         primaryImageId: variant.primaryImage?.id || null,
         title: variant.title,
         sku: variant.sku,

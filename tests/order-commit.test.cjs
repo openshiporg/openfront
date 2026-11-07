@@ -54,6 +54,7 @@ function env({ failTx = false, existing = false, smtp = true, mail } = {}) {
     cart: { update: async () => ({}) },
     address: { findUnique: async () => null },
     notification: { create: async () => ({}) },
+    $queryRaw: async () => [{ next: 1001 }],
   };
   const prisma = {
     $transaction: async (fn) => fn(tx),

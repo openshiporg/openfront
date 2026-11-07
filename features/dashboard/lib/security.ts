@@ -24,6 +24,8 @@ const USER_FACING_CODES = new Set([
   'KS_VALIDATION_FAILURE', 'KS_USER_INPUT_ERROR', 'KS_ACCESS_DENIED', 'KS_EXTENSION_ERROR',
   'REFUND_EXCEEDS_BALANCE', 'PAYMENT_NOT_CAPTURED', 'REFUND_IN_PROGRESS',
   'FULFILLMENT_TRACKING_INCOMPLETE',
+  'INVENTORY_CHANGED', 'INVENTORY_NEGATIVE', 'INVENTORY_DELTA_INVALID', 'INVENTORY_REASON_REQUIRED',
+  'VARIANT_NOT_FOUND', 'ACCESS_DENIED',
 ]);
 // Anything that looks like database, driver or stack output stays server-side.
 const UNSAFE_DETAIL = /prisma|invocation|\bat\s+\S+\s*\(|\bat\s+\/|node_modules|postgres(ql)?:\/\/|\bSQL\b|ECONN|query engine|\.ts:\d+|\.js:\d+/i;

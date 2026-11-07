@@ -192,6 +192,9 @@ export async function createOrderFromCartAtomically(cart: any, sudo: any) {
       });
     }
 
+    // Order numbers come from a database sequence (unique index Order_displayId_key): the old
+    // seconds-since-epoch number repeated whenever two checkouts finished in the same second.
+    const [{ next }] = await tx.$queryRaw`SELECT nextval('"Order_displayId_seq"')::int AS next`;
     const order = await tx.order.create({
       data: {
         cart: { connect: { id: cart.id } },
@@ -205,7 +208,7 @@ export async function createOrderFromCartAtomically(cart: any, sudo: any) {
         shippingMethods: { connect: (cart.shippingMethods || []).map((item: any) => ({ id: item.id })) },
         lineItems: { connect: lineItemIds.map((id) => ({ id })) },
         status: "pending",
-        displayId: Math.floor(Date.now() / 1000),
+        displayId: Number(next),
         taxRate: cart.region.taxRate || 0,
         metadata: { ...(cart.metadata || {}), commercialSnapshot },
         secretKey,

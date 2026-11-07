@@ -785,7 +785,7 @@ model OAuthToken {
 model Order {
   id                   String                @id @default(cuid())
   status               OrderStatusType       @default(pending)
-  displayId            Int
+  displayId            Int                   @unique
   email                String                @default("")
   taxRate              Float?
   canceledAt           DateTime?
