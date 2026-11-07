@@ -3,6 +3,7 @@ import { renderMcpCard } from './shell';
 
 const dollars = (minor: unknown) => (typeof minor === 'number' && Number.isFinite(minor) ? minor / 100 : undefined);
 const http = (value: unknown, base: string) => {
+  if (typeof value !== 'string' || !value.trim()) return undefined;
   try {
     const url = new URL(String(value ?? ''), base);
     return url.protocol === 'http:' || url.protocol === 'https:' ? url.toString() : undefined;

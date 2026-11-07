@@ -97,7 +97,13 @@ export function ProductCard({ data }: { data: ProductData }) {
             {product.variants.length > 1 && product.options.map((option) => (
               <div key={option.id} className="flex flex-col gap-1.5">
                 <span className="label text-muted-foreground">{option.title}</span>
+                {option.values.some((v) => v.length > 12) || option.values.length > 5 ? (
+                  <RadioGroup label={option.title} value={chosen[option.id] as string | undefined} onValueChange={(v) => setChosen((c) => ({ ...c, [option.id]: v }))}>
+                    {option.values.map((value) => <Radio key={value} value={value} label={value} />)}
+                  </RadioGroup>
+                ) : (
                 <Segmented size="sm" label={option.title} value={chosen[option.id] as string | undefined} onValueChange={(v) => setChosen((c) => ({ ...c, [option.id]: v }))} options={option.values.map((value) => ({ value, label: value }))} className="max-w-full flex-wrap" />
+                )}
               </div>
             ))}
             {restaurant?.groups.map((group) => (
