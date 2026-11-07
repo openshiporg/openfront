@@ -16,6 +16,7 @@ import { findOAuthToken } from "./security/oauth-credentials";
 import { s3ForcePathStyle } from "./lib/s3-storage";
 import { withMcpBearerSessions } from "./mcp-oauth/session";
 import { pooledDatabaseUrl } from './database-url';
+import { throwKeystonePrismaErrors } from './lib/keystonePrismaErrors';
 // Add rate limiting on storefront queries and mutations
 // import { ApolloArmor } from "@escape.tech/graphql-armor";
 // import { applyMiddleware } from "graphql-middleware";
@@ -444,6 +445,8 @@ export default withAuth(
       db: {
         provider: "postgresql",
         url: pooledDatabaseUrl(databaseURL),
+        // Keystone returns failed queries as values; this makes them throw so transactions roll back.
+        extendPrismaClient: throwKeystonePrismaErrors,
       },
       lists: models,
       storage: {
