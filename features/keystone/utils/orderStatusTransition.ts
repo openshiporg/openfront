@@ -1,3 +1,4 @@
+import { GraphQLError } from "graphql";
 import {
   enqueueWebhookOutbox,
   subscribedWebhookEndpointIds,
@@ -43,19 +44,19 @@ export async function applyOrderStatusTransition(
     if (order.status === status) return { changed: false };
 
     if (status === "archived") {
-      if (order.status !== "completed") throw new Error("Only completed orders can be archived");
+      if (order.status !== "completed") throw new GraphQLError("Only completed orders can be archived", { extensions: { code: "ORDER_TRANSITION_REFUSED" } });
     } else {
       if (!["pending", "completed", "requires_action"].includes(order.status)) {
-        throw new Error("Order cannot be canceled from its current state");
+        throw new GraphQLError("Order cannot be canceled from its current state", { extensions: { code: "ORDER_TRANSITION_REFUSED" } });
       }
-      if (order.fulfillments.length) throw new Error("Cancel active fulfillments before canceling the order");
+      if (order.fulfillments.length) throw new GraphQLError("Cancel active fulfillments before canceling the order", { extensions: { code: "ORDER_HAS_ACTIVE_FULFILLMENT" } });
       if (
         order.payments.some(
           (payment: any) =>
             payment.refunds.reduce((sum: number, refund: any) => sum + refund.amount, 0) < payment.amount
         )
       ) {
-        throw new Error("Captured payments must be fully refunded before cancellation");
+        throw new GraphQLError("Captured payments must be fully refunded before cancellation", { extensions: { code: "ORDER_NOT_REFUNDED" } });
       }
       for (const line of order.lineItems) {
         if (!line.productVariant?.manageInventory) continue;
