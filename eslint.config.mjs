@@ -6,6 +6,7 @@ export default defineConfig([
   ...nextVitals,
   ...nextTs,
   {
+    files: ["**/*.{js,jsx,mjs,ts,tsx,mts,cts}"],
     // NKS carries inherited dynamic dashboard/storefront surfaces and predates
     // the React Compiler lint rules bundled with Next 16. Keep lint executable
     // and visible without treating that inherited debt as a release blocker.
@@ -31,6 +32,14 @@ export default defineConfig([
       "react-hooks/static-components": "warn",
       "react/no-children-prop": "warn",
       "react/no-unescaped-entities": "warn",
+    },
+  },
+  {
+    // The node:test files are plain CommonJS and load modules with require().
+    files: ["tests/**/*.cjs"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+      "@next/next/no-assign-module-variable": "off",
     },
   },
   globalIgnores([
