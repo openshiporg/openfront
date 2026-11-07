@@ -31,12 +31,12 @@ function ListCard({ list, count, hideCreate = false }: ListCardProps) {
           <h3 className="text-sm font-semibold text-foreground">
             {list.label}
           </h3>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 min-h-4 text-xs text-muted-foreground">
             {isSingleton 
               ? 'Singleton' 
-              : count === null || count === undefined
-                ? 'Unknown'
-                : `${count} item${count !== 1 ? 's' : ''}`
+              : typeof count === 'number'
+                ? `${count} item${count !== 1 ? 's' : ''}`
+                : null
             }
           </p>
         </CardContent>

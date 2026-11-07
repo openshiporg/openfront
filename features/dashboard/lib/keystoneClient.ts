@@ -27,6 +27,35 @@ async function createGraphQLClient(): Promise<GraphQLClient> {
 }
 
 /**
+ * Run a query whose root fields are independent (e.g. one count per list) and keep every field that resolved.
+ * A field that failed (access denied, a transient database error) comes back as null and its path is listed in
+ * failedFields, instead of one failure discarding the whole response.
+ */
+export async function keystonePartialQuery<T extends Record<string, unknown>>(
+  query: string,
+  variables: Record<string, unknown> = {},
+): Promise<{ success: true; data: Partial<T>; failedFields: string[] } | { success: false; error: string }> {
+  try {
+    const { endpoint, fetch: internalFetch } = await getServerGraphQLTarget();
+    const authHeaders = await getAuthHeaders();
+    const client = new GraphQLClient(endpoint, {
+      credentials: 'include',
+      redirect: 'error',
+      errorPolicy: 'all',
+      ...(internalFetch ? { fetch: internalFetch } : {}),
+      headers: authHeaders || {},
+    });
+    const result = await client.rawRequest<T>(query, variables);
+    const failedFields = (result.errors ?? []).map(error => String(error.path?.[0] ?? '')).filter(Boolean);
+    if (!result.data) return { success: false, error: PUBLIC_REQUEST_ERROR };
+    return { success: true, data: result.data, failedFields };
+  } catch (error) {
+    console.error("Error fetching GraphQL data:", safeErrorSummary(error));
+    return { success: false, error: publicGraphQLErrorMessage(error) };
+  }
+}
+
+/**
  * Fetch data from the GraphQL API
  * Automatically handles file uploads by detecting File/Blob objects in variables
  * @param query GraphQL query or mutation
