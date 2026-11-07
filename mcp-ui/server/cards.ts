@@ -51,11 +51,11 @@ export function slimOpenfrontProduct(p: any, origin: string): SlimProduct {
   };
 }
 
-export function productsCardHtml(products: any[], origin: string, countryCode: string, storeName = 'Products') {
+export function productsCardHtml(products: any[], origin: string, countryCode: string, storeName?: string, query?: string) {
   const slim = products.map((p) => slimOpenfrontProduct(p, origin));
   return renderMcpCard({
     kind: 'discover',
-    data: { title: 'Products', stores: [{ storeId: '', name: storeName, countryCode, currency: slim[0]?.currency ?? 'USD', products: slim }] },
+    data: { title: [storeName, query].filter(Boolean).join(' · ') || 'Products', stores: [{ storeId: '', name: 'Products', countryCode, currency: slim[0]?.currency ?? 'USD', products: slim }] },
   }, 'Products', origin);
 }
 

@@ -352,7 +352,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
             countryCode: {
               type: 'string',
               description: 'Country code for regional pricing and shipping (e.g., "us", "ca", "gb"). If not provided, you must ask the user where they want items shipped with friendly language.'
-            }
+            },
+            query: { type: 'string', description: 'Optional words to match in product titles (e.g. "t-shirt").' }
           },
           required: ['countryCode']
         }
@@ -1321,11 +1322,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
         // Commerce tool handlers
         if (name === 'searchProducts') {
           const { countryCode, limit = 10 } = args;
+          const searchText = typeof args.query === 'string' ? args.query.trim().slice(0, 80) : '';
+          const titleFilter = searchText ? `, where: { title: { contains: ${JSON.stringify(searchText)}, mode: insensitive } }` : '';
 
-          // Simple query to get all products - filtering will be basic
+          // Simple query to get products, optionally filtered by title
           const queryString = `
             query {
-              products(take: ${limit}) {
+              stores(take: 1) { name }
+              products(take: ${limit}${titleFilter}) {
                 id
                 title
                 handle
@@ -1374,10 +1378,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ tra
 
           const result = await executeGraphQL(queryString, graphqlEndpoint, auth);
           const products = result.data?.products || [];
+          const shopName = result.data?.stores?.[0]?.name;
 
           const uiResource = createUIResource({
             uri: `ui://openfront/products?country=${countryCode}`,
-            content: { type: 'rawHtml', htmlString: productsCardHtml(products, await getBaseUrl(), countryCode) },
+            content: { type: 'rawHtml', htmlString: productsCardHtml(products, await getBaseUrl(), countryCode, shopName, searchText) },
             encoding: 'text',
           });
           const summary = products.map((p: any) => ({
