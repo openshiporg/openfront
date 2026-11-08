@@ -81,8 +81,12 @@ export default function ProductActions({ product, region, disabled, onVariantCha
   }, [variants]);
 
   useEffect(() => {
+    // An option with no values (left empty in the dashboard) can never be
+    // chosen, so it is left out; otherwise no variant would ever match and the
+    // product could not be added to the cart.
     const optionObj: any = {};
     for (const option of product.productOptions || []) {
+      if (option.productOptionValues && !option.productOptionValues.length) continue;
       Object.assign(optionObj, { [option.id]: undefined });
     }
     setOptions(optionObj);
