@@ -3,6 +3,7 @@ import Summary from "./summary"
 import EmptyCartMessage from "../components/empty-cart-message"
 import SignInPrompt from "../components/sign-in-prompt"
 import Divider from "@/features/storefront/modules/common/components/divider"
+import OpenfrontCTA from "@/features/storefront/modules/layout/components/openfront-cta"
 
 interface CartTemplateProps {
   cart?: {
@@ -43,6 +44,11 @@ const CartTemplate = ({ cart, user }: CartTemplateProps) => {
         ) : (
           <div>
             <EmptyCartMessage />
+          </div>
+        )}
+        {process.env.HIDE_OPENFRONT_BRANDING !== "true" && (
+          <div className="pt-10">
+            <OpenfrontCTA inline />
           </div>
         )}
       </div>

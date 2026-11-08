@@ -52,6 +52,29 @@ const Item = ({ item, region, type = "full" }: CartItemProps) => {
     message && setError(message);
   };
 
+  const quantityControls = (
+    <>
+      <div className="flex gap-2 items-center w-28">
+        <CartItemSelect
+          value={item.quantity}
+          onChange={(e) => changeQuantity(parseInt(e.target.value))}
+          min={1}
+          max={maxQuantity}
+          step={1}
+          className="w-20 h-10"
+        />
+        {updating ? (
+          <Button size="icon" variant="outline" disabled>
+            <RiLoader2Fill className="animate-spin" />
+          </Button>
+        ) : (
+          <DeleteButton id={item.id} />
+        )}
+      </div>
+      <ErrorMessage error={error} />
+    </>
+  );
+
   return (
     <TableRow className="w-full">
       <TableCell className="!pl-0 p-4 w-24">
@@ -77,29 +100,15 @@ const Item = ({ item, region, type = "full" }: CartItemProps) => {
           variant={{ sku: item.productVariant?.sku || "" }}
           variantTitle={item.productVariant?.title}
         />
+        {type === "full" && (
+          // On phones the quantity and remove controls sit under the title, so the
+          // row keeps a margin on the right and the line total stays in view.
+          <div className="mt-3 sm:hidden">{quantityControls}</div>
+        )}
       </TableCell>
 
       {type === "full" && (
-        <TableCell>
-          <div className="flex gap-2 items-center w-28">
-            <CartItemSelect
-              value={item.quantity}
-              onChange={(e) => changeQuantity(parseInt(e.target.value))}
-              min={1}
-              max={maxQuantity}
-              step={1}
-              className="w-20 h-10"
-            />
-            {updating ? (
-              <Button size="icon" variant="outline" disabled>
-                <RiLoader2Fill className="animate-spin" />
-              </Button>
-            ) : (
-              <DeleteButton id={item.id} />
-            )}
-          </div>
-          <ErrorMessage error={error} />
-        </TableCell>
+        <TableCell className="hidden sm:table-cell">{quantityControls}</TableCell>
       )}
 
       {type === "full" && (

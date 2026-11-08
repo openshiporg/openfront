@@ -7,9 +7,11 @@ const spaceGrotesk = Space_Grotesk({
   adjustFontFallback: false,
 });
 
-const OpenfrontCTA = () => {
+/** Floating everywhere except on the cart, where it would sit over the summary on a phone.
+ *  `inline` renders it in the page flow (checkout footer, cart end). */
+const OpenfrontCTA = ({ inline = false }: { inline?: boolean }) => {
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className={inline ? "flex justify-center" : "fixed bottom-4 right-4 z-50"}>
       <a
         href="https://www.openship.org"
         target="_blank"

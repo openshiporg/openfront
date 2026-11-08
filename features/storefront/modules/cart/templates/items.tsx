@@ -22,7 +22,7 @@ const ItemsTemplate = ({
           <TableRow className="text-muted-foreground text-base font-semibold">
             <TableHead className="!pl-0">Item</TableHead>
             <TableHead></TableHead>
-            <TableHead>Quantity</TableHead>
+            <TableHead className="hidden sm:table-cell">Quantity</TableHead>
             <TableHead className="hidden sm:table-cell">
               Price
             </TableHead>

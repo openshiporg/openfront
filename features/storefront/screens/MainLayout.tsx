@@ -1,6 +1,7 @@
 import Footer from "@/features/storefront/modules/layout/templates/footer"
 import Nav from "@/features/storefront/modules/layout/templates/nav"
 import OpenfrontCTA from "@/features/storefront/modules/layout/components/openfront-cta"
+import FloatingOutsideCart from "@/features/storefront/modules/layout/components/openfront-cta/floating"
 import { Metadata } from "next"
 import InteractiveLink from "@/features/storefront/modules/common/components/interactive-link"
 import StorefrontServer from "./StorefrontServer"
@@ -18,7 +19,11 @@ export async function MainLayout({ children }: { children: React.ReactNode }) {
       <Nav />
       {children}
       <Footer />
-      {!hideBranding && <OpenfrontCTA />}
+      {!hideBranding && (
+        <FloatingOutsideCart>
+          <OpenfrontCTA />
+        </FloatingOutsideCart>
+      )}
     </StorefrontServer>
   )
 }
