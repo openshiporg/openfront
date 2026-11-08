@@ -56,3 +56,11 @@ test('the Cart model routes its user hook through resolveCartOwner with the staf
   assert.match(hook, /existingUserId: \(item as any\)\?\.userId/);
   assert.doesNotMatch(hook, /return \{ connect: \{ id: context\.session\.itemId \} \}/);
 });
+
+test('the create-time owner override applies to shoppers only, not staff', () => {
+  const src = fs.readFileSync(path.join(root, 'features/keystone/models/Cart.ts'), 'utf8');
+  const lines = src.split('\n').filter((line) => /resolvedData\.user = \{ connect: \{ id: context\.session\.itemId \} \}/.test(line));
+  assert.equal(lines.length, 1);
+  const at = src.indexOf(lines[0]);
+  assert.match(src.slice(at - 300, at), /!permissions\.canManageOrders\(\{ session: context\.session \}\)/);
+});

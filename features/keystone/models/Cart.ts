@@ -332,8 +332,9 @@ export const Cart = list({
         resolvedData.type = 'default';
       }
 
-      // Handle user connection on create if user is authenticated
-      if (operation === 'create' && context.session?.itemId) {
+      // A shopper's new cart is always theirs; staff creating a cart keep the owner they chose
+      // (or none, for a guest cart) instead of becoming its owner.
+      if (operation === 'create' && context.session?.itemId && !permissions.canManageOrders({ session: context.session })) {
         resolvedData.user = { connect: { id: context.session.itemId } };
       }
 
