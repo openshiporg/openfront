@@ -19,7 +19,7 @@ const { resolvePublicUserCreateData } = um.exports;
 
 const NEW = '2026-11-02T19:16:00.000Z', OLD = '2026-01-01T00:00:00.000Z';
 function db(users) {
-  const rows = users.map((u) => ({ roleId: null, accounts: [], carts: [{ id: 'c' }], orders: [], ...u }));
+  const rows = users.map((u) => ({ roleId: null, accounts: [], carts: [{ id: 'c' }], orders: [], addresses: [], ...u }));
   return { rows, user: {
     findFirst: async ({ where }) => rows.find((u) => u.email.toLowerCase() === where.email.equals.toLowerCase()) || null,
     update: async ({ where, data }) => { Object.assign(rows.find((u) => u.id === where.id), data); },
@@ -142,4 +142,18 @@ test('resolveInput itself never retires; manager creates never retire', async ()
   assert.equal(prisma.rows[0].email, 'a@x.com');
   await User.hooks.beforeOperation({ operation: 'create', resolvedData: { email: 'a@x.com' }, context: { session: { manager: true }, prisma } });
   assert.equal(prisma.rows[0].email, 'a@x.com');
+});
+
+test('headless guest checkout: a guest with only a shipping address (no linked cart or order) is retired so the same email can check out again', async () => {
+  const prisma = db([{ id: 'g1', email: 'a@x.com', hasAccount: false, createdAt: NEW, carts: [], orders: [], addresses: [{ id: 'ad' }] }]);
+  assert.equal(await retireReturningGuest(prisma, 'a@x.com'), true);
+  assert.equal(prisma.rows[0].email, retiredGuestEmail('g1'));
+});
+
+test('a hasAccount:false row with no cart, order or address (a bare sign-up) is still kept; a member with an address is never retired', async () => {
+  const bare = db([{ id: 'b', email: 'a@x.com', hasAccount: false, createdAt: NEW, carts: [], orders: [], addresses: [] }]);
+  assert.equal(await retireReturningGuest(bare, 'a@x.com'), false);
+  const member = db([{ id: 'm', email: 'a@x.com', hasAccount: true, createdAt: NEW, carts: [], orders: [], addresses: [{ id: 'ad' }] }]);
+  assert.equal(await retireReturningGuest(member, 'a@x.com'), false);
+  assert.equal(member.rows[0].email, 'a@x.com');
 });

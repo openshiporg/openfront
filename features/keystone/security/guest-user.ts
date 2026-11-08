@@ -20,6 +20,7 @@ type GuestCandidate = {
   roleId?: string | null;
   accounts?: unknown[];
   carts?: unknown[];
+  addresses?: unknown[];
   orders?: unknown[];
 };
 
@@ -27,8 +28,12 @@ export function isRetirableGuest(user: GuestCandidate | null | undefined, epoch:
   if (!user || user.hasAccount !== false) return false;
   if (user.roleId) return false;
   if (user.accounts && user.accounts.length) return false;
-  // The guest flow creates the user for a cart/order; a sign-up has neither.
-  if (!(user.carts && user.carts.length) && !(user.orders && user.orders.length)) return false;
+  // The guest flow creates the user for a checkout and gives it a shipping address;
+  // a sign-up has none of these. A guest's cart and order are not always linked to the
+  // user (updateActiveCart drops a client-sent user, and guest orders carry no user),
+  // so the address is the evidence that survives for a headless storefront checkout.
+  const has = (rows?: unknown[]) => Boolean(rows && rows.length);
+  if (!has(user.carts) && !has(user.orders) && !has(user.addresses)) return false;
   const created = user.createdAt ? new Date(user.createdAt).getTime() : NaN;
   return Number.isFinite(created) && created >= epoch.getTime();
 }
@@ -43,7 +48,7 @@ export async function retireReturningGuest(prisma: any, email: unknown): Promise
   if (!normalized) return false;
   const existing = await prisma.user.findFirst({
     where: { email: { equals: normalized, mode: "insensitive" } },
-    select: { id: true, hasAccount: true, createdAt: true, roleId: true, accounts: { select: { id: true }, take: 1 }, carts: { select: { id: true }, take: 1 }, orders: { select: { id: true }, take: 1 } },
+    select: { id: true, hasAccount: true, createdAt: true, roleId: true, accounts: { select: { id: true }, take: 1 }, carts: { select: { id: true }, take: 1 }, orders: { select: { id: true }, take: 1 }, addresses: { select: { id: true }, take: 1 } },
   });
   if (!isRetirableGuest(existing)) return false;
   await prisma.user.update({ where: { id: existing.id }, data: { email: retiredGuestEmail(existing.id) } });
