@@ -16,7 +16,7 @@ export const OrderEvent = list({
       hooks: {
         resolveInput({ operation, resolvedData, context }) {
           if (
-            (operation === 'create' || operation === 'update') &&
+            operation === 'create' &&
             !resolvedData.user &&
             context.session?.itemId
           ) {
@@ -59,7 +59,7 @@ export const OrderEvent = list({
       hooks: {
         resolveInput({ operation, resolvedData, context }) {
           if (
-            (operation === 'create' || operation === 'update') &&
+            operation === 'create' &&
             !resolvedData.createdBy &&
             context.session?.itemId
           ) {
