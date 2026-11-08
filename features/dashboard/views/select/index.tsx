@@ -224,7 +224,7 @@ export function Field({
   return (
     <FieldContainer>
       <NullableFieldWrapper
-        isAllowed={!isRequired}
+        isAllowed={!isRequired && !isReadOnly}
         autoFocus={isNull && autoFocus}
         label={field.label}
         isReadOnly={isReadOnly}
