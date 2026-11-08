@@ -22,9 +22,28 @@ async function clearLegacyCartCookie() {
   if (jar.get("_openfront_cart_id")) jar.set("_openfront_cart_id", "", { maxAge: 0, path: "/" })
 }
 
+// The session cookie is shared with the dashboard and stays Lax, which Safari
+// drops inside a cross-site frame (the Oathkeeper Browser, an embed). Once
+// checkout signs the guest in, the cart belongs to that user, so the framed
+// shop would lose it. A partitioned copy under its own name carries the same
+// token there; it never shadows the dashboard's cookie.
+const FRAMED_SESSION_COOKIE = "_openfront_session_p"
+async function writeFramedSession(token: string) {
+  if (process.env.NODE_ENV !== "production") return
+  ;(await cookies()).set(FRAMED_SESSION_COOKIE, token, {
+    maxAge: token ? 60 * 60 * 24 * 30 : 0,
+    ...(token ? {} : { expires: new Date(0) }),
+    httpOnly: true,
+    sameSite: "none",
+    secure: true,
+    partitioned: true,
+    path: "/",
+  })
+}
+
 export const getAuthHeaders = async (): Promise<Record<string, string>> => {
   const cookieStore = await cookies()
-  const token = cookieStore.get("keystonejs-session")?.value
+  const token = (cookieStore.get("keystonejs-session") || cookieStore.get(FRAMED_SESSION_COOKIE))?.value
   const cartProof = (cookieStore.get("_openfront_cart") || cookieStore.get("_openfront_cart_id"))?.value
   const headers: Record<string, string> = {}
 
@@ -46,6 +65,7 @@ export const setAuthToken = async (token: string, options: CookieOptions = {}) =
     path: "/",
     ...options
   })
+  await writeFramedSession(token)
 }
 
 export const removeAuthToken = async () => {
@@ -57,6 +77,7 @@ export const removeAuthToken = async () => {
     secure: process.env.NODE_ENV === "production",
     path: "/",
   })
+  await writeFramedSession("")
 }
 
 export const getCartId = async (): Promise<string | undefined> => {
