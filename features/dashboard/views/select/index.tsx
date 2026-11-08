@@ -48,6 +48,7 @@ interface SelectFieldProps {
     description?: string
     options: Option[]
     displayMode: 'select' | 'segmented-control' | 'radio'
+    isRequired?: boolean
   }
   value: Value
   onChange?: (value: Value) => void
@@ -121,8 +122,11 @@ export function Field({
   onChange,
   autoFocus,
   forceValidation,
-  isRequired = false,
+  isRequired: isRequiredByForm = false,
 }: SelectFieldProps) {
+  // Keystone's own select view reads the field's validation.isRequired; without it every required select
+  // (e.g. a coupon's Discount Type) offered "Set field as null".
+  const isRequired = isRequiredByForm || Boolean(field.isRequired)
   const [isDirty, setDirty] = useState(false)
   const [preNullValue, setPreNullValue] = useState(
     value.value || (value.kind === 'update' ? value.initial : null)
@@ -265,6 +269,7 @@ type AdminSelectFieldMeta = {
   type: 'string' | 'integer' | 'enum'
   displayMode: 'select' | 'segmented-control' | 'radio'
   defaultValue: string | number | null
+  isRequired?: boolean
 }
 
 type Config = FieldControllerConfig<AdminSelectFieldMeta>
@@ -273,6 +278,7 @@ export function controller(config: Config): FieldController<Value, string[]> & {
   options: Option[]
   type: 'string' | 'integer' | 'enum'
   displayMode: 'select' | 'segmented-control' | 'radio'
+  isRequired: boolean
 } {
   const optionsWithStringValues = config.fieldMeta?.options?.map(x => ({
     label: x.label,
@@ -296,6 +302,7 @@ export function controller(config: Config): FieldController<Value, string[]> & {
     },
     type: config.fieldMeta?.type || 'string',
     displayMode: config.fieldMeta?.displayMode || 'select',
+    isRequired: Boolean(config.fieldMeta?.isRequired),
     options: optionsWithStringValues,
     deserialize: data => {
       for (const option of config.fieldMeta?.options || []) {
