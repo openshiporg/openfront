@@ -25,27 +25,23 @@ const resolveCartOwner = (args) => { const r = loaded.resolveCartOwner(args); re
 const customer = 'cust_hannah', staff = 'staff_admin';
 
 test('staff edit of a customer cart keeps the customer as owner', () => {
-  assert.equal(resolveCartOwner({ operation: 'update', resolvedUser: undefined, existingUserId: customer, sessionUserId: staff, editorIsStaff: true }), undefined);
+  assert.equal(resolveCartOwner({ operation: 'update', resolvedUser: undefined, sessionUserId: staff, editorIsStaff: true }), undefined);
 });
 
-test('staff edit of a guest cart does not claim it for the staff member', () => {
-  assert.equal(resolveCartOwner({ operation: 'update', resolvedUser: undefined, existingUserId: null, sessionUserId: staff, editorIsStaff: true }), undefined);
-  assert.equal(resolveCartOwner({ operation: 'create', resolvedUser: undefined, sessionUserId: staff, editorIsStaff: true }), undefined);
+test('an update never sets the owner from the session, even for a shopper on an unowned cart', () => {
+  assert.equal(resolveCartOwner({ operation: 'update', resolvedUser: undefined, sessionUserId: customer, editorIsStaff: false }), undefined);
+  assert.equal(resolveCartOwner({ operation: 'update', resolvedUser: undefined, sessionUserId: staff, editorIsStaff: true }), undefined);
 });
 
-test('signed-in shopper claims their unowned guest cart, and their new cart', () => {
-  assert.deepEqual(resolveCartOwner({ operation: 'update', resolvedUser: undefined, existingUserId: null, sessionUserId: customer, editorIsStaff: false }), { connect: { id: customer } });
+test('a signed-in shopper creating a cart owns it; staff and guests do not', () => {
   assert.deepEqual(resolveCartOwner({ operation: 'create', resolvedUser: undefined, sessionUserId: customer, editorIsStaff: false }), { connect: { id: customer } });
-});
-
-test("a shopper never takes over someone else's cart through the hook", () => {
-  assert.equal(resolveCartOwner({ operation: 'update', resolvedUser: undefined, existingUserId: 'cust_other', sessionUserId: customer, editorIsStaff: false }), undefined);
-});
-
-test('explicit owner changes are kept, guests stay unowned', () => {
-  const connect = { connect: { id: 'cust_other' } };
-  assert.deepEqual(resolveCartOwner({ operation: 'update', resolvedUser: connect, existingUserId: customer, sessionUserId: staff, editorIsStaff: true }), connect);
+  assert.equal(resolveCartOwner({ operation: 'create', resolvedUser: undefined, sessionUserId: staff, editorIsStaff: true }), undefined);
   assert.equal(resolveCartOwner({ operation: 'create', resolvedUser: undefined, sessionUserId: null, editorIsStaff: false }), undefined);
+});
+
+test('explicit owner changes are kept', () => {
+  const connect = { connect: { id: 'cust_other' } };
+  assert.deepEqual(resolveCartOwner({ operation: 'update', resolvedUser: connect, sessionUserId: staff, editorIsStaff: true }), connect);
 });
 
 test('the Cart model routes its user hook through resolveCartOwner with the staff check', () => {
@@ -53,8 +49,8 @@ test('the Cart model routes its user hook through resolveCartOwner with the staf
   const hook = src.slice(src.indexOf('user: relationship({'), src.indexOf('// Regular fields'));
   assert.match(hook, /resolveCartOwner\(/);
   assert.match(hook, /editorIsStaff: Boolean\(permissions\.canManageOrders\(\{ session: context\.session \}\)\)/);
-  assert.match(hook, /existingUserId: \(item as any\)\?\.userId/);
   assert.doesNotMatch(hook, /return \{ connect: \{ id: context\.session\.itemId \} \}/);
+  assert.doesNotMatch(hook, /operation === "update"/);
 });
 
 test('the create-time owner override applies to shoppers only, not staff', () => {

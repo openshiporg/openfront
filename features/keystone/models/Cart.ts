@@ -416,12 +416,11 @@ export const Cart = list({
       ref: "User.carts",
       many: false,
       hooks: {
-        // Staff edits keep the cart's owner; only a shopper's own write claims an unowned cart.
-        resolveInput({ operation, resolvedData, item, context }) {
+        // The owner is set only when a shopper creates the cart; updates never relink it.
+        resolveInput({ operation, resolvedData, context }) {
           return resolveCartOwner({
             operation,
             resolvedUser: resolvedData.user,
-            existingUserId: (item as any)?.userId ?? null,
             sessionUserId: context.session?.itemId ?? null,
             editorIsStaff: Boolean(permissions.canManageOrders({ session: context.session })),
           });
