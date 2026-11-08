@@ -92,13 +92,22 @@ async function getCountryCode(request: NextRequest, regionMap: Map<string, any>)
 }
 
 // Handles country code redirects and cart management for storefront routes
+// Production is HTTPS: the cart proof is SameSite=None; Secure; Partitioned
+// so a framed shop keeps its cart (Safari keeps only partitioned cookies in a
+// cross-site frame). Development over HTTP stays Lax.
+function cartCookieScope() {
+  return process.env.NODE_ENV === "production"
+    ? ({ sameSite: "none", secure: true, partitioned: true } as const)
+    : ({ sameSite: "lax", secure: false } as const);
+}
+
 export async function handleStorefrontRoutes(request: NextRequest, user: any | null) {
   // User is passed from the main middleware only for dashboard routes
 
   const regionMap = await getRegionMap(request);
   const countryCode = await getCountryCode(request, regionMap);
   const cartProof = request.nextUrl.searchParams.get("cart_proof");
-  const cartIdCookie = request.cookies.get("_openfront_cart_id");
+  const cartIdCookie = request.cookies.get("_openfront_cart") || request.cookies.get("_openfront_cart_id");
 
   let response;
 
@@ -120,10 +129,9 @@ export async function handleStorefrontRoutes(request: NextRequest, user: any | n
     redirectUrl.searchParams.delete("cart_proof");
     redirectUrl.searchParams.set("step", "address");
     response = NextResponse.redirect(redirectUrl);
-    response.cookies.set("_openfront_cart_id", cartProof, {
+    response.cookies.set("_openfront_cart", cartProof, {
+      ...cartCookieScope(),
       httpOnly: true,
-      sameSite: "strict",
-      secure: process.env.NODE_ENV === "production",
       path: "/",
       maxAge: 60 * 60 * 24 * 7,
     });

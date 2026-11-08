@@ -15,14 +15,21 @@ import {
 } from '../data/cart-client';
 
 // Client carts receive a server-signed bearer proof from createActiveCart.
+// Over HTTPS the proof is SameSite=None; Secure; Partitioned (CHIPS) so a
+// framed shop (the Oathkeeper Browser, an embed) keeps its cart: Safari keeps a
+// cookie in a cross-site frame only when it is partitioned. The earlier Strict
+// _openfront_cart_id is cleared whenever the cart cookie is written.
 const setCartProof = (proof: string) => {
   if (typeof window === 'undefined') return;
-  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
-  document.cookie = `_openfront_cart_id=${encodeURIComponent(proof)}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Strict${secure}`;
+  const attrs = window.location.protocol === 'https:' ? 'SameSite=None; Secure; Partitioned' : 'SameSite=Lax';
+  document.cookie = `_openfront_cart=${encodeURIComponent(proof)}; path=/; max-age=${60 * 60 * 24 * 7}; ${attrs}`;
+  document.cookie = '_openfront_cart_id=; path=/; max-age=-1';
 };
 
 const removeCartId = () => {
   if (typeof window === 'undefined') return;
+  const attrs = window.location.protocol === 'https:' ? '; SameSite=None; Secure; Partitioned' : '';
+  document.cookie = `_openfront_cart=; path=/; max-age=-1${attrs}`;
   document.cookie = '_openfront_cart_id=; path=/; max-age=-1';
 };
 

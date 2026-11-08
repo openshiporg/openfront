@@ -24,6 +24,7 @@ export function getCartProofFromContext(context: any): string | undefined {
   const headers = context?.req?.headers || {};
   return (
     headerValue(headers["x-openfront-cart-proof"]) ||
+    cookieValue(headerValue(headers.cookie), "_openfront_cart") ||
     cookieValue(headerValue(headers.cookie), "_openfront_cart_id")
   );
 }
