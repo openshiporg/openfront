@@ -8,8 +8,29 @@ import {
 import { applyOrderStatusTransition } from "../utils/orderStatusTransition";
 import { findIdempotencyAttempt, getOrCreateIdempotencyAttempt } from "../utils/idempotency";
 
-function refundRuleError(message: string, code: "REFUND_EXCEEDS_BALANCE" | "PAYMENT_NOT_CAPTURED" | "REFUND_IN_PROGRESS") {
+function refundRuleError(message: string, code: "REFUND_EXCEEDS_BALANCE" | "PAYMENT_NOT_CAPTURED" | "REFUND_IN_PROGRESS" | "REFUND_DECLINED") {
   return new GraphQLError(message, { extensions: { code } });
+}
+
+// The provider answered and refused (a 4xx that is not a conflict or a rate limit), so no money
+// moved: the reserved amount goes back and the same request can be sent again. A timeout or a
+// server error stays reserved, because the refund may have gone through.
+function providerRefused(error: any) {
+  const status = error?.cause?.statusCode;
+  return Number.isInteger(status) && status >= 400 && status < 500 && status !== 409 && status !== 429;
+}
+
+async function releaseRefundReservation(prisma: any, paymentId: string, amount: number, attemptId: string) {
+  await prisma.$transaction(async (tx: any) => {
+    await tx.payment.updateMany({
+      where: { id: paymentId, amountRefunded: { gte: amount } },
+      data: { amountRefunded: { decrement: amount } },
+    });
+    await tx.idempotencyKey.update({
+      where: { id: attemptId },
+      data: { recoveryPoint: "started", lockedAt: null },
+    });
+  });
 }
 
 function providerPaymentReference(payment: any): string | undefined {
@@ -132,13 +153,19 @@ async function refundOrderPayment(
 
   let providerResult = attempt.responseBody?.providerResult;
   if (!providerResult) {
-    providerResult = await refundPayment({
-      provider,
-      paymentId: providerReference,
-      amount: amount,
-      currency: payment.currencyCode,
-      idempotencyKey: businessKey,
-    });
+    try {
+      providerResult = await refundPayment({
+        provider,
+        paymentId: providerReference,
+        amount: amount,
+        currency: payment.currencyCode,
+        idempotencyKey: businessKey,
+      });
+    } catch (error) {
+      if (!providerRefused(error)) throw error;
+      await releaseRefundReservation(sudo.prisma, paymentId, amount, attempt.id);
+      throw refundRuleError("The payment provider declined this refund. Nothing was refunded.", "REFUND_DECLINED");
+    }
     if (!providerResult.id && !providerResult.refundId && !providerResult.data?.id) throw new Error("Provider refund reference is missing");
     const status = String(providerResult.status || "").toLowerCase();
     if (!["succeeded", "completed", "refunded"].includes(status)) {

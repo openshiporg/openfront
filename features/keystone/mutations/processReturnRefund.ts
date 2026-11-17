@@ -1,3 +1,4 @@
+import { GraphQLError } from "graphql";
 import { permissions } from "../access";
 import { RETURN_REFUNDABLE } from "../lib/state-machines";
 import { refundPayment } from "../utils/paymentProviderAdapter";
@@ -15,6 +16,27 @@ function providerPaymentReference(payment: any): string | undefined {
     payment.data?.orderId ||
     payment.data?.id
   );
+}
+
+// The provider answered and refused (a 4xx that is not a conflict or a rate limit), so no money
+// moved: the reserved amount goes back and the same request can be sent again. A timeout or a
+// server error stays reserved, because the refund may have gone through.
+function providerRefused(error: any) {
+  const status = error?.cause?.statusCode;
+  return Number.isInteger(status) && status >= 400 && status < 500 && status !== 409 && status !== 429;
+}
+
+async function releaseRefundReservation(prisma: any, paymentId: string, amount: number, attemptId: string) {
+  await prisma.$transaction(async (tx: any) => {
+    await tx.payment.updateMany({
+      where: { id: paymentId, amountRefunded: { gte: amount } },
+      data: { amountRefunded: { decrement: amount } },
+    });
+    await tx.idempotencyKey.update({
+      where: { id: attemptId },
+      data: { recoveryPoint: "started", lockedAt: null },
+    });
+  });
 }
 
 async function processReturnRefund(
@@ -136,13 +158,19 @@ async function processReturnRefund(
 
   let providerResult = attempt.responseBody?.providerResult;
   if (attempt.recoveryPoint !== "provider_refunded" || !providerResult) {
-    providerResult = await refundPayment({
-      provider,
-      paymentId: providerReference,
-      amount: returnRecord.refundAmount,
-      currency: payment.currencyCode,
-      idempotencyKey: businessKey,
-    });
+    try {
+      providerResult = await refundPayment({
+        provider,
+        paymentId: providerReference,
+        amount: returnRecord.refundAmount,
+        currency: payment.currencyCode,
+        idempotencyKey: businessKey,
+      });
+    } catch (error) {
+      if (!providerRefused(error)) throw error;
+      await releaseRefundReservation(sudo.prisma, paymentId, returnRecord.refundAmount, attempt.id);
+      throw new GraphQLError("The payment provider declined this refund. Nothing was refunded.", { extensions: { code: "REFUND_DECLINED" } });
+    }
     const status = String(providerResult.status || "").toLowerCase();
     if (!["succeeded", "completed", "refunded"].includes(status)) {
       throw new Error(`Provider refund is not complete: ${providerResult.status}`);

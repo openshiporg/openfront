@@ -51,7 +51,11 @@ export function RefundOrderDialog({ orderId, payments }: { orderId: string; paym
           setBusy(true); setError('')
           try {
             const result = await refundOrderPaymentAction(request.current)
-            if (!result.success) { setError(result.error || 'Refund not confirmed. Retry this request to reconcile.'); return }
+            if (!result.success) {
+              // The provider refused and nothing is held: the next attempt is a new request.
+              if (/declined this refund/.test(result.error || '')) request.current = null
+              setError(result.error || 'Refund not confirmed. Retry this request to reconcile.'); return
+            }
             request.current = null; router.refresh()
             if (result.restock && !result.restock.restocked) { setNotice(`Refunded. Items were not returned to stock: ${result.restock.reason || 'unknown error'}`); return }
             setOpen(false)

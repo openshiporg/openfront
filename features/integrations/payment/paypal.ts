@@ -220,8 +220,9 @@ export async function refundPaymentFunction({ paymentId, amount = 0, currency = 
   );
 
   const refund = await response.json();
-  if (refund.error) {
-    throw new Error(`PayPal refund failed: ${refund.error.message}`);
+  if (!response.ok || refund.error) {
+    // statusCode tells the refund mutation whether PayPal refused (4xx) or the outcome is unknown.
+    throw Object.assign(new Error(`PayPal refund failed: ${refund.error?.message || refund.message || response.statusText}`), { statusCode: response.status });
   }
 
   return {

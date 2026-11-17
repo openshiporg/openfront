@@ -29,7 +29,8 @@ export async function executeAdapterFunction({ provider, functionName, args }) {
     return await fn({ provider, ...args });
   } catch (error) {
     throw new Error(
-      `Error executing ${functionName} for provider ${functionPath}: ${error.message}`
+      `Error executing ${functionName} for provider ${functionPath}: ${error.message}`,
+      { cause: error }
     );
   }
 }
