@@ -59,6 +59,9 @@ export function validateReturnRequest(order: any, input: { items: { lineItemId: 
   const picked = (input.items || []).filter((i) => Number(i.quantity) > 0);
   if (!picked.length) throw new Error("Choose at least one item to return.");
   const seen = new Set<string>();
+  // Refund what was paid for the returned items: their share of the goods total after discounts,
+  // tax included. order.goodsPaid is absent only where the caller has no totals (list price then).
+  const listTotal = (order.lineItems || []).reduce((sum: number, line: any) => sum + (line.moneyAmount?.amount || 0) * (line.quantity || 0), 0);
   let refundAmount = 0;
   const accepted = picked.map((item) => {
     const line = lines.get(item.lineItemId);
@@ -68,5 +71,8 @@ export function validateReturnRequest(order: any, input: { items: { lineItemId: 
     refundAmount += line.unitAmount * item.quantity;
     return { orderLineItemId: line.id, quantity: item.quantity, title: line.title, variantTitle: line.variantTitle, returnReasonId: null, note: note || null };
   });
+  if (Number.isFinite(order.goodsPaid) && listTotal > 0) {
+    refundAmount = Math.max(0, Math.round((refundAmount * order.goodsPaid) / listTotal));
+  }
   return { accepted, refundAmount, note, closesAt: window.closesAt };
 }

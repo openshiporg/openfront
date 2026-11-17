@@ -1,7 +1,8 @@
 import { RETURN_REASONS, validateReturnRequest } from "../lib/return-request";
 
 const ORDER_QUERY = `
-  id status secretKey email displayId createdAt user { id }
+  id status secretKey email displayId createdAt user { id } metadata rawTotal
+  shippingMethods { price } discounts { discountRule { type } }
   fulfillments { id createdAt canceledAt fulfillmentItems { quantity lineItem { id } } }
   lineItems { id title variantTitle quantity moneyAmount { amount } }
   returns { id status metadata }
@@ -17,6 +18,14 @@ export default async function requestOrderReturn(
   const order = await sudo.query.Order.findOne({ where: { id: orderId }, query: ORDER_QUERY });
   const owner = order && (secretKey ? order.secretKey && order.secretKey === secretKey : context.session?.itemId && order.user?.id === context.session.itemId);
   if (!order || !owner) throw new Error("Order not found");
+
+  // Goods total as charged (after discounts, with tax, without shipping).
+  const totals = order.metadata?.totals;
+  const shipping = (order.shippingMethods || []).reduce((sum: number, method: any) => sum + (method.price || 0), 0);
+  const freeShipping = (order.discounts || []).some((d: any) => d.discountRule?.type === "free_shipping");
+  order.goodsPaid = totals && Number.isFinite(totals.total)
+    ? totals.subtotal - (totals.discount || 0) + (totals.tax || 0)
+    : (order.rawTotal || 0) - (freeShipping ? 0 : shipping);
 
   // Serialize requests for one order so two submissions cannot both claim the same items.
   const created = await sudo.prisma.$transaction(async (tx: any) => {

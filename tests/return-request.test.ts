@@ -32,3 +32,12 @@ test("a request prices the refund from the order line and rejects too many", () 
   assert.throws(() => validateReturnRequest(order(), { items: [{ lineItemId: "l1", quantity: 1 }], reason: "nope" }, now), /reason/);
   assert.throws(() => validateReturnRequest(order(), { items: [{ lineItemId: "l1", quantity: 1 }], reason: "other" }, now), /why/);
 });
+
+test("a return refunds what was paid for the items: discount taken off, tax included", () => {
+  const now = new Date("2026-11-05T00:00:00Z");
+  const lines = { lineItems: [{ id: "l1", title: "Hoodie", quantity: 2, moneyAmount: { amount: 10000 } }], fulfillments: [{ createdAt: shippedAt.toISOString(), canceledAt: null, fulfillmentItems: [{ quantity: 2, lineItem: { id: "l1" } }] }] };
+  // Two $100 items with a 50% code: $100 paid for the goods, so one item refunds $50.
+  assert.equal(validateReturnRequest(order({ ...lines, goodsPaid: 10000 }), { items: [{ lineItemId: "l1", quantity: 1 }], reason: "too_small" }, now).refundAmount, 5000);
+  // No code, 8% tax: a returned $100 item refunds $108.
+  assert.equal(validateReturnRequest(order({ ...lines, goodsPaid: 21600 }), { items: [{ lineItemId: "l1", quantity: 1 }], reason: "too_small" }, now).refundAmount, 10800);
+});
