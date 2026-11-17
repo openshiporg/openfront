@@ -172,13 +172,18 @@ const StripePaymentButton: React.FC<StripePaymentButtonProps> = ({
         }
       );
 
-      if (confirmError) {
+      // On a retry after the card was already confirmed, Stripe returns an error that carries the paid
+      // intent: finish the order instead of asking to pay again.
+      const status = paymentIntent?.status || confirmError?.payment_intent?.status;
+      const confirmed = status === 'succeeded' || status === 'requires_capture';
+
+      if (confirmError && !confirmed) {
         console.error('Stripe confirmation error:', confirmError);
         setErrorMessage(confirmError.message || "Payment confirmation failed.");
         return;
       }
 
-      if (paymentIntent?.status === 'succeeded' || paymentIntent?.status === 'requires_capture') {
+      if (confirmed) {
         console.log('Payment confirmed, sending to backend...');
         await onPaymentCompleted(session.id);
       } else {
