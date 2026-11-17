@@ -208,6 +208,10 @@ async function handlePaymentProviderWebhook(
       if (nextPaymentStatus && existing && !canTransition(PAYMENT_TRANSITIONS, existing.status, nextPaymentStatus)) {
         paymentMoved = false;
       }
+      // Checkout already recorded this capture; the provider's confirmation must not add a second one.
+      if (succeeded && existing?.status === "captured") {
+        paymentMoved = false;
+      }
       if (!paymentMoved) {
         // Stale or duplicate event: recorded as handled, no state change.
       } else if (succeeded) {
