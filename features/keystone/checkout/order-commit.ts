@@ -114,6 +114,9 @@ export async function createOrderFromCartAtomically(cart: any, sudo: any) {
     },
     acceptedAt: new Date().toISOString(),
   };
+  // What the shopper is charged, in minor units (read with the cart by completeActiveCart), kept on the
+  // order so its totals never change later. An order without it falls back to the calculation in Order.ts.
+  const totals = cart.totals || null;
   // Formatted totals as the Order shows them; never worth failing checkout over.
   const webhookTotals = orderWebhookEndpointIds.length
     ? await sudo.query.Cart.findOne({ where: { id: cart.id }, query: "subtotal shipping discount tax total" }).catch(() => null)
@@ -210,7 +213,7 @@ export async function createOrderFromCartAtomically(cart: any, sudo: any) {
         status: "pending",
         displayId: Number(next),
         taxRate: cart.region.taxRate || 0,
-        metadata: { ...(cart.metadata || {}), commercialSnapshot },
+        metadata: { ...(cart.metadata || {}), commercialSnapshot, ...(totals ? { totals } : {}) },
         secretKey,
         events: {
           create: {

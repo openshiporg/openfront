@@ -16,6 +16,7 @@ import {
   updateCheckoutAttempt,
 } from "../checkout/recovery";
 import { createOrderFromCartAtomically, resolveOrderCustomer } from "../checkout/order-commit";
+import { cartMoneyBreakdown } from "../models/Cart";
 import {
   allocateGiftCards,
   heldFor,
@@ -167,6 +168,10 @@ async function completeActiveCart(
 
   if (!cart) {
     throw new Error("Cart not found");
+  }
+  // The money this checkout charges, saved on the order. Never worth failing checkout over.
+  if (!cart.order?.id) {
+    cart.totals = await cartMoneyBreakdown(cartId, sudoContext).catch(() => null);
   }
 
   // The cart/order relationship is the local recovery anchor. Complete any

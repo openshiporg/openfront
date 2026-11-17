@@ -24,6 +24,19 @@ const formatCurrency = (amount, currencyCode) => {
   }).format(amount);
 };
 
+// Totals as charged at checkout: metadata.totals is written once when the order is created, so a later
+// change to the region tax rate or to a discount never changes a past order. Older orders have none
+// and keep the calculation below.
+// The rate saved on the order at checkout; orders from before it was saved use the region's rate.
+function orderTaxRate(item: any, order: any) {
+  return typeof item?.taxRate === "number" ? item.taxRate : order?.region?.taxRate || 0;
+}
+
+function chargedTotals(item: any) {
+  const totals = item?.metadata?.totals;
+  return totals && Number.isFinite(totals.total) ? totals : null;
+}
+
 export const Order = list({
   access: {
     operation: {
@@ -407,6 +420,16 @@ export const Order = list({
                 `,
               });
 
+              const charged = chargedTotals(item);
+              if (charged) {
+                const amount = (charged.discount || 0) + (charged.shippingDiscount || 0);
+                if (!amount) return null;
+                return formatCurrency(
+                  amount / (order?.region?.currency?.noDivisionCurrency ? 1 : 100),
+                  order?.region?.currency?.code || "USD"
+                );
+              }
+
               if (!order?.discounts?.length) return null;
 
               // Calculate subtotal for percentage discounts
@@ -511,7 +534,8 @@ export const Order = list({
               }
 
               const taxableAmount = subtotal - totalDiscountAmount;
-              const tax = taxableAmount * (order.region?.taxRate || 0);
+              const charged = chargedTotals(item);
+              const tax = charged ? charged.tax : taxableAmount * orderTaxRate(item, order);
 
               const currencyCode = order.region?.currency?.code || "USD";
               const divisor = order.region?.currency?.noDivisionCurrency ? 1 : 100;
@@ -600,10 +624,11 @@ export const Order = list({
 
               // Calculate tax
               const taxableAmount = subtotal - totalDiscountAmount;
-              const tax = taxableAmount * (order.region?.taxRate || 0);
+              const tax = taxableAmount * orderTaxRate(item, order);
 
               // Calculate total
-              const total = subtotal - totalDiscountAmount + shipping + tax;
+              const charged = chargedTotals(item);
+              const total = charged ? charged.total : subtotal - totalDiscountAmount + shipping + tax;
 
               const currencyCode = order.region?.currency?.code || "USD";
               const divisor = order.region?.currency?.noDivisionCurrency ? 1 : 100;
@@ -692,9 +717,11 @@ export const Order = list({
 
               // Calculate tax
               const taxableAmount = subtotal - totalDiscountAmount;
-              const tax = taxableAmount * (order.region?.taxRate || 0);
+              const tax = taxableAmount * orderTaxRate(item, order);
 
               // Calculate total
+              const charged = chargedTotals(item);
+              if (charged) return Math.round(charged.total);
               return Math.round(subtotal - totalDiscountAmount + shipping + tax);
             },
           }),
