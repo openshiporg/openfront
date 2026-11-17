@@ -93,6 +93,7 @@ async function updateActiveCart(
 
   // Handle duplicate line items if we're adding new ones
   if (data?.lineItems?.create?.length) {
+    const remaining: any[] = [];
     for (const newItem of data.lineItems.create) {
       if (
         !newItem.productVariant?.connect?.id ||
@@ -122,10 +123,14 @@ async function updateActiveCart(
             quantity: existingLineItem.quantity + newItem.quantity
           }
         });
-        // Remove the create operation since we handled it
-        delete data.lineItems;
+      } else {
+        remaining.push(newItem);
       }
     }
+    // Only the entries handled above are removed; other creates, updates and deletes still apply.
+    if (remaining.length) data.lineItems.create = remaining;
+    else delete data.lineItems.create;
+    if (!Object.keys(data.lineItems).length) delete data.lineItems;
   }
 
   // Update cart with modified data
