@@ -36,7 +36,7 @@ export const POPULAR_REGIONS = [
       { code: "GBP", name: "British Pound", symbol: "£", symbolNative: "£" },
     ],
     defaultCurrency: "EUR",
-    taxRate: 20,
+    taxRate: 0.2,
     automaticTaxes: true,
     paymentProviders: ["stripe", "paypal", "klarna"]
   },
@@ -51,7 +51,7 @@ export const POPULAR_REGIONS = [
       { code: "JPY", name: "Japanese Yen", symbol: "¥", symbolNative: "￥" },
     ],
     defaultCurrency: "JPY",
-    taxRate: 10,
+    taxRate: 0.1,
     automaticTaxes: true,
     paymentProviders: ["stripe", "konbini"]
   },
@@ -68,7 +68,7 @@ export const POPULAR_REGIONS = [
       { code: "NZD", name: "New Zealand Dollar", symbol: "NZ$", symbolNative: "$" },
     ],
     defaultCurrency: "AUD",
-    taxRate: 10,
+    taxRate: 0.1,
     automaticTaxes: true,
     paymentProviders: ["stripe", "afterpay"]
   },
@@ -83,7 +83,7 @@ export const POPULAR_REGIONS = [
       { code: "GBP", name: "British Pound", symbol: "£", symbolNative: "£" },
     ],
     defaultCurrency: "GBP", 
-    taxRate: 20,
+    taxRate: 0.2,
     automaticTaxes: true,
     paymentProviders: ["stripe", "paypal"]
   },
@@ -104,7 +104,7 @@ export const POPULAR_REGIONS = [
       { code: "PHP", name: "Philippine Peso", symbol: "₱", symbolNative: "₱" },
     ],
     defaultCurrency: "SGD",
-    taxRate: 7,
+    taxRate: 0.07,
     automaticTaxes: true,
     paymentProviders: ["stripe", "grabpay"]
   }

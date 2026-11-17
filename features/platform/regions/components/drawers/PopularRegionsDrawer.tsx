@@ -122,7 +122,7 @@ export function PopularRegionsDrawer({
                       </Badge>
                       <Badge variant="secondary" className="gap-1">
                         <Percent className="w-3 h-3" />
-                        {template.taxRate}% tax
+                        {Number((template.taxRate * 100).toFixed(2))}% tax
                       </Badge>
                     </div>
 
