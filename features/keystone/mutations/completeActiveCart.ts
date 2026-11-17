@@ -316,6 +316,12 @@ async function holdCartGiftCards(cart: any, prisma: any) {
     cards.map((card: any) => ({ ...card, balance: card.balance + Math.max(0, heldFor(ledgerOf(card), ref)) })),
     gross
   );
+  // The order total was computed from an earlier read of the cards. If another checkout has taken
+  // the balance since, stop here: the order must not be created with less held than it counted on.
+  const allocated = allocations.reduce((sum: number, row: any) => sum + row.amount, 0);
+  if (allocated !== (cart.giftCardApplied || 0)) {
+    throw new Error("A gift card balance changed. Review your order and try again.");
+  }
   await holdGiftCardBalances(prisma, allocations, ref);
 }
 
