@@ -28,7 +28,7 @@ const OrderDetails = ({ order, showStatus }: OrderDetailsProps) => {
       <p>
         We have sent the order confirmation details to{" "}
         <span
-          className="text-foreground font-semibold"
+          className="text-foreground font-semibold break-all"
           data-testid="order-email"
         >
           {order.email}
