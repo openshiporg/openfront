@@ -115,44 +115,33 @@ const ProductInfoTab = ({ product }: ProductTabsProps) => {
   const widthMeasurement = getMeasurement('width');
   const heightMeasurement = getMeasurement('height');
 
-  // Format dimensions string if all dimensions exist
   const dimensionsString = lengthMeasurement && widthMeasurement && heightMeasurement
     ? `${lengthMeasurement.value}${lengthMeasurement.unit} x ${widthMeasurement.value}${widthMeasurement.unit} x ${heightMeasurement.value}${heightMeasurement.unit}`
-    : "-";
+    : null;
+
+  // Only the details this product has: no rows of dashes.
+  const rows = [
+    ["Material", product.material],
+    ["Country of origin", product.originCountry],
+    ["Type", product.productType?.value],
+    ["Weight", weightMeasurement ? `${weightMeasurement.value} ${weightMeasurement.unit}` : null],
+    ["Dimensions", dimensionsString],
+  ].filter((row): row is [string, string] => !!row[1]);
 
   return (
     <div className="text-xs leading-5 font-normal py-8">
-      <div className="grid grid-cols-2 gap-x-8">
-        <div className="flex flex-col gap-y-4">
-          <div>
-            <span className="font-semibold">Material</span>
-            <p>{product.material ? product.material : "-"}</p>
-          </div>
-          <div>
-            <span className="font-semibold">Country of origin</span>
-            <p>{product.originCountry ? product.originCountry : "-"}</p> {/* Corrected prop name */}
-          </div>
-          <div>
-            <span className="font-semibold">Type</span>
-            <p>{product.productType ? product.productType.value : "-"}</p> {/* Corrected prop name */}
-          </div>
+      {rows.length ? (
+        <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+          {rows.map(([label, value]) => (
+            <div key={label}>
+              <span className="font-semibold">{label}</span>
+              <p>{value}</p>
+            </div>
+          ))}
         </div>
-        <div className="flex flex-col gap-y-4">
-          <div>
-            <span className="font-semibold">Weight</span>
-            <p>{weightMeasurement ? `${weightMeasurement.value} ${weightMeasurement.unit}` : "-"}</p>
-          </div>
-          <div>
-            <span className="font-semibold">Dimensions</span>
-            <p>{dimensionsString}</p>
-          </div>
-        </div>
-      </div>
-      {product.tags?.length ? (
-        <div>
-          <span className="font-semibold">Tags</span>
-        </div>
-      ) : null}
+      ) : (
+        <p>See the description above for details.</p>
+      )}
     </div>
   )
 }

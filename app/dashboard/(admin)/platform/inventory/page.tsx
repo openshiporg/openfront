@@ -1,3 +1,6 @@
-import InventoryListPage from '@/features/platform/inventory/screens/InventoryListPage';
+import { redirect } from 'next/navigation';
 
-export default InventoryListPage;
+// Stock is kept on each product variant (Inventory quantity), so Inventory opens Products.
+export default function InventoryPage() {
+  redirect('/dashboard/platform/products');
+}

@@ -191,16 +191,16 @@ export function PaymentProviderListPageClient({
   const breadcrumbs = [
     { type: 'link' as const, label: 'Dashboard', href: basePath },
     { type: 'page' as const, label: 'Platform' },
-    { type: 'page' as const, label: 'PaymentProviders' }
+    { type: 'page' as const, label: 'Payment Providers' }
   ]
 
   const header = (
     <div>
       <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-50">
-        PaymentProviders
+        Payment Providers
       </h1>
       <p className="text-muted-foreground">
-        Create and manage paymentproviders
+        Create and manage payment providers
       </p>
     </div>
   )
@@ -212,7 +212,7 @@ export function PaymentProviderListPageClient({
 
   return (
     <>
-    <PageContainer title="PaymentProviders" header={header} breadcrumbs={breadcrumbs}>
+    <PageContainer title="Payment Providers" header={header} breadcrumbs={breadcrumbs}>
       {/* Filter Bar - includes search, filters, sorting, and create button */}
       <div className="px-4 md:px-6">
         <PlatformFilterBar 
@@ -275,7 +275,7 @@ export function PaymentProviderListPageClient({
                 currentPage={currentPage}
                 total={data.count}
                 pageSize={pageSize}
-                list={{ singular: 'paymentprovider', plural: 'paymentproviders' }}
+                list={{ singular: 'payment provider', plural: 'payment providers' }}
               />
             </div>
           )}

@@ -206,16 +206,16 @@ export function ShippingProviderListPageClient({
   const breadcrumbs = [
     { type: 'link' as const, label: 'Dashboard', href: basePath },
     { type: 'page' as const, label: 'Platform' },
-    { type: 'page' as const, label: 'ShippingProviders' }
+    { type: 'page' as const, label: 'Shipping Providers' }
   ]
 
   const header = (
     <div>
       <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-50">
-        ShippingProviders
+        Shipping Providers
       </h1>
       <p className="text-muted-foreground">
-        Create and manage shippingproviders
+        Create and manage shipping providers
       </p>
     </div>
   )
@@ -227,7 +227,7 @@ export function ShippingProviderListPageClient({
 
   return (
     <>
-    <PageContainer title="ShippingProviders" header={header} breadcrumbs={breadcrumbs}>
+    <PageContainer title="Shipping Providers" header={header} breadcrumbs={breadcrumbs}>
       {/* Filter Bar - includes search, filters, sorting, and create button */}
       <div className="px-4 md:px-6">
         <PlatformFilterBar 
@@ -290,7 +290,7 @@ export function ShippingProviderListPageClient({
                 currentPage={currentPage}
                 total={data.count}
                 pageSize={pageSize}
-                list={{ singular: 'shippingprovider', plural: 'shippingproviders' }}
+                list={{ singular: 'shipping provider', plural: 'shipping providers' }}
               />
             </div>
           )}

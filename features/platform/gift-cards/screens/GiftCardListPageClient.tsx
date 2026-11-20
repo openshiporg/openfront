@@ -195,16 +195,16 @@ export function GiftCardListPageClient({
   const breadcrumbs = [
     { type: 'link' as const, label: 'Dashboard', href: basePath },
     { type: 'page' as const, label: 'Platform' },
-    { type: 'page' as const, label: 'GiftCards' }
+    { type: 'page' as const, label: 'Gift Cards' }
   ]
 
   const header = (
     <div>
       <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-50">
-        GiftCards
+        Gift Cards
       </h1>
       <p className="text-muted-foreground">
-        Create and manage giftcards
+        Create and manage gift cards
       </p>
     </div>
   )
@@ -216,7 +216,7 @@ export function GiftCardListPageClient({
 
   return (
     <>
-    <PageContainer title="GiftCards" header={header} breadcrumbs={breadcrumbs}>
+    <PageContainer title="Gift Cards" header={header} breadcrumbs={breadcrumbs}>
       {/* Filter Bar - includes search, filters, sorting, and create button */}
       <div className="px-4 md:px-6">
         <PlatformFilterBar 
@@ -251,7 +251,7 @@ export function GiftCardListPageClient({
                                 "color": "zinc"
                       }
             }}
-            entityName="GiftCards"
+            entityName="Gift Cards"
           />
         </div>
       )}
@@ -294,7 +294,7 @@ export function GiftCardListPageClient({
                 currentPage={currentPage}
                 total={data.count}
                 pageSize={pageSize}
-                list={{ singular: 'giftcard', plural: 'giftcards' }}
+                list={{ singular: 'gift card', plural: 'gift cards' }}
               />
             </div>
           )}

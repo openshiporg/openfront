@@ -47,7 +47,7 @@ export const ClaimImage = list({
   },
   ui: {
     listView: {
-      initialColumns: ['image', 'altText', 'product'],
+      initialColumns: ['image', 'altText', 'claimItem'],
     },
   },
 });

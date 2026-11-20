@@ -344,7 +344,7 @@ export function OrderPageClient({
                     <div key={event.id} className="flex gap-4 text-sm">
                       <Clock className="h-4 w-4 text-muted-foreground mt-1 flex-shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-medium">{event.type}</p>
+                        <p className="font-medium">{String(event.type || "").toLowerCase().replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())}</p>
                         <p className="text-sm text-muted-foreground">
                           <ViewerTime value={event.createdAt} style="long" fallback="No date" />
                           {event.user?.name && ` by ${event.user.name}`}
