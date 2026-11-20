@@ -238,6 +238,7 @@ export async function getCartAnalytics(startDate: string, endDate: string, previ
         id
         createdAt
         status
+        rawTotal
         lineItems {
           id
           quantity

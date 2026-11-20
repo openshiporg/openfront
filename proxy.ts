@@ -30,6 +30,6 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     // oauth and .well-known (MCP OAuth screens and discovery) serve themselves.
-    "/((?!api|oauth|\\.well-known|_next/static|_next/image|favicon.svg|images|assets|png|svg|jpg|jpeg|gif|webp).*)",
+    "/((?!api|oauth|\\.well-known|_next/static|_next/image|favicon.svg|robots.txt|images|assets|png|svg|jpg|jpeg|gif|webp).*)",
   ],
 };
